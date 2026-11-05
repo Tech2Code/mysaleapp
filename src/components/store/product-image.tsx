@@ -39,7 +39,7 @@ export function ProductImage({
 
   const hue = hueFrom(alt)
   return (
-    <div
+    <div data-ui="store/ProductImage"
       role="img"
       aria-label={alt}
       className={cn("absolute inset-0 grid place-items-center overflow-hidden", className)}

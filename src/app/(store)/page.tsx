@@ -8,20 +8,21 @@ import { HowItWorks } from "@/components/store/how-it-works"
 import { ProductGrid } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
-import { siteConfig } from "@/config/site"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import {
   getActiveProducts,
   getCategoriesWithCounts,
   getFeaturedProducts,
 } from "@/features/products/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { websiteJsonLd } from "@/lib/seo"
 
 export default async function HomePage() {
-  const [featured, all, categories] = await Promise.all([
+  const [featured, all, categories, shop] = await Promise.all([
     getFeaturedProducts(8),
     getActiveProducts(),
     getCategoriesWithCounts(),
+    getStoreSettings(),
   ])
   const newArrivals = all.slice(0, 4)
   // Keep the grid's last row full on 4-column desktops (4 or 8 cards).
@@ -66,10 +67,10 @@ export default async function HomePage() {
             </p>
             <div className="relative mt-8 flex flex-wrap justify-center gap-3">
               <a
-                href={shopWhatsappLink(`Hi ${siteConfig.name}! I'd like a custom order.`)}
+                href={shopWhatsappLink(shop, `Hi ${shop.shopName}! I'd like a custom order.`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 font-semibold text-foreground shadow-lg transition-transform hover:-translate-y-0.5"
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 font-semibold text-neutral-900 shadow-lg transition-transform hover:-translate-y-0.5"
               >
                 <WhatsAppIcon className="size-5 text-whatsapp" /> Chat with us
               </a>
@@ -84,7 +85,7 @@ export default async function HomePage() {
         </section>
       </div>
 
-      <JsonLd data={websiteJsonLd()} />
+      <JsonLd data={websiteJsonLd(shop)} />
     </>
   )
 }

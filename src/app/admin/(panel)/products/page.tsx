@@ -29,7 +29,7 @@ export default async function AdminProductsPage() {
 
       <div className="overflow-hidden rounded-2xl border bg-card">
         {products.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-8 sm:p-12 text-center">
             <p className="font-medium">No products yet</p>
             <p className="mt-1 text-sm text-muted-foreground">Add your first product to start selling.</p>
           </div>

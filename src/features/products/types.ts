@@ -7,6 +7,14 @@ export type Category = {
   sort: number
 }
 
+/**
+ * An extra charge on a product, e.g. "Handling charge" ₹20. It is added ONCE per product in an order
+ * (not multiplied by quantity). `reason` is a short explanation shown to the customer.
+ */
+export type ProductFee = { label: string; amount: number; reason?: string | null }
+
+export type ProductSpec = { label: string; value: string }
+
 export type Product = {
   id: string
   name: string
@@ -18,6 +26,14 @@ export type Product = {
   categoryId: string | null
   category: { name: string; slug: string } | null
   stock: number
+  fees: ProductFee[]
+  /** One or two sentences shown right under the price. */
+  shortDescription: string | null
+  /** Key selling points (max 6), shown as a checklist near the price. */
+  highlights: string[]
+  /** Material, size, weight… shown as a table. */
+  specs: ProductSpec[]
+  careInstructions: string | null
   isActive: boolean
   isFeatured: boolean
   seoTitle: string | null
@@ -38,6 +54,12 @@ export type ProductRow = {
   category_id: string | null
   category: { name: string; slug: string } | null
   stock: number
+  /** Added by migration 0003; optional so the app keeps working before it is applied. */
+  fees?: { label: string; amount: number | string; reason?: string | null }[] | null
+  short_description?: string | null
+  highlights?: string[] | null
+  specs?: ProductSpec[] | null
+  care_instructions?: string | null
   is_active: boolean
   is_featured: boolean
   seo_title: string | null
@@ -69,6 +91,11 @@ export function mapProduct(row: ProductRow): Product {
     categoryId: row.category_id,
     category: row.category,
     stock: row.stock,
+    fees: (row.fees ?? []).map((f) => ({ label: f.label, amount: Number(f.amount), reason: f.reason ?? null })),
+    shortDescription: row.short_description ?? null,
+    highlights: row.highlights ?? [],
+    specs: row.specs ?? [],
+    careInstructions: row.care_instructions ?? null,
     isActive: row.is_active,
     isFeatured: row.is_featured,
     seoTitle: row.seo_title,

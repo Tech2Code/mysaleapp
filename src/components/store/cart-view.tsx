@@ -3,6 +3,7 @@
 import { AlertTriangleIcon, ArrowRightIcon, ShoppingBagIcon, Trash2Icon } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import Link from "next/link"
+import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatPrice } from "@/lib/format"
@@ -14,13 +15,13 @@ import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
 
 export function CartView({ products }: { products: LiveProduct[] }) {
-  const { ready, lines, hasUnavailable, subtotal, count } = useLiveCart(products)
+  const { ready, lines, hasUnavailable, subtotal, charges } = useLiveCart(products)
   const setQuantity = useCart((s) => s.setQuantity)
   const remove = useCart((s) => s.remove)
 
   if (!ready) {
     return (
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div data-ui="store/CartView" className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-3">
           {[0, 1].map((i) => (
             <Skeleton key={i} className="h-32 rounded-3xl" />
@@ -33,7 +34,7 @@ export function CartView({ products }: { products: LiveProduct[] }) {
 
   if (lines.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-20 text-center">
+      <div data-ui="store/CartView" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
         <div className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
           <ShoppingBagIcon className="size-8 text-primary" />
         </div>
@@ -46,7 +47,7 @@ export function CartView({ products }: { products: LiveProduct[] }) {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+    <div data-ui="store/CartView" className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div className="space-y-3">
         {hasUnavailable && (
           <p className="flex items-center gap-2 rounded-2xl bg-destructive/10 p-4 text-sm font-medium text-destructive">
@@ -79,6 +80,11 @@ export function CartView({ products }: { products: LiveProduct[] }) {
                         {item.available ? formatPrice(item.price) : "Unavailable"}
                         {item.priceChanged && <span className="ml-2 text-xs text-primary">(price updated)</span>}
                       </p>
+                      {item.available && item.fees.length > 0 && (
+                        <p className="mt-1 inline-block rounded-lg bg-secondary/70 px-2 py-1 text-xs text-muted-foreground">
+                          + {item.fees.map((f) => `${formatPrice(f.amount)} ${f.label.toLowerCase()}`).join(", ")} (once for this product)
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -107,23 +113,13 @@ export function CartView({ products }: { products: LiveProduct[] }) {
         </ul>
       </div>
 
-      <aside className="h-fit space-y-4 rounded-3xl border bg-card p-6 lg:sticky lg:top-24">
+      <aside className="h-fit space-y-4 rounded-3xl border bg-card p-6 lg:sticky-store">
         <h2 className="text-xl font-semibold">Order summary</h2>
         <FreeShippingBar subtotal={subtotal} />
-        <dl className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">Items ({count})</dt>
-            <dd className="font-medium">{formatPrice(subtotal)}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted-foreground">Delivery</dt>
-            <dd className="font-medium">Confirmed on WhatsApp</dd>
-          </div>
-          <div className="flex justify-between border-t pt-3 text-base">
-            <dt className="font-semibold">Subtotal</dt>
-            <dd className="font-heading text-2xl font-semibold">{formatPrice(subtotal)}</dd>
-          </div>
-        </dl>
+        <PriceBreakdown {...charges} />
+        <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Pay by UPI after placing your order.</span> Cash on delivery isn&apos;t available.
+        </p>
         <Link
           href="/checkout"
           aria-disabled={hasUnavailable}

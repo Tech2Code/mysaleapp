@@ -2,14 +2,17 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { PageHeader } from "@/components/store/page-header"
 import { TrackOrder } from "@/components/store/track-order"
-import { siteConfig } from "@/config/site"
+import { getStoreSettings } from "@/features/settings/queries"
 import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Track your order",
-  description: `Check the status of your ${siteConfig.name} order with your order code.`,
-  path: "/track",
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const shop = await getStoreSettings()
+  return pageMetadata(shop, {
+    title: "Track your order",
+    description: `Check the status of your ${shop.shopName} order with your order code.`,
+    path: "/track",
+  })
+}
 
 export default function TrackPage() {
   return (

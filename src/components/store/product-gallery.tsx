@@ -10,9 +10,9 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   const list = images.length ? images : [null]
 
   return (
-    <div className="flex flex-col-reverse gap-3 md:flex-row">
+    <div data-ui="store/ProductGallery" className="flex flex-col-reverse gap-3 md:flex-row">
       {list.length > 1 && (
-        <div className="no-scrollbar flex gap-3 overflow-x-auto md:w-20 md:flex-col" role="tablist" aria-label="Product photos">
+        <div className="scroll-row flex gap-3 md:w-[5.75rem] md:flex-col" role="tablist" aria-label="Product photos">
           {list.map((src, i) => (
             <button
               key={src ?? i}

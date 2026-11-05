@@ -18,6 +18,8 @@ export const MAX_QTY_PER_ITEM = 20
 type CartState = {
   items: CartItem[]
   isOpen: boolean
+  /** The product that was added last, so the cart drawer can highlight it. Not saved. */
+  lastAddedId: string | null
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void
   setQuantity: (productId: string, quantity: number) => void
   remove: (productId: string) => void
@@ -34,12 +36,14 @@ export const useCart = create<CartState>()(
     (set) => ({
       items: [],
       isOpen: false,
+      lastAddedId: null,
       add: (item, quantity = 1) =>
         set((state) => {
           const existing = state.items.find((i) => i.productId === item.productId)
           if (existing) {
             return {
               isOpen: true,
+              lastAddedId: item.productId,
               items: state.items.map((i) =>
                 i.productId === item.productId
                   ? { ...i, ...item, quantity: clampQty(i.quantity + quantity, item.maxQuantity) }
@@ -49,6 +53,7 @@ export const useCart = create<CartState>()(
           }
           return {
             isOpen: true,
+            lastAddedId: item.productId,
             items: [...state.items, { ...item, quantity: clampQty(quantity, item.maxQuantity) }],
           }
         }),
@@ -61,7 +66,7 @@ export const useCart = create<CartState>()(
       remove: (productId) =>
         set((state) => ({ items: state.items.filter((i) => i.productId !== productId) })),
       clear: () => set({ items: [] }),
-      setOpen: (isOpen) => set({ isOpen }),
+      setOpen: (isOpen) => set(isOpen ? { isOpen } : { isOpen, lastAddedId: null }),
     }),
     {
       name: "kk-cart",

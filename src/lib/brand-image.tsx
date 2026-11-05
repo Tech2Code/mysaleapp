@@ -1,7 +1,5 @@
-import { siteConfig } from "@/config/site"
-
 /** Shared JSX for generated icons (rendered by next/og ImageResponse). */
-export function BrandMark({ size, padding = 0 }: { size: number; padding?: number }) {
+export function BrandMark({ size, padding = 0, letter }: { size: number; padding?: number; letter: string }) {
   const inner = size - padding * 2
   return (
     <div
@@ -29,7 +27,7 @@ export function BrandMark({ size, padding = 0 }: { size: number; padding?: numbe
           fontFamily: "serif",
         }}
       >
-        {siteConfig.name.charAt(0)}
+        {letter.charAt(0).toUpperCase()}
       </div>
     </div>
   )

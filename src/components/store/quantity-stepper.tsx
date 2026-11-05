@@ -21,7 +21,7 @@ export function QuantityStepper({
     size === "sm" ? "size-8" : "size-11"
   )
   return (
-    <div
+    <div data-ui="store/QuantityStepper"
       role="group"
       aria-label={`Quantity for ${label}`}
       className={cn("inline-flex items-center rounded-full border bg-background", size === "lg" && "p-0.5")}

@@ -17,7 +17,7 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
 
   if (!mounted) {
     return (
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+      <div data-ui="store/WishlistView" className="grid grid-cols-2 gap-6 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
         ))}
@@ -29,7 +29,7 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
   const saved = ids.map((id) => byId.get(id)).filter((p): p is ProductCardData => Boolean(p))
 
   return (
-    <div className="space-y-8">
+    <div data-ui="store/WishlistView" className="space-y-8">
       {!user && saved.length > 0 && (
         <p className="rounded-2xl bg-secondary/70 p-4 text-sm">
           Your wishlist is saved on this device.{" "}
@@ -41,7 +41,7 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
       )}
 
       {saved.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-20 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
           <div className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
             <HeartIcon className="size-8 text-rose-500" />
           </div>

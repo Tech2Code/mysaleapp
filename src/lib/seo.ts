@@ -1,17 +1,24 @@
 import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import type { Category, Product } from "@/features/products/types"
+import type { StoreSettings } from "@/features/settings/types"
 
 export const absoluteUrl = (path = "/") => `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`
 
-/** Consistent per-page metadata with canonical URL + OpenGraph + Twitter. */
-export function pageMetadata(input: {
-  title: string
-  description: string
-  path: string
-  images?: string[]
-  noIndex?: boolean
-}): Metadata {
+/**
+ * Consistent per-page metadata with canonical URL + OpenGraph + Twitter.
+ * `shop` is the owner's settings (getStoreSettings()), so the site name always matches Admin → Settings.
+ */
+export function pageMetadata(
+  shop: Pick<StoreSettings, "shopName">,
+  input: {
+    title: string
+    description: string
+    path: string
+    images?: string[]
+    noIndex?: boolean
+  }
+): Metadata {
   const url = absoluteUrl(input.path)
   return {
     title: input.title,
@@ -21,7 +28,7 @@ export function pageMetadata(input: {
       title: input.title,
       description: input.description,
       url,
-      siteName: siteConfig.name,
+      siteName: shop.shopName,
       locale: siteConfig.locale,
       type: "website",
       ...(input.images?.length ? { images: input.images.map((src) => ({ url: src })) } : {}),
@@ -36,29 +43,33 @@ export function pageMetadata(input: {
   }
 }
 
-export function organizationJsonLd() {
+export function organizationJsonLd(s: StoreSettings) {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: siteConfig.name,
+    name: s.shopName,
     url: siteConfig.url,
     logo: absoluteUrl("/icons/512"),
-    sameAs: Object.values(siteConfig.socials).filter(Boolean),
-    contactPoint: {
-      "@type": "ContactPoint",
-      telephone: siteConfig.contact.phone,
-      contactType: "customer service",
-      areaServed: "IN",
-      availableLanguage: ["English", "Hindi"],
-    },
+    sameAs: [s.instagramUrl, s.facebookUrl].filter((u): u is string => Boolean(u)),
+    ...(s.phone
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            telephone: s.phone,
+            contactType: "customer service",
+            areaServed: siteConfig.country,
+            availableLanguage: ["English", "Hindi"],
+          },
+        }
+      : {}),
   }
 }
 
-export function websiteJsonLd() {
+export function websiteJsonLd(s: Pick<StoreSettings, "shopName">) {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: siteConfig.name,
+    name: s.shopName,
     url: siteConfig.url,
     potentialAction: {
       "@type": "SearchAction",
@@ -68,7 +79,7 @@ export function websiteJsonLd() {
   }
 }
 
-export function productJsonLd(product: Product) {
+export function productJsonLd(product: Product, s: Pick<StoreSettings, "shopName">) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -77,7 +88,7 @@ export function productJsonLd(product: Product) {
     sku: product.id,
     url: absoluteUrl(`/products/${product.slug}`),
     image: product.images.length ? product.images : [absoluteUrl("/opengraph-image")],
-    brand: { "@type": "Brand", name: siteConfig.name },
+    brand: { "@type": "Brand", name: s.shopName },
     ...(product.category ? { category: product.category.name } : {}),
     offers: {
       "@type": "Offer",
@@ -86,10 +97,10 @@ export function productJsonLd(product: Product) {
       price: product.price.toFixed(2),
       availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       itemCondition: "https://schema.org/NewCondition",
-      seller: { "@type": "Organization", name: siteConfig.name },
+      seller: { "@type": "Organization", name: s.shopName },
       shippingDetails: {
         "@type": "OfferShippingDetails",
-        shippingDestination: { "@type": "DefinedRegion", addressCountry: "IN" },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: siteConfig.country },
       },
     },
   }
@@ -108,11 +119,11 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   }
 }
 
-export function itemListJsonLd(products: Product[], category?: Category) {
+export function itemListJsonLd(products: Product[], shop: Pick<StoreSettings, "shopName">, category?: Category) {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: category ? category.name : `${siteConfig.name} products`,
+    name: category ? category.name : `${shop.shopName} products`,
     itemListElement: products.map((p, i) => ({
       "@type": "ListItem",
       position: i + 1,

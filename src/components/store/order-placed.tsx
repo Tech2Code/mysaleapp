@@ -4,19 +4,19 @@ import { CheckIcon, CopyIcon } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { buttonVariants } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { PlacedOrder } from "@/features/orders/actions"
+import { trackOrder } from "@/features/orders/actions"
+import type { TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
-import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { LAST_ORDER_KEY } from "./checkout-form"
 import { WhatsAppIcon } from "./brand-icons"
-
-const REDIRECT_SECONDS = 4
-/** Remembers that we already opened WhatsApp for this order (so "Back" doesn't redirect again). */
-const SENT_KEY = "kk-last-order-sent"
+import { PaymentPanel } from "./payment-panel"
+import { useStoreSettings } from "./store-settings-provider"
 
 const noopSubscribe = () => () => {}
 
@@ -28,19 +28,22 @@ function readSession(key: string): string | null {
   }
 }
 
-function markSent(code: string) {
-  try {
-    sessionStorage.setItem(SENT_KEY, code)
-  } catch {
-    // ignore (private mode)
-  }
+const HEADLINE: Record<string, { title: string; text: string }> = {
+  pending: { title: "Order placed!", text: "Complete the payment below and we'll confirm your order." },
+  failed: { title: "Payment needs attention", text: "We couldn't verify your payment. Please check the details and submit it again." },
+  submitted: { title: "Payment submitted", text: "Thank you! We're verifying your payment and will confirm your order shortly." },
+  paid: { title: "Payment received", text: "Your order is confirmed. We'll start getting it ready." },
 }
 
+/**
+ * Shown right after checkout, and again if the page is reloaded. The payment state always
+ * comes from the server, so a refresh never shows the "pay now" screen to someone who already paid.
+ */
 export function OrderPlaced() {
+  const shop = useStoreSettings()
   const code = (useSearchParams().get("code") ?? "").toUpperCase()
   // sessionStorage is read as an external store: null on the server, real value on the client.
   const raw = useSyncExternalStore(noopSubscribe, () => readSession(LAST_ORDER_KEY), () => null)
-  const sent = useSyncExternalStore(noopSubscribe, () => readSession(SENT_KEY), () => null)
 
   const order = useMemo<PlacedOrder | null>(() => {
     try {
@@ -51,49 +54,42 @@ export function OrderPlaced() {
     }
   }, [raw, code])
 
-  const [elapsed, setElapsed] = useState(0)
-  const [cancelled, setCancelled] = useState(false)
-  const autoRedirect = Boolean(order) && !cancelled && sent !== code
-  const seconds = autoRedirect ? Math.max(0, REDIRECT_SECONDS - elapsed) : null
+  const [state, setState] = useState<TrackedOrder | null>(null)
 
-  // Countdown tick (state is only set from the timer callback).
-  useEffect(() => {
-    if (!autoRedirect) return
-    const id = setInterval(() => setElapsed((e) => e + 1), 1000)
-    return () => clearInterval(id)
-  }, [autoRedirect])
+  const load = useCallback(async () => {
+    if (!order) return
+    const res = await trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 })
+    if (res.ok) setState(res.data)
+  }, [order])
 
-  // Auto-open WhatsApp once the countdown finishes.
+  // Read the real payment state on mount (and whenever the order changes).
   useEffect(() => {
-    if (seconds === 0 && order) {
-      markSent(code)
-      window.location.href = order.whatsappUrl
+    if (!order) return
+    let cancelled = false
+    trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 }).then((res) => {
+      if (!cancelled && res.ok) setState(res.data)
+    })
+    return () => {
+      cancelled = true
     }
-  }, [seconds, order, code])
+  }, [order])
 
-  const cancelRedirect = () => {
-    setCancelled(true)
-    markSent(code)
-  }
-
-  const whatsappUrl = order?.whatsappUrl ?? shopWhatsappLink(`Hi! I just placed order ${code}.`)
+  const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.pending) : HEADLINE.pending
 
   return (
-    <div className="mx-auto max-w-lg text-center">
+    <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">
       <motion.div
         initial={{ scale: 0, rotate: -45 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
-        className="mx-auto grid size-24 place-items-center rounded-full bg-linear-to-br from-success to-whatsapp text-white shadow-2xl shadow-success/30"
+        className="mx-auto grid size-24 place-items-center rounded-full bg-linear-to-br from-success-solid to-whatsapp-solid text-white shadow-2xl shadow-success/30"
       >
         <CheckIcon className="size-12" strokeWidth={3} />
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <h1 className="mt-8 text-4xl font-semibold">Order saved!</h1>
-        <p className="mt-3 text-muted-foreground">
-          One last step — send it to us on WhatsApp so we can confirm delivery and payment.
-        </p>
+        <h1 className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed!"}</h1>
+        <p className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.pending.text}</p>
 
         {code && (
           <button
@@ -108,33 +104,48 @@ export function OrderPlaced() {
             {code} <CopyIcon className="size-4 text-muted-foreground" />
           </button>
         )}
-        {order && <p className="mt-2 text-sm text-muted-foreground">Total {formatPrice(order.subtotal)}</p>}
 
-        <a
-          href={whatsappUrl}
-          onClick={cancelRedirect}
-          className="mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-whatsapp text-lg font-semibold text-white shadow-xl shadow-whatsapp/30 transition-transform hover:-translate-y-0.5"
-        >
-          <WhatsAppIcon className="size-6" /> Send order on WhatsApp
-        </a>
-
-        {seconds !== null && seconds > 0 && (
-          <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
-            Opening WhatsApp in {seconds}s…{" "}
-            <button type="button" onClick={cancelRedirect} className="font-medium underline underline-offset-4">
-              Cancel
-            </button>
-          </p>
-        )}
+        <div className="mt-8 text-left">
+          {!order ? (
+            <p className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+              To pay for this order, open{" "}
+              <Link href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+                Track order
+              </Link>{" "}
+              and enter your order code with the last 4 digits of your phone.
+            </p>
+          ) : state ? (
+            <PaymentPanel
+              orderCode={state.orderCode}
+              phoneLast4={order.phoneLast4}
+              total={state.total}
+              orderStatus={state.status}
+              payment={state}
+              onSubmitted={() => void load()}
+            />
+          ) : (
+            // never flash the "pay now" screen before we know the real payment state
+            <Skeleton className="h-72 rounded-2xl" aria-hidden />
+          )}
+        </div>
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href={`/track?code=${code}`} className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-5")}>
+          <Link href={`/track?code=${code}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
             Track this order
           </Link>
-          <Link href="/products" className={cn(buttonVariants({ variant: "ghost" }), "rounded-full px-5")}>
+          <Link href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>
             Continue shopping
           </Link>
         </div>
+
+        <a
+          href={order?.whatsappUrl ?? shopWhatsappLink(shop, `Hi! I placed order ${code}.`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-whatsapp hover:underline"
+        >
+          <WhatsAppIcon className="size-4" /> Send order details to us on WhatsApp (optional)
+        </a>
       </motion.div>
     </div>
   )

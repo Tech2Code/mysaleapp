@@ -4,18 +4,21 @@ import { JsonLd } from "@/components/shared/json-ld"
 import { PageHeader } from "@/components/store/page-header"
 import { ProductBrowser } from "@/components/store/product-browser"
 import { ProductGrid } from "@/components/store/product-grid"
-import { siteConfig } from "@/config/site"
 import { getActiveProducts, getCategoriesWithCounts } from "@/features/products/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { breadcrumbJsonLd, itemListJsonLd, pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Shop all handmade gifts & decor",
-  description: `Browse every handmade product at ${siteConfig.name} — home decor, candles, wall art, jewellery and gifts. Order easily on WhatsApp.`,
-  path: "/products",
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const shop = await getStoreSettings()
+  return pageMetadata(shop, {
+    title: "Shop all handmade gifts & decor",
+    description: `Browse every handmade product at ${shop.shopName} — home decor, candles, wall art, jewellery and gifts. Pay securely by UPI.`,
+    path: "/products",
+  })
+}
 
 export default async function ProductsPage() {
-  const [products, categories] = await Promise.all([getActiveProducts(), getCategoriesWithCounts()])
+  const [products, categories, shop] = await Promise.all([getActiveProducts(), getCategoriesWithCounts(), getStoreSettings()])
 
   return (
     <>
@@ -32,7 +35,7 @@ export default async function ProductsPage() {
       </div>
       <JsonLd
         data={[
-          itemListJsonLd(products),
+          itemListJsonLd(products, shop),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Shop all", path: "/products" },

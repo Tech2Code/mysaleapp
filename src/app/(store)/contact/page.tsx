@@ -1,29 +1,55 @@
-import { MailIcon, MapPinIcon } from "lucide-react"
+import { MailIcon, MapPinIcon, PhoneIcon } from "lucide-react"
 import type { Metadata } from "next"
+import type { ComponentType, SVGProps } from "react"
+import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/store/brand-icons"
 import { PageHeader } from "@/components/store/page-header"
-import { InstagramIcon, WhatsAppIcon } from "@/components/store/brand-icons"
-import { siteConfig } from "@/config/site"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
+import { getStoreSettings } from "@/features/settings/queries"
 import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Contact us",
-  description: `Get in touch with ${siteConfig.name} on WhatsApp, email or Instagram.`,
-  path: "/contact",
-})
+export async function generateMetadata(): Promise<Metadata> {
+  const shop = await getStoreSettings()
+  return pageMetadata(shop, {
+    title: "Contact us",
+    description: `Get in touch with ${shop.shopName} on WhatsApp${shop.email ? ", email" : ""}${shop.instagramUrl ? " or Instagram" : ""}.`,
+    path: "/contact",
+  })
+}
 
-export default function ContactPage() {
-  const cards = [
+type ContactCard = {
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  title: string
+  text: string
+  href: string
+  cta: string
+}
+
+export default async function ContactPage() {
+  const shop = await getStoreSettings()
+
+  // Only the details the owner has filled in under Admin → Settings are shown.
+  const cards: ContactCard[] = [
     {
       icon: WhatsAppIcon,
       title: "WhatsApp",
       text: "Fastest reply — usually within an hour",
-      href: shopWhatsappLink(`Hi ${siteConfig.name}!`),
+      href: shopWhatsappLink(shop, `Hi ${shop.shopName}!`),
       cta: "Start chat",
     },
-    { icon: MailIcon, title: "Email", text: siteConfig.contact.email, href: `mailto:${siteConfig.contact.email}`, cta: "Send email" },
-    { icon: InstagramIcon, title: "Instagram", text: "See new pieces first", href: siteConfig.socials.instagram, cta: "Follow us" },
+    ...(shop.email
+      ? [{ icon: MailIcon, title: "Email", text: shop.email, href: `mailto:${shop.email}`, cta: "Send email" }]
+      : []),
+    ...(shop.phone
+      ? [{ icon: PhoneIcon, title: "Call us", text: shop.phone, href: `tel:${shop.phone.replace(/[^\d+]/g, "")}`, cta: "Call now" }]
+      : []),
+    ...(shop.instagramUrl
+      ? [{ icon: InstagramIcon, title: "Instagram", text: "See new pieces first", href: shop.instagramUrl, cta: "Follow us" }]
+      : []),
+    ...(shop.facebookUrl
+      ? [{ icon: FacebookIcon, title: "Facebook", text: "Updates and offers", href: shop.facebookUrl, cta: "Visit page" }]
+      : []),
   ]
+  const place = [shop.city, shop.region].filter(Boolean).join(", ")
 
   return (
     <>
@@ -32,7 +58,7 @@ export default function ContactPage() {
         description="Questions, custom orders or just saying hello — we'd love to hear from you."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Contact" }]}
       />
-      <div className="container-page grid gap-5 pt-12 md:grid-cols-3">
+      <div className="container-page grid gap-5 pt-8 sm:pt-12 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <a
             key={c.title}
@@ -49,9 +75,11 @@ export default function ContactPage() {
             <span className="mt-4 inline-block font-semibold text-primary group-hover:underline">{c.cta} →</span>
           </a>
         ))}
-        <p className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-3">
-          <MapPinIcon className="size-4" /> Studio in {siteConfig.contact.city}, {siteConfig.contact.region}. Shipping across India.
-        </p>
+        {place && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2 lg:col-span-3">
+            <MapPinIcon className="size-4" /> Studio in {place}. Shipping across India.
+          </p>
+        )}
       </div>
     </>
   )

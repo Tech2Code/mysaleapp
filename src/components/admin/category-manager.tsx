@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
-import { FormField } from "@/components/shared/form-field"
+import { TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,12 +16,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { deleteCategory, saveCategory } from "@/features/products/actions"
 import { categorySchema, type CategoryInput, type CategoryValues } from "@/features/products/schema"
 import type { Category } from "@/features/products/types"
 import { slugify } from "@/lib/format"
+import { LIMITS } from "@/lib/validation"
 
 type Row = Category & { productCount: number }
 
@@ -65,30 +64,38 @@ function CategoryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
+        <form onSubmit={onSubmit} noValidate className="space-y-1.5">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
           </DialogHeader>
-          <FormField label="Name" error={errors.name?.message}>
-            <Input
-              className="h-10"
-              {...form.register("name", {
-                onChange: (e) => {
-                  if (!category) form.setValue("slug", slugify(e.target.value))
-                },
-              })}
-            />
-          </FormField>
-          <FormField label="URL slug" error={errors.slug?.message}>
-            <Input className="h-10 font-mono text-sm" {...form.register("slug")} />
-          </FormField>
-          <FormField label="Description" error={errors.description?.message} hint="Shown on the category page and to Google">
-            <Textarea rows={3} {...form.register("description")} />
-          </FormField>
-          <FormField label="Sort order" error={errors.sort?.message} hint="Lower numbers show first">
-            <Input className="h-10 w-28" inputMode="numeric" {...form.register("sort")} />
-          </FormField>
+          <TextField
+            label="Name" maxLength={LIMITS.categoryName.max}
+            fieldSize="md"
+            error={errors.name?.message}
+            {...form.register("name", {
+              onChange: (e) => {
+                if (!category) form.setValue("slug", slugify(e.target.value))
+              },
+            })}
+          />
+          <TextField label="URL slug" kind="slug" fieldSize="md" className="font-mono text-sm" error={errors.slug?.message} {...form.register("slug")} />
+          <TextAreaField
+            label="Description" maxLength={LIMITS.categoryDescription.max}
+            rows={3}
+            hint="Shown on the category page and to Google"
+            error={errors.description?.message}
+            {...form.register("description")}
+          />
+          <TextField
+            label="Sort order" kind="digits" maxLength={3}
+            fieldSize="md"
+            inputMode="numeric"
+            hint="Lower numbers show first"
+            containerClassName="w-40"
+            error={errors.sort?.message}
+            {...form.register("sort")}
+          />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
@@ -142,7 +149,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
       </div>
 
       <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-        {categories.length === 0 && <li className="p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
+        {categories.length === 0 && <li className="p-7 sm:p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
         {categories.map((c) => (
           <li key={c.id} className="flex items-center gap-4 p-4">
             <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary font-heading text-lg font-semibold text-primary">

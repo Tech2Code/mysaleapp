@@ -34,7 +34,7 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   const needsLogin =
-    (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) ||
+    (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !pathname.startsWith("/admin/forgot-password")) ||
     pathname.startsWith("/account")
 
   if (!user && needsLogin) {

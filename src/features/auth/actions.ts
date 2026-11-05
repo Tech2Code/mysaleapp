@@ -3,12 +3,13 @@
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { fail, type ActionResult } from "@/lib/action-result"
+import { v } from "@/lib/validation"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 
 const loginSchema = z.object({
-  email: z.email("Enter a valid email"),
-  password: z.string().min(6, "Password is too short").max(200),
+  email: v.email(),
+  password: v.password(),
 })
 
 /** Email/password login for the shop owner. Non-admin accounts are rejected. */

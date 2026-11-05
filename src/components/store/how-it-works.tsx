@@ -1,17 +1,16 @@
-import { HeartHandshakeIcon, ShoppingBagIcon, TruckIcon } from "lucide-react"
+import { BadgeIndianRupeeIcon, HeartHandshakeIcon, ShoppingBagIcon, TruckIcon } from "lucide-react"
 import { FadeIn } from "@/components/shared/motion"
-import { WhatsAppIcon } from "./brand-icons"
 
 const steps = [
   { icon: ShoppingBagIcon, title: "Pick what you love", text: "Add handmade pieces to your cart — no account needed." },
-  { icon: WhatsAppIcon, title: "Send on WhatsApp", text: "Your order opens pre-filled in WhatsApp. Just hit send." },
-  { icon: HeartHandshakeIcon, title: "We confirm & craft", text: "We confirm details, payment and delivery with you personally." },
+  { icon: BadgeIndianRupeeIcon, title: "Pay by UPI", text: "Pay securely with any UPI app and share the reference number." },
+  { icon: HeartHandshakeIcon, title: "We confirm & craft", text: "Once your payment is verified, we confirm and start crafting." },
   { icon: TruckIcon, title: "Delivered with care", text: "Track every step online with your order code." },
 ]
 
 export function HowItWorks() {
   return (
-    <section className="container-page" aria-labelledby="how-title">
+    <section data-ui="store/HowItWorks" className="container-page" aria-labelledby="how-title">
       <FadeIn className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">Simple ordering</p>
         <h2 id="how-title" className="mt-3 text-3xl font-semibold sm:text-4xl">

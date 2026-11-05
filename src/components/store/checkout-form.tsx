@@ -1,37 +1,43 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, LockIcon } from "lucide-react"
+import { BanIcon, CheckCircle2Icon, Loader2Icon, MapPinIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
-import { FormField } from "@/components/shared/form-field"
+import { SwitchField, TextAreaField, TextField } from "@/components/form"
+import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import { getMyProfile } from "@/features/account/actions"
+import { listMyAddresses } from "@/features/addresses/actions"
+import type { Address } from "@/features/addresses/types"
 import { placeOrder } from "@/features/orders/actions"
 import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { useCart } from "@/store/cart"
+import { FreeShippingBar } from "./cart-drawer"
 import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
-import { WhatsAppIcon } from "./brand-icons"
+import { LIMITS } from "@/lib/validation"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 
 export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   const router = useRouter()
-  const { ready, available, hasUnavailable, subtotal } = useLiveCart(products)
+  const { ready, available, hasUnavailable, charges } = useLiveCart(products)
   const clearCart = useCart((s) => s.clear)
   const { user, ready: authReady } = useAuth()
   const [pending, startTransition] = useTransition()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [addresses, setAddresses] = useState<Address[]>([])
+  /** id of the saved address in use, or "new" when typing a different one */
+  const [selected, setSelected] = useState<string>("new")
+  const [saveAddress, setSaveAddress] = useState(true)
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -39,21 +45,46 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   })
   const { errors } = form.formState
 
-  // Pre-fill saved delivery details for signed-in customers.
+  const fillFrom = (a: Address) => {
+    setSelected(a.id)
+    form.reset({
+      name: a.fullName,
+      phone: a.phone,
+      address: a.address,
+      city: a.city,
+      pincode: a.pincode,
+      note: form.getValues("note"),
+    })
+  }
+
+  const useNewAddress = () => {
+    setSelected("new")
+    const current = form.getValues()
+    form.reset({ name: current.name, phone: current.phone, address: "", city: "", pincode: "", note: current.note })
+  }
+
+  // Signed-in customers: load the address book (default address pre-selected), else their profile name/phone.
   useEffect(() => {
     if (!authReady || !user) return
     let cancelled = false
-    getMyProfile().then((profile) => {
-      if (cancelled || !profile) return
-      const current = form.getValues()
-      form.reset({
-        name: current.name || profile.fullName,
-        phone: current.phone || profile.phone,
-        address: current.address || profile.address,
-        city: current.city || profile.city,
-        pincode: current.pincode || profile.pincode,
-        note: current.note,
-      })
+    Promise.all([listMyAddresses(), getMyProfile()]).then(([list, profile]) => {
+      if (cancelled) return
+      setAddresses(list)
+      const first = list[0]
+      if (first) {
+        setSelected(first.id)
+        form.reset({
+          name: first.fullName,
+          phone: first.phone,
+          address: first.address,
+          city: first.city,
+          pincode: first.pincode,
+          note: form.getValues("note"),
+        })
+      } else if (profile) {
+        const current = form.getValues()
+        form.reset({ ...current, name: current.name || profile.fullName, phone: current.phone || profile.phone })
+      }
     })
     return () => {
       cancelled = true
@@ -66,6 +97,8 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
       const res = await placeOrder({
         customer: values,
         items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        // only offer to save when the customer typed a new address
+        saveAddress: Boolean(user) && selected === "new" && saveAddress,
       })
       if (!res.ok) {
         setServerError(res.error)
@@ -90,7 +123,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
 
   if (available.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-20 text-center">
+      <div data-ui="store/CheckoutForm" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
         <p className="font-heading text-2xl">Your cart is empty</p>
         <Link href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
           Browse products
@@ -100,13 +133,13 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
-      <div className="space-y-6 rounded-3xl border bg-card p-5 sm:p-8">
+    <form data-ui="store/CheckoutForm" onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
+      <div className="space-y-1.5 rounded-3xl border bg-card p-5 sm:p-8">
         <div>
           <h2 className="text-2xl font-semibold">Delivery details</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {user ? (
-              "We've filled in your saved details."
+              addresses.length > 0 ? "Choose a saved address or add a new one." : "Enter where we should deliver."
             ) : (
               <>
                 Checking out as a guest.{" "}
@@ -119,29 +152,106 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
           </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormField label="Full name" error={errors.name?.message}>
-            <Input autoComplete="name" className="h-11" {...form.register("name")} />
-          </FormField>
-          <FormField label="WhatsApp / mobile number" error={errors.phone?.message} hint="We'll confirm your order on this number">
-            <Input type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" className="h-11" {...form.register("phone")} />
-          </FormField>
-          <FormField label="Full address" error={errors.address?.message} className="sm:col-span-2">
-            <Textarea autoComplete="street-address" rows={3} placeholder="House no., street, landmark" {...form.register("address")} />
-          </FormField>
-          <FormField label="City" error={errors.city?.message}>
-            <Input autoComplete="address-level2" className="h-11" {...form.register("city")} />
-          </FormField>
-          <FormField label="Pincode" error={errors.pincode?.message}>
-            <Input inputMode="numeric" autoComplete="postal-code" maxLength={6} className="h-11" {...form.register("pincode")} />
-          </FormField>
-          <FormField label="Note (optional)" error={errors.note?.message} hint="Gift message, custom name, preferred colour…" className="sm:col-span-2">
-            <Textarea rows={2} {...form.register("note")} />
-          </FormField>
+        {user && addresses.length > 0 && (
+          <fieldset className="space-y-3">
+            <legend className="sr-only">Saved addresses</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {addresses.map((a) => {
+                const active = selected === a.id
+                return (
+                  <label
+                    key={a.id}
+                    className={cn(
+                      "relative flex cursor-pointer flex-col rounded-2xl border p-4 text-sm transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/40",
+                      active ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                    )}
+                  >
+                    <input type="radio" name="saved-address" className="sr-only" checked={active} onChange={() => fillFrom(a)} />
+                    <span className="flex items-center gap-2 font-semibold">
+                      <MapPinIcon className="size-4 text-primary" aria-hidden /> {a.label}
+                      {a.isDefault && <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem]">Default</span>}
+                      {active && <CheckCircle2Icon className="ml-auto size-4 text-primary" aria-hidden />}
+                    </span>
+                    <span className="mt-1 font-medium">{a.fullName}</span>
+                    <span className="line-clamp-2 text-muted-foreground">
+                      {a.address}, {a.city} - {a.pincode}
+                    </span>
+                  </label>
+                )
+              })}
+              <button
+                type="button"
+                onClick={useNewAddress}
+                aria-pressed={selected === "new"}
+                className={cn(
+                  "flex min-h-24 items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-sm font-semibold transition-colors",
+                  selected === "new" ? "border-primary bg-primary/5 text-primary" : "text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                <PlusIcon className="size-4" /> Use a different address
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Need to change a saved address?{" "}
+              <Link href="/account/profile" className="font-medium text-primary underline-offset-4 hover:underline">
+                Manage addresses
+              </Link>
+            </p>
+          </fieldset>
+        )}
+
+        <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+          <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
+          <TextField
+            label="WhatsApp / mobile number" kind="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="98765 43210"
+            leading="+91"
+            hint="We'll confirm your order on this number"
+            error={errors.phone?.message}
+            {...form.register("phone")}
+          />
+          <TextAreaField
+            label="Full address" maxLength={LIMITS.address.max}
+            autoComplete="street-address"
+            rows={3}
+            placeholder="House no., street, landmark"
+            containerClassName="sm:col-span-2"
+            error={errors.address?.message}
+            {...form.register("address")}
+          />
+          <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+          <TextField
+            label="Pincode" kind="pincode"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            maxLength={6}
+            error={errors.pincode?.message}
+            {...form.register("pincode")}
+          />
+          <TextAreaField
+            label="Note (optional)" maxLength={LIMITS.note.max}
+            rows={2}
+            hint="Gift message, custom name, preferred colour…"
+            containerClassName="sm:col-span-2"
+            error={errors.note?.message}
+            {...form.register("note")}
+          />
         </div>
+
+        {user && selected === "new" && (
+          <SwitchField
+            label="Save this address to my account"
+            description="Use it next time in one tap"
+            checked={saveAddress}
+            onCheckedChange={setSaveAddress}
+          />
+        )}
       </div>
 
-      <aside className="h-fit space-y-5 rounded-3xl border bg-card p-6 lg:sticky lg:top-24">
+      <aside className="h-fit space-y-5 rounded-3xl border bg-card p-6 lg:sticky-store">
         <h2 className="text-xl font-semibold">Your order</h2>
         <ul className="max-h-72 space-y-3 overflow-y-auto pr-1">
           {available.map((l) => (
@@ -152,7 +262,14 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
                   {l.quantity}
                 </span>
               </div>
-              <span className="line-clamp-2 flex-1 text-sm font-medium">{l.name}</span>
+              <span className="flex-1 text-sm font-medium">
+                <span className="line-clamp-2">{l.name}</span>
+                {l.fees.length > 0 && (
+                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                    + {l.fees.map((f) => f.label.toLowerCase()).join(", ")} (once)
+                  </span>
+                )}
+              </span>
               <span className="text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
             </li>
           ))}
@@ -160,10 +277,8 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
         {hasUnavailable && (
           <p className="text-xs text-destructive">Unavailable items were left out of this order.</p>
         )}
-        <div className="flex items-baseline justify-between border-t pt-4">
-          <span className="font-semibold">Total</span>
-          <span className="font-heading text-3xl font-semibold">{formatPrice(subtotal)}</span>
-        </div>
+        <FreeShippingBar subtotal={charges.subtotal} />
+        <PriceBreakdown {...charges} totalLabel="Total to pay" className="border-t pt-4" />
         {serverError && (
           <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {serverError}
@@ -173,15 +288,21 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
           type="submit"
           size="lg"
           disabled={pending}
-          className="h-13 w-full rounded-full bg-whatsapp text-base text-white shadow-lg shadow-whatsapp/25 hover:bg-whatsapp/90"
+          className="h-13 w-full rounded-full text-base shadow-lg shadow-primary/25"
         >
-          {pending ? <Loader2Icon className="size-5 animate-spin" /> : <WhatsAppIcon className="size-5" />}
-          {pending ? "Placing order…" : "Place order on WhatsApp"}
+          {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
+          {pending ? "Placing order…" : "Place order & pay"}
         </Button>
-        <p className="flex items-start gap-2 text-xs text-muted-foreground">
-          <LockIcon className="mt-0.5 size-3.5 shrink-0" />
-          No online payment needed now. We&apos;ll confirm the order, delivery charges and payment with you on WhatsApp.
-        </p>
+        <div className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+          <p className="flex items-start gap-2">
+            <BanIcon className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              <span className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
+              right after placing the order.
+            </span>
+          </p>
+          <p className="pl-5.5">Your order is confirmed once we verify the payment.</p>
+        </div>
       </aside>
     </form>
   )

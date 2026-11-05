@@ -14,5 +14,7 @@ export async function GET(request: NextRequest) {
     if (!error) return NextResponse.redirect(new URL(next, origin))
   }
 
+  // An expired/used admin link (password reset, email confirmation) goes back to the admin screens.
+  if (next.startsWith("/admin")) return NextResponse.redirect(new URL("/admin/forgot-password?error=expired", origin))
   return NextResponse.redirect(new URL("/login?error=auth", origin))
 }

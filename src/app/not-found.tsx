@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 
 export default function NotFound() {
   return (
-    <main className="grid min-h-dvh place-items-center bg-hero px-4 text-center">
+    <main data-ui="not-found:/" className="grid min-h-dvh place-items-center bg-hero px-4 text-center">
       <div>
         <p className="font-heading text-8xl font-semibold text-gradient">404</p>
         <h1 className="mt-4 text-3xl font-semibold">This page wandered off</h1>

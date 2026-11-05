@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Order placed", robots: { index: fals
 
 export default function OrderPlacedPage() {
   return (
-    <section className="bg-hero">
+    <section data-ui="page:/order-placed" className="bg-hero">
       <div className="container-page py-16 sm:py-24">
         <Suspense>
           <OrderPlaced />

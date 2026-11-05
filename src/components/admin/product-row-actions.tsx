@@ -56,7 +56,7 @@ export function ProductRowActions({ productId, name }: { productId: string; name
   const [pending, startTransition] = useTransition()
 
   return (
-    <div className="flex justify-end gap-1">
+    <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">
       <Link
         href={`/admin/products/${productId}`}
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}

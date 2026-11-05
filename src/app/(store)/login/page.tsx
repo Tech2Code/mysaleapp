@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { LogoMark } from "@/components/shared/logo"
 import { GoogleSignIn } from "@/components/store/google-sign-in"
-import { siteConfig } from "@/config/site"
+import { getStoreSettings } from "@/features/settings/queries"
 
 export const metadata: Metadata = { title: "Sign in", robots: { index: false } }
 
@@ -14,13 +14,14 @@ const perks = [
   { icon: MapPinIcon, text: "Save your address for faster checkout" },
 ]
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const shop = await getStoreSettings()
   return (
-    <section className="bg-hero">
-      <div className="container-page flex min-h-[70vh] items-center justify-center py-16">
+    <section data-ui="page:/login" className="bg-hero">
+      <div className="container-page flex min-h-[70vh] items-center justify-center py-12 sm:py-16">
         <div className="w-full max-w-md rounded-[2rem] border bg-card/80 p-8 shadow-2xl shadow-black/5 backdrop-blur sm:p-10">
           <LogoMark className="size-12 text-2xl" />
-          <h1 className="mt-6 text-3xl font-semibold">Welcome to {siteConfig.name}</h1>
+          <h1 className="mt-6 text-3xl font-semibold">Welcome to {shop.shopName}</h1>
           <p className="mt-2 text-muted-foreground">Sign in with one tap — no password to remember.</p>
 
           <ul className="my-8 space-y-3">

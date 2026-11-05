@@ -1,14 +1,16 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { JsonLd } from "@/components/shared/json-ld"
 import { PageHeader } from "@/components/store/page-header"
 import { ProductGrid } from "@/components/store/product-grid"
-import { siteConfig } from "@/config/site"
 import {
   getCategories,
   getCategoryBySlug,
   getProductsByCategory,
 } from "@/features/products/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { breadcrumbJsonLd, itemListJsonLd, pageMetadata } from "@/lib/seo"
 
 export async function generateStaticParams() {
@@ -19,20 +21,51 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/category/[slug]">): Promise<Metadata> {
   const { slug } = await params
-  const category = await getCategoryBySlug(slug)
+  const [category, shop] = await Promise.all([getCategoryBySlug(slug), getStoreSettings()])
   if (!category) return { title: "Category not found", robots: { index: false } }
-  return pageMetadata({
+  return pageMetadata(shop, {
     title: `Handmade ${category.name}`,
     description:
       category.description ||
-      `Shop handmade ${category.name.toLowerCase()} at ${siteConfig.name}. Crafted by artisans, ordered on WhatsApp.`,
+      `Shop handmade ${category.name.toLowerCase()} at ${shop.shopName}. Crafted by artisans, paid securely by UPI.`,
     path: `/category/${category.slug}`,
   })
 }
 
-export default async function CategoryPage({ params }: PageProps<"/category/[slug]">) {
+function CategorySkeleton() {
+  return (
+    <div data-ui="page:/category/[slug]#CategorySkeleton" aria-hidden>
+      <div className="bg-hero">
+        <div className="container-page space-y-4 py-14">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-12 w-72" />
+        </div>
+      </div>
+      <div className="container-page grid grid-cols-2 gap-6 pt-10 md:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Reading `params` inside <Suspense> keeps navigation instant (see products/[slug]).
+export default function CategoryPage({ params }: PageProps<"/category/[slug]">) {
+  return (
+    <Suspense fallback={<CategorySkeleton />}>
+      <CategoryContent params={params} />
+    </Suspense>
+  )
+}
+
+async function CategoryContent({ params }: Pick<PageProps<"/category/[slug]">, "params">) {
   const { slug } = await params
-  const [category, products] = await Promise.all([getCategoryBySlug(slug), getProductsByCategory(slug)])
+  const [category, products, shop] = await Promise.all([
+    getCategoryBySlug(slug),
+    getProductsByCategory(slug),
+    getStoreSettings(),
+  ])
   if (!category) notFound()
 
   return (
@@ -46,14 +79,14 @@ export default async function CategoryPage({ params }: PageProps<"/category/[slu
         {products.length ? (
           <ProductGrid products={products} />
         ) : (
-          <p className="rounded-3xl border border-dashed py-20 text-center text-muted-foreground">
+          <p className="rounded-3xl border border-dashed py-14 sm:py-20 text-center text-muted-foreground">
             New pieces for this collection are being crafted. Check back soon!
           </p>
         )}
       </div>
       <JsonLd
         data={[
-          itemListJsonLd(products, category),
+          itemListJsonLd(products, shop, category),
           breadcrumbJsonLd([
             { name: "Home", path: "/" },
             { name: "Shop", path: "/products" },

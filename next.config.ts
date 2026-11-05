@@ -10,6 +10,8 @@ const supabaseHost = (() => {
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // data-ui ids (see scripts/tag-ui.mjs) are for developers only: keep them out of production HTML
+  compiler: process.env.NODE_ENV === "production" ? { reactRemoveProperties: { properties: ["^data-ui$"] } } : {},
   partialPrefetching: true,
   images: {
     formats: ["image/avif", "image/webp"],

@@ -2,7 +2,6 @@
 
 import { PlusIcon } from "lucide-react"
 import Link from "next/link"
-import { toast } from "sonner"
 import type { Product } from "@/features/products/types"
 import { discountPercent, formatPrice } from "@/lib/format"
 import { useCart } from "@/store/cart"
@@ -20,7 +19,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
   const soldOut = product.stock <= 0
 
   return (
-    <article className="group relative flex h-full flex-col">
+    <article data-ui="store/ProductCard" className="group relative flex h-full flex-col">
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted @container">
         <Link href={`/products/${product.slug}`} className="absolute inset-0" aria-label={product.name}>
           <ProductImage
@@ -60,7 +59,6 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
                 image: product.images[0] ?? null,
                 maxQuantity: product.stock,
               })
-              toast.success(`Added “${product.name}” to cart`)
             }}
             aria-label={`Add ${product.name} to cart`}
             className="absolute right-3 bottom-3 grid size-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 focus-visible:translate-y-0 focus-visible:opacity-100 md:translate-y-2 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"

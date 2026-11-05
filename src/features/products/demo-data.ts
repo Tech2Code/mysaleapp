@@ -21,6 +21,11 @@ const cat = (slug: string) => {
 
 const base = {
   images: [] as string[],
+  fees: [] as Product["fees"],
+  shortDescription: null,
+  highlights: [] as string[],
+  specs: [] as Product["specs"],
+  careInstructions: null,
   isActive: true,
   seoTitle: null,
   seoDescription: null,

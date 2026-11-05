@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next"
-import { siteConfig } from "@/config/site"
+import { getStoreSettings } from "@/features/settings/queries"
 
 /** Makes the site installable as an app ("Add to Home screen"). */
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const shop = await getStoreSettings()
   return {
-    name: siteConfig.name,
-    short_name: siteConfig.shortName,
-    description: siteConfig.description,
+    name: shop.shopName,
+    short_name: shop.shopName.slice(0, 12),
+    description: shop.description,
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",

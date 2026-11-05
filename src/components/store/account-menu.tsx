@@ -22,7 +22,7 @@ export function AccountMenu() {
   const { user, ready } = useAuth()
   const router = useRouter()
 
-  if (!ready) return <span className="size-9" aria-hidden />
+  if (!ready) return <span data-ui="store/AccountMenu" className="size-10" aria-hidden />
 
   if (!user) {
     return (
@@ -45,7 +45,7 @@ export function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="grid size-9 place-items-center overflow-hidden rounded-full ring-2 ring-primary/20 transition hover:ring-primary/50"
+        className="grid size-10 place-items-center overflow-hidden rounded-full ring-2 ring-primary/20 transition hover:ring-primary/50"
         aria-label="Account menu"
       >
         {user.avatarUrl ? (

@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og"
-import { siteConfig } from "@/config/site"
+import { getStoreSettings } from "@/features/settings/queries"
 import { getProductBySlug } from "@/features/products/queries"
 import { formatPrice } from "@/lib/format"
 
@@ -10,8 +10,8 @@ export const contentType = "image/png"
 /** Rich share card for each product: photo, name and price. */
 export default async function ProductOgImage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const product = await getProductBySlug(slug)
-  const name = product?.name ?? siteConfig.name
+  const [product, shop] = await Promise.all([getProductBySlug(slug), getStoreSettings()])
+  const name = product?.name ?? shop.shopName
   const photo = product?.images[0]
 
   return new ImageResponse(
@@ -49,12 +49,12 @@ export default async function ProductOgImage({ params }: { params: Promise<{ slu
           )}
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingRight: 70 }}>
-          <div style={{ fontSize: 28, color: "#8a4b33", fontWeight: 600 }}>{siteConfig.name}</div>
+          <div style={{ fontSize: 28, color: "#8a4b33", fontWeight: 600 }}>{shop.shopName}</div>
           <div style={{ fontSize: 60, fontWeight: 700, lineHeight: 1.1, marginTop: 16 }}>{name}</div>
           {product && (
             <div style={{ fontSize: 52, fontWeight: 700, marginTop: 28, color: "#b85c38" }}>{formatPrice(product.price)}</div>
           )}
-          <div style={{ fontSize: 26, marginTop: 28, color: "#6b5348" }}>Handmade · Order on WhatsApp</div>
+          <div style={{ fontSize: 26, marginTop: 28, color: "#6b5348" }}>Handmade · Pay securely by UPI</div>
         </div>
       </div>
     ),

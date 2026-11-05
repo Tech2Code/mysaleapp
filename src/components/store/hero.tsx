@@ -4,7 +4,7 @@ import { ArrowRightIcon, SparklesIcon } from "lucide-react"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
-import { siteConfig } from "@/config/site"
+import { useStoreSettings } from "./store-settings-provider"
 import type { Product } from "@/features/products/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -14,10 +14,11 @@ import { WhatsAppIcon } from "./brand-icons"
 const ease = [0.22, 1, 0.36, 1] as const
 
 export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "name" | "price" | "images">[] }) {
+  const { description } = useStoreSettings()
   const [a, b, c] = showcase
 
   return (
-    <section className="relative isolate overflow-hidden bg-hero">
+    <section data-ui="store/Hero" className="relative isolate overflow-hidden bg-hero">
       {/* Soft animated colour blobs */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-24 -left-24 size-96 rounded-full bg-primary/20 blur-3xl animate-blob" />
@@ -25,7 +26,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
         <div className="absolute -bottom-32 left-1/3 size-96 rounded-full bg-amber-200/40 blur-3xl animate-blob [animation-delay:-12s] dark:bg-amber-900/20" />
       </div>
 
-      <div className="container-page grid items-center gap-12 pt-10 pb-20 md:pt-16 lg:grid-cols-2 lg:pb-28">
+      <div className="container-page grid items-center gap-8 sm:gap-12 pt-10 pb-20 md:pt-16 lg:grid-cols-2 lg:pb-28">
         <div className="max-w-xl">
           <motion.span
             initial={{ opacity: 0, y: 12 }}
@@ -40,7 +41,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.08 }}
-            className="mt-6 text-[2.6rem] leading-[1.05] font-semibold sm:text-6xl lg:text-7xl"
+            className="mt-6 text-5xl font-semibold sm:text-6xl lg:text-7xl"
           >
             Little things, <span className="text-gradient italic">made by hand</span>, loved for years.
           </motion.h1>
@@ -51,7 +52,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             transition={{ duration: 0.7, ease, delay: 0.16 }}
             className="mt-6 max-w-lg text-lg leading-relaxed text-muted-foreground"
           >
-            {siteConfig.description}
+            {description}
           </motion.p>
 
           <motion.div

@@ -1,13 +1,16 @@
 import { JsonLd } from "@/components/shared/json-ld"
+import { AnnouncementBar } from "@/components/store/announcement-bar"
 import { CartDrawer } from "@/components/store/cart-drawer"
 import { Footer } from "@/components/store/footer"
 import { Header } from "@/components/store/header"
+import { InstallPrompt } from "@/components/store/install-prompt"
 import { WhatsAppFab } from "@/components/store/whatsapp-fab"
 import { getCategoriesWithCounts } from "@/features/products/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { organizationJsonLd } from "@/lib/seo"
 
 export default async function StoreLayout({ children }: LayoutProps<"/">) {
-  const categories = await getCategoriesWithCounts()
+  const [categories, settings] = await Promise.all([getCategoriesWithCounts(), getStoreSettings()])
   const nav = categories.map(({ name, slug }) => ({ name, slug }))
 
   return (
@@ -18,14 +21,16 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
       >
         Skip to content
       </a>
+      <AnnouncementBar text={settings.announcement} />
       <Header categories={nav} />
       <main id="main" className="flex-1">
         {children}
       </main>
-      <Footer categories={nav} />
+      <Footer categories={nav} shop={settings} />
       <CartDrawer />
       <WhatsAppFab />
-      <JsonLd data={organizationJsonLd()} />
+      <InstallPrompt />
+      <JsonLd data={organizationJsonLd(settings)} />
     </>
   )
 }

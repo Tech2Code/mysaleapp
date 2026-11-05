@@ -1,9 +1,10 @@
 "use client"
 
-import { SearchIcon, SearchXIcon, XIcon } from "lucide-react"
+import { SearchXIcon } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import { useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
+import { SearchField, SelectField } from "@/components/form"
 import type { Category, Product } from "@/features/products/types"
 import { cn } from "@/lib/utils"
 import { ProductCard } from "./product-card"
@@ -71,57 +72,40 @@ export function ProductBrowser({
   const chips = [{ slug: "all", name: "All" }, ...categories]
 
   return (
-    <div>
-      <div className="sticky top-16 z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+    <div data-ui="store/ProductBrowser">
+      <div className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative flex-1">
-            <span className="sr-only">Search products</span>
-            <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                syncUrl({ q: e.target.value })
-              }}
-              placeholder="Search candles, vases, gifts…"
-              className="h-12 w-full rounded-full border bg-card pr-10 pl-11 text-sm shadow-sm transition-shadow outline-none focus:ring-3 focus:ring-ring/30"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("")
-                  syncUrl({ q: "" })
-                }}
-                className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"
-                aria-label="Clear search"
-              >
-                <XIcon className="size-4" />
-              </button>
-            )}
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <span className="shrink-0 text-muted-foreground">Sort</span>
-            <select
-              value={sort}
-              onChange={(e) => {
-                const s = e.target.value as SortKey
-                setSort(s)
-                syncUrl({ sort: s })
-              }}
-              className="h-12 rounded-full border bg-card px-4 text-sm font-medium shadow-sm outline-none focus:ring-3 focus:ring-ring/30"
-            >
-              {Object.entries(SORTS).map(([k, label]) => (
-                <option key={k} value={k}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SearchField
+            label="Search products"
+            pill
+            containerClassName="flex-1"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              syncUrl({ q: e.target.value })
+            }}
+            onClear={() => {
+              setQuery("")
+              syncUrl({ q: "" })
+            }}
+            placeholder="Search candles, vases, gifts…"
+          />
+          <SelectField
+            label="Sort products"
+            hideLabel
+            pill
+            containerClassName="sm:w-56"
+            value={sort}
+            onValueChange={(next) => {
+              const s = next as SortKey
+              setSort(s)
+              syncUrl({ sort: s })
+            }}
+            options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
+          />
         </div>
 
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" role="group" aria-label="Filter by category">
+        <div className="scroll-row flex gap-2 sm:flex-wrap" role="group" aria-label="Filter by category">
           {chips.map((c) => {
             const active = category === c.slug
             return (
@@ -157,7 +141,7 @@ export function ProductBrowser({
       </p>
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-20 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
           <SearchXIcon className="size-10 text-muted-foreground" />
           <p className="font-heading text-xl">No matches found</p>
           <p className="text-sm text-muted-foreground">Try a different word or category.</p>

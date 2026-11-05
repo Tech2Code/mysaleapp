@@ -1,11 +1,16 @@
 import Link from "next/link"
 import { Logo } from "@/components/shared/logo"
-import { siteConfig } from "@/config/site"
+import type { StoreSettings } from "@/features/settings/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import type { NavCategory } from "./header"
+import { InstallButton } from "./install-prompt"
 import { WhatsAppIcon } from "./brand-icons"
 
-export function Footer({ categories }: { categories: NavCategory[] }) {
+export function Footer({ categories, shop }: { categories: NavCategory[]; shop: StoreSettings }) {
+  const socials = [
+    ...(shop.instagramUrl ? [{ href: shop.instagramUrl, label: "Instagram", external: true as const }] : []),
+    ...(shop.facebookUrl ? [{ href: shop.facebookUrl, label: "Facebook", external: true as const }] : []),
+  ]
   const columns = [
     {
       title: "Shop",
@@ -27,26 +32,29 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
       title: "About",
       links: [
         { href: "/about", label: "Our story" },
-        { href: siteConfig.socials.instagram, label: "Instagram", external: true },
-        { href: siteConfig.socials.facebook, label: "Facebook", external: true },
+        { href: "/contact", label: "Contact us" },
+        ...socials,
       ],
     },
   ]
 
   return (
-    <footer className="mt-24 border-t bg-linear-to-b from-secondary/40 to-secondary/80">
-      <div className="container-page grid gap-12 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+    <footer data-ui="store/Footer" className="mt-16 sm:mt-24 border-t bg-linear-to-b from-secondary/40 to-secondary/80">
+      <div className="container-page grid gap-8 sm:gap-12 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="space-y-4">
           <Logo />
-          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{siteConfig.description}</p>
+          <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{shop.description}</p>
           <a
-            href={shopWhatsappLink(`Hi ${siteConfig.name}!`)}
+            href={shopWhatsappLink(shop, `Hi ${shop.shopName}!`)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-whatsapp px-4 py-2 text-sm font-semibold text-white shadow-md shadow-whatsapp/25 transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-full bg-whatsapp-solid px-4 py-2 text-sm font-semibold text-white shadow-md shadow-whatsapp/25 transition-transform hover:-translate-y-0.5"
           >
             <WhatsAppIcon className="size-4" /> Chat on WhatsApp
           </a>
+          <div>
+            <InstallButton />
+          </div>
         </div>
         {columns.map((col) => (
           <nav key={col.title} aria-label={col.title}>
@@ -72,7 +80,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
       <div className="border-t">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted-foreground sm:flex-row">
           <p>
-            © {siteConfig.name}. Handmade in {siteConfig.contact.city}, India.
+            © {shop.shopName}.{shop.city ? ` Handmade in ${shop.city}, India.` : ""}
           </p>
           <p>Orders confirmed on WhatsApp · Secure &amp; simple</p>
         </div>

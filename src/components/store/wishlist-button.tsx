@@ -19,7 +19,7 @@ export function WishlistButton({
   const { active, toggle } = useWishlistToggle(productId, productName)
 
   return (
-    <motion.button
+    <motion.button data-ui="store/WishlistButton"
       type="button"
       whileTap={{ scale: 0.85 }}
       onClick={(e) => {

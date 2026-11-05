@@ -41,7 +41,7 @@ function NavItemsWithPath() {
 
 export function AccountNav() {
   return (
-    <nav aria-label="Account" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:px-0">
+    <nav data-ui="account/AccountNav" aria-label="Account" className="scroll-row flex gap-2 lg:flex-col">
       <Suspense fallback={<NavItems pathname={null} />}>
         <NavItemsWithPath />
       </Suspense>

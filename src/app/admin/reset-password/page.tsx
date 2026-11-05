@@ -1,0 +1,30 @@
+import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+import { Suspense } from "react"
+import { ResetPasswordForm } from "@/components/admin/password-reset-forms"
+import { LogoMark } from "@/components/shared/logo"
+import { getCurrentUser } from "@/features/auth/guards"
+
+export const metadata: Metadata = { title: "Set a new password" }
+
+/** Only reachable through the emailed reset link, which signs the admin in first. */
+async function Gate() {
+  const user = await getCurrentUser()
+  if (!user) redirect("/admin/forgot-password?error=expired")
+  return <ResetPasswordForm />
+}
+
+export default function AdminResetPasswordPage() {
+  return (
+    <main data-ui="page:/admin/reset-password" className="grid min-h-dvh place-items-center bg-hero px-4">
+      <div className="w-full max-w-sm rounded-[2rem] border bg-card p-6 sm:p-8 shadow-2xl shadow-black/5">
+        <LogoMark className="size-12 text-2xl" />
+        <h1 className="mt-6 text-2xl font-semibold">Choose a new password</h1>
+        <p className="mt-1 mb-6 text-sm text-muted-foreground">You&apos;ll be signed in right after.</p>
+        <Suspense>
+          <Gate />
+        </Suspense>
+      </div>
+    </main>
+  )
+}

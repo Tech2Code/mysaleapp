@@ -43,6 +43,12 @@ export function formatDateTime(iso: string): string {
   return dateTimeFmt.format(new Date(iso))
 }
 
+/** "919876543210" → "+91 98765 43210" (other lengths: "+" and the digits). */
+export function formatPhoneDisplay(digitsWithCountryCode: string): string {
+  const d = digitsWithCountryCode.replace(/\D/g, "")
+  return /^91\d{10}$/.test(d) ? `+91 ${d.slice(2, 7)} ${d.slice(7)}` : `+${d}`
+}
+
 /** Normalise an Indian mobile number to 10 digits, or return null if invalid. */
 export function normalizeIndianPhone(input: string): string | null {
   let digits = input.replace(/\D/g, "")

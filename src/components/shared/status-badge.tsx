@@ -20,18 +20,32 @@ const TONES = {
 } as const
 
 /** Status pill — icon + text, so colour is never the only signal. */
-export function StatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
+export function StatusBadge({
+  status,
+  className,
+  pulse = false,
+}: {
+  status: OrderStatus
+  className?: string
+  /** Adds a soft pulsing ring behind the icon. Use on single-order views, not in long lists. */
+  pulse?: boolean
+}) {
   const meta = STATUS_META[status]
   const Icon = ICONS[status]
   return (
-    <span
+    <span data-ui="shared/StatusBadge"
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
         TONES[meta.tone],
         className
       )}
     >
-      <Icon className="size-3.5" aria-hidden />
+      <span className="relative grid place-items-center">
+        {pulse && (
+          <span aria-hidden className="absolute inset-0 rounded-full bg-current opacity-30 animate-ping [animation-duration:2.2s]" />
+        )}
+        <Icon className="relative size-3.5" aria-hidden />
+      </span>
       {meta.label}
     </span>
   )

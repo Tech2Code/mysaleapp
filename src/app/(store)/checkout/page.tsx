@@ -7,13 +7,13 @@ export const metadata: Metadata = { title: "Checkout", robots: { index: false } 
 
 export default async function CheckoutPage() {
   const products = await getActiveProducts()
-  const live = products.map(({ id, price, stock, name, images, slug }) => ({ id, price, stock, name, images, slug }))
+  const live = products.map(({ id, price, stock, name, images, slug, fees }) => ({ id, price, stock, name, images, slug, fees }))
 
   return (
     <>
       <PageHeader
         title="Checkout"
-        description="Fill in your details — your order opens in WhatsApp, ready to send."
+        description="Enter your delivery details, then pay by UPI to confirm your order."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
       />
       <div className="container-page pt-8">

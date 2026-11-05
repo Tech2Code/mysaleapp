@@ -11,7 +11,7 @@ export function FadeIn({
   ...props
 }: HTMLMotionProps<"div"> & { delay?: number; y?: number }) {
   return (
-    <motion.div
+    <motion.div data-ui="shared/FadeIn"
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
@@ -24,7 +24,7 @@ export function FadeIn({
 /** Container that reveals its <StaggerItem> children one after another. */
 export function Stagger({ stagger = 0.07, ...props }: HTMLMotionProps<"div"> & { stagger?: number }) {
   return (
-    <motion.div
+    <motion.div data-ui="shared/Stagger"
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: "-40px" }}
@@ -36,7 +36,7 @@ export function Stagger({ stagger = 0.07, ...props }: HTMLMotionProps<"div"> & {
 
 export function StaggerItem(props: HTMLMotionProps<"div">) {
   return (
-    <motion.div
+    <motion.div data-ui="shared/StaggerItem"
       variants={{
         hidden: { opacity: 0, y: 20, scale: 0.98 },
         show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease } },

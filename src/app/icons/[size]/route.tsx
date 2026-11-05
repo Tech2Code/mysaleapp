@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og"
+import { getStoreSettings } from "@/features/settings/queries"
 import { BrandMark } from "@/lib/brand-image"
 
 const VARIANTS: Record<string, { size: number; padding: number }> = {
@@ -12,10 +13,11 @@ export function generateStaticParams() {
   return Object.keys(VARIANTS).map((size) => ({ size }))
 }
 
-/** PWA icons, generated once at build time. */
+/** PWA icons. The letter comes from the shop name in Admin → Settings. */
 export async function GET(_req: Request, { params }: RouteContext<"/icons/[size]">) {
   const { size } = await params
   const v = VARIANTS[size]
   if (!v) return new Response("Not found", { status: 404 })
-  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} />, { width: v.size, height: v.size })
+  const { shopName } = await getStoreSettings()
+  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} letter={shopName} />, { width: v.size, height: v.size })
 }

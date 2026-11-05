@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next"
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google"
 import { Providers } from "@/components/shared/providers"
+import { StoreSettingsProvider } from "@/components/store/store-settings-provider"
 import { siteConfig } from "@/config/site"
+import { getStoreSettings } from "@/features/settings/queries"
 import "./globals.css"
 
 const display = Fraunces({
@@ -17,44 +19,38 @@ const body = Plus_Jakarta_Sans({
   display: "swap",
 })
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteConfig.url),
-  title: {
-    default: `${siteConfig.name} — ${siteConfig.tagline}`,
-    template: `%s | ${siteConfig.name}`,
-  },
-  description: siteConfig.description,
-  keywords: [...siteConfig.keywords],
-  applicationName: siteConfig.name,
-  authors: [{ name: siteConfig.name }],
-  creator: siteConfig.name,
-  formatDetection: { telephone: false },
-  alternates: { canonical: siteConfig.url },
-  openGraph: {
-    type: "website",
-    locale: siteConfig.locale,
-    url: siteConfig.url,
-    siteName: siteConfig.name,
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-  },
-  appleWebApp: {
-    capable: true,
-    title: siteConfig.shortName,
-    statusBarStyle: "default",
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
-  },
-  // Paste the code from Google Search Console → Settings → Ownership verification
-  verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
+/** Site-wide metadata comes from Admin → Settings (shop name, tagline, description, keywords). */
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getStoreSettings()
+  const title = `${s.shopName} — ${s.tagline}`
+  return {
+    metadataBase: new URL(siteConfig.url),
+    title: { default: title, template: `%s | ${s.shopName}` },
+    description: s.description,
+    keywords: s.keywords,
+    applicationName: s.shopName,
+    authors: [{ name: s.shopName }],
+    creator: s.shopName,
+    formatDetection: { telephone: false },
+    alternates: { canonical: siteConfig.url },
+    openGraph: {
+      type: "website",
+      locale: siteConfig.locale,
+      url: siteConfig.url,
+      siteName: s.shopName,
+      title,
+      description: s.description,
+    },
+    twitter: { card: "summary_large_image", title, description: s.description },
+    appleWebApp: { capable: true, title: s.shopName.slice(0, 12), statusBarStyle: "default" },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+    },
+    // Paste the code from Google Search Console → Settings → Ownership verification
+    verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
+  }
 }
 
 export const viewport: Viewport = {
@@ -66,11 +62,15 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const settings = await getStoreSettings()
+
   return (
-    <html lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} h-full antialiased`}>
+    <html data-ui="layout:/" lang="en-IN" suppressHydrationWarning data-scroll-behavior="smooth" className={`${display.variable} ${body.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <Providers>{children}</Providers>
+        <StoreSettingsProvider value={settings}>
+          <Providers>{children}</Providers>
+        </StoreSettingsProvider>
       </body>
     </html>
   )

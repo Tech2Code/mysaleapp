@@ -2,7 +2,8 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { AdminPageHeader } from "@/components/admin/admin-page-header"
-import { OrderFilters } from "@/components/admin/order-filters"
+import { OrdersBrowser } from "@/components/admin/order-filters"
+import { PaymentBadge } from "@/components/shared/payment-badge"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -16,13 +17,15 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   const sp = await searchParams
-  const filters = { status: one(sp.status), q: one(sp.q), page: one(sp.page) }
+  const filters = { status: one(sp.status), payment: one(sp.payment), view: one(sp.view), q: one(sp.q), page: one(sp.page) }
   const { orders, total, page } = await listOrders(filters)
   const pages = Math.max(1, Math.ceil(total / ADMIN_ORDERS_PAGE_SIZE))
 
   const pageHref = (p: number) => {
     const qs = new URLSearchParams()
+    if (filters.view) qs.set("view", filters.view)
     if (filters.status) qs.set("status", filters.status)
+    if (filters.payment) qs.set("payment", filters.payment)
     if (filters.q) qs.set("q", filters.q)
     if (p > 1) qs.set("page", String(p))
     return `/admin/orders${qs.size ? `?${qs}` : ""}`
@@ -31,11 +34,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
   return (
     <>
       <AdminPageHeader title="Orders" description={`${total} order${total === 1 ? "" : "s"} found`} />
-      <OrderFilters key={`${filters.status}-${filters.q}`} status={filters.status} q={filters.q} />
-
+      <OrdersBrowser status={filters.status} payment={filters.payment} view={filters.view} q={filters.q}>
       <div className="overflow-hidden rounded-2xl border bg-card">
         {orders.length === 0 ? (
-          <p className="p-12 text-center text-sm text-muted-foreground">No orders match these filters.</p>
+          <p className="p-8 sm:p-12 text-center text-sm text-muted-foreground">No orders match these filters.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -44,6 +46,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                 <TableHead>Customer</TableHead>
                 <TableHead className="hidden md:table-cell">Items</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden lg:table-cell">Payment</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
               </TableRow>
@@ -68,7 +71,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                   <TableCell>
                     <StatusBadge status={o.status} />
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{formatPrice(o.subtotal)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} />
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
                   <TableCell className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
                     {formatDateTime(o.createdAt)}
                   </TableCell>
@@ -100,6 +106,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           </Link>
         </nav>
       )}
+      </OrdersBrowser>
     </>
   )
 }

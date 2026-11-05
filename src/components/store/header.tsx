@@ -31,7 +31,7 @@ function CountBadge({ count }: { count: number }) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.4, opacity: 0 }}
           transition={{ type: "spring", stiffness: 600, damping: 20 }}
-          className="absolute -top-0.5 -right-0.5 grid min-w-[1.15rem] place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-[1.15rem] font-bold text-primary-foreground"
+          className="absolute top-0.5 right-0.5 grid min-w-[1.15rem] place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-[1.15rem] font-bold text-primary-foreground ring-2 ring-background"
         >
           {count > 99 ? "99+" : count}
         </motion.span>
@@ -129,13 +129,13 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const closeMobile = () => setMobileOpen(false)
 
   return (
-    <header
+    <header data-ui="store/Header"
       className={cn(
         "sticky top-0 z-40 transition-all duration-300",
         scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
       )}
     >
-      <div className="container-page flex h-16 items-center gap-3">
+      <div className="container-page flex h-(--store-header-h) items-center gap-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full lg:hidden")}
@@ -153,6 +153,14 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
               </Suspense>
             </nav>
+            <div className="mt-auto flex items-center justify-between gap-3 border-t p-4 text-sm">
+              <Link href="/wishlist" onClick={closeMobile} className="font-medium hover:text-primary">
+                Wishlist
+              </Link>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                Theme <ThemeToggle />
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
 
@@ -164,15 +172,17 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </Suspense>
         </nav>
 
-        <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+        <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
           <Link
             href="/products"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex")}
             aria-label="Search products"
           >
             <SearchIcon className="size-[1.15rem]" />
           </Link>
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
           <Link
             href="/wishlist"
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}

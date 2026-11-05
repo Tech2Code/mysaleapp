@@ -1,10 +1,12 @@
 "use client"
 
+import { UiInspector } from "./ui-inspector"
 import { MotionConfig } from "motion/react"
 import { ThemeProvider } from "next-themes"
 import type { ReactNode } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthListener } from "./auth-listener"
+import { RouteProgressProvider } from "./route-progress"
 import { ServiceWorkerRegister } from "./sw-register"
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -12,10 +14,11 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       {/* Honour the OS "reduce motion" setting for every animation in the app */}
       <MotionConfig reducedMotion="user">
-        {children}
+        <RouteProgressProvider>{children}</RouteProgressProvider>
         <Toaster position="top-center" richColors closeButton />
         <AuthListener />
         <ServiceWorkerRegister />
+        <UiInspector />
       </MotionConfig>
     </ThemeProvider>
   )

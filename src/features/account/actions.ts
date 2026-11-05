@@ -11,13 +11,10 @@ import { profileSchema, type Profile } from "./schema"
 type ProfileRow = {
   full_name: string | null
   phone: string | null
-  address: string | null
-  city: string | null
-  pincode: string | null
   avatar_url: string | null
 }
 
-/** Used by checkout to pre-fill the form. Returns null for guests. */
+/** Name, phone and email of the signed-in customer. Returns null for guests. */
 export async function getMyProfile(): Promise<Profile | null> {
   const user = await getCurrentUser()
   if (!user) return null
@@ -25,16 +22,13 @@ export async function getMyProfile(): Promise<Profile | null> {
   const supabase = await getServerSupabase()
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, phone, address, city, pincode, avatar_url")
+    .select("full_name, phone, avatar_url")
     .eq("id", user.id)
     .maybeSingle<ProfileRow>()
 
   return {
     fullName: data?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? "",
     phone: data?.phone ?? "",
-    address: data?.address ?? "",
-    city: data?.city ?? "",
-    pincode: data?.pincode ?? "",
     avatarUrl: data?.avatar_url ?? null,
     email: user.email ?? "",
   }
@@ -55,9 +49,6 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
     id: user.id,
     full_name: p.fullName,
     phone: p.phone ? normalizeIndianPhone(p.phone) : null,
-    address: p.address || null,
-    city: p.city || null,
-    pincode: p.pincode || null,
   })
   if (error) return fail("Could not save your profile")
 

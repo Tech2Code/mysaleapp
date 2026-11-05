@@ -46,8 +46,10 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
         })
         if (error) throw error
         urls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl)
-      } catch {
-        toast.error(`Couldn't upload ${file.name}`)
+      } catch (err) {
+        // Show the real reason (e.g. "Bucket not found", RLS denial) so setup problems are obvious.
+        const reason = err instanceof Error ? err.message : "unknown error"
+        toast.error(`Couldn't upload ${file.name}: ${reason}`)
       } finally {
         setUploading((n) => n - 1)
       }
@@ -63,7 +65,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
   }
 
   return (
-    <div className="space-y-3">
+    <div data-ui="admin/ImageUploader" className="space-y-3">
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {value.map((url, i) => (
           <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
@@ -86,7 +88,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
               <button
                 type="button"
                 onClick={() => onChange(value.filter((u) => u !== url))}
-                className="grid size-7 place-items-center rounded-full bg-destructive text-white shadow"
+                className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
                 aria-label="Remove photo"
               >
                 <XIcon className="size-3.5" />

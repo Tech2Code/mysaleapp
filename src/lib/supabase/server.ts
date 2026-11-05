@@ -1,6 +1,7 @@
 import "server-only"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { connection } from "next/server"
 import { supabaseConfig } from "./config"
 
 /**
@@ -9,6 +10,9 @@ import { supabaseConfig } from "./config"
  * or a Route Handler — never inside "use cache".
  */
 export async function getServerSupabase() {
+  // Supabase's auth code checks token expiry with Date.now(). Cache Components
+  // forbids that during prerender, so always defer to real request time first.
+  await connection()
   const cookieStore = await cookies()
 
   return createServerClient(supabaseConfig.url, supabaseConfig.anonKey, {

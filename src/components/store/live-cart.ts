@@ -2,25 +2,37 @@
 
 import { useMemo } from "react"
 import { useMounted } from "@/hooks/use-mounted"
+import { calculateCharges } from "@/features/orders/pricing"
+import type { ProductFee } from "@/features/products/types"
 import { useCart, type CartItem } from "@/store/cart"
+import { useStoreSettings } from "./store-settings-provider"
 
-export type LiveProduct = { id: string; price: number; stock: number; name: string; images: string[]; slug: string }
+export type LiveProduct = {
+  id: string
+  price: number
+  stock: number
+  name: string
+  images: string[]
+  slug: string
+  fees: ProductFee[]
+}
 
-export type LiveCartLine = CartItem & { available: boolean; priceChanged: boolean }
+export type LiveCartLine = CartItem & { available: boolean; priceChanged: boolean; fees: ProductFee[] }
 
 /**
  * Re-checks the saved cart against live catalogue data, so customers always
- * see current prices and stock. The server recalculates again at checkout.
+ * see current prices, stock and extra charges. The server recalculates again at checkout.
  */
 export function useLiveCart(products: LiveProduct[]) {
   const mounted = useMounted()
   const items = useCart((s) => s.items)
+  const settings = useStoreSettings()
 
   return useMemo(() => {
     const byId = new Map(products.map((p) => [p.id, p]))
     const lines: LiveCartLine[] = (mounted ? items : []).map((item) => {
       const live = byId.get(item.productId)
-      if (!live || live.stock <= 0) return { ...item, available: false, priceChanged: false }
+      if (!live || live.stock <= 0) return { ...item, available: false, priceChanged: false, fees: [] }
       return {
         ...item,
         name: live.name,
@@ -31,16 +43,20 @@ export function useLiveCart(products: LiveProduct[]) {
         quantity: Math.min(item.quantity, live.stock),
         available: true,
         priceChanged: live.price !== item.price,
+        fees: live.fees,
       }
     })
     const available = lines.filter((l) => l.available)
+    const charges = calculateCharges(available, settings)
     return {
       ready: mounted,
       lines,
       available,
       hasUnavailable: lines.length !== available.length,
-      subtotal: available.reduce((n, l) => n + l.price * l.quantity, 0),
+      /** Items total (without delivery / extra charges). */
+      subtotal: charges.subtotal,
+      charges,
       count: available.reduce((n, l) => n + l.quantity, 0),
     }
-  }, [items, products, mounted])
+  }, [items, products, mounted, settings])
 }
