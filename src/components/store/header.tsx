@@ -1,0 +1,198 @@
+"use client"
+
+import { HeartIcon, MenuIcon, SearchIcon, ShoppingBagIcon } from "lucide-react"
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Suspense, useState } from "react"
+import { Logo } from "@/components/shared/logo"
+import { ThemeToggle } from "@/components/shared/theme-toggle"
+import { buttonVariants } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useMounted } from "@/hooks/use-mounted"
+import { cn } from "@/lib/utils"
+import { cartCount, useCart } from "@/store/cart"
+import { useWishlist } from "@/store/wishlist"
+import { AccountMenu } from "./account-menu"
+
+export type NavCategory = { name: string; slug: string }
+type NavLinkItem = { href: string; label: string }
+
+const isActive = (pathname: string | null, href: string) =>
+  pathname !== null && (pathname === href || pathname.startsWith(`${href}/`))
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <AnimatePresence>
+      {count > 0 && (
+        <motion.span
+          key={count}
+          initial={{ scale: 0.4, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.4, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 600, damping: 20 }}
+          className="absolute -top-0.5 -right-0.5 grid min-w-[1.15rem] place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-[1.15rem] font-bold text-primary-foreground"
+        >
+          {count > 99 ? "99+" : count}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  )
+}
+
+function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: string | null }) {
+  return (
+    <>
+      {links.map((l) => {
+        const active = isActive(pathname, l.href)
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative rounded-full px-3.5 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground",
+              active && "text-foreground"
+            )}
+          >
+            {active && (
+              <motion.span
+                layoutId="nav-pill"
+                className="absolute inset-0 -z-10 rounded-full bg-secondary"
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              />
+            )}
+            {l.label}
+          </Link>
+        )
+      })}
+    </>
+  )
+}
+
+/** Reads the URL, so it lives inside <Suspense> (required by Cache Components). */
+function DesktopNavWithPath({ links }: { links: NavLinkItem[] }) {
+  return <DesktopNavItems links={links} pathname={usePathname()} />
+}
+
+function MobileNavItems({
+  links,
+  pathname,
+  onNavigate,
+}: {
+  links: NavLinkItem[]
+  pathname: string | null
+  onNavigate: () => void
+}) {
+  return (
+    <>
+      {links.map((l, i) => (
+        <motion.div key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
+          <Link
+            href={l.href}
+            onClick={onNavigate}
+            aria-current={isActive(pathname, l.href) ? "page" : undefined}
+            className={cn(
+              "block rounded-xl px-4 py-3 text-base font-medium transition-colors hover:bg-muted",
+              isActive(pathname, l.href) && "bg-secondary text-primary"
+            )}
+          >
+            {l.label}
+          </Link>
+        </motion.div>
+      ))}
+    </>
+  )
+}
+
+function MobileNavWithPath(props: { links: NavLinkItem[]; onNavigate: () => void }) {
+  return <MobileNavItems {...props} pathname={usePathname()} />
+}
+
+export function Header({ categories }: { categories: NavCategory[] }) {
+  const mounted = useMounted()
+  const items = useCart((s) => s.items)
+  const openCart = useCart((s) => s.setOpen)
+  const wishCount = useWishlist((s) => s.ids.length)
+  const [scrolled, setScrolled] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const { scrollY } = useScroll()
+  useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12))
+
+  const links: NavLinkItem[] = [
+    { href: "/products", label: "Shop all" },
+    ...categories.slice(0, 4).map((c) => ({ href: `/category/${c.slug}`, label: c.name })),
+    { href: "/track", label: "Track order" },
+  ]
+  const mobileLinks = [...links, { href: "/about", label: "About us" }]
+  const closeMobile = () => setMobileOpen(false)
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-40 transition-all duration-300",
+        scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
+      )}
+    >
+      <div className="container-page flex h-16 items-center gap-3">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full lg:hidden")}
+            aria-label="Open menu"
+          >
+            <MenuIcon className="size-5" />
+          </SheetTrigger>
+          <SheetContent side="left" className="w-80">
+            <SheetHeader>
+              <SheetTitle className="sr-only">Menu</SheetTitle>
+              <Logo />
+            </SheetHeader>
+            <nav className="flex flex-col gap-1 px-3" aria-label="Mobile">
+              <Suspense fallback={<MobileNavItems links={mobileLinks} pathname={null} onNavigate={closeMobile} />}>
+                <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
+              </Suspense>
+            </nav>
+          </SheetContent>
+        </Sheet>
+
+        <Logo />
+
+        <nav className="ml-8 hidden items-center gap-1 lg:flex" aria-label="Main">
+          <Suspense fallback={<DesktopNavItems links={links} pathname={null} />}>
+            <DesktopNavWithPath links={links} />
+          </Suspense>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+          <Link
+            href="/products"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}
+            aria-label="Search products"
+          >
+            <SearchIcon className="size-[1.15rem]" />
+          </Link>
+          <ThemeToggle />
+          <Link
+            href="/wishlist"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} items` : ""}`}
+          >
+            <HeartIcon className="size-[1.15rem]" />
+            {mounted && <CountBadge count={wishCount} />}
+          </Link>
+          <button
+            type="button"
+            onClick={() => openCart(true)}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+            aria-label={`Open cart${mounted ? `, ${cartCount(items)} items` : ""}`}
+          >
+            <ShoppingBagIcon className="size-[1.15rem]" />
+            {mounted && <CountBadge count={cartCount(items)} />}
+          </button>
+          <AccountMenu />
+        </div>
+      </div>
+    </header>
+  )
+}

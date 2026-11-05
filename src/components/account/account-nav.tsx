@@ -1,0 +1,50 @@
+"use client"
+
+import { HeartIcon, PackageIcon, UserIcon } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Suspense } from "react"
+import { cn } from "@/lib/utils"
+
+const links = [
+  { href: "/account/orders", label: "My orders", icon: PackageIcon },
+  { href: "/wishlist", label: "Wishlist", icon: HeartIcon },
+  { href: "/account/profile", label: "Profile & address", icon: UserIcon },
+]
+
+function NavItems({ pathname }: { pathname: string | null }) {
+  return (
+    <>
+      {links.map((l) => {
+        const active = pathname?.startsWith(l.href) ?? false
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
+              active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-card hover:bg-muted lg:bg-transparent"
+            )}
+          >
+            <l.icon className="size-4" /> {l.label}
+          </Link>
+        )
+      })}
+    </>
+  )
+}
+
+function NavItemsWithPath() {
+  return <NavItems pathname={usePathname()} />
+}
+
+export function AccountNav() {
+  return (
+    <nav aria-label="Account" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:px-0">
+      <Suspense fallback={<NavItems pathname={null} />}>
+        <NavItemsWithPath />
+      </Suspense>
+    </nav>
+  )
+}

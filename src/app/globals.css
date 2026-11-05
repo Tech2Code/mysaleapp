@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-display);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-success: var(--success);
+  --color-whatsapp: var(--whatsapp);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-blob: blob 18s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -40px) scale(1.08); }
+    66% { transform: translate(-25px, 20px) scale(0.95); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+/* Warm artisanal palette: cream, terracotta, blush, deep cocoa */
+:root {
+  --background: oklch(0.985 0.008 75);
+  --foreground: oklch(0.24 0.03 45);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 45);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 45);
+  --primary: oklch(0.58 0.14 40);
+  --primary-foreground: oklch(0.99 0.005 75);
+  --secondary: oklch(0.95 0.025 60);
+  --secondary-foreground: oklch(0.3 0.04 45);
+  --muted: oklch(0.955 0.012 70);
+  --muted-foreground: oklch(0.48 0.03 50);
+  --accent: oklch(0.93 0.04 20);
+  --accent-foreground: oklch(0.32 0.06 30);
+  --destructive: oklch(0.58 0.22 27);
+  --success: oklch(0.58 0.13 155);
+  --whatsapp: oklch(0.66 0.17 150);
+  --border: oklch(0.9 0.018 65);
+  --input: oklch(0.88 0.02 65);
+  --ring: oklch(0.58 0.14 40);
+  --radius: 0.85rem;
+  --sidebar: oklch(0.975 0.01 70);
+  --sidebar-foreground: oklch(0.24 0.03 45);
+  --sidebar-primary: oklch(0.58 0.14 40);
+  --sidebar-primary-foreground: oklch(0.99 0.005 75);
+  --sidebar-accent: oklch(0.94 0.025 60);
+  --sidebar-accent-foreground: oklch(0.3 0.04 45);
+  --sidebar-border: oklch(0.9 0.018 65);
+  --sidebar-ring: oklch(0.58 0.14 40);
+
+  --hero-a: oklch(0.93 0.05 50);
+  --hero-b: oklch(0.92 0.05 15);
+  --hero-c: oklch(0.95 0.04 90);
+}
+
+.dark {
+  --background: oklch(0.18 0.015 45);
+  --foreground: oklch(0.95 0.01 75);
+  --card: oklch(0.22 0.018 45);
+  --card-foreground: oklch(0.95 0.01 75);
+  --popover: oklch(0.22 0.018 45);
+  --popover-foreground: oklch(0.95 0.01 75);
+  --primary: oklch(0.72 0.13 45);
+  --primary-foreground: oklch(0.18 0.02 45);
+  --secondary: oklch(0.27 0.02 45);
+  --secondary-foreground: oklch(0.95 0.01 75);
+  --muted: oklch(0.26 0.015 45);
+  --muted-foreground: oklch(0.72 0.02 60);
+  --accent: oklch(0.3 0.04 25);
+  --accent-foreground: oklch(0.95 0.01 75);
+  --destructive: oklch(0.7 0.19 22);
+  --success: oklch(0.72 0.14 155);
+  --whatsapp: oklch(0.72 0.17 150);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.13 45);
+  --sidebar: oklch(0.2 0.015 45);
+  --sidebar-foreground: oklch(0.95 0.01 75);
+  --sidebar-primary: oklch(0.72 0.13 45);
+  --sidebar-primary-foreground: oklch(0.18 0.02 45);
+  --sidebar-accent: oklch(0.27 0.02 45);
+  --sidebar-accent-foreground: oklch(0.95 0.01 75);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.72 0.13 45);
+
+  --hero-a: oklch(0.3 0.06 45);
+  --hero-b: oklch(0.28 0.06 15);
+  --hero-c: oklch(0.26 0.04 80);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans scroll-smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1, h2, h3 {
+    @apply font-heading tracking-tight;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+}
+
+@layer utilities {
+  .bg-hero {
+    background:
+      radial-gradient(60% 60% at 15% 20%, var(--hero-a), transparent 70%),
+      radial-gradient(50% 55% at 85% 15%, var(--hero-b), transparent 70%),
+      radial-gradient(60% 60% at 50% 100%, var(--hero-c), transparent 70%),
+      var(--background);
+  }
+  .text-gradient {
+    background-image: linear-gradient(110deg, var(--primary), oklch(0.6 0.16 15), var(--primary));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .glass {
+    @apply bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55;
+  }
+  .shimmer {
+    background-image: linear-gradient(90deg, transparent, oklch(1 0 0 / 35%), transparent);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
