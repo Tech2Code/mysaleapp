@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   orderCodePrefix: "KK",
 
   unpaidOrderExpiryHours: 24,
+  returnWindowDays: 7,
   deliveryFee: 60,
   freeDeliveryAbove: 999,
 

@@ -228,6 +228,8 @@ const returnSchema = z.object({
     .max(50),
   reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
   refund: z.boolean(),
+  /** The customer's return request this return closes (if it came from one). */
+  requestId: z.uuid().optional(),
 })
 
 const RETURN_ERRORS: Record<string, string> = {
@@ -235,6 +237,7 @@ const RETURN_ERRORS: Record<string, string> = {
   ITEM_NOT_IN_ORDER: "One of the items isn't part of this order.",
   TOO_MANY_RETURNED: "You're returning more than was ordered (including earlier returns).",
   NO_ITEMS: "Enter how many came back.",
+  REQUEST_NOT_OPEN: "That return request is no longer open.",
 }
 
 /** Record goods that came back: per item, choose whether it goes back into stock (resellable) or not (damaged). */
@@ -244,7 +247,7 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
 
   const parsed = returnSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the return details.", z.flattenError(parsed.error).fieldErrors)
-  const { orderId, items, reason, refund } = parsed.data
+  const { orderId, items, reason, refund, requestId } = parsed.data
 
   const supabase = await getServerSupabase()
   const { data, error } = await supabase.rpc("record_order_return", {
@@ -252,6 +255,7 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
     p_items: items,
     p_reason: reason ?? null,
     p_refund: refund,
+    ...(requestId ? { p_request_id: requestId } : {}),
   })
   if (error) {
     if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Run the latest database migrations (npm run db:push).")
@@ -261,4 +265,33 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
 
   revalidatePath("/admin", "layout")
   return { ok: true, data: { restocked: Number((data as { restocked?: number } | null)?.restocked ?? 0) } }
+}
+
+const decideSchema = z.object({
+  requestId: z.uuid(),
+  approve: z.boolean(),
+  /** Approve: pickup / shipping instructions (optional). Reject: the reason (required). */
+  note: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+})
+
+/** Approve a customer's return request (with instructions) or reject it (with a reason the customer sees). */
+export async function decideReturnRequest(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = decideSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
+  const { requestId, approve, note } = parsed.data
+  if (!approve && !note) return fail("Tell the customer why the return isn't approved.", { note: ["Write a reason"] })
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.rpc("decide_return_request", { p_request_id: requestId, p_approve: approve, p_note: note ?? null })
+  if (error) {
+    if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Run the latest database migrations (npm run db:push).")
+    if (error.message.includes("NOT_PENDING")) return fail("This request was already decided or withdrawn.")
+    return fail("Could not save your decision")
+  }
+  revalidatePath("/admin", "layout")
+  revalidatePath("/account", "layout")
+  return { ok: true }
 }

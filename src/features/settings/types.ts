@@ -30,6 +30,8 @@ export type StoreSettings = {
   orderCodePrefix: string
   /** Unpaid orders are cancelled automatically after this many hours (stock goes back on sale). 0 = never. */
   unpaidOrderExpiryHours: number
+  /** Customers can ask for a return within this many days after delivery. 0 = returns are not accepted. */
+  returnWindowDays: number
 
   // ---- Delivery ----
   /** Flat delivery charge (₹) added to every order. */

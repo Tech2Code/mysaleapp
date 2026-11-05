@@ -121,6 +121,7 @@ export function OrderPlaced() {
               total={state.total}
               orderStatus={state.status}
               payment={state}
+              createdAt={state.createdAt}
               onSubmitted={() => void load()}
             />
           ) : (

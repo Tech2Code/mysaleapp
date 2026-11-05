@@ -31,7 +31,12 @@ export function AdminReturnOrder({
   paymentStatus,
   items,
   returns,
+  prefill,
+  triggerLabel = "Record a return",
 }: {
+  /** From an approved customer request: its items are filled in and the request is closed when saved. */
+  prefill?: { requestId: string; items: { productId: string; quantity: number }[] }
+  triggerLabel?: string
   orderId: string
   orderCode: string
   status: OrderStatus
@@ -41,7 +46,9 @@ export function AdminReturnOrder({
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [rows, setRows] = useState<Record<string, Row>>({})
+  const [rows, setRows] = useState<Record<string, Row>>(() =>
+    Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
+  )
   const [reason, setReason] = useState("")
   const [refund, setRefund] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +73,7 @@ export function AdminReturnOrder({
   const submit = () =>
     startTransition(async () => {
       setError(null)
-      const res = await recordOrderReturn({ orderId, items: payload, reason: reason.trim() || undefined, refund })
+      const res = await recordOrderReturn({ orderId, items: payload, reason: reason.trim() || undefined, refund, requestId: prefill?.requestId })
       if (!res.ok) {
         setError(res.error)
         return
@@ -85,7 +92,7 @@ export function AdminReturnOrder({
         data-ui="admin/AdminReturnOrder/DialogTrigger-inline-flex"
         className="inline-flex h-9 w-full items-center justify-center rounded-full border text-sm font-semibold transition-colors hover:bg-muted"
       >
-        Record a return
+        {triggerLabel}
       </DialogTrigger>
       <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>

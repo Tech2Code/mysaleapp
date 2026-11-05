@@ -89,6 +89,24 @@ export const cancelOrderSchema = z.object({
   reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
 })
 
+export const requestReturnSchema = z.object({
+  code: trackOrderSchema.shape.code,
+  /** Needed for guests; signed-in customers are recognised by their account. */
+  phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+  items: z
+    .array(z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(999) }))
+    .min(1, "Choose at least one item to return")
+    .max(50),
+  reason: z.string().trim().min(2, "Choose a reason").max(80),
+  details: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+})
+
+export const withdrawReturnSchema = z.object({
+  code: trackOrderSchema.shape.code,
+  phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+  requestId: z.uuid(),
+})
+
 export const submitPaymentSchema = z.object({
   code: trackOrderSchema.shape.code,
   phoneLast4: trackOrderSchema.shape.phoneLast4,

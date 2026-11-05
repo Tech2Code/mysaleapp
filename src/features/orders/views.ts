@@ -7,6 +7,7 @@ export const ORDER_VIEWS = {
   "to-verify": { label: "Payments to verify" },
   "awaiting-payment": { label: "Awaiting payment" },
   "to-ship": { label: "To pack & ship" },
+  "return-requests": { label: "Return requests" },
 } as const
 
 export type OrderView = keyof typeof ORDER_VIEWS

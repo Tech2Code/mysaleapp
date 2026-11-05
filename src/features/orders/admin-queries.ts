@@ -28,6 +28,8 @@ function applyOrderView<Q>(query: Q, view: OrderView): Q {
       return q.eq("status", "pending").in("payment_status", ["pending", "failed"])
     case "to-ship":
       return q.in("status", ["confirmed", "packed"])
+    case "return-requests":
+      return q // filtered by order id in listOrders(): the requests live in their own table
     default: {
       const never: never = view
       return never
@@ -51,6 +53,12 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
     .range(from, from + ADMIN_ORDERS_PAGE_SIZE - 1)
 
   if (isOrderView(filters.view)) {
+    if (filters.view === "return-requests") {
+      const { data: open } = await supabase.from("return_requests").select("order_id").eq("status", "requested")
+      const ids = (open ?? []).map((r) => r.order_id as string)
+      // no pending requests -> match nothing (an impossible id), not everything
+      query = query.in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+    }
     query = applyOrderView(query, filters.view)
   } else {
     if (isOrderStatus(filters.status)) query = query.eq("status", filters.status)
@@ -79,7 +87,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, created_at)")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at)")
     .eq("id", id)
     .maybeSingle<OrderRow>()
   if (error) throw new Error(error.message)
@@ -108,7 +116,7 @@ export type DashboardData = {
   averageOrder: { current: number; previous: number }
   /** Orders in the range by status. */
   byStatus: Record<OrderStatus, number>
-  attention: { toVerify: number; awaitingPayment: number; toFulfil: number }
+  attention: { toVerify: number; awaitingPayment: number; toFulfil: number; returnRequests: number }
   topProducts: TopProduct[]
   lowStock: LowStockProduct[]
   recent: Order[]
@@ -181,13 +189,14 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 
   const now = new Date()
 
-  const [orderRows, itemsByOrder, recentRes, verifyRes, awaitingRes, fulfilRes, lowStockRes] = await Promise.all([
+  const [orderRows, itemsByOrder, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes] = await Promise.all([
     fetchOrdersBetween(range.previous?.start ?? range.start, range.end),
     fetchPaidItems(range.start, range.end),
     supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
     applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "to-verify"),
     applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "awaiting-payment"),
     applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "to-ship"),
+    supabase.from("return_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
     supabase
       .from("products")
       .select("id, name, stock, images")
@@ -197,14 +206,10 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       .limit(6)
       .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
   ])
-  const failed = [recentRes, verifyRes, awaitingRes, fulfilRes, lowStockRes].find((r) => r.error)
+  const failed = [recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes].find((r) => r.error)
   if (failed?.error) throw new Error(failed.error.message)
 
-  // "All time" starts at the first real order, so the chart isn't mostly empty
-  let start = range.start
-  if (range.key === "all" && orderRows.length) {
-    start = new Date(Math.min(...orderRows.map((o) => new Date(o.created_at).getTime())))
-  }
+  const start = range.start
 
   // ---- chart points: one per day, or per month for long ranges ---------------
   const bucketKey = (d: Date) => (range.bucket === "month" ? istDayKey(d).slice(0, 7) : istDayKey(d))
@@ -228,6 +233,8 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
   for (const o of orderRows) {
     const created = new Date(o.created_at)
     const isCurrent = created >= cutoffCurrent
+    // the comparison period may not touch the current one (e.g. same months of last year), so skip the gap
+    if (!isCurrent && !(range.previous && created >= range.previous.start && created < range.previous.end)) continue
     const bucket = isCurrent ? cur : prev
     const total = Number(o.total ?? o.subtotal)
     const counts = o.status !== "cancelled"
@@ -283,6 +290,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       toVerify: verifyRes.count ?? 0,
       awaitingPayment: awaitingRes.count ?? 0,
       toFulfil: fulfilRes.count ?? 0,
+      returnRequests: returnsRes.count ?? 0,
     },
     topProducts: [...productTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5),
     lowStock,

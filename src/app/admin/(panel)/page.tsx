@@ -7,6 +7,7 @@ import {
   ExternalLinkIcon,
   PackageCheckIcon,
   PlusIcon,
+  Undo2Icon,
   type LucideIcon,
 } from "lucide-react"
 import type { Metadata } from "next"
@@ -155,11 +156,11 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
   const sp = await searchParams
   await connection() // the date range depends on "today", so this page is rendered per request
   const now = new Date()
-  const range = resolveRange({ range: one(sp.range), from: one(sp.from), to: one(sp.to) }, now)
+  const range = resolveRange({ range: one(sp.range), month: one(sp.month), from: one(sp.from), to: one(sp.to) }, now)
   const d = await getDashboard(range)
   const maxStatus = Math.max(1, ...Object.values(d.byStatus))
   const aovSeries = d.days.map((p) => (p.orders ? p.revenue / p.orders : 0))
-  const attentionTotal = d.attention.toVerify + d.attention.awaitingPayment + d.attention.toFulfil + d.lowStock.length
+  const attentionTotal = d.attention.toVerify + d.attention.awaitingPayment + d.attention.toFulfil + d.attention.returnRequests + d.lowStock.length
 
   return (
     <div data-ui="page:/admin" className="space-y-6">
@@ -186,7 +187,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
 
       <DashboardRangeShell current={{ key: range.key, from: range.from, to: range.to }} today={istDayKey(now)}>
         {/* ------------------------------------------------ needs attention */}
-        <Stagger className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" stagger={0.05}>
+        <Stagger className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" stagger={0.05}>
           <StaggerItem>
             <AttentionTile
               href="/admin/orders?view=to-verify"
@@ -208,7 +209,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
               hint="Orders not yet paid"
             />
           </StaggerItem>
-          <StaggerItem className="sm:col-span-2 xl:col-span-1">
+          <StaggerItem>
             <AttentionTile
               href="/admin/orders?view=to-ship"
               icon={PackageCheckIcon}
@@ -216,6 +217,16 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
               count={d.attention.toFulfil}
               label="To pack & ship"
               hint="Paid and confirmed"
+            />
+          </StaggerItem>
+          <StaggerItem>
+            <AttentionTile
+              href="/admin/orders?view=return-requests"
+              icon={Undo2Icon}
+              tone="rose"
+              count={d.attention.returnRequests}
+              label="Return requests"
+              hint="Waiting for your decision"
             />
           </StaggerItem>
         </Stagger>

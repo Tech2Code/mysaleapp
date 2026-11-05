@@ -9,7 +9,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { getActiveProducts } from "@/features/products/queries"
 import { getStoreSettings } from "@/features/settings/queries"
-import { cancelOrderSchema, placeOrderSchema, submitPaymentSchema, trackOrderSchema, updateDeliverySchema } from "./schema"
+import { cancelOrderSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema } from "./schema"
+import { returnWindow } from "./returns"
 import { buildOrderMessage, shopWhatsappLink } from "./whatsapp"
 import { mapFees, type OrderPricing, type TrackedOrder } from "./types"
 
@@ -28,6 +29,15 @@ const RPC_ERRORS: Record<string, string> = {
   ORDER_CANCELLED: "This order was cancelled.",
   ALREADY_PAID: "This order is already marked as paid.",
   DUPLICATE_REFERENCE: "This reference number was already used for another payment. Please check it and try again.",
+  NOT_DELIVERED: "Returns can only be requested after the order is delivered.",
+  RETURNS_OFF: "This shop isn't accepting returns right now. Please message us on WhatsApp.",
+  WINDOW_CLOSED: "The return window for this order has ended. Please message us on WhatsApp.",
+  REASON_REQUIRED: "Please choose a reason for the return.",
+  NO_ITEMS: "Choose at least one item to return.",
+  ITEM_NOT_IN_ORDER: "One of those items isn't part of this order.",
+  TOO_MANY_RETURNED: "You can't return more than you ordered.",
+  ALREADY_OPEN: "You already have a return request open for this order.",
+  CANNOT_WITHDRAW: "This request has already been reviewed, so it can't be withdrawn.",
   ALREADY_CANCELLED: "This order is already cancelled.",
   CANNOT_CANCEL: "This order is already packed, so it can't be cancelled here. Please message us on WhatsApp.",
   TOO_MANY_ATTEMPTS: "Too many wrong attempts for this order. Please try again in 15 minutes, sign in, or message us on WhatsApp.",
@@ -143,6 +153,7 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
   if (!isSupabaseConfigured) return fail("Order tracking is unavailable in demo mode.")
 
   const supabase = await getServerSupabase()
+  const shop = await getStoreSettings()
   const { data, error } = await supabase.rpc("track_order", {
     p_code: parsed.data.code,
     p_phone_last4: parsed.data.phoneLast4,
@@ -162,6 +173,13 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
       ...t,
       shipping: t.shipping ?? null,
       cancellation: t.cancellation ?? null,
+      returns: t.returns ?? [],
+      returnRequests: t.returnRequests ?? [],
+      returnWindow: (() => {
+        const days = shop.returnWindowDays
+        const w = returnWindow(t.history ?? [], days, new Date())
+        return { open: w.open, until: w.until ? w.until.toISOString() : null, days }
+      })(),
       delivery: t.delivery ?? null,
       subtotal,
       shippingFee: Number(t.shippingFee ?? 0),
@@ -263,4 +281,49 @@ export async function cancelOrder(input: unknown): Promise<ActionResult<{ refund
   if (soft) return fail(soft)
   revalidatePath("/account", "layout")
   return { ok: true, data: { refundDue: (data as { refundDue?: boolean } | null)?.refundDue === true } }
+}
+
+/** The customer asks to send items back (delivered orders, within the return window). The admin approves or rejects. */
+export async function requestReturn(input: unknown): Promise<ActionResult> {
+  const parsed = requestReturnSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the return details.", z.flattenError(parsed.error).fieldErrors)
+  if (!isSupabaseConfigured) return fail("Unavailable in demo mode.")
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("request_return", {
+    p_code: parsed.data.code,
+    p_phone_last4: parsed.data.phoneLast4 ?? null,
+    p_items: parsed.data.items,
+    p_reason: parsed.data.reason,
+    p_details: parsed.data.details ?? null,
+  })
+  if (error) {
+    if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Please message us on WhatsApp.")
+    return fail(mapRpcError(error.message, "Could not send your return request. Please try again."))
+  }
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  return { ok: true }
+}
+
+/** The customer takes back a return request that hasn't been reviewed yet. */
+export async function withdrawReturnRequest(input: unknown): Promise<ActionResult> {
+  const parsed = withdrawReturnSchema.safeParse(input)
+  if (!parsed.success) return fail("Something went wrong. Please refresh and try again.")
+  if (!isSupabaseConfigured) return fail("Unavailable in demo mode.")
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("withdraw_return_request", {
+    p_code: parsed.data.code,
+    p_phone_last4: parsed.data.phoneLast4 ?? null,
+    p_request_id: parsed.data.requestId,
+  })
+  if (error) return fail(mapRpcError(error.message, "Could not withdraw the request. Please try again."))
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  return { ok: true }
 }

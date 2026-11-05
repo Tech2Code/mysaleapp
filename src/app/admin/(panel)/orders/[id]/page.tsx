@@ -4,6 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
 import { AdminReturnOrder } from "@/components/admin/return-order"
+import { AdminReturnRequests } from "@/components/admin/return-requests"
 import { AdminCancelOrder, AdminNoteForm, OrderStatusControl } from "@/components/admin/order-controls"
 import { PaymentControl } from "@/components/admin/payment-control"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
@@ -16,6 +17,8 @@ import { StatusBadge } from "@/components/shared/status-badge"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { getOrderById } from "@/features/orders/admin-queries"
 import { whatsappLink } from "@/features/orders/whatsapp"
+import { formatDeadline, paymentDeadline } from "@/features/orders/deadline"
+import { getStoreSettings } from "@/features/settings/queries"
 import { formatDateTime } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Order details" }
@@ -36,8 +39,12 @@ function Card({ title, children }: { title?: string; children: ReactNode }) {
  */
 export default async function AdminOrderPage({ params }: PageProps<"/admin/orders/[id]">) {
   const { id } = await params
-  const order = await getOrderById(id)
+  const [order, shop] = await Promise.all([getOrderById(id), getStoreSettings()])
   if (!order) notFound()
+  const autoCancelAt =
+    order.status === "pending" && (order.paymentStatus === "pending" || order.paymentStatus === "failed")
+      ? paymentDeadline(order.createdAt, shop.unpaidOrderExpiryHours)
+      : null
 
   // Changes whenever the order changes (e.g. payment verified → status becomes "confirmed"),
   // so the forms below always start from the saved values instead of stale ones.
@@ -57,6 +64,11 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} className="text-sm" />
         </div>
         <span data-ui="page:/admin/orders/[id]/span" className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</span>
+        {autoCancelAt && (
+          <span data-ui="page:/admin/orders/[id]/span-2" className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+            Auto-cancels {formatDeadline(autoCancelAt)} if unpaid
+          </span>
+        )}
       </header>
 
       <div data-ui="page:/admin/orders/[id]/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
@@ -64,6 +76,17 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           {order.cancellation && (
             <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="admin" />
           )}
+          <AdminReturnRequests
+            requests={order.returnRequests}
+            orderId={order.id}
+            orderCode={order.orderCode}
+            customerName={order.customerName}
+            phone={order.phone}
+            status={order.status}
+            paymentStatus={order.paymentStatus}
+            items={order.items}
+            returns={order.returns}
+          />
           <ReturnsList returns={order.returns} audience="admin" />
           <OrderSummary order={order} openLinksInNewTab />
 
@@ -139,7 +162,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
             )}
             {order.note && (
               <p data-ui="page:/admin/orders/[id]/p-7" className="mt-3 rounded-xl bg-secondary/70 p-3 text-sm">
-                <span data-ui="page:/admin/orders/[id]/span-2" className="font-semibold">Customer note:</span> {order.note}
+                <span data-ui="page:/admin/orders/[id]/span-3" className="font-semibold">Customer note:</span> {order.note}
               </p>
             )}
           </Card>

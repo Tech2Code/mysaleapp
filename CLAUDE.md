@@ -93,3 +93,15 @@ Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-succes
 - Stock is **reserved when the order is placed** (`create_order`, migration 0010) and given back once if the order is cancelled. The `stock` number is the sellable amount; dispatch does not change it.
 - Unpaid orders (status pending, payment pending/failed) are cancelled automatically after `store_settings.unpaid_order_expiry_hours` (default 24, 0 = never) by `expire_unpaid_orders()`, run every 15 minutes by pg_cron. An order where the customer already submitted a UTR is never auto-cancelled. Cancellation `by` can be `system`.
 - Returns: `record_order_return()` (admin only, delivered orders). Per item the admin chooses "Back into stock" (resellable) or not (damaged). Rows live in `order_returns`; show them with `<ReturnsList>`.
+
+## Return requests
+
+Customer flow: delivered order → **Request a return** (inside `store_settings.return_window_days` of delivery, default 7; 0 = off) → admin **approves** (with pickup/shipping instructions) or **rejects** (reason required) → when the goods arrive the admin **records the return** from the approved request (`record_order_return` with `p_request_id`), choosing per item whether it goes back into stock → the request becomes `received`.
+- One open request per order (DB unique index). The customer can withdraw it until it is reviewed.
+- Rules live in `features/orders/returns.ts` (window, returnable quantities, reasons); the DB enforces the same (migration 0012). RPCs: `request_return`, `withdraw_return_request` (guest by code + last 4, or signed in), `decide_return_request` (admin).
+- Dashboard tile and `/admin/orders?view=return-requests` list orders with a request waiting for a decision.
+- The admin can tell the customer on WhatsApp after deciding (`buildReturnDecisionMessage`).
+
+## Dashboard range
+
+Default is the current **financial year** (April–March, India), compared with the same stretch of last year. Other options: this month, a particular month (`?month=YYYY-MM`), custom dates. See `features/orders/dashboard-range.ts`.

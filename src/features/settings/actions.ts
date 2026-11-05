@@ -38,6 +38,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       facebook_url: s.facebookUrl,
       order_code_prefix: s.orderCodePrefix,
       unpaid_order_expiry_hours: s.unpaidOrderExpiryHours,
+      return_window_days: s.returnWindowDays,
       delivery_fee: s.deliveryFee,
       free_delivery_above: s.freeDeliveryAbove,
       upi_id: s.upiId,

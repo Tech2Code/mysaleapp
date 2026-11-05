@@ -44,6 +44,7 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     facebookUrl: s.facebookUrl ?? "",
     orderCodePrefix: s.orderCodePrefix,
     unpaidOrderExpiryHours: s.unpaidOrderExpiryHours,
+    returnWindowDays: s.returnWindowDays,
     deliveryFee: s.deliveryFee,
     freeDeliveryAbove: s.freeDeliveryAbove,
     upiId: s.upiId ?? "",
@@ -105,6 +106,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         facebookUrl: values.facebookUrl ?? "",
         orderCodePrefix: values.orderCodePrefix,
         unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
+        returnWindowDays: values.returnWindowDays,
         deliveryFee: values.deliveryFee,
         freeDeliveryAbove: values.freeDeliveryAbove,
         upiId: values.upiId ?? "",
@@ -278,7 +280,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
-          <Card title="Orders" description="How your order numbers look, and how long an unpaid order is kept.">
+          <Card title="Orders" description="How your order numbers look, and how long an unpaid order is kept, and the return window.">
             <TextField
               label="Order code prefix" kind="orderPrefix"
               fieldSize="md"
@@ -298,6 +300,16 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
               hint="Frees the reserved stock if nobody pays. 0 = never. Orders where the customer already sent a UTR are never auto-cancelled."
               error={errors.unpaidOrderExpiryHours?.message}
               {...form.register("unpaidOrderExpiryHours")}
+            />
+            <TextField
+              label="Return window (days after delivery)" kind="digits"
+              fieldSize="md"
+              inputMode="numeric"
+              maxLength={2}
+              containerClassName="sm:w-64"
+              hint="How long customers can request a return. 0 = returns are not accepted."
+              error={errors.returnWindowDays?.message}
+              {...form.register("returnWindowDays")}
             />
           </Card>
         </div>

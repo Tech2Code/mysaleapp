@@ -166,10 +166,27 @@ export type Cancellation = {
 /** Goods that came back for a delivered order (recorded by the admin). */
 export type OrderReturn = {
   id: string
-  items: { productId: string; name: string; quantity: number; restock: boolean }[]
+  /** `restock` is only meaningful to the admin (was it put back on sale?). */
+  items: { productId: string; name: string; quantity: number; restock?: boolean }[]
   reason: string | null
   refunded: boolean
   createdAt: string
+}
+
+export const RETURN_REQUEST_STATUSES = ["requested", "approved", "rejected", "withdrawn", "received"] as const
+export type ReturnRequestStatus = (typeof RETURN_REQUEST_STATUSES)[number]
+
+/** A customer's request to send items back. The admin approves or rejects it. */
+export type ReturnRequest = {
+  id: string
+  items: { productId: string; name: string; quantity: number }[]
+  reason: string
+  details: string | null
+  status: ReturnRequestStatus
+  /** Shown to the customer: pickup / shipping instructions, or the reason for a rejection. */
+  adminNote: string | null
+  createdAt: string
+  decidedAt: string | null
 }
 
 export type Order = {
@@ -193,7 +210,7 @@ export type Order = {
 } & OrderPricing &
   OrderPayment
 
-export type OrderWithHistory = Order & { history: StatusHistoryEntry[]; returns: OrderReturn[] }
+export type OrderWithHistory = Order & { history: StatusHistoryEntry[]; returns: OrderReturn[]; returnRequests: ReturnRequest[] }
 
 /** Public tracking result (no address / phone exposed). */
 export type TrackedOrder = {
@@ -207,6 +224,10 @@ export type TrackedOrder = {
   /** Present only while the order is pending (still editable). */
   delivery: DeliveryDetails | null
   history: StatusHistoryEntry[]
+  returns: OrderReturn[]
+  returnRequests: ReturnRequest[]
+  /** Can the customer still ask for a return? (delivered + inside the shop's return window) */
+  returnWindow: { open: boolean; until: string | null; days: number }
 } & OrderPricing &
   OrderPayment
 
@@ -251,6 +272,16 @@ export type OrderRow = {
   updated_at: string
   history?: { status: OrderStatus; changed_at: string }[]
   returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; created_at: string }[]
+  return_requests?: {
+    id: string
+    items: ReturnRequest["items"]
+    reason: string
+    details: string | null
+    status: ReturnRequestStatus
+    admin_note: string | null
+    created_at: string
+    decided_at: string | null
+  }[]
 }
 
 type RawFees =
@@ -330,6 +361,18 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
     history: (row.history ?? [])
       .map((h) => ({ status: h.status, changedAt: h.changed_at }))
       .sort((a, b) => a.changedAt.localeCompare(b.changedAt)),
+    returnRequests: (row.return_requests ?? [])
+      .map((r) => ({
+        id: r.id,
+        items: r.items,
+        reason: r.reason,
+        details: r.details,
+        status: r.status,
+        adminNote: r.admin_note,
+        createdAt: r.created_at,
+        decidedAt: r.decided_at,
+      }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     returns: (row.returns ?? [])
       .map((r) => ({ id: r.id, items: r.items, reason: r.reason, refunded: r.refunded, createdAt: r.created_at }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),

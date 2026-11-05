@@ -123,3 +123,20 @@ export function buildStatusUpdateMessage(
     `Track anytime: ${siteConfig.url}/track?code=${input.orderCode}`,
   ].join("\n")
 }
+
+/** Message the ADMIN sends to the customer about their return request. */
+export function buildReturnDecisionMessage(
+  shop: Shop,
+  input: { orderCode: string; customerName: string; approved: boolean; note?: string | null }
+): string {
+  return [
+    `Hi ${input.customerName}! 👋`,
+    `Update on your return request for order *${input.orderCode}* from ${shop.shopName}:`,
+    "",
+    input.approved ? "✅ *Approved.*" : "❌ *We couldn't approve this return.*",
+    ...(input.note ? [input.approved ? `How to send it back: ${input.note}` : `Reason: ${input.note}`] : []),
+    ...(input.approved ? ["Once the items reach us and are checked, we'll process your refund."] : []),
+    "",
+    "Reply here if you have any questions.",
+  ].join("\n")
+}

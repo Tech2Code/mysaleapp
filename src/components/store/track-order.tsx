@@ -23,6 +23,8 @@ import { WhatsAppIcon } from "./brand-icons"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { CopyButton } from "@/components/shared/copy-button"
 import { CancelOrder } from "./cancel-order"
+import { RequestReturn, ReturnRequestsPanel } from "./request-return"
+import { ReturnsList } from "@/components/shared/returns-list"
 import { DeliveryEditor } from "./delivery-editor"
 import { useStoreSettings } from "./store-settings-provider"
 import { PaymentPanel } from "./payment-panel"
@@ -201,6 +203,8 @@ export function TrackOrder() {
                 <StatusBadge status={result.status} pulse />
               </div>
               <p data-ui="store/TrackOrder/p-6" className="text-sm text-muted-foreground">{STATUS_META[result.status].description}.</p>
+              {query && <ReturnRequestsPanel requests={result.returnRequests} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} />}
+              <ReturnsList returns={result.returns} audience="customer" />
               {result.cancellation && (
                 <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
               )}
@@ -211,12 +215,24 @@ export function TrackOrder() {
                   total={result.total}
                   orderStatus={result.status}
                   payment={result}
+                  createdAt={result.createdAt}
                   onSubmitted={() => void refetch()}
                 />
               )}
               <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} />
               {query && (
-                <div data-ui="store/TrackOrder/div-5" className="border-t pt-5">
+                <div data-ui="store/TrackOrder/div-flex-3" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
+                  <RequestReturn
+                    orderCode={result.orderCode}
+                    phoneLast4={query.phoneLast4}
+                    status={result.status}
+                    items={result.items}
+                    returns={result.returns}
+                    requests={result.returnRequests}
+                    window={result.returnWindow}
+                    whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
+                    onDone={() => void refetch()}
+                  />
                   <CancelOrder
                     orderCode={result.orderCode}
                     phoneLast4={query.phoneLast4}

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import {
   AlertCircleIcon,
   BadgeCheckIcon,
+  ClockIcon,
   CopyIcon,
   HourglassIcon,
   Loader2Icon,
@@ -30,6 +31,7 @@ import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { WhatsAppIcon } from "./brand-icons"
+import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { useStoreSettings } from "./store-settings-provider"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
@@ -44,6 +46,8 @@ type PaymentPanelProps = {
   payment: OrderPayment
   /** Called after a payment is submitted. Defaults to refreshing the current page. */
   onSubmitted?: () => void
+  /** When the order was placed: lets us show the exact time an unpaid order is cancelled automatically. */
+  createdAt?: string
 }
 
 function CopyRow({ label, value }: { label: string; value: string }) {
@@ -130,7 +134,7 @@ function ReferenceForm({
  *  paid               → receipt
  * Cash on delivery isn't offered; the order is confirmed after we verify the payment.
  */
-export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, payment, onSubmitted }: PaymentPanelProps) {
+export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, payment, onSubmitted, createdAt }: PaymentPanelProps) {
   const router = useRouter()
   const shop = useStoreSettings()
   const { upiId, upiPayeeName } = shop
@@ -201,6 +205,9 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   // ---- Pending / rejected / changing: pay now ------------------------------
   const upiUrl = upiId ? buildUpiUrl({ upiId, payeeName: upiPayeeName, amount: total, orderCode }) : null
   const rejected = payment.paymentStatus === "failed"
+  const expiryHours = shop.unpaidOrderExpiryHours
+  const at = createdAt ? paymentDeadline(createdAt, expiryHours) : null
+  const deadline = expiryHours > 0 ? { exact: at ? formatDeadline(at) : null, within: describeHours(expiryHours) } : null
 
   return (
     <section data-ui="store/PaymentPanel" aria-label="Pay for your order" className="space-y-5 rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
@@ -208,16 +215,31 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         <h3 data-ui="store/PaymentPanel/h3-pay" className="font-heading text-xl font-semibold">Pay {formatPrice(total)} to confirm your order</h3>
         <p data-ui="store/PaymentPanel/p-3" className="mt-1 text-sm text-muted-foreground">
           Cash on delivery isn&apos;t available. Pay by UPI now, then enter the reference number below.
-          {shop.unpaidOrderExpiryHours > 0 &&
-            ` Please pay within ${shop.unpaidOrderExpiryHours} hour${shop.unpaidOrderExpiryHours === 1 ? "" : "s"}; unpaid orders are cancelled automatically.`}
         </p>
+        {deadline && (
+          <p data-ui="store/PaymentPanel/p-flex" className="mt-2 flex items-start gap-2 rounded-xl bg-amber-100 p-3 text-xs/snug  text-amber-950 dark:bg-amber-900/30 dark:text-amber-100">
+            <ClockIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span data-ui="store/PaymentPanel/span-2">
+              {deadline.exact ? (
+                <>
+                  Please pay by <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.exact}</span>. If we don&apos;t receive the payment by then, this order is cancelled automatically and the items go back on sale.
+                </>
+              ) : (
+                <>
+                  Please pay within <span data-ui="store/PaymentPanel/span-4" className="font-semibold">{deadline.within}</span>. Unpaid orders are cancelled automatically after that and the items go back on sale.
+                </>
+              )}
+              {" "}Already paid? Enter your UTR below and we&apos;ll keep your order.
+            </span>
+          </p>
+        )}
       </div>
 
       {rejected && (
-        <p data-ui="store/PaymentPanel/p-flex" role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+        <p data-ui="store/PaymentPanel/p-flex-2" role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
-          <span data-ui="store/PaymentPanel/span-2">
-            <span data-ui="store/PaymentPanel/span-3" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
+          <span data-ui="store/PaymentPanel/span-5">
+            <span data-ui="store/PaymentPanel/span-6" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
             {payment.paymentNote ?? "Please check the reference number and submit it again."}
           </span>
         </p>
@@ -225,7 +247,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
 
       {upiUrl && upiId ? (
         <div data-ui="store/PaymentPanel/div-2" className="space-y-4">
-          <p data-ui="store/PaymentPanel/p-flex-2" className="flex items-center gap-2 text-sm font-semibold">
+          <p data-ui="store/PaymentPanel/p-flex-3" className="flex items-center gap-2 text-sm font-semibold">
             <span data-ui="store/PaymentPanel/span-grid" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
             Pay with any UPI app
           </p>
@@ -240,7 +262,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           <div data-ui="store/PaymentPanel/div-hidden" className="hidden items-center gap-4 rounded-2xl border bg-white p-4 md:flex">
             <QRCodeSVG value={upiUrl} size={132} marginSize={1} title={`UPI QR code to pay ${formatPrice(total)}`} />
             <div data-ui="store/PaymentPanel/div-3" className="text-sm text-neutral-700">
-              <p data-ui="store/PaymentPanel/p-flex-3" className="flex items-center gap-2 font-semibold text-neutral-900">
+              <p data-ui="store/PaymentPanel/p-flex-4" className="flex items-center gap-2 font-semibold text-neutral-900">
                 <QrCodeIcon className="size-4" /> Scan with any UPI app
               </p>
               <p data-ui="store/PaymentPanel/p-4" className="mt-1">Amount {formatPrice(total)} is filled in for you.</p>
@@ -260,7 +282,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
       )}
 
       <div data-ui="store/PaymentPanel/div-5" className="space-y-3">
-        <p data-ui="store/PaymentPanel/p-flex-4" className="flex items-center gap-2 text-sm font-semibold">
+        <p data-ui="store/PaymentPanel/p-flex-5" className="flex items-center gap-2 text-sm font-semibold">
           <span data-ui="store/PaymentPanel/span-grid-2" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
           After paying, enter the reference number
         </p>

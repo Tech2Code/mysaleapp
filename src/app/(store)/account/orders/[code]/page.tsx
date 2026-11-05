@@ -7,6 +7,8 @@ import { ReturnsList } from "@/components/shared/returns-list"
 import { CopyButton } from "@/components/shared/copy-button"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { CancelOrder } from "@/components/store/cancel-order"
+import { RequestReturn, ReturnRequestsPanel } from "@/components/store/request-return"
+import { returnWindow } from "@/features/orders/returns"
 import { DeliveryEditor } from "@/components/store/delivery-editor"
 import { PaymentPanel } from "@/components/store/payment-panel"
 import { OrderTimeline } from "@/components/shared/order-timeline"
@@ -22,6 +24,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   const [order, shop] = await Promise.all([getMyOrder(code), getStoreSettings()])
   if (!order) notFound()
+  const win = returnWindow(order.history, shop.returnWindowDays, new Date())
 
   return (
     <div data-ui="page:/account/orders/[code]#OrderDetail" className="space-y-6">
@@ -39,6 +42,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
       {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
       <div data-ui="page:/account/orders/[code]#OrderDetail/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div data-ui="page:/account/orders/[code]#OrderDetail/div-2" className="space-y-6">
+        <ReturnRequestsPanel requests={order.returnRequests} orderCode={order.orderCode} phoneLast4={order.phone.slice(-4)} />
         <ReturnsList returns={order.returns} audience="customer" />
         {order.cancellation && (
           <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="customer" />
@@ -49,6 +53,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
           total={order.total}
           orderStatus={order.status}
           payment={order}
+          createdAt={order.createdAt}
         />
         <section data-ui="page:/account/orders/[code]#OrderDetail/section" aria-labelledby="progress-title" className="rounded-3xl border bg-card p-6 sm:p-8">
           <h3 data-ui="page:/account/orders/[code]#OrderDetail/h3-order-progress" id="progress-title" className="mb-6 font-sans text-lg font-semibold">
@@ -65,6 +70,15 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
             >
               <WhatsAppIcon className="size-4" /> Ask about this order
             </a>
+            <RequestReturn
+              orderCode={order.orderCode}
+              status={order.status}
+              items={order.items}
+              returns={order.returns}
+              requests={order.returnRequests}
+              window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: shop.returnWindowDays }}
+              whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${order.orderCode}.`)}
+            />
             <CancelOrder
               orderCode={order.orderCode}
               status={order.status}

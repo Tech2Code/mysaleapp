@@ -19,7 +19,9 @@ import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
+import { describeHours } from "@/features/orders/deadline"
 import { useCart } from "@/store/cart"
+import { useStoreSettings } from "./store-settings-provider"
 import { FreeShippingBar } from "./cart-drawer"
 import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
@@ -32,6 +34,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   const { ready, available, hasUnavailable, charges } = useLiveCart(products)
   const itemCount = available.reduce((n, l) => n + l.quantity, 0)
   const clearCart = useCart((s) => s.clear)
+  const shop = useStoreSettings()
   const { user, ready: authReady } = useAuth()
   const [pending, startTransition] = useTransition()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -308,6 +311,11 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
             </span>
           </p>
           <p data-ui="store/CheckoutForm/p-6" className="pl-5.5">Your order is confirmed once we verify the payment.</p>
+          {shop.unpaidOrderExpiryHours > 0 && (
+            <p data-ui="store/CheckoutForm/p-7" className="pl-5.5">
+              Pay within <span data-ui="store/CheckoutForm/span-11" className="font-semibold text-foreground">{describeHours(shop.unpaidOrderExpiryHours)}</span> of ordering. Unpaid orders are cancelled automatically.
+            </p>
+          )}
         </div>
       </aside>
     </form>

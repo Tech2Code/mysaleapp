@@ -4,12 +4,14 @@ import { Suspense } from "react"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { getMyOrders } from "@/features/orders/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 async function OrdersList() {
-  const orders = await getMyOrders()
+  const [orders, shop] = await Promise.all([getMyOrders(), getStoreSettings()])
 
   if (orders.length === 0) {
     return (
@@ -56,6 +58,11 @@ async function OrdersList() {
                 {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
               </p>
               <p data-ui="page:/account/orders#OrdersList/p-4" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
+              {o.status === "pending" && (o.paymentStatus === "pending" || o.paymentStatus === "failed") && shop.unpaidOrderExpiryHours > 0 && (
+                <p data-ui="page:/account/orders#OrdersList/p-5" className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                  Pay by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours)!)} · unpaid orders are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
+                </p>
+              )}
             </div>
             <span data-ui="page:/account/orders#OrdersList/span-4" className="font-semibold">{formatPrice(o.total)}</span>
             <ChevronRightIcon className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
