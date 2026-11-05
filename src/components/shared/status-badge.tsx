@@ -40,9 +40,9 @@ export function StatusBadge({
         className
       )}
     >
-      <span className="relative grid place-items-center">
+      <span data-ui="shared/StatusBadge/span-grid" className="relative grid place-items-center">
         {pulse && (
-          <span aria-hidden className="absolute inset-0 rounded-full bg-current opacity-30 animate-ping [animation-duration:2.2s]" />
+          <span data-ui="shared/StatusBadge/span-absolute" aria-hidden className="absolute inset-0 rounded-full bg-current opacity-30 animate-ping animation-duration-[2.2s]" />
         )}
         <Icon className="relative size-3.5" aria-hidden />
       </span>

@@ -274,7 +274,7 @@
     color: transparent;
   }
   .glass {
-    @apply bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55;
+    @apply bg-background/70 backdrop-blur-xl supports-backdrop-filter:bg-background/55;
   }
   .shimmer {
     background-image: linear-gradient(90deg, transparent, oklch(1 0 0 / 35%), transparent);

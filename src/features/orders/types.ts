@@ -214,7 +214,8 @@ export type OrderRow = {
   items: OrderItem[]
   subtotal: number | string
   status: OrderStatus
-  admin_note: string | null
+  /** Only present on admin queries that embed `order_admin_notes` (customers can never select it). */
+  private_note?: { note: string } | { note: string }[] | null
   // Added by migrations 0002 / 0003; optional so the app keeps working before they are applied.
   shipping_carrier?: string | null
   tracking_number?: string | null
@@ -287,7 +288,7 @@ export function mapOrder(row: OrderRow): Order {
     note: row.note,
     items: (row.items ?? []).map((i) => ({ ...i, price: Number(i.price) })),
     status: row.status,
-    adminNote: row.admin_note,
+    adminNote: (Array.isArray(row.private_note) ? row.private_note[0]?.note : row.private_note?.note) ?? null,
     shipping: row.shipping_carrier
       ? {
           carrier: row.shipping_carrier,

@@ -4,6 +4,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { assertAdmin, getCurrentUser } from "@/features/auth/guards"
+import { siteConfig } from "@/config/site"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
@@ -13,6 +14,16 @@ import { changePasswordSchema, emailSchema, profileSchema, resetSchema } from ".
  * Admin account management: profile, email, password, and the "forgot password" flow.
  * Emails (confirmation / reset link) are sent by Supabase Auth; see README → "Admin account emails".
  */
+
+/**
+ * Base URL for links inside auth emails. In production this is the configured site URL, never a
+ * request header, so a forged Origin/Host can't point a reset link at another site. The request
+ * Origin is only used as a fallback while NEXT_PUBLIC_SITE_URL is unset (local development).
+ */
+async function trustedOrigin(): Promise<string | undefined> {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return siteConfig.url
+  return (await headers()).get("origin") ?? undefined
+}
 
 export async function updateAdminProfile(input: unknown): Promise<ActionResult> {
   const auth = await assertAdmin()
@@ -35,7 +46,7 @@ export async function requestAdminEmailChange(input: unknown): Promise<ActionRes
   if (parsed.data.email.toLowerCase() === auth.user.email?.toLowerCase()) return fail("That is already your email address.")
 
   const supabase = await getServerSupabase()
-  const origin = (await headers()).get("origin") ?? undefined
+  const origin = await trustedOrigin()
   const { error } = await supabase.auth.updateUser(
     { email: parsed.data.email },
     origin ? { emailRedirectTo: `${origin}/auth/callback?next=/admin/account` } : undefined
@@ -69,7 +80,7 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   const parsed = emailSchema.safeParse(input)
   if (!parsed.success) return fail("Enter a valid email address.", z.flattenError(parsed.error).fieldErrors)
 
-  const origin = (await headers()).get("origin")
+  const origin = await trustedOrigin()
   const supabase = await getServerSupabase()
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: origin ? `${origin}/auth/callback?next=/admin/reset-password` : undefined,

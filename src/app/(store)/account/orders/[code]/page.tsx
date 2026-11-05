@@ -24,20 +24,20 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
 
   return (
     <div data-ui="page:/account/orders/[code]#OrderDetail" className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-card p-5">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-mono text-2xl font-semibold">{order.orderCode}</h2>
+      <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex" className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-card p-5">
+        <div data-ui="page:/account/orders/[code]#OrderDetail/div">
+          <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex-2" className="flex flex-wrap items-center gap-3">
+            <h2 data-ui="page:/account/orders/[code]#OrderDetail/h2" className="font-mono text-2xl font-semibold">{order.orderCode}</h2>
             <CopyButton value={order.orderCode} label="Order ID" />
           </div>
-          <p className="text-sm text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
+          <p data-ui="page:/account/orders/[code]#OrderDetail/p" className="text-sm text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
         </div>
         <StatusBadge status={order.status} className="text-sm" pulse />
       </div>
 
       {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="space-y-6">
+      <div data-ui="page:/account/orders/[code]#OrderDetail/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div data-ui="page:/account/orders/[code]#OrderDetail/div-2" className="space-y-6">
         {order.cancellation && (
           <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="customer" />
         )}
@@ -48,14 +48,14 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
           orderStatus={order.status}
           payment={order}
         />
-        <section aria-labelledby="progress-title" className="rounded-3xl border bg-card p-6 sm:p-8">
-          <h3 id="progress-title" className="mb-6 font-sans text-lg font-semibold">
+        <section data-ui="page:/account/orders/[code]#OrderDetail/section" aria-labelledby="progress-title" className="rounded-3xl border bg-card p-6 sm:p-8">
+          <h3 data-ui="page:/account/orders/[code]#OrderDetail/h3-order-progress" id="progress-title" className="mb-6 font-sans text-lg font-semibold">
             Order progress
           </h3>
           <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} />
           {/* Help + cancel live together, under the progress they relate to */}
-          <div className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
-            <a
+          <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex-3" className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
+            <a data-ui="page:/account/orders/[code]#OrderDetail/a-ask-about-this-order"
               href={shopWhatsappLink(shop, `Hi! I have a question about my order ${order.orderCode}.`)}
               target="_blank"
               rel="noopener noreferrer"
@@ -73,7 +73,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
         </section>
         </div>
 
-        <div className="space-y-6 xl:sticky-store xl:self-start">
+        <div data-ui="page:/account/orders/[code]#OrderDetail/div-3" className="space-y-6 xl:sticky-store xl:self-start">
           <OrderSummary order={order} />
 
           <DeliveryEditor
@@ -97,10 +97,10 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
 export default function MyOrderPage({ params }: PageProps<"/account/orders/[code]">) {
   return (
     <section data-ui="page:/account/orders/[code]" className="space-y-6">
-      <Link href="/account/orders" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link data-ui="page:/account/orders/[code]/Link-all-orders" href="/account/orders" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeftIcon className="size-4" /> All orders
       </Link>
-      <Suspense fallback={<Skeleton className="h-96 rounded-3xl" />}>
+      <Suspense fallback={<Skeleton data-ui="page:/account/orders/[code]/Skeleton" className="h-96 rounded-3xl" />}>
         <OrderDetail params={params} />
       </Suspense>
     </section>

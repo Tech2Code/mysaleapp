@@ -79,11 +79,12 @@ export function AreaChart({
   const mid = Math.floor((labels.length - 1) / 2)
   const best = data.length ? data.indexOf(max) : -1
   const bestPoint = best >= 0 && max > 0 ? pts[best] : null
+  const xPct = bestPoint ? (bestPoint[0] / w) * 100 : 50
 
   return (
     <div data-ui="admin/AreaChart" className={className}>
-      <div className="relative">
-        <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} className="h-48 w-full text-primary sm:h-56" preserveAspectRatio="none">
+      <div data-ui="admin/AreaChart/div-relative" className="relative">
+        <svg data-ui="admin/AreaChart/svg" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} className="h-48 w-full text-primary sm:h-56" preserveAspectRatio="none">
           <defs>
             <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="currentColor" stopOpacity="0.32" />
@@ -97,18 +98,23 @@ export function AreaChart({
           <path d={line} fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
         {bestPoint && (
-          <span
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-[0.7rem] font-semibold whitespace-nowrap text-background shadow"
-            style={{ left: `${(bestPoint[0] / w) * 100}%`, top: `${(bestPoint[1] / h) * 100}%` }}
+          <span data-ui="admin/AreaChart/span-absolute"
+            className="pointer-events-none absolute rounded-md bg-foreground px-2 py-1 text-[0.7rem] font-semibold whitespace-nowrap text-background shadow"
+            style={{
+              left: `${xPct}%`,
+              top: `${(bestPoint[1] / h) * 100}%`,
+              // keep the tag inside the chart: shift it left/right near the edges, below the point near the top
+              transform: `translate(${xPct < 18 ? "-12%" : xPct > 82 ? "-88%" : "-50%"}, ${bestPoint[1] / h < 0.2 ? "0.5rem" : "-100%"})`,
+            }}
           >
             Best day · {formatValue(max)}
           </span>
         )}
       </div>
-      <div className="mt-2 flex justify-between text-xs text-muted-foreground" aria-hidden>
-        <span>{labels[0]}</span>
-        <span>{labels[mid]}</span>
-        <span>{labels.at(-1)}</span>
+      <div data-ui="admin/AreaChart/div-flex" className="mt-2 flex justify-between text-xs text-muted-foreground" aria-hidden>
+        <span data-ui="admin/AreaChart/span">{labels[0]}</span>
+        <span data-ui="admin/AreaChart/span-2">{labels[mid]}</span>
+        <span data-ui="admin/AreaChart/span-3">{labels.at(-1)}</span>
       </div>
     </div>
   )

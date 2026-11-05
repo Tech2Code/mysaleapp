@@ -28,18 +28,18 @@ export function ReadMore({
 
   return (
     <div data-ui="shared/ReadMore" className={className}>
-      <div
+      <div data-ui="shared/ReadMore/div"
         id={id}
         className={cn("relative overflow-hidden transition-[max-height] duration-500 ease-out")}
         style={collapsible && !open ? { maxHeight: collapsedHeight } : { maxHeight: "200rem" }}
       >
         {children}
         {collapsible && !open && (
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
+          <div data-ui="shared/ReadMore/div-absolute" aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
         )}
       </div>
       {collapsible && (
-        <button
+        <button data-ui="shared/ReadMore/button"
           type="button"
           aria-expanded={open}
           aria-controls={id}

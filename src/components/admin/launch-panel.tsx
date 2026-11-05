@@ -51,65 +51,65 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
 
   return (
     <div data-ui="admin/LaunchPanel" className="grid gap-6 xl:grid-cols-2 xl:items-start">
-      <section className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
-        <div>
-          <h2 className="font-sans text-lg font-semibold">Ready to launch?</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+      <section data-ui="admin/LaunchPanel/section" className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
+        <div data-ui="admin/LaunchPanel/div">
+          <h2 data-ui="admin/LaunchPanel/h2-ready-to-launch" className="font-sans text-lg font-semibold">Ready to launch?</h2>
+          <p data-ui="admin/LaunchPanel/p" className="mt-0.5 text-sm text-muted-foreground">
             {ready ? "Everything is in place. You can go live." : "Finish these before sharing the store link."}
           </p>
         </div>
-        <ul className="divide-y rounded-xl border">
+        <ul data-ui="admin/LaunchPanel/ul" className="divide-y rounded-xl border">
           {checklist.map((c) => (
-            <li key={c.label}>
-              <Link href={c.href} className="flex items-center gap-3 p-3.5 transition-colors hover:bg-muted/50">
+            <li data-ui="admin/LaunchPanel/li" key={c.label}>
+              <Link data-ui="admin/LaunchPanel/Link-flex" href={c.href} className="flex items-center gap-3 p-3.5 transition-colors hover:bg-muted/50">
                 {c.done ? (
                   <CheckCircle2Icon className="size-5 shrink-0 text-success" aria-hidden />
                 ) : (
                   <CircleDashedIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                 )}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{c.label}</span>
-                  {!c.done && <span className="block text-xs text-muted-foreground">{c.hint}</span>}
+                <span data-ui="admin/LaunchPanel/span" className="min-w-0 flex-1">
+                  <span data-ui="admin/LaunchPanel/span-2" className="block text-sm font-medium">{c.label}</span>
+                  {!c.done && <span data-ui="admin/LaunchPanel/span-3" className="block text-xs text-muted-foreground">{c.hint}</span>}
                 </span>
-                <span className="sr-only">{c.done ? "Done" : "To do"}</span>
+                <span data-ui="admin/LaunchPanel/span-4" className="sr-only">{c.done ? "Done" : "To do"}</span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="space-y-5 rounded-2xl border border-destructive/30 bg-card p-5 sm:p-6">
-        <div>
-          <h2 className="flex items-center gap-2 font-sans text-lg font-semibold text-destructive">
+      <section data-ui="admin/LaunchPanel/section-2" className="space-y-5 rounded-2xl border border-destructive/30 bg-card p-5 sm:p-6">
+        <div data-ui="admin/LaunchPanel/div-2">
+          <h2 data-ui="admin/LaunchPanel/h2-clear-test-data" className="flex items-center gap-2 font-sans text-lg font-semibold text-destructive">
             <TriangleAlertIcon className="size-5" aria-hidden /> Clear test data
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p data-ui="admin/LaunchPanel/p-2" className="mt-0.5 text-sm text-muted-foreground">
             Testing is done? Remove the practice data and start fresh. Your shop settings and admin login are never touched. This can&apos;t be undone.
           </p>
         </div>
 
-        <fieldset className="space-y-2">
-          <legend className="sr-only">What to clear</legend>
+        <fieldset data-ui="admin/LaunchPanel/fieldset" className="space-y-2">
+          <legend data-ui="admin/LaunchPanel/legend-what-to-clear" className="sr-only">What to clear</legend>
           {RESET_SCOPES.map((s) => (
-            <label
+            <label data-ui="admin/LaunchPanel/label"
               key={s}
               className={cn(
                 "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors",
                 scopes.includes(s) ? "border-destructive/50 bg-destructive/5" : "hover:bg-muted/50"
               )}
             >
-              <input
+              <input data-ui="admin/LaunchPanel/input-checkbox"
                 type="checkbox"
                 checked={scopes.includes(s)}
                 onChange={() => toggle(s)}
-                className="mt-1 size-4 shrink-0 accent-[var(--destructive)]"
+                className="mt-1 size-4 shrink-0 accent-(--destructive)"
               />
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <span className="text-sm font-semibold">{RESET_SCOPE_INFO[s].label}</span>
-                  <span className="text-xs text-muted-foreground">Now: {COUNT_LABEL[s](counts)}</span>
+              <span data-ui="admin/LaunchPanel/span-5" className="min-w-0 flex-1">
+                <span data-ui="admin/LaunchPanel/span-flex" className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <span data-ui="admin/LaunchPanel/span-6" className="text-sm font-semibold">{RESET_SCOPE_INFO[s].label}</span>
+                  <span data-ui="admin/LaunchPanel/span-7" className="text-xs text-muted-foreground">Now: {COUNT_LABEL[s](counts)}</span>
                 </span>
-                <span className="block text-xs text-muted-foreground">{RESET_SCOPE_INFO[s].description}</span>
+                <span data-ui="admin/LaunchPanel/span-8" className="block text-xs text-muted-foreground">{RESET_SCOPE_INFO[s].description}</span>
               </span>
             </label>
           ))}
@@ -125,11 +125,11 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
           placeholder={RESET_CONFIRM_WORD}
         />
         {error && (
-          <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          <p data-ui="admin/LaunchPanel/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {error}
           </p>
         )}
-        <Button type="button" variant="destructive" disabled={!canRun} onClick={run} className="rounded-full">
+        <Button data-ui="admin/LaunchPanel/Button-clear-selected-data" type="button" variant="destructive" disabled={!canRun} onClick={run} className="rounded-full">
           {pending && <Loader2Icon className="animate-spin" />} Clear selected data
         </Button>
       </section>

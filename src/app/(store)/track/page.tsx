@@ -22,7 +22,7 @@ export default function TrackPage() {
         description="Enter the order code from your WhatsApp message and the last 4 digits of your phone number."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Track order" }]}
       />
-      <div className="container-page pt-10">
+      <div data-ui="page:/track/div" className="container-page pt-4 sm:pt-6">
         <Suspense>
           <TrackOrder />
         </Suspense>

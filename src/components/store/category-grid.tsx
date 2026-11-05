@@ -16,17 +16,17 @@ export function CategoryGrid({ categories }: { categories: (Category & { count: 
     <Stagger className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
       {categories.map((c, i) => (
         <StaggerItem key={c.id}>
-          <Link
+          <Link data-ui="store/CategoryGrid/Link"
             href={`/category/${c.slug}`}
             className={`group relative flex h-36 flex-col justify-between overflow-hidden rounded-3xl bg-linear-to-br p-5 ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:h-44 ${tints[i % tints.length]}`}
           >
-            <span className="absolute -right-6 -bottom-8 font-heading text-[7rem] leading-none font-semibold text-foreground/5 transition-transform duration-500 group-hover:scale-110">
+            <span data-ui="store/CategoryGrid/span-absolute" className="absolute -right-6 -bottom-8 font-heading text-[7rem] leading-none font-semibold text-foreground/5 transition-transform duration-500 group-hover:scale-110">
               {c.name.charAt(0)}
             </span>
             <ArrowUpRightIcon className="size-5 self-end opacity-60 transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100" />
-            <div>
-              <h3 className="text-lg font-semibold sm:text-xl">{c.name}</h3>
-              <p className="text-xs text-foreground/60">
+            <div data-ui="store/CategoryGrid/div">
+              <h3 data-ui="store/CategoryGrid/h3" className="text-lg font-semibold sm:text-xl">{c.name}</h3>
+              <p data-ui="store/CategoryGrid/p" className="text-xs text-foreground/60">
                 {c.count} {c.count === 1 ? "item" : "items"}
               </p>
             </div>

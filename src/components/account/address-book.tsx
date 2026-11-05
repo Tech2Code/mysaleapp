@@ -74,14 +74,14 @@ function AddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <form onSubmit={onSubmit} noValidate className="space-y-1.5">
+      <DialogContent data-ui="account/AddressDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <form data-ui="account/AddressDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
           <DialogHeader>
             <DialogTitle>{address ? "Edit address" : "Add a new address"}</DialogTitle>
             <DialogDescription>Saved addresses can be picked in one tap at checkout.</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+          <div data-ui="account/AddressDialog/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
             <FormSelectField control={form.control} name="label" label="Save as" options={labelOptions} />
             <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
           </div>
@@ -101,7 +101,7 @@ function AddressDialog({
             error={errors.address?.message}
             {...form.register("address")}
           />
-          <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+          <div data-ui="account/AddressDialog/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
             <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
             <TextField
               label="Pincode" kind="pincode"
@@ -126,15 +126,15 @@ function AddressDialog({
           />
 
           {serverError && (
-            <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+            <p data-ui="account/AddressDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {serverError}
             </p>
           )}
           <DialogFooter>
-            <Button type="button" variant="outline" size="lg" onClick={() => onOpenChange(false)}>
+            <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending}>
               {pending && <Loader2Icon className="animate-spin" />} Save address
             </Button>
           </DialogFooter>
@@ -187,50 +187,50 @@ export function AddressBook({
 
   return (
     <section data-ui="account/AddressBook" aria-labelledby="addresses-title" className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 id="addresses-title" className="text-2xl font-semibold">
+      <div data-ui="account/AddressBook/div-flex" className="flex flex-wrap items-end justify-between gap-3">
+        <div data-ui="account/AddressBook/div">
+          <h2 data-ui="account/AddressBook/h2-saved-addresses" id="addresses-title" className="text-2xl font-semibold">
             Saved addresses
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p data-ui="account/AddressBook/p" className="text-sm text-muted-foreground">
             {addresses.length} of {MAX_ADDRESSES} saved. Pick one at checkout in a single tap.
           </p>
         </div>
-        <Button onClick={openNew} disabled={addresses.length >= MAX_ADDRESSES} className="rounded-full">
+        <Button data-ui="account/AddressBook/Button-add-address" onClick={openNew} disabled={addresses.length >= MAX_ADDRESSES} className="rounded-full">
           <PlusIcon /> Add address
         </Button>
       </div>
 
       {addresses.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 text-center">
+        <div data-ui="account/AddressBook/div-flex-2" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 text-center">
           <MapPinIcon className="size-9 text-muted-foreground" />
-          <p className="font-heading text-xl">No saved addresses yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">Add your home or office address to check out faster next time.</p>
-          <Button onClick={openNew} className="rounded-full">
+          <p data-ui="account/AddressBook/p-2" className="font-heading text-xl">No saved addresses yet</p>
+          <p data-ui="account/AddressBook/p-3" className="max-w-sm text-sm text-muted-foreground">Add your home or office address to check out faster next time.</p>
+          <Button data-ui="account/AddressBook/Button-add-your-first-address" onClick={openNew} className="rounded-full">
             <PlusIcon /> Add your first address
           </Button>
         </div>
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul data-ui="account/AddressBook/ul-grid" className="grid gap-4 md:grid-cols-2">
           {addresses.map((a) => (
-            <li key={a.id} className="flex flex-col rounded-3xl border bg-card p-5">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">
+            <li data-ui="account/AddressBook/li-flex" key={a.id} className="flex flex-col rounded-3xl border bg-card p-5">
+              <div data-ui="account/AddressBook/div-flex-3" className="flex items-center gap-2">
+                <span data-ui="account/AddressBook/span-inline-flex" className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">
                   <HomeIcon className="size-3.5" aria-hidden /> {a.label}
                 </span>
                 {a.isDefault && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                  <span data-ui="account/AddressBook/span-inline-flex-2" className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                     <StarIcon className="size-3.5 fill-current" aria-hidden /> Default
                   </span>
                 )}
               </div>
-              <p className="mt-3 font-medium">{a.fullName}</p>
-              <p className="text-sm text-muted-foreground">+91 {a.phone}</p>
-              <p className="mt-1 text-sm">
+              <p data-ui="account/AddressBook/p-4" className="mt-3 font-medium">{a.fullName}</p>
+              <p data-ui="account/AddressBook/p-5" className="text-sm text-muted-foreground">+91 {a.phone}</p>
+              <p data-ui="account/AddressBook/p-6" className="mt-1 text-sm">
                 {a.address}, {a.city} - {a.pincode}
               </p>
-              <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-                <Button
+              <div data-ui="account/AddressBook/div-flex-4" className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+                <Button data-ui="account/AddressBook/Button-edit"
                   variant="outline"
                   size="sm"
                   className="rounded-full"
@@ -242,11 +242,11 @@ export function AddressBook({
                   <PencilIcon /> Edit
                 </Button>
                 {!a.isDefault && (
-                  <Button variant="ghost" size="sm" className="rounded-full" disabled={pending} onClick={() => makeDefault(a)}>
+                  <Button data-ui="account/AddressBook/Button-set-as-default" variant="ghost" size="sm" className="rounded-full" disabled={pending} onClick={() => makeDefault(a)}>
                     <StarIcon /> Set as default
                   </Button>
                 )}
-                <Button
+                <Button data-ui="account/AddressBook/Button-delete"
                   variant="ghost"
                   size="sm"
                   className="ml-auto rounded-full text-destructive hover:bg-destructive/10"
@@ -270,7 +270,7 @@ export function AddressBook({
       />
 
       <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
-        <DialogContent>
+        <DialogContent data-ui="account/AddressBook/DialogContent">
           <DialogHeader>
             <DialogTitle>Delete this address?</DialogTitle>
             <DialogDescription>
@@ -278,10 +278,10 @@ export function AddressBook({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(null)}>
+            <Button data-ui="account/AddressBook/Button-cancel" variant="outline" onClick={() => setDeleting(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" disabled={pending} onClick={confirmDelete}>
+            <Button data-ui="account/AddressBook/Button-delete-2" variant="destructive" disabled={pending} onClick={confirmDelete}>
               {pending && <Loader2Icon className="animate-spin" />} Delete
             </Button>
           </DialogFooter>

@@ -35,15 +35,15 @@ export async function generateMetadata({ params }: PageProps<"/category/[slug]">
 function CategorySkeleton() {
   return (
     <div data-ui="page:/category/[slug]#CategorySkeleton" aria-hidden>
-      <div className="bg-hero">
-        <div className="container-page space-y-4 py-14">
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-12 w-72" />
+      <div data-ui="page:/category/[slug]#CategorySkeleton/div" className="bg-hero">
+        <div data-ui="page:/category/[slug]#CategorySkeleton/div-2" className="container-page space-y-4 py-14">
+          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton" className="h-4 w-48" />
+          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton-2" className="h-12 w-72" />
         </div>
       </div>
-      <div className="container-page grid grid-cols-2 gap-6 pt-10 md:grid-cols-4">
+      <div data-ui="page:/category/[slug]#CategorySkeleton/div-grid" className="container-page grid grid-cols-2 gap-6 pt-4 sm:pt-6 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
+          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton-3" key={i} className="aspect-4/5 rounded-2xl" />
         ))}
       </div>
     </div>
@@ -75,11 +75,11 @@ async function CategoryContent({ params }: Pick<PageProps<"/category/[slug]">, "
         description={category.description}
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Shop", href: "/products" }, { name: category.name }]}
       />
-      <div className="container-page pt-10">
+      <div data-ui="page:/category/[slug]#CategoryContent/div" className="container-page pt-4 sm:pt-6">
         {products.length ? (
           <ProductGrid products={products} />
         ) : (
-          <p className="rounded-3xl border border-dashed py-14 sm:py-20 text-center text-muted-foreground">
+          <p data-ui="page:/category/[slug]#CategoryContent/p" className="rounded-3xl border border-dashed py-14 sm:py-20 text-center text-muted-foreground">
             New pieces for this collection are being crafted. Check back soon!
           </p>
         )}

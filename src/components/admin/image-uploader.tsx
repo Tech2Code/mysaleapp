@@ -66,17 +66,17 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
 
   return (
     <div data-ui="admin/ImageUploader" className="space-y-3">
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+      <div data-ui="admin/ImageUploader/div-grid" className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {value.map((url, i) => (
-          <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
-            <Image src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
+          <div data-ui="admin/ImageUploader/div-relative" key={url} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
+            <Image data-ui="admin/ImageUploader/Image" src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
             {i === 0 && (
-              <span className="absolute top-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
+              <span data-ui="admin/ImageUploader/span-absolute" className="absolute top-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
                 Cover
               </span>
             )}
-            <div className="absolute inset-x-1.5 bottom-1.5 flex justify-between gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
-              <button
+            <div data-ui="admin/ImageUploader/div-flex" className="absolute inset-x-1.5 bottom-1.5 flex justify-between gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+              <button data-ui="admin/ImageUploader/button-move-photo-left"
                 type="button"
                 onClick={() => move(i, i - 1)}
                 disabled={i === 0}
@@ -85,7 +85,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
               >
                 <ArrowLeftIcon className="size-3.5" />
               </button>
-              <button
+              <button data-ui="admin/ImageUploader/button-remove-photo"
                 type="button"
                 onClick={() => onChange(value.filter((u) => u !== url))}
                 className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
@@ -93,7 +93,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
               >
                 <XIcon className="size-3.5" />
               </button>
-              <button
+              <button data-ui="admin/ImageUploader/button-move-photo-right"
                 type="button"
                 onClick={() => move(i, i + 1)}
                 disabled={i === value.length - 1}
@@ -107,7 +107,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
         ))}
 
         {value.length < MAX_IMAGES && (
-          <label
+          <label data-ui="admin/ImageUploader/label"
             htmlFor={inputId}
             className={cn(
               "flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-within:border-primary",
@@ -115,8 +115,8 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
             )}
           >
             {uploading > 0 ? <Loader2Icon className="size-6 animate-spin" /> : <ImagePlusIcon className="size-6" />}
-            <span className="text-xs font-medium">{uploading > 0 ? `Uploading ${uploading}…` : "Add photos"}</span>
-            <input
+            <span data-ui="admin/ImageUploader/span" className="text-xs font-medium">{uploading > 0 ? `Uploading ${uploading}…` : "Add photos"}</span>
+            <input data-ui="admin/ImageUploader/input-file"
               id={inputId}
               type="file"
               accept={ACCEPTED.join(",")}
@@ -130,7 +130,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
           </label>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">
+      <p data-ui="admin/ImageUploader/p" className="text-xs text-muted-foreground">
         Square or portrait photos look best. Images are compressed automatically. First photo is the cover.
       </p>
     </div>

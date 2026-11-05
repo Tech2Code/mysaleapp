@@ -16,7 +16,7 @@ export default async function CheckoutPage() {
         description="Enter your delivery details, then pay by UPI to confirm your order."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
       />
-      <div className="container-page pt-8">
+      <div data-ui="page:/checkout/div" className="container-page pt-4 sm:pt-6">
         <CheckoutForm products={live} />
       </div>
     </>

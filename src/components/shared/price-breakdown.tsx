@@ -30,41 +30,41 @@ export function PriceBreakdown({
 
   return (
     <div data-ui="shared/PriceBreakdown" className={cn("space-y-3 text-sm", className)}>
-      <dl className="space-y-2">
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Items total</dt>
-          <dd className="font-medium">{formatPrice(subtotal)}</dd>
+      <dl data-ui="shared/PriceBreakdown/dl" className="space-y-2">
+        <div data-ui="shared/PriceBreakdown/div-flex" className="flex justify-between gap-4">
+          <dt data-ui="shared/PriceBreakdown/dt" className="text-muted-foreground">Items total</dt>
+          <dd data-ui="shared/PriceBreakdown/dd" className="font-medium">{formatPrice(subtotal)}</dd>
         </div>
       </dl>
 
       {extraFees.length > 0 && (
-        <section aria-label="Product charges" className="space-y-2.5 rounded-xl bg-muted/60 p-3">
-          <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <section data-ui="shared/PriceBreakdown/section-product-charges" aria-label="Product charges" className="space-y-2.5 rounded-xl bg-muted/60 p-3">
+          <p data-ui="shared/PriceBreakdown/p-flex" className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             <InfoIcon className="size-3.5" aria-hidden /> Product charges · added once per product
           </p>
-          <ul className="space-y-2.5">
+          <ul data-ui="shared/PriceBreakdown/ul" className="space-y-2.5">
             {extraFees.map((fee, i) => (
-              <li key={`${fee.productId ?? fee.productName ?? ""}-${fee.label}-${i}`} className="flex justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium">{fee.label}</p>
-                  {fee.productName && <p className="truncate text-xs text-muted-foreground">for {fee.productName}</p>}
-                  {fee.reason && <p className="mt-0.5 text-xs text-muted-foreground italic">{fee.reason}</p>}
+              <li data-ui="shared/PriceBreakdown/li-flex" key={`${fee.productId ?? fee.productName ?? ""}-${fee.label}-${i}`} className="flex justify-between gap-4">
+                <div data-ui="shared/PriceBreakdown/div" className="min-w-0">
+                  <p data-ui="shared/PriceBreakdown/p" className="font-medium">{fee.label}</p>
+                  {fee.productName && <p data-ui="shared/PriceBreakdown/p-2" className="truncate text-xs text-muted-foreground">for {fee.productName}</p>}
+                  {fee.reason && <p data-ui="shared/PriceBreakdown/p-3" className="mt-0.5 text-xs text-muted-foreground italic">{fee.reason}</p>}
                 </div>
-                <p className="shrink-0 font-medium">{formatPrice(fee.amount)}</p>
+                <p data-ui="shared/PriceBreakdown/p-4" className="shrink-0 font-medium">{formatPrice(fee.amount)}</p>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <dl className="space-y-2">
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Delivery</dt>
-          <dd className="flex items-baseline gap-2 font-medium">
+      <dl data-ui="shared/PriceBreakdown/dl-2" className="space-y-2">
+        <div data-ui="shared/PriceBreakdown/div-flex-2" className="flex justify-between gap-4">
+          <dt data-ui="shared/PriceBreakdown/dt-2" className="text-muted-foreground">Delivery</dt>
+          <dd data-ui="shared/PriceBreakdown/dd-flex" className="flex items-baseline gap-2 font-medium">
             {deliveryFree ? (
               <>
-                {saved > 0 && <s className="text-muted-foreground">{formatPrice(saved)}</s>}
-                <span className="font-semibold text-success">FREE</span>
+                {saved > 0 && <s data-ui="shared/PriceBreakdown/s" className="text-muted-foreground">{formatPrice(saved)}</s>}
+                <span data-ui="shared/PriceBreakdown/span" className="font-semibold text-success">FREE</span>
               </>
             ) : (
               formatPrice(shippingFee)
@@ -72,11 +72,11 @@ export function PriceBreakdown({
           </dd>
         </div>
 
-        {saved > 0 && <p className="text-xs font-medium text-success">You saved {formatPrice(saved)} on delivery 🎉</p>}
+        {saved > 0 && <p data-ui="shared/PriceBreakdown/p-5" className="text-xs font-medium text-success">You saved {formatPrice(saved)} on delivery 🎉</p>}
 
-        <div className="flex items-baseline justify-between gap-4 border-t pt-3">
-          <dt className="font-semibold">{totalLabel}</dt>
-          <dd className="font-heading text-2xl font-semibold">{formatPrice(total)}</dd>
+        <div data-ui="shared/PriceBreakdown/div-flex-3" className="flex items-baseline justify-between gap-4 border-t pt-3">
+          <dt data-ui="shared/PriceBreakdown/dt-3" className="font-semibold">{totalLabel}</dt>
+          <dd data-ui="shared/PriceBreakdown/dd-2" className="font-heading text-2xl font-semibold">{formatPrice(total)}</dd>
         </div>
       </dl>
     </div>

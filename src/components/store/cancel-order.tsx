@@ -43,7 +43,7 @@ export function CancelOrder({
     return (
       <p data-ui="store/CancelOrder" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
         Need to cancel? This order is already {status === "shipped" ? "on its way" : "packed"}.{" "}
-        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-4">
+        <a data-ui="store/CancelOrder/a-message-us-on-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-4">
           Message us on WhatsApp
         </a>{" "}
         and we&apos;ll help.
@@ -71,12 +71,12 @@ export function CancelOrder({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        data-ui="store/CancelOrder"
+        data-ui="store/CancelOrder/DialogTrigger-inline-flex"
         className="inline-flex h-11 items-center justify-center rounded-full border border-destructive/40 px-6 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
       >
         Cancel order
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent data-ui="store/CancelOrder/DialogContent">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -86,7 +86,7 @@ export function CancelOrder({
             This can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-1.5">
+        <div data-ui="store/CancelOrder/div" className="space-y-1">
           <SelectField
             label="Why are you cancelling?"
             fieldSize="md"
@@ -102,16 +102,16 @@ export function CancelOrder({
             onChange={(e) => setDetail(e.target.value)}
           />
           {error && (
-            <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+            <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {error}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
+          <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Keep order
           </Button>
-          <Button type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
+          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Yes, cancel order
           </Button>
         </DialogFooter>

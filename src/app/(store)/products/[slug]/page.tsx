@@ -41,12 +41,12 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
 function ProductSkeleton() {
   return (
     <div data-ui="page:/products/[slug]#ProductSkeleton" className="container-page grid gap-10 pt-10 lg:grid-cols-2 lg:gap-16" aria-hidden>
-      <Skeleton className="aspect-[4/5] rounded-3xl" />
-      <div className="space-y-4">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-40 rounded-3xl" />
+      <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton" className="aspect-4/5 rounded-3xl" />
+      <div data-ui="page:/products/[slug]#ProductSkeleton/div" className="space-y-4">
+        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-2" className="h-4 w-24" />
+        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-3" className="h-12 w-3/4" />
+        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-4" className="h-8 w-40" />
+        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-5" className="h-40 rounded-3xl" />
       </div>
     </div>
   )
@@ -96,19 +96,19 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
 
   return (
     <>
-      <div className="container-page pt-6 pb-4">
+      <div data-ui="page:/products/[slug]#ProductDetails/div" className="container-page pt-6 pb-4">
         <Breadcrumbs items={crumbs} />
       </div>
 
-      <div className="container-page grid gap-10 lg:grid-cols-2 lg:gap-16">
+      <div data-ui="page:/products/[slug]#ProductDetails/div-grid" className="container-page grid gap-10 lg:grid-cols-2 lg:gap-16">
         <FadeIn y={16} className="lg:sticky-store lg:self-start">
           <ProductGallery images={product.images} name={product.name} />
 
-          <ul className="mt-6 grid grid-cols-3 gap-2 rounded-3xl border bg-card p-3 sm:gap-3 sm:p-5">
+          <ul data-ui="page:/products/[slug]#ProductDetails/ul-grid" className="mt-6 grid grid-cols-3 gap-2 rounded-3xl border bg-card p-3 sm:gap-3 sm:p-5">
             {perks.map((p) => (
-              <li key={p.text} className="flex flex-col items-center gap-2 text-center text-xs leading-snug sm:text-sm">
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-primary">
-                  <p.icon className="size-4" />
+              <li data-ui="page:/products/[slug]#ProductDetails/li-flex" key={p.text} className="flex flex-col items-center gap-2 text-center text-xs/snug  sm:text-sm">
+                <span data-ui="page:/products/[slug]#ProductDetails/span-grid" className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+                  <p.icon data-ui="page:/products/[slug]#ProductDetails/p.icon" className="size-4" />
                 </span>
                 {p.text}
               </li>
@@ -118,27 +118,27 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
 
         <FadeIn y={16} delay={0.1} className="min-w-0">
           {product.category && (
-            <p className="text-sm font-semibold tracking-widest text-primary uppercase">{product.category.name}</p>
+            <p data-ui="page:/products/[slug]#ProductDetails/p" className="text-sm font-semibold tracking-widest text-primary uppercase">{product.category.name}</p>
           )}
-          <h1 className="mt-2 text-3xl leading-tight font-semibold sm:text-4xl lg:text-5xl">{product.name}</h1>
+          <h1 data-ui="page:/products/[slug]#ProductDetails/h1" className="mt-2 text-3xl/tight  font-semibold sm:text-4xl lg:text-5xl">{product.name}</h1>
 
-          <div className="mt-5 flex flex-wrap items-baseline gap-3">
-            <span className="font-heading text-3xl font-semibold">{formatPrice(product.price)}</span>
+          <div data-ui="page:/products/[slug]#ProductDetails/div-flex" className="mt-5 flex flex-wrap items-baseline gap-3">
+            <span data-ui="page:/products/[slug]#ProductDetails/span" className="font-heading text-3xl font-semibold">{formatPrice(product.price)}</span>
             {product.compareAtPrice && (
-              <span className="text-lg text-muted-foreground line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span data-ui="page:/products/[slug]#ProductDetails/span-2" className="text-lg text-muted-foreground line-through">{formatPrice(product.compareAtPrice)}</span>
             )}
             {off && (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">Save {off}%</span>
+              <span data-ui="page:/products/[slug]#ProductDetails/span-3" className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">Save {off}%</span>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
+          <p data-ui="page:/products/[slug]#ProductDetails/p-2" className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
 
-          {summary && <p className="mt-5 leading-relaxed text-muted-foreground">{summary}</p>}
+          {summary && <p data-ui="page:/products/[slug]#ProductDetails/p-3" className="mt-5 leading-relaxed text-muted-foreground">{summary}</p>}
 
           {product.highlights.length > 0 && (
-            <ul className="mt-5 space-y-2.5" aria-label="Highlights">
+            <ul data-ui="page:/products/[slug]#ProductDetails/ul-highlights" className="mt-5 space-y-2.5" aria-label="Highlights">
               {product.highlights.map((h) => (
-                <li key={h} className="flex items-start gap-2.5 text-sm">
+                <li data-ui="page:/products/[slug]#ProductDetails/li-flex-2" key={h} className="flex items-start gap-2.5 text-sm">
                   <CheckCircle2Icon className="mt-0.5 size-4.5 shrink-0 text-success" aria-hidden />
                   {h}
                 </li>
@@ -147,25 +147,25 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
           )}
 
           {product.fees.length > 0 && (
-            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
-              <p className="flex items-center gap-2 font-semibold">
+            <div data-ui="page:/products/[slug]#ProductDetails/div-2" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
+              <p data-ui="page:/products/[slug]#ProductDetails/p-flex" className="flex items-center gap-2 font-semibold">
                 <InfoIcon className="size-4" aria-hidden /> Extra charge on this product
               </p>
-              <ul className="mt-2 space-y-2">
+              <ul data-ui="page:/products/[slug]#ProductDetails/ul" className="mt-2 space-y-2">
                 {product.fees.map((f) => (
-                  <li key={f.label}>
-                    <span className="font-medium">
+                  <li data-ui="page:/products/[slug]#ProductDetails/li" key={f.label}>
+                    <span data-ui="page:/products/[slug]#ProductDetails/span-4" className="font-medium">
                       {f.label}: {formatPrice(f.amount)}
                     </span>
-                    {f.reason && <span className="block text-muted-foreground">{f.reason}</span>}
+                    {f.reason && <span data-ui="page:/products/[slug]#ProductDetails/span-5" className="block text-muted-foreground">{f.reason}</span>}
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-muted-foreground">Added once per order for this product, whatever the quantity. Shown separately at checkout.</p>
+              <p data-ui="page:/products/[slug]#ProductDetails/p-4" className="mt-2 text-xs text-muted-foreground">Added once per order for this product, whatever the quantity. Shown separately at checkout.</p>
             </div>
           )}
 
-          <div className="mt-8">
+          <div data-ui="page:/products/[slug]#ProductDetails/div-3" className="mt-8">
             <ProductActions product={product} />
           </div>
 
@@ -173,25 +173,25 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
       </div>
 
       {/* ---------------------------------------------------------------- full details */}
-      <section className="container-page mt-10 sm:mt-16 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16" aria-labelledby="details-title">
-        <div className="min-w-0">
-          <h2 id="details-title" className="text-2xl font-semibold">
+      <section data-ui="page:/products/[slug]#ProductDetails/section-grid" className="container-page mt-10 sm:mt-16 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16" aria-labelledby="details-title">
+        <div data-ui="page:/products/[slug]#ProductDetails/div-4" className="min-w-0">
+          <h2 data-ui="page:/products/[slug]#ProductDetails/h2-about-this-piece" id="details-title" className="text-2xl font-semibold">
             About this piece
           </h2>
           <ReadMore length={product.description.length} className="mt-4">
-            <div className="space-y-3 leading-relaxed whitespace-pre-line text-muted-foreground">{product.description}</div>
+            <div data-ui="page:/products/[slug]#ProductDetails/div-5" className="space-y-3 leading-relaxed whitespace-pre-line text-muted-foreground">{product.description}</div>
           </ReadMore>
         </div>
 
-        <div className="min-w-0 space-y-6">
+        <div data-ui="page:/products/[slug]#ProductDetails/div-6" className="min-w-0 space-y-6">
           {product.specs.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-semibold">Details</h2>
-              <dl className="mt-4 divide-y rounded-3xl border bg-card px-5 sm:px-6">
+            <div data-ui="page:/products/[slug]#ProductDetails/div-7">
+              <h2 data-ui="page:/products/[slug]#ProductDetails/h2-details" className="text-2xl font-semibold">Details</h2>
+              <dl data-ui="page:/products/[slug]#ProductDetails/dl" className="mt-4 divide-y rounded-3xl border bg-card px-5 sm:px-6">
                 {product.specs.map((s) => (
-                  <div key={s.label} className="grid grid-cols-[8rem_1fr] gap-4 py-3 text-sm sm:grid-cols-[10rem_1fr]">
-                    <dt className="text-muted-foreground">{s.label}</dt>
-                    <dd className="font-medium">{s.value}</dd>
+                  <div data-ui="page:/products/[slug]#ProductDetails/div-grid-2" key={s.label} className="grid grid-cols-[8rem_1fr] gap-4 py-3 text-sm sm:grid-cols-[10rem_1fr]">
+                    <dt data-ui="page:/products/[slug]#ProductDetails/dt" className="text-muted-foreground">{s.label}</dt>
+                    <dd data-ui="page:/products/[slug]#ProductDetails/dd" className="font-medium">{s.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -214,7 +214,7 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
       </section>
 
       {related.length > 0 && (
-        <section className="container-page mt-16 sm:mt-24" aria-labelledby="related-title">
+        <section data-ui="page:/products/[slug]#ProductDetails/section" className="container-page mt-16 sm:mt-24" aria-labelledby="related-title">
           <SectionHeading id="related-title" eyebrow="You may also like" title="More handmade picks" href="/products" />
           <ProductGrid products={related} priorityCount={0} />
         </section>

@@ -63,8 +63,8 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={onSubmit} noValidate className="space-y-1.5">
+      <DialogContent data-ui="admin/CategoryDialog/DialogContent">
+        <form data-ui="admin/CategoryDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
@@ -97,10 +97,10 @@ function CategoryDialog({
             {...form.register("sort")}
           />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending}>
               {pending && <Loader2Icon className="animate-spin" />} Save
             </Button>
           </DialogFooter>
@@ -136,8 +136,8 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <Button
+      <div data-ui="admin/CategoryManager/div-flex" className="mb-4 flex justify-end">
+        <Button data-ui="admin/CategoryManager/Button-add-category"
           className="rounded-full px-4"
           onClick={() => {
             setEditing(null)
@@ -148,20 +148,20 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
         </Button>
       </div>
 
-      <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-        {categories.length === 0 && <li className="p-7 sm:p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
+      <ul data-ui="admin/CategoryManager/ul" className="divide-y overflow-hidden rounded-2xl border bg-card">
+        {categories.length === 0 && <li data-ui="admin/CategoryManager/li" className="p-7 sm:p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
         {categories.map((c) => (
-          <li key={c.id} className="flex items-center gap-4 p-4">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary font-heading text-lg font-semibold text-primary">
+          <li data-ui="admin/CategoryManager/li-flex" key={c.id} className="flex items-center gap-4 p-4">
+            <span data-ui="admin/CategoryManager/span-grid" className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary font-heading text-lg font-semibold text-primary">
               {c.name.charAt(0)}
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{c.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
+            <div data-ui="admin/CategoryManager/div" className="min-w-0 flex-1">
+              <p data-ui="admin/CategoryManager/p" className="font-medium">{c.name}</p>
+              <p data-ui="admin/CategoryManager/p-2" className="truncate text-xs text-muted-foreground">
                 /category/{c.slug} · {c.productCount} product{c.productCount === 1 ? "" : "s"} · order {c.sort}
               </p>
             </div>
-            <Button
+            <Button data-ui="admin/CategoryManager/Button"
               variant="ghost"
               size="icon-sm"
               aria-label={`Edit ${c.name}`}
@@ -172,7 +172,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
             >
               <PencilIcon />
             </Button>
-            <Button
+            <Button data-ui="admin/CategoryManager/Button-2"
               variant="ghost"
               size="icon-sm"
               aria-label={`Delete ${c.name}`}

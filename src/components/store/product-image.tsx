@@ -26,7 +26,7 @@ export function ProductImage({
 }) {
   if (src) {
     return (
-      <Image
+      <Image data-ui="store/ProductImage"
         src={src}
         alt={alt}
         fill
@@ -49,7 +49,7 @@ export function ProductImage({
                      oklch(0.95 0.03 ${(hue + 20) % 360})`,
       }}
     >
-      <span
+      <span data-ui="store/ProductImage/span"
         aria-hidden
         className="font-heading text-[min(28cqw,6rem)] font-semibold opacity-30 select-none"
         style={{ color: `oklch(0.45 0.1 ${hue})` }}

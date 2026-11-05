@@ -78,7 +78,7 @@ export function OrderPlaced() {
 
   return (
     <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">
-      <motion.div
+      <motion.div data-ui="store/OrderPlaced/m-div-grid"
         initial={{ scale: 0, rotate: -45 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
@@ -87,12 +87,12 @@ export function OrderPlaced() {
         <CheckIcon className="size-12" strokeWidth={3} />
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <h1 className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed!"}</h1>
-        <p className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.pending.text}</p>
+      <motion.div data-ui="store/OrderPlaced/m-div" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <h1 data-ui="store/OrderPlaced/h1" className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed!"}</h1>
+        <p data-ui="store/OrderPlaced/p" className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.pending.text}</p>
 
         {code && (
-          <button
+          <button data-ui="store/OrderPlaced/button-flex"
             type="button"
             onClick={() => {
               navigator.clipboard?.writeText(code)
@@ -105,11 +105,11 @@ export function OrderPlaced() {
           </button>
         )}
 
-        <div className="mt-8 text-left">
+        <div data-ui="store/OrderPlaced/div" className="mt-8 text-left">
           {!order ? (
-            <p className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+            <p data-ui="store/OrderPlaced/p-2" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
               To pay for this order, open{" "}
-              <Link href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/OrderPlaced/Link-track-order" href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Track order
               </Link>{" "}
               and enter your order code with the last 4 digits of your phone.
@@ -125,20 +125,20 @@ export function OrderPlaced() {
             />
           ) : (
             // never flash the "pay now" screen before we know the real payment state
-            <Skeleton className="h-72 rounded-2xl" aria-hidden />
+            <Skeleton data-ui="store/OrderPlaced/Skeleton" className="h-72 rounded-2xl" aria-hidden />
           )}
         </div>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href={`/track?code=${code}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
+        <div data-ui="store/OrderPlaced/div-flex" className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={`/track?code=${code}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
             Track this order
           </Link>
-          <Link href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>
+          <Link data-ui="store/OrderPlaced/Link-continue-shopping" href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>
             Continue shopping
           </Link>
         </div>
 
-        <a
+        <a data-ui="store/OrderPlaced/a-send-order-details-to-"
           href={order?.whatsappUrl ?? shopWhatsappLink(shop, `Hi! I placed order ${code}.`)}
           target="_blank"
           rel="noopener noreferrer"

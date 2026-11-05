@@ -19,7 +19,7 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
     return (
       <div data-ui="store/WishlistView" className="grid grid-cols-2 gap-6 md:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
+          <Skeleton data-ui="store/WishlistView/Skeleton" key={i} className="aspect-4/5 rounded-2xl" />
         ))}
       </div>
     )
@@ -31,9 +31,9 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
   return (
     <div data-ui="store/WishlistView" className="space-y-8">
       {!user && saved.length > 0 && (
-        <p className="rounded-2xl bg-secondary/70 p-4 text-sm">
+        <p data-ui="store/WishlistView/p" className="rounded-2xl bg-secondary/70 p-4 text-sm">
           Your wishlist is saved on this device.{" "}
-          <Link href="/login?next=/wishlist" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link data-ui="store/WishlistView/Link-sign-in" href="/login?next=/wishlist" className="font-semibold text-primary underline-offset-4 hover:underline">
             Sign in
           </Link>{" "}
           to keep it across all your devices.
@@ -41,18 +41,18 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
       )}
 
       {saved.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-          <div className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
+        <div data-ui="store/WishlistView/div-flex" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
+          <div data-ui="store/WishlistView/div-grid" className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
             <HeartIcon className="size-8 text-rose-500" />
           </div>
-          <p className="font-heading text-2xl">Nothing saved yet</p>
-          <p className="text-sm text-muted-foreground">Tap the heart on any product to save it here.</p>
-          <Link href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
+          <p data-ui="store/WishlistView/p-2" className="font-heading text-2xl">Nothing saved yet</p>
+          <p data-ui="store/WishlistView/p-3" className="text-sm text-muted-foreground">Tap the heart on any product to save it here.</p>
+          <Link data-ui="store/WishlistView/Link-explore-products" href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
             Explore products
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+        <div data-ui="store/WishlistView/div-grid-2" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
           {saved.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}

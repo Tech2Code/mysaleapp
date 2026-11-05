@@ -49,10 +49,10 @@ type PaymentPanelProps = {
 function CopyRow({ label, value }: { label: string; value: string }) {
   return (
     <div data-ui="store/CopyRow" className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-3 py-2 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="flex min-w-0 items-center gap-1 font-mono font-semibold">
-        <span className="truncate">{value}</span>
-        <button
+      <span data-ui="store/CopyRow/span" className="text-muted-foreground">{label}</span>
+      <span data-ui="store/CopyRow/span-flex" className="flex min-w-0 items-center gap-1 font-mono font-semibold">
+        <span data-ui="store/CopyRow/span-2" className="truncate">{value}</span>
+        <button data-ui="store/CopyRow/button-grid"
           type="button"
           aria-label={`Copy ${label}`}
           onClick={async () => {
@@ -101,7 +101,7 @@ function ReferenceForm({
   })
 
   return (
-    <form data-ui="store/ReferenceForm" onSubmit={onSubmit} noValidate className="space-y-1.5">
+    <form data-ui="store/ReferenceForm" onSubmit={onSubmit} noValidate className="space-y-1">
       <TextField
         label="UTR / UPI reference number" kind="paymentRef"
         placeholder="e.g. 412345678901"
@@ -112,11 +112,11 @@ function ReferenceForm({
         {...form.register("reference")}
       />
       {serverError && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <p data-ui="store/ReferenceForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {serverError}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={pending} className="w-full rounded-full">
+      <Button data-ui="store/ReferenceForm/Button" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} {submitLabel}
       </Button>
     </form>
@@ -143,34 +143,34 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   if (payment.paymentStatus === "paid") {
     return (
       <section data-ui="store/PaymentPanel" aria-label="Payment" className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <h3 className="flex items-center gap-2 font-sans text-base font-semibold text-emerald-900 dark:text-emerald-200">
+        <h3 data-ui="store/PaymentPanel/h3-payment-received" className="flex items-center gap-2 font-sans text-base font-semibold text-emerald-900 dark:text-emerald-200">
           <BadgeCheckIcon className="size-5" /> Payment received
         </h3>
-        <dl className="mt-3 space-y-1.5 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Amount</dt>
-            <dd className="font-semibold">{formatPrice(payment.paymentAmount ?? total)}</dd>
+        <dl data-ui="store/PaymentPanel/dl" className="mt-3 space-y-1.5 text-sm">
+          <div data-ui="store/PaymentPanel/div-flex" className="flex justify-between gap-4">
+            <dt data-ui="store/PaymentPanel/dt" className="text-muted-foreground">Amount</dt>
+            <dd data-ui="store/PaymentPanel/dd" className="font-semibold">{formatPrice(payment.paymentAmount ?? total)}</dd>
           </div>
           {payment.paymentMethod && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Method</dt>
-              <dd className="font-medium">{PAYMENT_METHOD_LABEL[payment.paymentMethod]}</dd>
+            <div data-ui="store/PaymentPanel/div-flex-2" className="flex justify-between gap-4">
+              <dt data-ui="store/PaymentPanel/dt-2" className="text-muted-foreground">Method</dt>
+              <dd data-ui="store/PaymentPanel/dd-2" className="font-medium">{PAYMENT_METHOD_LABEL[payment.paymentMethod]}</dd>
             </div>
           )}
           {payment.paymentReference && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Reference</dt>
-              <dd className="font-mono font-medium">{payment.paymentReference}</dd>
+            <div data-ui="store/PaymentPanel/div-flex-3" className="flex justify-between gap-4">
+              <dt data-ui="store/PaymentPanel/dt-3" className="text-muted-foreground">Reference</dt>
+              <dd data-ui="store/PaymentPanel/dd-3" className="font-mono font-medium">{payment.paymentReference}</dd>
             </div>
           )}
           {payment.paymentPaidAt && (
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Date</dt>
-              <dd className="font-medium">{formatDateTime(payment.paymentPaidAt)}</dd>
+            <div data-ui="store/PaymentPanel/div-flex-4" className="flex justify-between gap-4">
+              <dt data-ui="store/PaymentPanel/dt-4" className="text-muted-foreground">Date</dt>
+              <dd data-ui="store/PaymentPanel/dd-4" className="font-medium">{formatDateTime(payment.paymentPaidAt)}</dd>
             </div>
           )}
         </dl>
-        {payment.paymentNote && <p className="mt-3 text-sm text-muted-foreground">{payment.paymentNote}</p>}
+        {payment.paymentNote && <p data-ui="store/PaymentPanel/p" className="mt-3 text-sm text-muted-foreground">{payment.paymentNote}</p>}
       </section>
     )
   }
@@ -179,15 +179,15 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   if (payment.paymentStatus === "submitted" && !changing) {
     return (
       <section data-ui="store/PaymentPanel" aria-label="Payment" className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
-        <h3 className="flex items-center gap-2 font-sans text-base font-semibold text-amber-900 dark:text-amber-200">
+        <h3 data-ui="store/PaymentPanel/h3-we-apos-re-verifying-y" className="flex items-center gap-2 font-sans text-base font-semibold text-amber-900 dark:text-amber-200">
           <HourglassIcon className="size-5 animate-pulse" /> We&apos;re verifying your payment
         </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Reference <span className="font-mono font-semibold text-foreground">{payment.paymentReference}</span>
+        <p data-ui="store/PaymentPanel/p-2" className="mt-2 text-sm text-muted-foreground">
+          Reference <span data-ui="store/PaymentPanel/span" className="font-mono font-semibold text-foreground">{payment.paymentReference}</span>
           {payment.paymentSubmittedAt && <> · sent {formatDateTime(payment.paymentSubmittedAt)}</>}. Your order is
           confirmed as soon as we see the payment, usually within a few hours.
         </p>
-        <button
+        <button data-ui="store/PaymentPanel/button-entered-the-wrong-refe"
           type="button"
           onClick={() => setChanging(true)}
           className="mt-3 text-sm font-semibold text-primary underline-offset-4 hover:underline"
@@ -204,62 +204,62 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
 
   return (
     <section data-ui="store/PaymentPanel" aria-label="Pay for your order" className="space-y-5 rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
-      <div>
-        <h3 className="font-heading text-xl font-semibold">Pay {formatPrice(total)} to confirm your order</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <div data-ui="store/PaymentPanel/div">
+        <h3 data-ui="store/PaymentPanel/h3-pay" className="font-heading text-xl font-semibold">Pay {formatPrice(total)} to confirm your order</h3>
+        <p data-ui="store/PaymentPanel/p-3" className="mt-1 text-sm text-muted-foreground">
           Cash on delivery isn&apos;t available. Pay by UPI now, then enter the reference number below.
         </p>
       </div>
 
       {rejected && (
-        <p role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+        <p data-ui="store/PaymentPanel/p-flex" role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
-          <span>
-            <span className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
+          <span data-ui="store/PaymentPanel/span-2">
+            <span data-ui="store/PaymentPanel/span-3" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
             {payment.paymentNote ?? "Please check the reference number and submit it again."}
           </span>
         </p>
       )}
 
       {upiUrl && upiId ? (
-        <div className="space-y-4">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <span className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
+        <div data-ui="store/PaymentPanel/div-2" className="space-y-4">
+          <p data-ui="store/PaymentPanel/p-flex-2" className="flex items-center gap-2 text-sm font-semibold">
+            <span data-ui="store/PaymentPanel/span-grid" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
             Pay with any UPI app
           </p>
 
           {/* On a phone: open the UPI app. On desktop: scan the QR with your phone. */}
-          <a
+          <a data-ui="store/PaymentPanel/a-pay"
             href={upiUrl}
             className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 md:hidden"
           >
             <SmartphoneIcon className="size-5" /> Pay {formatPrice(total)} with UPI app
           </a>
-          <div className="hidden items-center gap-4 rounded-2xl border bg-white p-4 md:flex">
+          <div data-ui="store/PaymentPanel/div-hidden" className="hidden items-center gap-4 rounded-2xl border bg-white p-4 md:flex">
             <QRCodeSVG value={upiUrl} size={132} marginSize={1} title={`UPI QR code to pay ${formatPrice(total)}`} />
-            <div className="text-sm text-neutral-700">
-              <p className="flex items-center gap-2 font-semibold text-neutral-900">
+            <div data-ui="store/PaymentPanel/div-3" className="text-sm text-neutral-700">
+              <p data-ui="store/PaymentPanel/p-flex-3" className="flex items-center gap-2 font-semibold text-neutral-900">
                 <QrCodeIcon className="size-4" /> Scan with any UPI app
               </p>
-              <p className="mt-1">Amount {formatPrice(total)} is filled in for you.</p>
+              <p data-ui="store/PaymentPanel/p-4" className="mt-1">Amount {formatPrice(total)} is filled in for you.</p>
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div data-ui="store/PaymentPanel/div-4" className="space-y-2">
             <CopyRow label="UPI ID" value={upiId} />
             {upiPayeeName && <CopyRow label="Name" value={upiPayeeName} />}
             <CopyRow label="Amount" value={total.toFixed(2)} />
           </div>
         </div>
       ) : (
-        <p className="rounded-xl bg-muted p-4 text-sm">
+        <p data-ui="store/PaymentPanel/p-5" className="rounded-xl bg-muted p-4 text-sm">
           Payment details aren&apos;t set up on the website yet. Please message us on WhatsApp and we&apos;ll share them.
         </p>
       )}
 
-      <div className="space-y-3">
-        <p className="flex items-center gap-2 text-sm font-semibold">
-          <span className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
+      <div data-ui="store/PaymentPanel/div-5" className="space-y-3">
+        <p data-ui="store/PaymentPanel/p-flex-4" className="flex items-center gap-2 text-sm font-semibold">
+          <span data-ui="store/PaymentPanel/span-grid-2" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
           After paying, enter the reference number
         </p>
         <ReferenceForm
@@ -273,7 +273,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         />
       </div>
 
-      <a
+      <a data-ui="store/PaymentPanel/a-send-payment-screensho"
         href={shopWhatsappLink(shop, `Hi! I paid for order ${orderCode}. Sending the payment screenshot.`)}
         target="_blank"
         rel="noopener noreferrer"

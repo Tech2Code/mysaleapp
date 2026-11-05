@@ -28,20 +28,20 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
         unlocked ? "border-success/30 bg-success/10" : "border-primary/15 bg-linear-to-br from-secondary/80 to-accent/40"
       )}
     >
-      <p className="flex items-center gap-2 font-medium">
-        <span className={cn("grid size-7 shrink-0 place-items-center rounded-full", unlocked ? "bg-success-solid text-white" : "bg-primary/10 text-primary")}>
+      <p data-ui="store/FreeShippingBar/p-flex" className="flex items-center gap-2 font-medium">
+        <span data-ui="store/FreeShippingBar/span" className={cn("grid size-7 shrink-0 place-items-center rounded-full", unlocked ? "bg-success-solid text-white" : "bg-primary/10 text-primary")}>
           {unlocked ? <SparklesIcon className="size-3.5" /> : <TruckIcon className="size-3.5" />}
         </span>
         {unlocked ? (
           <>You&apos;ve unlocked free delivery 🎉</>
         ) : (
           <>
-            Add <span className="font-bold">{formatPrice(remaining)}</span> more for free delivery
+            Add <span data-ui="store/FreeShippingBar/span-2" className="font-bold">{formatPrice(remaining)}</span> more for free delivery
           </>
         )}
       </p>
-      <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-background/80">
-        <motion.div
+      <div data-ui="store/FreeShippingBar/div" className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-background/80">
+        <motion.div data-ui="store/FreeShippingBar/m-div"
           className={cn("h-full rounded-full", unlocked ? "bg-success" : "bg-linear-to-r from-primary to-[oklch(0.6_0.16_15)]")}
           initial={false}
           animate={{ width: `${pct}%` }}
@@ -78,7 +78,7 @@ function DrawerItem({
       )}
     >
       {highlighted && (
-        <motion.span
+        <motion.span data-ui="store/DrawerItem/m-span-absolute"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground uppercase shadow"
@@ -87,7 +87,7 @@ function DrawerItem({
         </motion.span>
       )}
 
-      <Link
+      <Link data-ui="store/DrawerItem/Link-relative"
         href={`/products/${item.slug}`}
         onClick={onNavigate}
         className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted @container"
@@ -95,12 +95,12 @@ function DrawerItem({
         <ProductImage src={item.image} alt={item.name} sizes="96px" className="transition-transform duration-500 hover:scale-105" />
       </Link>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-start justify-between gap-2">
-          <Link href={`/products/${item.slug}`} onClick={onNavigate} className="line-clamp-2 text-sm leading-snug font-semibold hover:text-primary">
+      <div data-ui="store/DrawerItem/div-flex" className="flex min-w-0 flex-1 flex-col">
+        <div data-ui="store/DrawerItem/div-flex-2" className="flex items-start justify-between gap-2">
+          <Link data-ui="store/DrawerItem/Link" href={`/products/${item.slug}`} onClick={onNavigate} className="line-clamp-2 text-sm/snug  font-semibold hover:text-primary">
             {item.name}
           </Link>
-          <button
+          <button data-ui="store/DrawerItem/button-grid"
             type="button"
             onClick={onRemove}
             className="-m-1.5 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
@@ -109,16 +109,16 @@ function DrawerItem({
             <Trash2Icon className="size-4" />
           </button>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{formatPrice(item.price)} each</p>
+        <p data-ui="store/DrawerItem/p" className="mt-0.5 text-xs text-muted-foreground">{formatPrice(item.price)} each</p>
 
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+        <div data-ui="store/DrawerItem/div-flex-3" className="mt-auto flex items-center justify-between gap-2 pt-2">
           <QuantityStepper
             label={item.name}
             value={item.quantity}
             max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
             onChange={onQuantity}
           />
-          <span className="font-heading text-lg font-semibold">{formatPrice(item.price * item.quantity)}</span>
+          <span data-ui="store/DrawerItem/span" className="font-heading text-lg font-semibold">{formatPrice(item.price * item.quantity)}</span>
         </div>
       </div>
     </motion.li>
@@ -137,43 +137,43 @@ export function CartDrawer() {
 
   return (
     <Sheet open={isOpen} onOpenChange={setOpen}>
-      <SheetContent
+      <SheetContent data-ui="store/CartDrawer/SheetContent"
         side={isPhone ? "bottom" : "right"}
         className={cn(
           "gap-0 bg-background p-0",
           isPhone ? "max-h-[92dvh] rounded-t-3xl" : "w-full sm:max-w-md"
         )}
       >
-        {isPhone && <span aria-hidden className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />}
+        {isPhone && <span data-ui="store/CartDrawer/span" aria-hidden className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />}
 
         <SheetHeader className="flex-row items-center gap-3 border-b px-5 py-4 pr-14">
-          <span className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
+          <span data-ui="store/CartDrawer/span-grid" className="grid size-10 place-items-center rounded-2xl bg-primary/10 text-primary">
             <ShoppingBagIcon className="size-5" aria-hidden />
           </span>
-          <div className="min-w-0">
-            <SheetTitle className="font-heading text-xl leading-tight">Your cart</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+          <div data-ui="store/CartDrawer/div" className="min-w-0">
+            <SheetTitle className="font-heading text-xl/tight ">Your cart</SheetTitle>
+            <p data-ui="store/CartDrawer/p" className="text-xs text-muted-foreground">
               {items.length === 0 ? "Nothing here yet" : `${cartCount(items)} item${cartCount(items) === 1 ? "" : "s"} · ready to checkout`}
             </p>
           </div>
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-7 sm:p-10 text-center">
-            <div className="grid size-24 place-items-center rounded-full bg-linear-to-br from-secondary to-accent animate-float">
+          <div data-ui="store/CartDrawer/div-flex" className="flex flex-1 flex-col items-center justify-center gap-4 p-7 sm:p-10 text-center">
+            <div data-ui="store/CartDrawer/div-grid" className="grid size-24 place-items-center rounded-full bg-linear-to-br from-secondary to-accent animate-float">
               <ShoppingBagIcon className="size-10 text-primary" />
             </div>
-            <p className="font-heading text-2xl">Your cart is empty</p>
-            <p className="max-w-60 text-sm text-muted-foreground">Find something handmade you&apos;ll love.</p>
-            <Link href="/products" onClick={close} className={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}>
+            <p data-ui="store/CartDrawer/p-2" className="font-heading text-2xl">Your cart is empty</p>
+            <p data-ui="store/CartDrawer/p-3" className="max-w-60 text-sm text-muted-foreground">Find something handmade you&apos;ll love.</p>
+            <Link data-ui="store/CartDrawer/Link-start-shopping" href="/products" onClick={close} className={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}>
               Start shopping
             </Link>
           </div>
         ) : (
           <>
-            <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5">
+            <div data-ui="store/CartDrawer/div-2" className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5">
               <FreeShippingBar subtotal={subtotal} />
-              <ul className="space-y-3.5">
+              <ul data-ui="store/CartDrawer/ul" className="space-y-3.5">
                 <AnimatePresence initial={false} mode="popLayout">
                   {items.map((item) => (
                     <DrawerItem
@@ -189,20 +189,20 @@ export function CartDrawer() {
               </ul>
             </div>
 
-            <div className="space-y-3 border-t bg-card/80 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm text-muted-foreground">Subtotal</span>
-                <span className="font-heading text-2xl font-semibold">{formatPrice(subtotal)}</span>
+            <div data-ui="store/CartDrawer/div-3" className="space-y-3 border-t bg-card/80 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur">
+              <div data-ui="store/CartDrawer/div-flex-2" className="flex items-baseline justify-between">
+                <span data-ui="store/CartDrawer/span-2" className="text-sm text-muted-foreground">Subtotal</span>
+                <span data-ui="store/CartDrawer/span-3" className="font-heading text-2xl font-semibold">{formatPrice(subtotal)}</span>
               </div>
-              <p className="text-xs text-muted-foreground">Delivery and any product charges are added at checkout.</p>
-              <Link
+              <p data-ui="store/CartDrawer/p-4" className="text-xs text-muted-foreground">Delivery and any product charges are added at checkout.</p>
+              <Link data-ui="store/CartDrawer/Link-checkout"
                 href="/checkout"
                 onClick={close}
                 className={cn(buttonVariants({ size: "lg" }), "group w-full rounded-full text-base shadow-lg shadow-primary/25")}
               >
                 Checkout <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
               </Link>
-              <Link
+              <Link data-ui="store/CartDrawer/Link-view-full-cart"
                 href="/cart"
                 onClick={close}
                 className="block text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

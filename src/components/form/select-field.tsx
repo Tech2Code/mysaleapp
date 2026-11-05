@@ -90,14 +90,14 @@ export function SelectField({
             className
           )}
         >
-          <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>{selectedLabel ?? placeholder ?? "Select…"}</span>
+          <span data-ui="form/SelectField/span" className={cn("truncate", !selectedLabel && "text-muted-foreground/60")}>{selectedLabel ?? placeholder ?? "Select…"}</span>
           <SelectPrimitive.Icon className="shrink-0 text-muted-foreground transition-transform duration-200 group-data-popup-open:rotate-180">
             <ChevronDownIcon className="size-4" aria-hidden />
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
 
         <SelectPrimitive.Portal>
-          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className="z-[70] outline-none">
+          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className="z-70 outline-none">
             <SelectPrimitive.Popup
               className={cn(
                 "max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-xl border bg-popover p-1.5 text-popover-foreground shadow-xl outline-none",

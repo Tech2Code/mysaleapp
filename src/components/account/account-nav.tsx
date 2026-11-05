@@ -18,7 +18,7 @@ function NavItems({ pathname }: { pathname: string | null }) {
       {links.map((l) => {
         const active = pathname?.startsWith(l.href) ?? false
         return (
-          <Link
+          <Link data-ui="account/NavItems/Link"
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
@@ -27,7 +27,7 @@ function NavItems({ pathname }: { pathname: string | null }) {
               active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-card hover:bg-muted lg:bg-transparent"
             )}
           >
-            <l.icon className="size-4" /> {l.label}
+            <l.icon data-ui="account/NavItems/l.icon" className="size-4" /> {l.label}
           </Link>
         )
       })}

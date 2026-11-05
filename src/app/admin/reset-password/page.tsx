@@ -17,10 +17,10 @@ async function Gate() {
 export default function AdminResetPasswordPage() {
   return (
     <main data-ui="page:/admin/reset-password" className="grid min-h-dvh place-items-center bg-hero px-4">
-      <div className="w-full max-w-sm rounded-[2rem] border bg-card p-6 sm:p-8 shadow-2xl shadow-black/5">
+      <div data-ui="page:/admin/reset-password/div" className="w-full max-w-sm rounded-4xl border bg-card p-6 sm:p-8 shadow-2xl shadow-black/5">
         <LogoMark className="size-12 text-2xl" />
-        <h1 className="mt-6 text-2xl font-semibold">Choose a new password</h1>
-        <p className="mt-1 mb-6 text-sm text-muted-foreground">You&apos;ll be signed in right after.</p>
+        <h1 data-ui="page:/admin/reset-password/h1-choose-a-new-password" className="mt-6 text-2xl font-semibold">Choose a new password</h1>
+        <p data-ui="page:/admin/reset-password/p" className="mt-1 mb-6 text-sm text-muted-foreground">You&apos;ll be signed in right after.</p>
         <Suspense>
           <Gate />
         </Suspense>

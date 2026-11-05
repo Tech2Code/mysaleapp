@@ -43,7 +43,7 @@ export function AdminLoginForm() {
   )
 
   return (
-    <form data-ui="admin/AdminLoginForm" onSubmit={onSubmit} noValidate className="space-y-1.5">
+    <form data-ui="admin/AdminLoginForm" onSubmit={onSubmit} noValidate className="space-y-1">
       <TextField label="Email" kind="email" type="email" autoComplete="email" error={form.formState.errors.email?.message} {...form.register("email")} />
       <TextField
         label="Password" maxLength={LIMITS.password.max}
@@ -52,17 +52,17 @@ export function AdminLoginForm() {
         error={form.formState.errors.password?.message}
         {...form.register("password")}
       />
-      <p className="-mt-2 text-right text-sm">
-        <Link href="/admin/forgot-password" className="font-medium text-primary hover:underline">
+      <p data-ui="admin/AdminLoginForm/p" className="-mt-2 text-right text-sm">
+        <Link data-ui="admin/AdminLoginForm/Link-forgot-password" href="/admin/forgot-password" className="font-medium text-primary hover:underline">
           Forgot password?
         </Link>
       </p>
       {error && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <p data-ui="admin/AdminLoginForm/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
+      <Button data-ui="admin/AdminLoginForm/Button-sign-in" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Sign in
       </Button>
     </form>

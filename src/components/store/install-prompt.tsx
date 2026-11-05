@@ -31,7 +31,7 @@ export function InstallPrompt() {
     <AnimatePresence>
       {show && (
         <motion.aside
-          data-ui="store/InstallPrompt"
+          data-ui="store/InstallPrompt/m-aside"
           role="dialog"
           aria-label={`Install ${shop.shopName}`}
           initial={{ opacity: 0, y: 40 }}
@@ -43,7 +43,7 @@ export function InstallPrompt() {
             "sm:right-auto sm:left-6 sm:mx-0 sm:bottom-6"
           )}
         >
-          <button
+          <button data-ui="store/InstallPrompt/button-not-now"
             type="button"
             onClick={dismiss}
             aria-label="Not now"
@@ -51,27 +51,27 @@ export function InstallPrompt() {
           >
             <XIcon className="size-4" />
           </button>
-          <div className="flex items-start gap-3 pr-6">
+          <div data-ui="store/InstallPrompt/div-flex" className="flex items-start gap-3 pr-6">
             <LogoMark className="size-11 shrink-0 text-xl" />
-            <div className="min-w-0">
-              <p className="text-sm leading-snug font-semibold">Get the {shop.shopName} app</p>
-              <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+            <div data-ui="store/InstallPrompt/div" className="min-w-0">
+              <p data-ui="store/InstallPrompt/p" className="text-sm/snug  font-semibold">Get the {shop.shopName} app</p>
+              <p data-ui="store/InstallPrompt/p-2" className="mt-0.5 text-xs/snug  text-muted-foreground">
                 Faster shopping, order tracking and offers, right from your home screen.
               </p>
             </div>
           </div>
 
           {needsManualSteps ? (
-            <ol className="mt-3 space-y-2 rounded-xl bg-muted/60 p-3 text-xs leading-snug">
-              <li className="flex items-center gap-2">
-                <ShareIcon className="size-4 shrink-0 text-primary" aria-hidden /> Tap <span className="font-semibold">Share</span> in Safari&apos;s toolbar
+            <ol data-ui="store/InstallPrompt/ol" className="mt-3 space-y-2 rounded-xl bg-muted/60 p-3 text-xs/snug ">
+              <li data-ui="store/InstallPrompt/li-flex" className="flex items-center gap-2">
+                <ShareIcon className="size-4 shrink-0 text-primary" aria-hidden /> Tap <span data-ui="store/InstallPrompt/span" className="font-semibold">Share</span> in Safari&apos;s toolbar
               </li>
-              <li className="flex items-center gap-2">
-                <SquarePlusIcon className="size-4 shrink-0 text-primary" aria-hidden /> Choose <span className="font-semibold">Add to Home Screen</span>
+              <li data-ui="store/InstallPrompt/li-flex-2" className="flex items-center gap-2">
+                <SquarePlusIcon className="size-4 shrink-0 text-primary" aria-hidden /> Choose <span data-ui="store/InstallPrompt/span-2" className="font-semibold">Add to Home Screen</span>
               </li>
             </ol>
           ) : (
-            <Button type="button" onClick={() => void install()} className="mt-3 h-10 w-full rounded-full">
+            <Button data-ui="store/InstallPrompt/Button-install-app" type="button" onClick={() => void install()} className="mt-3 h-10 w-full rounded-full">
               <DownloadIcon /> Install app
             </Button>
           )}

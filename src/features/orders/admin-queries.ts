@@ -79,7 +79,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, history:order_status_history(status, changed_at)")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note)")
     .eq("id", id)
     .maybeSingle<OrderRow>()
   if (error) throw new Error(error.message)
@@ -119,28 +119,60 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const dayLabel = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: IST })
 const monthLabel = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: IST })
 
-/** Orders can be more than one request's worth, so read them page by page (the API caps a response). */
+const PAGE = 1000
+/** Safety cap (50,000 rows). Past it we refuse to show numbers that would silently be wrong. */
+const MAX_PAGES = 50
+
+/** The API caps a response, so read page by page. A unique tiebreaker (id) keeps pages stable. */
+async function readAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  const rows: T[] = []
+  for (let i = 0; i < MAX_PAGES; i++) {
+    const { data, error } = await page(i * PAGE, i * PAGE + PAGE - 1)
+    if (error) throw new Error(error.message)
+    rows.push(...(data ?? []))
+    if ((data?.length ?? 0) < PAGE) return rows
+  }
+  throw new Error("Too many orders in this period to total up. Pick a shorter date range.")
+}
+
+/** Light columns for every order in the range (no `items`, which is the heavy part). */
 async function fetchOrdersBetween(from: Date, to: Date): Promise<DashboardOrderRow[]> {
   const supabase = await getServerSupabase()
-  const rows: DashboardOrderRow[] = []
-  const PAGE = 1000
-  for (let page = 0; page < 20; page++) {
-    const { data, error } = await supabase
+  return readAllPages<DashboardOrderRow>((a, b) =>
+    supabase
       .from("orders")
-      .select("id, status, total, subtotal, payment_status, created_at, items")
+      .select("id, status, total, subtotal, payment_status, created_at")
       .gte("created_at", from.toISOString())
       .lt("created_at", to.toISOString())
       .order("created_at", { ascending: false })
-      .range(page * PAGE, page * PAGE + PAGE - 1)
+      .order("id")
+      .range(a, b)
       .returns<DashboardOrderRow[]>()
-    if (error) throw new Error(error.message)
-    rows.push(...data)
-    if (data.length < PAGE) break
-  }
-  return rows
+  )
 }
 
-type DashboardOrderRow = Pick<OrderRow, "id" | "status" | "total" | "subtotal" | "payment_status" | "created_at" | "items">
+/** Line items are only needed for "top products", which counts paid, non-cancelled orders of the current range. */
+async function fetchPaidItems(from: Date, to: Date): Promise<Map<string, OrderRow["items"]>> {
+  const supabase = await getServerSupabase()
+  const rows = await readAllPages<{ id: string; items: OrderRow["items"] }>((a, b) =>
+    supabase
+      .from("orders")
+      .select("id, items")
+      .eq("payment_status", "paid")
+      .neq("status", "cancelled")
+      .gte("created_at", from.toISOString())
+      .lt("created_at", to.toISOString())
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(a, b)
+      .returns<{ id: string; items: OrderRow["items"] }[]>()
+  )
+  return new Map(rows.map((r) => [r.id, r.items]))
+}
+
+type DashboardOrderRow = Pick<OrderRow, "id" | "status" | "total" | "subtotal" | "payment_status" | "created_at">
 
 /** Everything the admin dashboard shows, in one go. Small shop → aggregated here, no extra tables needed. */
 export async function getDashboard(range: DashboardRange): Promise<DashboardData> {
@@ -149,8 +181,9 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 
   const now = new Date()
 
-  const [orderRows, recentRes, verifyRes, awaitingRes, fulfilRes, lowStockRes] = await Promise.all([
+  const [orderRows, itemsByOrder, recentRes, verifyRes, awaitingRes, fulfilRes, lowStockRes] = await Promise.all([
     fetchOrdersBetween(range.previous?.start ?? range.start, range.end),
+    fetchPaidItems(range.start, range.end),
     supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
     applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "to-verify"),
     applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "awaiting-payment"),
@@ -214,7 +247,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       if (isPaid) point.revenue += total
     }
     if (isPaid) {
-      for (const item of o.items ?? []) {
+      for (const item of itemsByOrder.get(o.id) ?? []) {
         const t = productTotals.get(item.productId) ?? {
           productId: item.productId,
           name: item.name,

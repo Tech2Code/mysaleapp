@@ -25,11 +25,11 @@ export function ForgotPasswordForm() {
   if (sentTo) {
     return (
       <div data-ui="admin/ForgotPasswordForm" role="status" className="space-y-3 rounded-2xl bg-success/10 p-4 text-sm">
-        <p className="flex items-center gap-2 font-semibold">
+        <p data-ui="admin/ForgotPasswordForm/p-flex" className="flex items-center gap-2 font-semibold">
           <MailCheckIcon className="size-4 text-success" aria-hidden /> Check your inbox
         </p>
-        <p>
-          If <span className="font-semibold">{sentTo}</span> is an admin account, a reset link is on its way. It works once and expires soon.
+        <p data-ui="admin/ForgotPasswordForm/p">
+          If <span data-ui="admin/ForgotPasswordForm/span" className="font-semibold">{sentTo}</span> is an admin account, a reset link is on its way. It works once and expires soon.
         </p>
       </div>
     )
@@ -39,7 +39,7 @@ export function ForgotPasswordForm() {
     <form
       data-ui="admin/ForgotPasswordForm"
       noValidate
-      className="space-y-1.5"
+      className="space-y-1"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           setError(null)
@@ -51,11 +51,11 @@ export function ForgotPasswordForm() {
     >
       <TextField label="Admin email" kind="email" error={form.formState.errors.email?.message} {...form.register("email")} />
       {error && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <p data-ui="admin/ForgotPasswordForm/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
+      <Button data-ui="admin/ForgotPasswordForm/Button-send-reset-link" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Send reset link
       </Button>
     </form>
@@ -73,7 +73,7 @@ export function ResetPasswordForm() {
     <form
       data-ui="admin/ResetPasswordForm"
       noValidate
-      className="space-y-1.5"
+      className="space-y-1"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           setError(null)
@@ -100,11 +100,11 @@ export function ResetPasswordForm() {
         {...form.register("confirm")}
       />
       {error && (
-        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <p data-ui="admin/ResetPasswordForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
+      <Button data-ui="admin/ResetPasswordForm/Button-set-new-password" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Set new password
       </Button>
     </form>

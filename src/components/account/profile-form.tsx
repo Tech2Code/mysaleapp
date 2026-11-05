@@ -29,8 +29,8 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   )
 
   return (
-    <form data-ui="account/ProfileForm" onSubmit={onSubmit} noValidate className="space-y-1.5 rounded-3xl border bg-card p-6 sm:p-8">
-      <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
+    <form data-ui="account/ProfileForm" onSubmit={onSubmit} noValidate className="space-y-1 rounded-3xl border bg-card p-6 sm:p-8">
+      <div data-ui="account/ProfileForm/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
         <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
         <TextField label="Email" kind="email" hint="From your Google account" value={profile.email} readOnly disabled />
         <TextField
@@ -43,7 +43,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           {...form.register("phone")}
         />
       </div>
-      <Button type="submit" size="lg" disabled={pending || !isDirty} className="h-11 rounded-full px-5 sm:px-8">
+      <Button data-ui="account/ProfileForm/Button-save-changes" type="submit" size="lg" disabled={pending || !isDirty} className="h-11 rounded-full px-5 sm:px-8">
         {pending && <Loader2Icon className="animate-spin" />} Save changes
       </Button>
     </form>

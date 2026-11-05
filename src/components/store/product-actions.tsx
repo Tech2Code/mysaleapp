@@ -33,7 +33,7 @@ export function ProductActions({
   if (soldOut) {
     return (
       <div data-ui="store/ProductActions" className="space-y-3">
-        <p className="rounded-2xl bg-muted p-4 text-sm font-medium">
+        <p data-ui="store/ProductActions/p" className="rounded-2xl bg-muted p-4 text-sm font-medium">
           Sold out for now — handmade pieces take time. Save it to your wishlist and check back soon.
         </p>
         <WishlistButton productId={product.id} productName={product.name} size="lg" />
@@ -43,14 +43,14 @@ export function ProductActions({
 
   return (
     <div data-ui="store/ProductActions" className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div data-ui="store/ProductActions/div-flex" className="flex items-center gap-3">
         <QuantityStepper label={product.name} value={qty} max={max} onChange={setQty} size="lg" />
         {product.stock <= 5 && (
-          <span className="text-sm font-medium text-primary">Only {product.stock} left</span>
+          <span data-ui="store/ProductActions/span" className="text-sm font-medium text-primary">Only {product.stock} left</span>
         )}
       </div>
-      <div className="flex gap-3">
-        <Button
+      <div data-ui="store/ProductActions/div-flex-2" className="flex gap-3">
+        <Button data-ui="store/ProductActions/Button-add-to-cart"
           size="lg"
           variant="outline"
           className="h-13 flex-1 rounded-full text-base"
@@ -62,7 +62,7 @@ export function ProductActions({
         </Button>
         <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-13" />
       </div>
-      <Button
+      <Button data-ui="store/ProductActions/Button-buy-now"
         size="lg"
         className="h-13 w-full rounded-full bg-whatsapp-solid text-base text-white shadow-lg shadow-whatsapp/25 hover:bg-whatsapp-solid/90"
         onClick={() => {

@@ -73,8 +73,8 @@ export function ProductBrowser({
 
   return (
     <div data-ui="store/ProductBrowser">
-      <div className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div data-ui="store/ProductBrowser/div" className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div data-ui="store/ProductBrowser/div-flex" className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchField
             label="Search products"
             pill
@@ -105,11 +105,11 @@ export function ProductBrowser({
           />
         </div>
 
-        <div className="scroll-row flex gap-2 sm:flex-wrap" role="group" aria-label="Filter by category">
+        <div data-ui="store/ProductBrowser/div-filter-by-category" className="scroll-row flex gap-2 sm:flex-wrap" role="group" aria-label="Filter by category">
           {chips.map((c) => {
             const active = category === c.slug
             return (
-              <button
+              <button data-ui="store/ProductBrowser/button"
                 key={c.slug}
                 type="button"
                 aria-pressed={active}
@@ -123,34 +123,34 @@ export function ProductBrowser({
                 )}
               >
                 {active && (
-                  <motion.span
+                  <motion.span data-ui="store/ProductBrowser/m-span-absolute"
                     layoutId="chip-active"
-                    className="absolute inset-0 -z-0 rounded-full bg-primary"
+                    className="absolute inset-0 z-0 rounded-full bg-primary"
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
-                <span className="relative">{c.name}</span>
+                <span data-ui="store/ProductBrowser/span-relative" className="relative">{c.name}</span>
               </button>
             )
           })}
         </div>
       </div>
 
-      <p className="mb-4 text-sm text-muted-foreground" aria-live="polite">
+      <p data-ui="store/ProductBrowser/p" className="mb-4 text-sm text-muted-foreground" aria-live="polite">
         {visible.length} {visible.length === 1 ? "product" : "products"}
       </p>
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
+        <div data-ui="store/ProductBrowser/div-flex-2" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
           <SearchXIcon className="size-10 text-muted-foreground" />
-          <p className="font-heading text-xl">No matches found</p>
-          <p className="text-sm text-muted-foreground">Try a different word or category.</p>
+          <p data-ui="store/ProductBrowser/p-2" className="font-heading text-xl">No matches found</p>
+          <p data-ui="store/ProductBrowser/p-3" className="text-sm text-muted-foreground">Try a different word or category.</p>
         </div>
       ) : (
-        <motion.div layout className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+        <motion.div data-ui="store/ProductBrowser/m-div-grid" layout className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
           <AnimatePresence mode="popLayout">
             {visible.map((p, i) => (
-              <motion.div
+              <motion.div data-ui="store/ProductBrowser/m-div"
                 key={p.id}
                 layout
                 initial={{ opacity: 0, scale: 0.96 }}

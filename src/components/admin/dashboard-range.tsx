@@ -12,14 +12,14 @@ type Selected = { key: RangeKey; from: string; to: string }
 function DashboardSkeleton() {
   return (
     <div data-ui="admin/DashboardSkeleton" className="space-y-6" aria-hidden>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div data-ui="admin/DashboardSkeleton/div-grid" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-36 animate-pulse rounded-2xl border bg-muted/60" />
+          <div data-ui="admin/DashboardSkeleton/div" key={i} className="h-36 animate-pulse rounded-2xl border bg-muted/60" />
         ))}
       </div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="h-96 animate-pulse rounded-2xl border bg-muted/60" />
-        <div className="h-96 animate-pulse rounded-2xl border bg-muted/60" />
+      <div data-ui="admin/DashboardSkeleton/div-grid-2" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div data-ui="admin/DashboardSkeleton/div-2" className="h-96 animate-pulse rounded-2xl border bg-muted/60" />
+        <div data-ui="admin/DashboardSkeleton/div-3" className="h-96 animate-pulse rounded-2xl border bg-muted/60" />
       </div>
     </div>
   )
@@ -59,10 +59,10 @@ export function DashboardRangeShell({
 
   return (
     <div data-ui="admin/DashboardRangeShell" className="space-y-6">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div className="scroll-row flex items-center gap-2" role="group" aria-label="Date range">
+      <div data-ui="admin/DashboardRangeShell/div-flex" className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div data-ui="admin/DashboardRangeShell/div-date-range" className="scroll-row flex items-center gap-2" role="group" aria-label="Date range">
           {RANGE_PRESETS.map((p) => (
-            <button
+            <button data-ui="admin/DashboardRangeShell/button"
               key={p.key}
               type="button"
               aria-pressed={selected.key === p.key}
@@ -76,7 +76,7 @@ export function DashboardRangeShell({
             </button>
           ))}
         </div>
-        <div className="flex items-end gap-2" role="group" aria-label="Custom date range">
+        <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex items-end gap-2" role="group" aria-label="Custom date range">
           <CalendarRangeIcon className={cn("mb-2.5 size-4", selected.key === "custom" ? "text-primary" : "text-muted-foreground")} aria-hidden />
           <TextField
             label="From"
@@ -92,7 +92,7 @@ export function DashboardRangeShell({
             containerClassName="w-40"
             noErrorSpace
           />
-          <span className="mb-2.5 text-sm text-muted-foreground">to</span>
+          <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">to</span>
           <TextField
             label="To"
             hideLabel
@@ -110,7 +110,7 @@ export function DashboardRangeShell({
           />
         </div>
       </div>
-      <div aria-busy={pending}>{pending ? <DashboardSkeleton /> : children}</div>
+      <div data-ui="admin/DashboardRangeShell/div" aria-busy={pending}>{pending ? <DashboardSkeleton /> : children}</div>
     </div>
   )
 }

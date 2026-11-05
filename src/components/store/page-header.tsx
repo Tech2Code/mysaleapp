@@ -5,16 +5,16 @@ import type { ReactNode } from "react"
 export function Breadcrumbs({ items }: { items: { name: string; href?: string }[] }) {
   return (
     <nav data-ui="store/Breadcrumbs" aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
+      <ol data-ui="store/Breadcrumbs/ol-flex" className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
         {items.map((item, i) => (
-          <li key={item.name} className="flex items-center gap-1">
+          <li data-ui="store/Breadcrumbs/li-flex" key={item.name} className="flex items-center gap-1">
             {i > 0 && <ChevronRightIcon className="size-3.5 opacity-60" aria-hidden />}
             {item.href ? (
-              <Link href={item.href} className="inline-block py-1.5 hover:text-foreground">
+              <Link data-ui="store/Breadcrumbs/Link" href={item.href} className="inline-block py-1.5 hover:text-foreground">
                 {item.name}
               </Link>
             ) : (
-              <span aria-current="page" className="font-medium text-foreground">
+              <span data-ui="store/Breadcrumbs/span" aria-current="page" className="font-medium text-foreground">
                 {item.name}
               </span>
             )}
@@ -38,10 +38,10 @@ export function PageHeader({
 }) {
   return (
     <section data-ui="store/PageHeader" className="relative overflow-hidden bg-hero">
-      <div className="container-page py-10 sm:py-14">
+      <div data-ui="store/PageHeader/div" className="container-page pt-8 pb-6 sm:pt-12 sm:pb-8">
         {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
-        <h1 className="mt-4 text-4xl font-semibold sm:text-5xl">{title}</h1>
-        {description && <p className="mt-3 max-w-2xl text-muted-foreground sm:text-lg">{description}</p>}
+        <h1 data-ui="store/PageHeader/h1" className="mt-4 text-4xl font-semibold sm:text-5xl">{title}</h1>
+        {description && <p data-ui="store/PageHeader/p" className="mt-3 max-w-2xl text-muted-foreground sm:text-lg">{description}</p>}
         {children}
       </div>
     </section>

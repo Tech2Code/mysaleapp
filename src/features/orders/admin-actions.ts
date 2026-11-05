@@ -154,10 +154,12 @@ export async function updateAdminNote(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Note is too long")
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase
-    .from("orders")
-    .update({ admin_note: parsed.data.note || null })
-    .eq("id", parsed.data.orderId)
+  // The note lives in its own admin-only table, so customers can never read it (even via their own orders).
+  const { error } = parsed.data.note
+    ? await supabase
+        .from("order_admin_notes")
+        .upsert({ order_id: parsed.data.orderId, note: parsed.data.note }, { onConflict: "order_id" })
+    : await supabase.from("order_admin_notes").delete().eq("order_id", parsed.data.orderId)
   if (error) return fail("Could not save note")
 
   revalidatePath(`/admin/orders/${parsed.data.orderId}`)

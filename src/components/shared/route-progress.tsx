@@ -121,8 +121,8 @@ export function RouteProgressProvider({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <RouteChangeWatcher onChange={finishClick} />
       </Suspense>
-      <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px]">
-        <div
+      <div data-ui="shared/RouteProgressProvider/div-fixed" aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-100 h-0.75">
+        <div data-ui="shared/RouteProgressProvider/div"
           className={cn(
             "h-full rounded-r-full bg-primary shadow-[0_0_10px_var(--color-primary)] transition-[width,opacity] ease-out",
             visible ? "opacity-100 duration-200" : "opacity-0 duration-300"

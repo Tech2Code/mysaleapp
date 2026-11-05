@@ -20,26 +20,26 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
 
   return (
     <article data-ui="store/ProductCard" className="group relative flex h-full flex-col">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted @container">
-        <Link href={`/products/${product.slug}`} className="absolute inset-0" aria-label={product.name}>
+      <div data-ui="store/ProductCard/div-relative" className="relative aspect-4/5 overflow-hidden rounded-2xl bg-muted @container">
+        <Link data-ui="store/ProductCard/Link-absolute" href={`/products/${product.slug}`} className="absolute inset-0" aria-label={product.name}>
           <ProductImage
             src={product.images[0]}
             alt={product.name}
             priority={priority}
             sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 50vw"
-            className="transition-transform duration-700 ease-out group-hover:scale-[1.06]"
+            className="transition-transform duration-700 ease-out group-hover:scale-106"
           />
-          <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <span data-ui="store/ProductCard/span-absolute" className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         </Link>
 
-        <div className="pointer-events-none absolute top-3 left-3 flex flex-col gap-1.5">
+        <div data-ui="store/ProductCard/div-flex" className="pointer-events-none absolute top-3 left-3 flex flex-col gap-1.5">
           {off && (
-            <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow">
+            <span data-ui="store/ProductCard/span" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow">
               {off}% off
             </span>
           )}
           {soldOut && (
-            <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
+            <span data-ui="store/ProductCard/span-2" className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
               Sold out
             </span>
           )}
@@ -48,7 +48,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
         <WishlistButton productId={product.id} productName={product.name} className="absolute top-3 right-3" />
 
         {!soldOut && (
-          <button
+          <button data-ui="store/ProductCard/button-grid"
             type="button"
             onClick={() => {
               add({
@@ -68,21 +68,21 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
         )}
       </div>
 
-      <div className="mt-3 flex flex-1 flex-col gap-1 px-0.5">
+      <div data-ui="store/ProductCard/div-flex-2" className="mt-3 flex flex-1 flex-col gap-1 px-0.5">
         {product.category && (
-          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          <span data-ui="store/ProductCard/span-3" className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
             {product.category.name}
           </span>
         )}
-        <h3 className="font-sans text-[0.95rem] leading-snug font-semibold">
-          <Link href={`/products/${product.slug}`} className="line-clamp-2 hover:text-primary">
+        <h3 data-ui="store/ProductCard/h3" className="font-sans text-[0.95rem] leading-snug font-semibold">
+          <Link data-ui="store/ProductCard/Link" href={`/products/${product.slug}`} className="line-clamp-2 hover:text-primary">
             {product.name}
           </Link>
         </h3>
-        <div className="mt-auto flex items-baseline gap-2 pt-1">
-          <span className="text-base font-bold">{formatPrice(product.price)}</span>
+        <div data-ui="store/ProductCard/div-flex-3" className="mt-auto flex items-baseline gap-2 pt-1">
+          <span data-ui="store/ProductCard/span-4" className="text-base font-bold">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
-            <span className="text-sm text-muted-foreground line-through">
+            <span data-ui="store/ProductCard/span-5" className="text-sm text-muted-foreground line-through">
               {formatPrice(product.compareAtPrice)}
             </span>
           )}

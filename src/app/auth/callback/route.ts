@@ -6,6 +6,8 @@ import { getServerSupabase } from "@/lib/supabase/server"
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
   const code = searchParams.get("code")
+  // Google/Supabase send these when the person pressed Cancel or something failed
+  const oauthError = searchParams.get("error")
   const next = safeNextPath(searchParams.get("next"), "/account/orders")
 
   if (code) {
@@ -14,6 +16,10 @@ export async function GET(request: NextRequest) {
     if (!error) return NextResponse.redirect(new URL(next, origin))
   }
 
+  if (!code && oauthError) {
+    const reason = oauthError === "access_denied" ? "cancelled" : "auth"
+    return NextResponse.redirect(new URL(`/login?error=${reason}&next=${encodeURIComponent(next)}`, origin))
+  }
   // An expired/used admin link (password reset, email confirmation) goes back to the admin screens.
   if (next.startsWith("/admin")) return NextResponse.redirect(new URL("/admin/forgot-password?error=expired", origin))
   return NextResponse.redirect(new URL("/login?error=auth", origin))

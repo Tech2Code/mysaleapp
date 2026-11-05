@@ -35,47 +35,47 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     <>
       <AdminPageHeader title="Orders" description={`${total} order${total === 1 ? "" : "s"} found`} />
       <OrdersBrowser status={filters.status} payment={filters.payment} view={filters.view} q={filters.q}>
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      <div data-ui="page:/admin/orders/div" className="overflow-hidden rounded-2xl border bg-card">
         {orders.length === 0 ? (
-          <p className="p-8 sm:p-12 text-center text-sm text-muted-foreground">No orders match these filters.</p>
+          <p data-ui="page:/admin/orders/p" className="p-8 sm:p-12 text-center text-sm text-muted-foreground">No orders match these filters.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-5">Order</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="hidden md:table-cell">Items</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Payment</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
+          <Table data-ui="page:/admin/orders/Table">
+            <TableHeader data-ui="page:/admin/orders/TableHeader">
+              <TableRow data-ui="page:/admin/orders/TableRow">
+                <TableHead data-ui="page:/admin/orders/TableHead-order" className="pl-5">Order</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-customer">Customer</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-items" className="hidden md:table-cell">Items</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-status">Status</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-payment" className="hidden lg:table-cell">Payment</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-total" className="text-right">Total</TableHead>
+                <TableHead data-ui="page:/admin/orders/TableHead-placed" className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody data-ui="page:/admin/orders/TableBody">
               {orders.map((o) => (
-                <TableRow key={o.id} className="group">
-                  <TableCell className="pl-5">
-                    <Link href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
+                <TableRow data-ui="page:/admin/orders/TableRow-2" key={o.id} className="group">
+                  <TableCell data-ui="page:/admin/orders/TableCell" className="pl-5">
+                    <Link data-ui="page:/admin/orders/Link" href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
                       {o.orderCode}
                     </Link>
                   </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{o.customerName}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <TableCell data-ui="page:/admin/orders/TableCell-2">
+                    <div data-ui="page:/admin/orders/div-2" className="font-medium">{o.customerName}</div>
+                    <div data-ui="page:/admin/orders/div-3" className="text-xs text-muted-foreground">
                       {o.phone} · {o.city}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden max-w-64 truncate text-sm text-muted-foreground md:table-cell">
+                  <TableCell data-ui="page:/admin/orders/TableCell-hidden" className="hidden max-w-64 truncate text-sm text-muted-foreground md:table-cell">
                     {o.items.reduce((n, i) => n + i.quantity, 0)} × {o.items.map((i) => i.name).join(", ")}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-ui="page:/admin/orders/TableCell-3">
                     <StatusBadge status={o.status} />
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell data-ui="page:/admin/orders/TableCell-hidden-2" className="hidden lg:table-cell">
                     <PaymentBadge status={o.paymentStatus} orderStatus={o.status} />
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
-                  <TableCell className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
+                  <TableCell data-ui="page:/admin/orders/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
+                  <TableCell data-ui="page:/admin/orders/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
                     {formatDateTime(o.createdAt)}
                   </TableCell>
                 </TableRow>
@@ -86,18 +86,18 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
       </div>
 
       {pages > 1 && (
-        <nav className="mt-4 flex items-center justify-between" aria-label="Pagination">
-          <Link
+        <nav data-ui="page:/admin/orders/nav-pagination" className="mt-4 flex items-center justify-between" aria-label="Pagination">
+          <Link data-ui="page:/admin/orders/Link-previous"
             href={pageHref(page - 1)}
             aria-disabled={page <= 1}
             className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page <= 1 && "pointer-events-none opacity-50")}
           >
             <ChevronLeftIcon /> Previous
           </Link>
-          <span className="text-sm text-muted-foreground">
+          <span data-ui="page:/admin/orders/span" className="text-sm text-muted-foreground">
             Page {page} of {pages}
           </span>
-          <Link
+          <Link data-ui="page:/admin/orders/Link-next"
             href={pageHref(page + 1)}
             aria-disabled={page >= pages}
             className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page >= pages && "pointer-events-none opacity-50")}

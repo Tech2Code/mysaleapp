@@ -27,7 +27,7 @@ export default async function ProductsPage() {
         description="Every piece is made by hand in small batches — no two are exactly alike."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Shop all" }]}
       />
-      <div className="container-page pt-8">
+      <div data-ui="page:/products/div" className="container-page pt-4 sm:pt-6">
         {/* Fallback is the full, crawlable grid; filters hydrate on top of it. */}
         <Suspense fallback={<ProductGrid products={products} />}>
           <ProductBrowser products={products} categories={categories} />

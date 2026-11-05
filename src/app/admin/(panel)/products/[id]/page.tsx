@@ -22,7 +22,7 @@ export default async function EditProductPage({ params }: PageProps<"/admin/prod
         description="Changes go live on the store as soon as you save."
         actions={
           product.isActive && (
-            <Link
+            <Link data-ui="page:/admin/products/[id]/Link-view-in-store"
               href={`/products/${product.slug}`}
               target="_blank"
               className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}

@@ -35,7 +35,7 @@ export function WishlistButton({
         className
       )}
     >
-      <motion.span
+      <motion.span data-ui="store/WishlistButton/m-span"
         key={active ? "on" : "off"}
         initial={{ scale: 0.6 }}
         animate={{ scale: 1 }}

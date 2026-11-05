@@ -36,11 +36,11 @@ async function OrdersBadge() {
   if (count === 0) return null
   return (
     <span data-ui="layout:/admin#OrdersBadge"
-      className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[0.7rem] leading-5 font-bold text-primary-foreground"
+      className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[0.7rem]/5  font-bold text-primary-foreground"
       title={`${count} payment${count === 1 ? "" : "s"} to verify`}
     >
       {count > 99 ? "99+" : count}
-      <span className="sr-only"> payments to verify</span>
+      <span data-ui="layout:/admin#OrdersBadge/span" className="sr-only"> payments to verify</span>
     </span>
   )
 }
@@ -55,16 +55,16 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
   return (
     <div data-ui="layout:/admin" className="lg:flex">
       <AdminSidebar ordersBadge={badge} />
-      <div className="min-w-0 flex-1">
+      <div data-ui="layout:/admin/div" className="min-w-0 flex-1">
         <AdminTopbar
           ordersBadge={badge}
           account={
-            <Suspense fallback={<span className="size-9 animate-pulse rounded-full bg-muted" aria-hidden />}>
+            <Suspense fallback={<span data-ui="layout:/admin/span" className="size-9 animate-pulse rounded-full bg-muted" aria-hidden />}>
               <AccountSlot />
             </Suspense>
           }
         />
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main data-ui="layout:/admin/main" className="p-4 sm:p-6 lg:p-8">
           <Suspense fallback={<PanelSkeleton />}>
             <AdminGate>{children}</AdminGate>
           </Suspense>

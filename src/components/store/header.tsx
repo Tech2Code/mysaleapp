@@ -3,6 +3,7 @@
 import { HeartIcon, MenuIcon, SearchIcon, ShoppingBagIcon } from "lucide-react"
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react"
 import Link from "next/link"
+import { ScrollLink } from "@/components/shared/scroll-link"
 import { usePathname } from "next/navigation"
 import { Suspense, useState } from "react"
 import { Logo } from "@/components/shared/logo"
@@ -25,13 +26,13 @@ function CountBadge({ count }: { count: number }) {
   return (
     <AnimatePresence>
       {count > 0 && (
-        <motion.span
+        <motion.span data-ui="store/CountBadge/m-span-grid"
           key={count}
           initial={{ scale: 0.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.4, opacity: 0 }}
           transition={{ type: "spring", stiffness: 600, damping: 20 }}
-          className="absolute top-0.5 right-0.5 grid min-w-[1.15rem] place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-[1.15rem] font-bold text-primary-foreground ring-2 ring-background"
+          className="absolute top-0.5 right-0.5 grid min-w-4.6 place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-4.6 font-bold text-primary-foreground ring-2 ring-background"
         >
           {count > 99 ? "99+" : count}
         </motion.span>
@@ -46,7 +47,7 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
       {links.map((l) => {
         const active = isActive(pathname, l.href)
         return (
-          <Link
+          <ScrollLink data-ui="store/DesktopNavItems/ScrollLink"
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
@@ -56,14 +57,14 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
             )}
           >
             {active && (
-              <motion.span
+              <motion.span data-ui="store/DesktopNavItems/m-span-absolute"
                 layoutId="nav-pill"
                 className="absolute inset-0 -z-10 rounded-full bg-secondary"
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
               />
             )}
             {l.label}
-          </Link>
+          </ScrollLink>
         )
       })}
     </>
@@ -87,8 +88,8 @@ function MobileNavItems({
   return (
     <>
       {links.map((l, i) => (
-        <motion.div key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
-          <Link
+        <motion.div data-ui="store/MobileNavItems/m-div" key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
+          <ScrollLink data-ui="store/MobileNavItems/ScrollLink"
             href={l.href}
             onClick={onNavigate}
             aria-current={isActive(pathname, l.href) ? "page" : undefined}
@@ -98,7 +99,7 @@ function MobileNavItems({
             )}
           >
             {l.label}
-          </Link>
+          </ScrollLink>
         </motion.div>
       ))}
     </>
@@ -135,29 +136,26 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
       )}
     >
-      <div className="container-page flex h-(--store-header-h) items-center gap-3">
+      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) items-center gap-1.5 sm:gap-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger
+          <SheetTrigger data-ui="store/Header/SheetTrigger-open-menu"
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full lg:hidden")}
             aria-label="Open menu"
           >
             <MenuIcon className="size-5" />
           </SheetTrigger>
-          <SheetContent side="left" className="w-80">
+          <SheetContent data-ui="store/Header/SheetContent" side="left" className="w-80">
             <SheetHeader>
               <SheetTitle className="sr-only">Menu</SheetTitle>
               <Logo />
             </SheetHeader>
-            <nav className="flex flex-col gap-1 px-3" aria-label="Mobile">
+            <nav data-ui="store/Header/nav-mobile" className="flex flex-col gap-1 px-3" aria-label="Mobile">
               <Suspense fallback={<MobileNavItems links={mobileLinks} pathname={null} onNavigate={closeMobile} />}>
                 <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
               </Suspense>
             </nav>
-            <div className="mt-auto flex items-center justify-between gap-3 border-t p-4 text-sm">
-              <Link href="/wishlist" onClick={closeMobile} className="font-medium hover:text-primary">
-                Wishlist
-              </Link>
-              <div className="flex items-center gap-2 text-muted-foreground">
+            <div data-ui="store/Header/div-flex-2" className="mt-auto flex items-center justify-end gap-3 border-t p-4 text-sm">
+              <div data-ui="store/Header/div-flex-3" className="flex items-center gap-2 text-muted-foreground">
                 Theme <ThemeToggle />
               </div>
             </div>
@@ -166,41 +164,41 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
         <Logo />
 
-        <nav className="ml-8 hidden items-center gap-1 lg:flex" aria-label="Main">
+        <nav data-ui="store/Header/nav-main" className="ml-8 hidden items-center gap-1 lg:flex" aria-label="Main">
           <Suspense fallback={<DesktopNavItems links={links} pathname={null} />}>
             <DesktopNavWithPath links={links} />
           </Suspense>
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-          <Link
+        <div data-ui="store/Header/div-flex-4" className="ml-auto flex items-center gap-1 sm:gap-1.5">
+          <Link data-ui="store/Header/Link-search-products"
             href="/products"
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex")}
             aria-label="Search products"
           >
-            <SearchIcon className="size-[1.15rem]" />
+            <SearchIcon className="size-4.6" />
           </Link>
-          <div className="hidden sm:block">
+          <div data-ui="store/Header/div-hidden" className="hidden sm:block">
             <ThemeToggle />
           </div>
-          <Link
+          <Link data-ui="store/Header/Link"
             href="/wishlist"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full max-sm:size-9")}
             aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} items` : ""}`}
           >
-            <HeartIcon className="size-[1.15rem]" />
+            <HeartIcon className="size-4.6" />
             {mounted && <CountBadge count={wishCount} />}
           </Link>
-          <button
+          <button data-ui="store/Header/button"
             type="button"
             onClick={() => openCart(true)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full max-sm:size-9")}
             aria-label={`Open cart${mounted ? `, ${cartCount(items)} items` : ""}`}
           >
-            <ShoppingBagIcon className="size-[1.15rem]" />
+            <ShoppingBagIcon className="size-4.6" />
             {mounted && <CountBadge count={cartCount(items)} />}
           </button>
-          <AccountMenu />
+          <span data-ui="store/Header/span" className="max-sm:ml-1.5"><AccountMenu /></span>
         </div>
       </div>
     </header>

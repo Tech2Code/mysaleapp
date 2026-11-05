@@ -12,7 +12,7 @@ export default async function CartPage() {
   return (
     <>
       <PageHeader title="Your cart" breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart" }]} />
-      <div className="container-page pt-8">
+      <div data-ui="page:/cart/div" className="container-page pt-4 sm:pt-6">
         <CartView products={live} />
       </div>
     </>

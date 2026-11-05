@@ -58,25 +58,25 @@ export default async function ContactPage() {
         description="Questions, custom orders or just saying hello — we'd love to hear from you."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Contact" }]}
       />
-      <div className="container-page grid gap-5 pt-8 sm:pt-12 md:grid-cols-2 lg:grid-cols-3">
+      <div data-ui="page:/contact/div-grid" className="container-page grid gap-5 pt-8 sm:pt-12 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
-          <a
+          <a data-ui="page:/contact/a"
             key={c.title}
             href={c.href}
             target={c.href.startsWith("http") ? "_blank" : undefined}
             rel="noopener noreferrer"
             className="group rounded-3xl border bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl"
           >
-            <span className="grid size-12 place-items-center rounded-2xl bg-secondary text-primary">
-              <c.icon className="size-6" />
+            <span data-ui="page:/contact/span-grid" className="grid size-12 place-items-center rounded-2xl bg-secondary text-primary">
+              <c.icon data-ui="page:/contact/c.icon" className="size-6" />
             </span>
-            <h2 className="mt-5 font-sans text-xl font-semibold">{c.title}</h2>
-            <p className="mt-1 text-muted-foreground">{c.text}</p>
-            <span className="mt-4 inline-block font-semibold text-primary group-hover:underline">{c.cta} →</span>
+            <h2 data-ui="page:/contact/h2" className="mt-5 font-sans text-xl font-semibold">{c.title}</h2>
+            <p data-ui="page:/contact/p" className="mt-1 text-muted-foreground">{c.text}</p>
+            <span data-ui="page:/contact/span" className="mt-4 inline-block font-semibold text-primary group-hover:underline">{c.cta} →</span>
           </a>
         ))}
         {place && (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2 lg:col-span-3">
+          <p data-ui="page:/contact/p-flex" className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2 lg:col-span-3">
             <MapPinIcon className="size-4" /> Studio in {place}. Shipping across India.
           </p>
         )}

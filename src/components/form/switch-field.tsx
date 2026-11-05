@@ -26,12 +26,12 @@ export function SwitchField({
 
   return (
     <div data-ui="form/SwitchField" className={cn("flex items-center justify-between gap-4 text-sm", className)}>
-      <div>
-        <p id={labelId} className="font-medium">
+      <div data-ui="form/SwitchField/div">
+        <p data-ui="form/SwitchField/p" id={labelId} className="font-medium">
           {label}
         </p>
         {description && (
-          <p id={descId} className="text-muted-foreground">
+          <p data-ui="form/SwitchField/p-2" id={descId} className="text-muted-foreground">
             {description}
           </p>
         )}

@@ -21,14 +21,14 @@ function ResultsSkeleton() {
   return (
     <div data-ui="admin/ResultsSkeleton" className="overflow-hidden rounded-2xl border bg-card" aria-hidden>
       {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="flex items-center gap-4 border-b p-4 last:border-0">
-          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-1/3 animate-pulse rounded bg-muted" />
-            <div className="h-3 w-1/4 animate-pulse rounded bg-muted/70" />
+        <div data-ui="admin/ResultsSkeleton/div-flex" key={i} className="flex items-center gap-4 border-b p-4 last:border-0">
+          <div data-ui="admin/ResultsSkeleton/div" className="h-4 w-20 animate-pulse rounded bg-muted" />
+          <div data-ui="admin/ResultsSkeleton/div-2" className="flex-1 space-y-2">
+            <div data-ui="admin/ResultsSkeleton/div-3" className="h-3.5 w-1/3 animate-pulse rounded bg-muted" />
+            <div data-ui="admin/ResultsSkeleton/div-4" className="h-3 w-1/4 animate-pulse rounded bg-muted/70" />
           </div>
-          <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
-          <div className="h-4 w-14 animate-pulse rounded bg-muted" />
+          <div data-ui="admin/ResultsSkeleton/div-5" className="h-6 w-20 animate-pulse rounded-full bg-muted" />
+          <div data-ui="admin/ResultsSkeleton/div-6" className="h-4 w-14 animate-pulse rounded bg-muted" />
         </div>
       ))}
     </div>
@@ -82,8 +82,8 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
 
   return (
     <div data-ui="admin/OrdersBrowser">
-      <div className="mb-4 space-y-3">
-        <form
+      <div data-ui="admin/OrdersBrowser/div" className="mb-4 space-y-3">
+        <form data-ui="admin/OrdersBrowser/form"
           onSubmit={(e) => {
             e.preventDefault()
             go({ q: query })
@@ -105,9 +105,9 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
         </form>
 
         {view && (
-          <p className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Showing</span>
-            <button
+          <p data-ui="admin/OrdersBrowser/p-flex" className="flex items-center gap-2 text-sm">
+            <span data-ui="admin/OrdersBrowser/span" className="text-muted-foreground">Showing</span>
+            <button data-ui="admin/OrdersBrowser/button-inline-flex"
               type="button"
               onClick={() => go({ view: "", status: "all", payment: "all" })}
               className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary/10 pr-2 pl-3 font-semibold text-primary transition-colors hover:bg-primary/15"
@@ -119,11 +119,11 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
           </p>
         )}
 
-        <div className="scroll-row flex gap-2" role="group" aria-label="Filter by status">
+        <div data-ui="admin/OrdersBrowser/div-filter-by-status" className="scroll-row flex gap-2" role="group" aria-label="Filter by status">
           {["all", ...ORDER_STATUSES].map((t) => {
             const active = !view && status === t
             return (
-              <button
+              <button data-ui="admin/OrdersBrowser/button"
                 key={t}
                 type="button"
                 aria-pressed={active}
@@ -138,11 +138,11 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
             )
           })}
         </div>
-        <div className="scroll-row flex gap-2" role="group" aria-label="Filter by payment">
+        <div data-ui="admin/OrdersBrowser/div-filter-by-payment" className="scroll-row flex gap-2" role="group" aria-label="Filter by payment">
           {PAYMENT_TABS.map((t) => {
             const active = !view && payment === t.value
             return (
-              <button
+              <button data-ui="admin/OrdersBrowser/button-2"
                 key={t.value}
                 type="button"
                 aria-pressed={active}
@@ -159,7 +159,7 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
         </div>
       </div>
 
-      <div aria-busy={pending}>{pending ? <ResultsSkeleton /> : children}</div>
+      <div data-ui="admin/OrdersBrowser/div-2" aria-busy={pending}>{pending ? <ResultsSkeleton /> : children}</div>
     </div>
   )
 }

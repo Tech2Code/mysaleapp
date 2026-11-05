@@ -78,26 +78,26 @@ export function DeliveryEditor({
 
   return (
     <section data-ui="store/DeliveryEditor" aria-labelledby="delivery-title" className="rounded-3xl border bg-card p-5 text-sm sm:p-6">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 id="delivery-title" className="font-sans text-lg font-semibold">
+      <div data-ui="store/DeliveryEditor/div-flex" className="mb-2 flex items-center justify-between gap-3">
+        <h3 data-ui="store/DeliveryEditor/h3-delivery-address" id="delivery-title" className="font-sans text-lg font-semibold">
           Delivery address
         </h3>
         {editable && (
-          <Button variant="outline" size="sm" className="rounded-full" onClick={() => setOpen(true)}>
+          <Button data-ui="store/DeliveryEditor/Button-edit" variant="outline" size="sm" className="rounded-full" onClick={() => setOpen(true)}>
             <PencilIcon /> Edit
           </Button>
         )}
       </div>
 
-      <p className="font-medium">
+      <p data-ui="store/DeliveryEditor/p" className="font-medium">
         {delivery.name} · {delivery.phone}
       </p>
-      <p className="text-muted-foreground">
+      <p data-ui="store/DeliveryEditor/p-2" className="text-muted-foreground">
         {delivery.address}, {delivery.city} - {delivery.pincode}
       </p>
-      {delivery.note && <p className="mt-2 text-muted-foreground">Note: {delivery.note}</p>}
+      {delivery.note && <p data-ui="store/DeliveryEditor/p-3" className="mt-2 text-muted-foreground">Note: {delivery.note}</p>}
 
-      <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+      <p data-ui="store/DeliveryEditor/p-flex" className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
         {editable ? (
           "You can change these details until your order is confirmed."
         ) : (
@@ -110,8 +110,8 @@ export function DeliveryEditor({
 
       {editable && (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-            <form onSubmit={onSubmit} noValidate className="space-y-1.5">
+          <DialogContent data-ui="store/DeliveryEditor/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+            <form data-ui="store/DeliveryEditor/form" onSubmit={onSubmit} noValidate className="space-y-1">
               <DialogHeader>
                 <DialogTitle>Edit delivery details</DialogTitle>
                 <DialogDescription>Order {orderCode}. You can change this until we confirm the order.</DialogDescription>
@@ -127,7 +127,7 @@ export function DeliveryEditor({
                 {...form.register("phone")}
               />
               <TextAreaField label="Full address" maxLength={LIMITS.address.max} rows={3} error={errors.address?.message} {...form.register("address")} />
-              <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+              <div data-ui="store/DeliveryEditor/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
                 <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
                 <TextField
                   label="Pincode" kind="pincode"
@@ -139,15 +139,15 @@ export function DeliveryEditor({
               </div>
               <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
               {serverError && (
-                <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                <p data-ui="store/DeliveryEditor/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
                   {serverError}
                 </p>
               )}
               <DialogFooter>
-                <Button type="button" variant="outline" size="lg" onClick={() => setOpen(false)}>
+                <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="lg" disabled={pending}>
+                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending}>
                   {pending && <Loader2Icon className="animate-spin" />} Save changes
                 </Button>
               </DialogFooter>

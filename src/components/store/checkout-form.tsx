@@ -30,6 +30,7 @@ export const LAST_ORDER_KEY = "kk-last-order"
 export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   const router = useRouter()
   const { ready, available, hasUnavailable, charges } = useLiveCart(products)
+  const itemCount = available.reduce((n, l) => n + l.quantity, 0)
   const clearCart = useCart((s) => s.clear)
   const { user, ready: authReady } = useAuth()
   const [pending, startTransition] = useTransition()
@@ -119,13 +120,13 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
     })
   })
 
-  if (!ready) return <Skeleton className="h-[32rem] rounded-3xl" />
+  if (!ready) return <Skeleton data-ui="store/CheckoutForm" className="h-128 rounded-3xl" />
 
   if (available.length === 0) {
     return (
       <div data-ui="store/CheckoutForm" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-        <p className="font-heading text-2xl">Your cart is empty</p>
-        <Link href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
+        <p data-ui="store/CheckoutForm/p" className="font-heading text-2xl">Your cart is empty</p>
+        <Link data-ui="store/CheckoutForm/Link-browse-products" href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
           Browse products
         </Link>
       </div>
@@ -134,16 +135,16 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
 
   return (
     <form data-ui="store/CheckoutForm" onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
-      <div className="space-y-1.5 rounded-3xl border bg-card p-5 sm:p-8">
-        <div>
-          <h2 className="text-2xl font-semibold">Delivery details</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+      <div data-ui="store/CheckoutForm/div" className="space-y-1 rounded-3xl border bg-card p-5 sm:p-8">
+        <div data-ui="store/CheckoutForm/div-2">
+          <h2 data-ui="store/CheckoutForm/h2-delivery-details" className="text-2xl font-semibold">Delivery details</h2>
+          <p data-ui="store/CheckoutForm/p-2" className="mt-1 text-sm text-muted-foreground">
             {user ? (
               addresses.length > 0 ? "Choose a saved address or add a new one." : "Enter where we should deliver."
             ) : (
               <>
                 Checking out as a guest.{" "}
-                <Link href="/login?next=/checkout" className="font-medium text-primary underline-offset-4 hover:underline">
+                <Link data-ui="store/CheckoutForm/Link-sign-in" href="/login?next=/checkout" className="font-medium text-primary underline-offset-4 hover:underline">
                   Sign in
                 </Link>{" "}
                 to save your address and track orders.
@@ -153,33 +154,33 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
         </div>
 
         {user && addresses.length > 0 && (
-          <fieldset className="space-y-3">
-            <legend className="sr-only">Saved addresses</legend>
-            <div className="grid gap-3 sm:grid-cols-2">
+          <fieldset data-ui="store/CheckoutForm/fieldset" className="space-y-3">
+            <legend data-ui="store/CheckoutForm/legend-saved-addresses" className="sr-only">Saved addresses</legend>
+            <div data-ui="store/CheckoutForm/div-grid" className="grid gap-3 sm:grid-cols-2">
               {addresses.map((a) => {
                 const active = selected === a.id
                 return (
-                  <label
+                  <label data-ui="store/CheckoutForm/label"
                     key={a.id}
                     className={cn(
-                      "relative flex cursor-pointer flex-col rounded-2xl border p-4 text-sm transition-colors has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/40",
+                      "relative flex cursor-pointer flex-col rounded-2xl border p-4 text-sm transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/40",
                       active ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                     )}
                   >
-                    <input type="radio" name="saved-address" className="sr-only" checked={active} onChange={() => fillFrom(a)} />
-                    <span className="flex items-center gap-2 font-semibold">
+                    <input data-ui="store/CheckoutForm/input-saved-address" type="radio" name="saved-address" className="sr-only" checked={active} onChange={() => fillFrom(a)} />
+                    <span data-ui="store/CheckoutForm/span-flex" className="flex items-center gap-2 font-semibold">
                       <MapPinIcon className="size-4 text-primary" aria-hidden /> {a.label}
-                      {a.isDefault && <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem]">Default</span>}
+                      {a.isDefault && <span data-ui="store/CheckoutForm/span" className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem]">Default</span>}
                       {active && <CheckCircle2Icon className="ml-auto size-4 text-primary" aria-hidden />}
                     </span>
-                    <span className="mt-1 font-medium">{a.fullName}</span>
-                    <span className="line-clamp-2 text-muted-foreground">
+                    <span data-ui="store/CheckoutForm/span-2" className="mt-1 font-medium">{a.fullName}</span>
+                    <span data-ui="store/CheckoutForm/span-3" className="line-clamp-2 text-muted-foreground">
                       {a.address}, {a.city} - {a.pincode}
                     </span>
                   </label>
                 )
               })}
-              <button
+              <button data-ui="store/CheckoutForm/button-use-a-different-addres"
                 type="button"
                 onClick={useNewAddress}
                 aria-pressed={selected === "new"}
@@ -191,16 +192,16 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
                 <PlusIcon className="size-4" /> Use a different address
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p data-ui="store/CheckoutForm/p-3" className="text-xs text-muted-foreground">
               Need to change a saved address?{" "}
-              <Link href="/account/profile" className="font-medium text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/CheckoutForm/Link-manage-addresses" href="/account/profile" className="font-medium text-primary underline-offset-4 hover:underline">
                 Manage addresses
               </Link>
             </p>
           </fieldset>
         )}
 
-        <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+        <div data-ui="store/CheckoutForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
           <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
           <TextField
             label="WhatsApp / mobile number" kind="phone"
@@ -251,57 +252,62 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
         )}
       </div>
 
-      <aside className="h-fit space-y-5 rounded-3xl border bg-card p-6 lg:sticky-store">
-        <h2 className="text-xl font-semibold">Your order</h2>
-        <ul className="max-h-72 space-y-3 overflow-y-auto pr-1">
+      <aside data-ui="store/CheckoutForm/aside" className="h-fit space-y-5 rounded-3xl border bg-card p-6 lg:sticky-store">
+        <h2 data-ui="store/CheckoutForm/h2-your-order" className="flex items-baseline justify-between gap-3 text-xl font-semibold">
+          Your order
+          <span data-ui="store/CheckoutForm/span-4" className="text-sm font-medium text-muted-foreground">
+            {itemCount} item{itemCount === 1 ? "" : "s"}
+          </span>
+        </h2>
+        <ul data-ui="store/CheckoutForm/ul" className="max-h-72 space-y-3 overflow-y-auto pr-1">
           {available.map((l) => (
-            <li key={l.productId} className="flex items-center gap-3">
-              <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted @container">
+            <li data-ui="store/CheckoutForm/li-flex" key={l.productId} className="flex items-center gap-3">
+              <div data-ui="store/CheckoutForm/div-relative" className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted @container">
                 <ProductImage src={l.image} alt={l.name} sizes="56px" />
-                <span className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-foreground text-[0.65rem] font-bold text-background">
+                <span data-ui="store/CheckoutForm/span-grid" className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-foreground text-[0.65rem] font-bold text-background">
                   {l.quantity}
                 </span>
               </div>
-              <span className="flex-1 text-sm font-medium">
-                <span className="line-clamp-2">{l.name}</span>
+              <span data-ui="store/CheckoutForm/span-5" className="flex-1 text-sm font-medium">
+                <span data-ui="store/CheckoutForm/span-6" className="line-clamp-2">{l.name}</span>
                 {l.fees.length > 0 && (
-                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                  <span data-ui="store/CheckoutForm/span-7" className="mt-0.5 block text-xs font-normal text-muted-foreground">
                     + {l.fees.map((f) => f.label.toLowerCase()).join(", ")} (once)
                   </span>
                 )}
               </span>
-              <span className="text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
+              <span data-ui="store/CheckoutForm/span-8" className="text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
             </li>
           ))}
         </ul>
         {hasUnavailable && (
-          <p className="text-xs text-destructive">Unavailable items were left out of this order.</p>
+          <p data-ui="store/CheckoutForm/p-4" className="text-xs text-destructive">Unavailable items were left out of this order.</p>
         )}
         <FreeShippingBar subtotal={charges.subtotal} />
         <PriceBreakdown {...charges} totalLabel="Total to pay" className="border-t pt-4" />
         {serverError && (
-          <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          <p data-ui="store/CheckoutForm/p-5" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {serverError}
           </p>
         )}
-        <Button
+        <Button data-ui="store/CheckoutForm/Button"
           type="submit"
           size="lg"
           disabled={pending}
           className="h-13 w-full rounded-full text-base shadow-lg shadow-primary/25"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
-          {pending ? "Placing order…" : "Place order & pay"}
+          {pending ? "Placing order…" : `Place order & pay · ${formatPrice(charges.total)}`}
         </Button>
-        <div className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          <p className="flex items-start gap-2">
+        <div data-ui="store/CheckoutForm/div-3" className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+          <p data-ui="store/CheckoutForm/p-flex" className="flex items-start gap-2">
             <BanIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              <span className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
+            <span data-ui="store/CheckoutForm/span-9">
+              <span data-ui="store/CheckoutForm/span-10" className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
               right after placing the order.
             </span>
           </p>
-          <p className="pl-5.5">Your order is confirmed once we verify the payment.</p>
+          <p data-ui="store/CheckoutForm/p-6" className="pl-5.5">Your order is confirmed once we verify the payment.</p>
         </div>
       </aside>
     </form>

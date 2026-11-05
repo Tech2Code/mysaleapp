@@ -17,9 +17,9 @@ import { LIMITS } from "@/lib/validation"
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <section data-ui="admin/Card" className="mb-6 space-y-5 break-inside-avoid rounded-2xl border bg-card p-5 sm:p-6">
-      <div>
-        <h2 className="font-sans text-lg font-semibold">{title}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      <div data-ui="admin/Card/div">
+        <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
+        <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -114,14 +114,14 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
 
   return (
     <form data-ui="admin/StoreSettingsForm" onSubmit={onSubmit} noValidate>
-      <div className="xl:columns-2 xl:gap-6">
+      <div data-ui="admin/StoreSettingsForm/div" className="xl:columns-2 xl:gap-6">
         {/* ----------------------------------------------- column 1: your shop */}
-        <div className="contents">
+        <div data-ui="admin/StoreSettingsForm/div-2" className="contents">
           <Card
             title="Shop profile"
             description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
           >
-            <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
               <TextField label="Tagline" maxLength={LIMITS.tagline.max} fieldSize="md" error={errors.tagline?.message} {...form.register("tagline")} />
             </div>
@@ -142,7 +142,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
           </Card>
 
           <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link.">
-            <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Instagram" kind="url"
                 fieldSize="md"
@@ -173,16 +173,16 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
               error={errors.keywords?.message}
               {...form.register("keywords")}
             />
-            <div className="rounded-xl border bg-background p-4">
-              <p className="truncate text-xs text-muted-foreground">{siteConfig.url.replace(/^https?:\/\//, "")}</p>
-              <p className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{String(name ?? "")}</p>
-              <p className="line-clamp-2 text-sm text-muted-foreground">{String(description ?? "")}</p>
+            <div data-ui="admin/StoreSettingsForm/div-3" className="rounded-xl border bg-background p-4">
+              <p data-ui="admin/StoreSettingsForm/p" className="truncate text-xs text-muted-foreground">{siteConfig.url.replace(/^https?:\/\//, "")}</p>
+              <p data-ui="admin/StoreSettingsForm/p-2" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{String(name ?? "")}</p>
+              <p data-ui="admin/StoreSettingsForm/p-3" className="line-clamp-2 text-sm text-muted-foreground">{String(description ?? "")}</p>
             </div>
           </Card>
         </div>
 
         {/* ----------------------------------------------- column 2: contact, money, orders */}
-        <div className="contents">
+        <div data-ui="admin/StoreSettingsForm/div-4" className="contents">
           <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message.">
             <TextField
               label="WhatsApp number" kind="intlPhone"
@@ -218,19 +218,19 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 {...form.register("phone")}
               />
             )}
-            <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
               <TextField label="City" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
               <TextField label="State" maxLength={LIMITS.region.max} fieldSize="md" error={errors.region?.message} {...form.register("region")} />
             </div>
-            <p className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
+            <p data-ui="admin/StoreSettingsForm/p-4" className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
           </Card>
 
           <Card
             title="Payment (UPI)"
             description="Customers pay this UPI ID after placing an order, then enter the UTR. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
           >
-            <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="UPI ID" kind="upiId"
                 fieldSize="md"
@@ -253,7 +253,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
           </Card>
 
           <Card title="Delivery charges" description="Applied to every order. Per-product charges (like handling) are set on each product.">
-            <div className="grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Delivery charge" kind="money"
                 fieldSize="md"
@@ -273,7 +273,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 {...form.register("freeDeliveryAbove")}
               />
             </div>
-            {deliveryPreview && <p className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
+            {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
           <Card title="Orders" description="How your order numbers look.">

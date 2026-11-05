@@ -30,7 +30,19 @@ const RPC_ERRORS: Record<string, string> = {
   DUPLICATE_REFERENCE: "This reference number was already used for another payment. Please check it and try again.",
   ALREADY_CANCELLED: "This order is already cancelled.",
   CANNOT_CANCEL: "This order is already packed, so it can't be cancelled here. Please message us on WhatsApp.",
+  TOO_MANY_ATTEMPTS: "Too many wrong attempts for this order. Please try again in 15 minutes, sign in, or message us on WhatsApp.",
+  TOO_MANY_ORDERS: "Too many unpaid orders from this number. Please pay for or cancel an existing order, or message us on WhatsApp.",
   NOT_EDITABLE: "This order is already confirmed, so the delivery details can't be changed. Message us on WhatsApp for help.",
+}
+
+/**
+ * Guest lookups (code + last 4 digits) answer {"ok":false,"error":"…"} instead of raising, so that
+ * wrong attempts can be counted (see migration 0009). Returns the friendly message, or null if fine.
+ */
+function softRpcError(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null
+  const { error } = data as { error?: unknown }
+  return typeof error === "string" ? mapRpcError(error, "Could not find that order.") : null
 }
 
 function mapRpcError(message: string, fallback: string): string {
@@ -137,6 +149,8 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
   })
 
   if (error) return fail("Could not look up the order. Please try again.")
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
   if (!data) return fail("No order found with that code and phone number.")
 
   // Older database versions omit some fields, so default them.
@@ -178,7 +192,7 @@ export async function submitPayment(input: unknown): Promise<ActionResult> {
   if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase.rpc("submit_payment", {
+  const { data, error } = await supabase.rpc("submit_payment", {
     p_code: parsed.data.code,
     p_phone_last4: parsed.data.phoneLast4,
     p_reference: parsed.data.reference,
@@ -190,6 +204,8 @@ export async function submitPayment(input: unknown): Promise<ActionResult> {
     }
     return fail(mapRpcError(error.message, "Could not submit your payment. Please try again."))
   }
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
   return { ok: true }
 }
 
@@ -217,6 +233,8 @@ export async function updateOrderDelivery(input: unknown): Promise<ActionResult<
     return fail(mapRpcError(error.message, "Could not update the delivery details. Please try again."))
   }
 
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
   const result = data as { phoneLast4?: string } | null
   return { ok: true, data: { phoneLast4: result?.phoneLast4 ?? phone.slice(-4) } }
 }
@@ -241,6 +259,8 @@ export async function cancelOrder(input: unknown): Promise<ActionResult<{ refund
     }
     return fail(mapRpcError(error.message, "Could not cancel the order. Please try again."))
   }
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
   revalidatePath("/account", "layout")
   return { ok: true, data: { refundDue: (data as { refundDue?: boolean } | null)?.refundDue === true } }
 }

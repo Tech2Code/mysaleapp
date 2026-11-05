@@ -135,9 +135,9 @@ export function OrderStatusControl({
       <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} />
 
       {showShipping && (
-        <fieldset className="space-y-1.5 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
-          <legend className="px-1 text-sm font-semibold">Shipping details</legend>
-          <p className="-mt-2 text-xs text-muted-foreground">
+        <fieldset data-ui="admin/OrderStatusControl/fieldset" className="space-y-1 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+          <legend data-ui="admin/OrderStatusControl/legend-shipping-details" className="px-1 text-sm font-semibold">Shipping details</legend>
+          <p data-ui="admin/OrderStatusControl/p" className="-mt-2 text-xs text-muted-foreground">
             {value === "shipped" ? "Courier name is required to mark an order as shipped. " : ""}Customers see these on their order page.
           </p>
           <TextField
@@ -175,10 +175,10 @@ export function OrderStatusControl({
         </fieldset>
       )}
 
-      <Button type="submit" disabled={!isDirty || pending} className="w-full rounded-full">
+      <Button data-ui="admin/OrderStatusControl/Button-update-status" type="submit" disabled={!isDirty || pending} className="w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Update status
       </Button>
-      <a
+      <a data-ui="admin/OrderStatusControl/a-send"
         href={notifyUrl}
         target="_blank"
         rel="noopener noreferrer"
@@ -217,12 +217,12 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        data-ui="admin/AdminCancelOrder"
+        data-ui="admin/AdminCancelOrder/DialogTrigger-inline-flex"
         className="inline-flex h-9 w-full items-center justify-center rounded-full border border-destructive/40 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
       >
         Cancel order
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -230,7 +230,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             {paidOrSent ? "A payment was received, so remember to refund it and mark the payment as Refunded." : "No payment was received."}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-1.5">
+        <div data-ui="admin/AdminCancelOrder/div" className="space-y-1">
           <SelectField
             label="Reason"
             fieldSize="md"
@@ -240,16 +240,16 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
           />
           <TextAreaField label="Message to the customer (optional)" rows={2} maxLength={200} value={detail} onChange={(e) => setDetail(e.target.value)} />
           {error && (
-            <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+            <p data-ui="admin/AdminCancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {error}
             </p>
           )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
+          <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Keep order
           </Button>
-          <Button type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
+          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Cancel order
           </Button>
         </DialogFooter>
@@ -281,7 +281,7 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
         onChange={(e) => setValue(e.target.value)}
         placeholder="Payment received via UPI, packing notes…"
       />
-      <Button type="submit" variant="outline" size="sm" disabled={pending || value === (note ?? "")} className="rounded-full">
+      <Button data-ui="admin/AdminNoteForm/Button-save-note" type="submit" variant="outline" size="sm" disabled={pending || value === (note ?? "")} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Save note
       </Button>
     </form>

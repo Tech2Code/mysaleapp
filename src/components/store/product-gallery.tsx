@@ -12,9 +12,9 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   return (
     <div data-ui="store/ProductGallery" className="flex flex-col-reverse gap-3 md:flex-row">
       {list.length > 1 && (
-        <div className="scroll-row flex gap-3 md:w-[5.75rem] md:flex-col" role="tablist" aria-label="Product photos">
+        <div data-ui="store/ProductGallery/div-product-photos" className="scroll-row flex gap-3 md:w-23 md:flex-col" role="tablist" aria-label="Product photos">
           {list.map((src, i) => (
-            <button
+            <button data-ui="store/ProductGallery/button"
               key={src ?? i}
               type="button"
               role="tab"
@@ -32,9 +32,9 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
         </div>
       )}
 
-      <div className="relative aspect-[4/5] flex-1 overflow-hidden rounded-3xl bg-muted @container">
+      <div data-ui="store/ProductGallery/div-relative" className="relative aspect-4/5 flex-1 overflow-hidden rounded-3xl bg-muted @container">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div
+          <motion.div data-ui="store/ProductGallery/m-div-absolute"
             key={index}
             initial={{ opacity: 0, scale: 1.03 }}
             animate={{ opacity: 1, scale: 1 }}

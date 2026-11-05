@@ -17,14 +17,14 @@ export function SectionHeading({
 }) {
   return (
     <FadeIn className="mb-8 flex items-end justify-between gap-4">
-      <div>
-        {eyebrow && <p className="text-sm font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>}
-        <h2 id={id} className="mt-2 text-3xl font-semibold sm:text-4xl">
+      <div data-ui="store/SectionHeading/div">
+        {eyebrow && <p data-ui="store/SectionHeading/p" className="text-sm font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>}
+        <h2 data-ui="store/SectionHeading/h2" id={id} className="mt-2 text-3xl font-semibold sm:text-4xl">
           {title}
         </h2>
       </div>
       {href && (
-        <Link
+        <Link data-ui="store/SectionHeading/Link-hidden"
           href={href}
           className="group hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-primary sm:inline-flex"
         >

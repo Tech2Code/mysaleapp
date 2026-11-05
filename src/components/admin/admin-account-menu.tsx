@@ -26,39 +26,39 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        data-ui="admin/AdminAccountMenu"
+        data-ui="admin/AdminAccountMenu/DropdownMenuTrigger-grid"
         className="grid size-9 place-items-center overflow-hidden rounded-full bg-secondary ring-2 ring-primary/20 transition hover:ring-primary/50"
         aria-label={`Account: ${account.email}`}
       >
         {account.avatarUrl ? (
-          <Image src={account.avatarUrl} alt="" width={36} height={36} className="size-full object-cover" />
+          <Image data-ui="admin/AdminAccountMenu/Image" src={account.avatarUrl} alt="" width={36} height={36} className="size-full object-cover" />
         ) : (
-          <span className="text-sm leading-none font-semibold text-primary">{initial}</span>
+          <span data-ui="admin/AdminAccountMenu/span" className="text-sm leading-none font-semibold text-primary">{initial}</span>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent data-ui="admin/AdminAccountMenu/DropdownMenuContent" align="end" className="w-64">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="space-y-1 py-2">
-            <span className="block truncate text-sm font-semibold text-foreground">{account.name}</span>
-            <span className="block truncate">{account.email}</span>
-            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[0.7rem] font-semibold text-primary">
+            <span data-ui="admin/AdminAccountMenu/span-2" className="block truncate text-sm font-semibold text-foreground">{account.name}</span>
+            <span data-ui="admin/AdminAccountMenu/span-3" className="block truncate">{account.email}</span>
+            <span data-ui="admin/AdminAccountMenu/span-inline-flex" className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[0.7rem] font-semibold text-primary">
               <ShieldCheckIcon className="size-3" aria-hidden /> Administrator
             </span>
-            {account.lastSignIn && <span className="block pt-1 text-[0.7rem]">Signed in {account.lastSignIn}</span>}
+            {account.lastSignIn && <span data-ui="admin/AdminAccountMenu/span-4" className="block pt-1 text-[0.7rem]">Signed in {account.lastSignIn}</span>}
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/admin/account")}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem" onClick={() => router.push("/admin/account")}>
           <UserRoundCogIcon /> My account
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-2" onClick={() => router.push("/admin/settings")}>
           <SettingsIcon /> Store settings
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => window.open("/", "_blank")}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-3" onClick={() => window.open("/", "_blank")}>
           <ExternalLinkIcon /> View store
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" disabled={pending} onClick={() => startTransition(() => signOutAdmin())}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => startTransition(() => signOutAdmin())}>
           <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>

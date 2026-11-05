@@ -34,7 +34,7 @@ export function SearchField({
 
   return (
     <div data-ui="form/SearchField" className={cn("relative", containerClassName)}>
-      <label htmlFor={id} className="sr-only">
+      <label data-ui="form/SearchField/label" htmlFor={id} className="sr-only">
         {label}
       </label>
       <SearchIcon
@@ -54,7 +54,7 @@ export function SearchField({
         {...props}
       />
       {onClear && hasText && (
-        <button
+        <button data-ui="form/SearchField/button-clear-search"
           type="button"
           onClick={onClear}
           aria-label="Clear search"

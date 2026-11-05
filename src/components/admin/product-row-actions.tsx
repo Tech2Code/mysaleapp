@@ -57,18 +57,18 @@ export function ProductRowActions({ productId, name }: { productId: string; name
 
   return (
     <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">
-      <Link
+      <Link data-ui="admin/ProductRowActions/Link"
         href={`/admin/products/${productId}`}
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
         aria-label={`Edit ${name}`}
       >
         <PencilIcon />
       </Link>
-      <Button variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className="text-destructive hover:bg-destructive/10">
+      <Button data-ui="admin/ProductRowActions/Button" variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className="text-destructive hover:bg-destructive/10">
         <Trash2Icon />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent data-ui="admin/ProductRowActions/DialogContent">
           <DialogHeader>
             <DialogTitle>Delete “{name}”?</DialogTitle>
             <DialogDescription>
@@ -77,8 +77,8 @@ export function ProductRowActions({ productId, name }: { productId: string; name
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button
+            <DialogClose render={<Button data-ui="admin/ProductRowActions/Button-2" variant="outline" />}>Cancel</DialogClose>
+            <Button data-ui="admin/ProductRowActions/Button-delete"
               variant="destructive"
               disabled={pending}
               onClick={() =>

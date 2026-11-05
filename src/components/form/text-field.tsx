@@ -83,7 +83,7 @@ export function TextField({
 
   return (
     <FieldShell id={id} label={label} hideLabel={hideLabel} error={error} hint={hint} className={containerClassName} noErrorSpace={noErrorSpace || pill}>
-      <div className="relative">
+      <div data-ui="form/TextField/div-relative" className="relative">
         {leading && <Leading>{leading}</Leading>}
         <Input
           id={id}
@@ -101,9 +101,9 @@ export function TextField({
           onChange={handleChange}
         />
         {listId && (
-          <datalist id={listId}>
+          <datalist data-ui="form/TextField/datalist" id={listId}>
             {suggestions!.map((s) => (
-              <option key={s} value={s} />
+              <option data-ui="form/TextField/option" key={s} value={s} />
             ))}
           </datalist>
         )}

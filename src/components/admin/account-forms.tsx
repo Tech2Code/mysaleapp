@@ -17,9 +17,9 @@ import { LIMITS } from "@/lib/validation"
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <section data-ui="admin/Card" className="space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
-      <div>
-        <h2 className="font-sans text-lg font-semibold">{title}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      <div data-ui="admin/Card/div">
+        <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
+        <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </section>
@@ -54,7 +54,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
     <form
       data-ui="admin/ProfileForm"
       noValidate
-      className="space-y-1.5"
+      className="space-y-1"
       onSubmit={form.handleSubmit((values) =>
         run(
           () => updateAdminProfile(values),
@@ -66,11 +66,11 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
         )
       )}
     >
-      <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+      <div data-ui="admin/ProfileForm/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
         <TextField label="Your name" kind="personName" fieldSize="md" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
         <TextField label="Mobile number (optional)" kind="phone" fieldSize="md" leading="+91" error={errors.phone?.message} {...form.register("phone")} />
       </div>
-      <Button type="submit" disabled={!isDirty || pending} className="rounded-full">
+      <Button data-ui="admin/ProfileForm/Button-save-details" type="submit" disabled={!isDirty || pending} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Save details
       </Button>
     </form>
@@ -98,20 +98,20 @@ function EmailForm({ email }: { email: string }) {
         )
       )}
     >
-      <p className="text-sm">
-        Signed in as <span className="font-semibold">{email}</span>
+      <p data-ui="admin/EmailForm/p" className="text-sm">
+        Signed in as <span data-ui="admin/EmailForm/span" className="font-semibold">{email}</span>
       </p>
       <TextField label="New email address" kind="email" fieldSize="md" error={errors.email?.message} {...form.register("email")} />
       {sentTo && (
-        <p role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
+        <p data-ui="admin/EmailForm/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
           <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          <span>
-            We sent a confirmation link to <span className="font-semibold">{sentTo}</span>. Open it to finish. Until then you keep signing in with{" "}
+          <span data-ui="admin/EmailForm/span-2">
+            We sent a confirmation link to <span data-ui="admin/EmailForm/span-3" className="font-semibold">{sentTo}</span>. Open it to finish. Until then you keep signing in with{" "}
             {email}.
           </span>
         </p>
       )}
-      <Button type="submit" variant="outline" disabled={pending} className="rounded-full">
+      <Button data-ui="admin/EmailForm/Button-change-email" type="submit" variant="outline" disabled={pending} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Change email
       </Button>
     </form>
@@ -130,7 +130,7 @@ function PasswordForm() {
     <form
       data-ui="admin/PasswordForm"
       noValidate
-      className="space-y-1.5"
+      className="space-y-1"
       onSubmit={form.handleSubmit((values) =>
         run(
           () => changeAdminPassword(values),
@@ -150,7 +150,7 @@ function PasswordForm() {
         error={errors.current?.message}
         {...form.register("current")}
       />
-      <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+      <div data-ui="admin/PasswordForm/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
         <TextField
           label="New password"
           type="password"
@@ -171,7 +171,7 @@ function PasswordForm() {
           {...form.register("confirm")}
         />
       </div>
-      <Button type="submit" variant="outline" disabled={pending} className="rounded-full">
+      <Button data-ui="admin/PasswordForm/Button-change-password" type="submit" variant="outline" disabled={pending} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Change password
       </Button>
     </form>
@@ -182,7 +182,7 @@ function PasswordForm() {
 export function AccountSettings({ name, phone, email }: { name: string; phone: string; email: string }) {
   return (
     <div data-ui="admin/AccountSettings" className="grid gap-6 xl:grid-cols-2 xl:items-start">
-      <div className="space-y-6">
+      <div data-ui="admin/AccountSettings/div" className="space-y-6">
         <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
           <ProfileForm name={name} phone={phone} />
         </Card>

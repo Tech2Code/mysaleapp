@@ -34,17 +34,17 @@ export function StickySaveBar({
         className
       )}
     >
-      <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-        <span className={cn("size-2 rounded-full", unsaved ? "bg-amber-500" : "bg-emerald-500")} aria-hidden />
+      <p data-ui="admin/StickySaveBar/p-flex" className="flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
+        <span data-ui="admin/StickySaveBar/span" className={cn("size-2 rounded-full", unsaved ? "bg-amber-500" : "bg-emerald-500")} aria-hidden />
         {unsaved ? "You have unsaved changes" : requireChanges ? "All changes saved" : "Review the details, then save"}
       </p>
-      <div className="ml-auto flex items-center gap-2">
+      <div data-ui="admin/StickySaveBar/div-flex" className="ml-auto flex items-center gap-2">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} className="rounded-full">
+          <Button data-ui="admin/StickySaveBar/Button-cancel" type="button" variant="outline" onClick={onCancel} className="rounded-full">
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={pending || (requireChanges && !dirty)} className="rounded-full px-6">
+        <Button data-ui="admin/StickySaveBar/Button" type="submit" disabled={pending || (requireChanges && !dirty)} className="rounded-full px-6">
           {pending && <Loader2Icon className="animate-spin" />} {saveLabel}
         </Button>
       </div>

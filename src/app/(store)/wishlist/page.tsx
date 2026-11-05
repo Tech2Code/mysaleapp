@@ -21,7 +21,7 @@ export default async function WishlistPage() {
   return (
     <>
       <PageHeader title="Your wishlist" breadcrumbs={[{ name: "Home", href: "/" }, { name: "Wishlist" }]} />
-      <div className="container-page pt-8">
+      <div data-ui="page:/wishlist/div" className="container-page pt-4 sm:pt-6">
         <WishlistView products={cards} />
       </div>
     </>

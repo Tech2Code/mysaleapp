@@ -30,9 +30,9 @@ import { LIMITS } from "@/lib/validation"
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section data-ui="admin/Section" className="rounded-2xl border bg-card p-5 sm:p-6">
-      <h2 className="font-sans text-lg font-semibold">{title}</h2>
-      {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
-      <div className="mt-5 space-y-5">{children}</div>
+      <h2 data-ui="admin/Section/h2" className="font-sans text-lg font-semibold">{title}</h2>
+      {description && <p data-ui="admin/Section/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+      <div data-ui="admin/Section/div" className="mt-5 space-y-5">{children}</div>
     </section>
   )
 }
@@ -101,9 +101,9 @@ export function ProductForm({
 
   return (
     <form data-ui="admin/ProductForm" onSubmit={onSubmit} noValidate className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+      <div data-ui="admin/ProductForm/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
         {/* ------------------------------------------------ main column */}
-        <div className="min-w-0 space-y-1.5">
+        <div data-ui="admin/ProductForm/div" className="min-w-0 space-y-1">
           <Section title="Basic details">
             <TextField
               label="Product name" maxLength={LIMITS.productName.max}
@@ -152,13 +152,13 @@ export function ProductForm({
               {...form.register("highlights")}
             />
 
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium">Specifications</p>
-                <p className="text-xs text-muted-foreground">Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
+            <div data-ui="admin/ProductForm/div-2" className="space-y-3">
+              <div data-ui="admin/ProductForm/div-3">
+                <p data-ui="admin/ProductForm/p" className="text-sm font-medium">Specifications</p>
+                <p data-ui="admin/ProductForm/p-2" className="text-xs text-muted-foreground">Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
               </div>
               {specs.map((field, i) => (
-                <div key={field.id} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[200px_1fr_auto]">
+                <div data-ui="admin/ProductForm/div-grid-2" key={field.id} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[200px_1fr_auto]">
                   <TextField
                     label={`Detail ${i + 1} name`} maxLength={LIMITS.specLabel.max}
                     hideLabel
@@ -177,14 +177,14 @@ export function ProductForm({
                     error={errors.specs?.[i]?.value?.message}
                     {...form.register(`specs.${i}.value`)}
                   />
-                  <Button type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
+                  <Button data-ui="admin/ProductForm/Button" type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
                     <Trash2Icon />
                   </Button>
                 </div>
               ))}
-              {errors.specs?.message && <p className="text-xs font-medium text-destructive">{errors.specs.message}</p>}
+              {errors.specs?.message && <p data-ui="admin/ProductForm/p-3" className="text-xs font-medium text-destructive">{errors.specs.message}</p>}
               {specs.length < MAX_SPECS && (
-                <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => appendSpec({ label: "", value: "" })}>
+                <Button data-ui="admin/ProductForm/Button-add-a-detail" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => appendSpec({ label: "", value: "" })}>
                   <PlusIcon /> Add a detail
                 </Button>
               )}
@@ -205,16 +205,16 @@ export function ProductForm({
               name="images"
               render={({ field }) => <ImageUploader value={(field.value as string[]) ?? []} onChange={field.onChange} />}
             />
-            {errors.images && <p className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
+            {errors.images && <p data-ui="admin/ProductForm/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>
 
           <Section title="Search engine listing" description="How this product appears on Google. Leave blank to auto-fill.">
-            <div className="rounded-xl border bg-background p-4">
-              <p className="truncate text-xs text-muted-foreground">
+            <div data-ui="admin/ProductForm/div-4" className="rounded-xl border bg-background p-4">
+              <p data-ui="admin/ProductForm/p-5" className="truncate text-xs text-muted-foreground">
                 {siteConfig.url.replace(/^https?:\/\//, "")} › products › {slug || "…"}
               </p>
-              <p className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{previewTitle}</p>
-              <p className="line-clamp-2 text-sm text-muted-foreground">{previewDesc}</p>
+              <p data-ui="admin/ProductForm/p-6" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{previewTitle}</p>
+              <p data-ui="admin/ProductForm/p-7" className="line-clamp-2 text-sm text-muted-foreground">{previewDesc}</p>
             </div>
             <TextField
               label="SEO title" maxLength={LIMITS.seoTitle.max}
@@ -234,7 +234,7 @@ export function ProductForm({
         </div>
 
         {/* ------------------------------------------------ side column (settings for this product) */}
-        <div className="min-w-0 space-y-6">
+        <div data-ui="admin/ProductForm/div-5" className="min-w-0 space-y-6">
           <Section title="Visibility">
             <Controller
               control={form.control}
@@ -258,7 +258,7 @@ export function ProductForm({
           </Section>
 
           <Section title="Pricing & stock">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            <div data-ui="admin/ProductForm/div-grid-3" className="grid grid-cols-2 gap-x-4 gap-y-1">
               <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
               <TextField
                 label="MRP" kind="money"
@@ -286,8 +286,8 @@ export function ProductForm({
             description="Optional. Added once per product (not multiplied by quantity) and shown to the customer under this product's name, with your reason."
           >
             {fees.map((field, i) => (
-              <div key={field.id} className="space-y-1.5 rounded-xl border p-3">
-                <div className="grid grid-cols-[1fr_7rem] gap-x-3 gap-y-1.5">
+              <div data-ui="admin/ProductForm/div-6" key={field.id} className="space-y-1 rounded-xl border p-3">
+                <div data-ui="admin/ProductForm/div-grid-4" className="grid grid-cols-[1fr_7rem] gap-x-3 gap-y-1">
                   <TextField
                     label="Charge name" maxLength={LIMITS.feeLabel.max}
                     fieldSize="md"
@@ -305,7 +305,7 @@ export function ProductForm({
                     {...form.register(`fees.${i}.amount`)}
                   />
                 </div>
-                <div className="flex items-end gap-2">
+                <div data-ui="admin/ProductForm/div-flex" className="flex items-end gap-2">
                   <TextField
                     label="Why is it charged?" maxLength={LIMITS.feeReason.max}
                     fieldSize="md"
@@ -315,15 +315,15 @@ export function ProductForm({
                     error={errors.fees?.[i]?.reason?.message}
                     {...form.register(`fees.${i}.reason`)}
                   />
-                  <Button type="button" variant="ghost" size="icon" aria-label={`Remove charge ${i + 1}`} onClick={() => removeFee(i)} className="mb-5">
+                  <Button data-ui="admin/ProductForm/Button-2" type="button" variant="ghost" size="icon" aria-label={`Remove charge ${i + 1}`} onClick={() => removeFee(i)} className="mb-5">
                     <Trash2Icon />
                   </Button>
                 </div>
               </div>
             ))}
-            {errors.fees?.message && <p className="text-xs font-medium text-destructive">{errors.fees.message}</p>}
+            {errors.fees?.message && <p data-ui="admin/ProductForm/p-8" className="text-xs font-medium text-destructive">{errors.fees.message}</p>}
             {fees.length < MAX_FEES_PER_PRODUCT && (
-              <Button
+              <Button data-ui="admin/ProductForm/Button-add-a-charge"
                 type="button"
                 variant="outline"
                 size="sm"

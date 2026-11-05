@@ -58,7 +58,7 @@ Rules:
 
 ## UI ids for "change this part"
 
-Every component's root element carries `data-ui="area/Component"` (pages: `page:/route`). In dev press **Alt+I** (or the corner button), hover to see the id chain, click to copy it. `grep -rn 'data-ui="store/Header"' src` finds the file. After adding components run `npm run ui:tag`. The ids are stripped from production builds (`next.config.ts`). Skips `components/ui/*` and image/SEO files.
+Every element in components and pages carries `data-ui`: the root is `area/Component` (pages: `page:/route`), anything inside is `area/Component/tag-hint`, e.g. `store/Header/button-open-cart`. In dev press **Alt+I** (or the corner button), hover an element, click to copy its id. `grep -rn 'data-ui="store/Header/button-open-cart"' src` finds it. After editing components run `npm run ui:tag` (ids are regenerated; counters like `-2` can shift when siblings are added). Skips `components/ui/*` and image/SEO files. Stripped from production builds (`next.config.ts`).
 
 ## Admin orders lists and dashboard
 

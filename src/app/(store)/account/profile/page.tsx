@@ -12,8 +12,8 @@ async function ProfileSection() {
 
   return (
     <div data-ui="page:/account/profile#ProfileSection" className="space-y-8 sm:space-y-12">
-      <section aria-labelledby="profile-title" className="space-y-4">
-        <h2 id="profile-title" className="text-2xl font-semibold">
+      <section data-ui="page:/account/profile#ProfileSection/section" aria-labelledby="profile-title" className="space-y-4">
+        <h2 data-ui="page:/account/profile#ProfileSection/h2-your-details" id="profile-title" className="text-2xl font-semibold">
           Your details
         </h2>
         <ProfileForm profile={profile} />
@@ -26,9 +26,9 @@ async function ProfileSection() {
 export default function ProfilePage() {
   return (
     <section data-ui="page:/account/profile">
-      <h2 className="text-3xl font-semibold">Profile & addresses</h2>
-      <p className="mt-1 mb-8 text-muted-foreground">Manage your details and saved delivery addresses.</p>
-      <Suspense fallback={<Skeleton className="h-96 rounded-3xl" />}>
+      <h2 data-ui="page:/account/profile/h2-profile-addresses" className="text-3xl font-semibold">Profile & addresses</h2>
+      <p data-ui="page:/account/profile/p" className="mt-1 mb-8 text-muted-foreground">Manage your details and saved delivery addresses.</p>
+      <Suspense fallback={<Skeleton data-ui="page:/account/profile/Skeleton" className="h-96 rounded-3xl" />}>
         <ProfileSection />
       </Suspense>
     </section>
