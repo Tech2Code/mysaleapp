@@ -3,7 +3,7 @@ import { requireUser } from "@/features/auth/guards"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
 
-const WITH_HISTORY = "*, history:order_status_history(status, changed_at)"
+const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at)"
 
 /** Orders of the signed-in customer. RLS also limits rows to auth.uid(). */
 export async function getMyOrders(): Promise<Order[]> {

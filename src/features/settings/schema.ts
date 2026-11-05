@@ -53,6 +53,8 @@ export const storeSettingsSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]{1,5}$/, `${LIMITS.orderPrefix.min} to ${LIMITS.orderPrefix.max} letters, like KK`),
 
+  unpaidOrderExpiryHours: v.wholeNumber(720, "Enter hours (0 = never cancel)"),
+
   // ---- Delivery ----
   deliveryFee: v.money(LIMITS.deliveryFee.max, "Enter the delivery charge"),
   freeDeliveryAbove: v.money(LIMITS.money.max, "Enter an amount (0 = never free)"),

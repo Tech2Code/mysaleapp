@@ -87,3 +87,9 @@ Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-succes
 - **Errors never move the layout.** `FieldShell` reserves a strip under every field and draws the error absolutely inside it (11px). So stacks of fields use `FIELD_STACK` (`space-y-1.5`) and grids use `FIELD_GRID` (`gap-x-4 gap-y-1.5`), not bigger gaps. Filters and search boxes that never show errors pass `noErrorSpace` (pill fields do it automatically). Keep validation messages short (about 45 characters or less) so they fit on one line on a phone.
 - **Type is fluid.** `text-lg … text-7xl` are `clamp()` tokens in `globals.css` with matching line heights; don't hard-code sizes like `text-[2.6rem]`. Big unprefixed spacing (`py-20`, `gap-12`, `p-8`, `mt-24`…) needs a smaller phone value first (`py-14 sm:py-20`).
 - Check a change at 360px: no horizontal scroll, body text at least 14px, helper text at least 11px.
+
+## Stock, unpaid orders and returns
+
+- Stock is **reserved when the order is placed** (`create_order`, migration 0010) and given back once if the order is cancelled. The `stock` number is the sellable amount; dispatch does not change it.
+- Unpaid orders (status pending, payment pending/failed) are cancelled automatically after `store_settings.unpaid_order_expiry_hours` (default 24, 0 = never) by `expire_unpaid_orders()`, run every 15 minutes by pg_cron. An order where the customer already submitted a UTR is never auto-cancelled. Cancellation `by` can be `system`.
+- Returns: `record_order_return()` (admin only, delivered orders). Per item the admin chooses "Back into stock" (resellable) or not (damaged). Rows live in `order_returns`; show them with `<ReturnsList>`.

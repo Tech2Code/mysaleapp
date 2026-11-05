@@ -208,6 +208,8 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         <h3 data-ui="store/PaymentPanel/h3-pay" className="font-heading text-xl font-semibold">Pay {formatPrice(total)} to confirm your order</h3>
         <p data-ui="store/PaymentPanel/p-3" className="mt-1 text-sm text-muted-foreground">
           Cash on delivery isn&apos;t available. Pay by UPI now, then enter the reference number below.
+          {shop.unpaidOrderExpiryHours > 0 &&
+            ` Please pay within ${shop.unpaidOrderExpiryHours} hour${shop.unpaidOrderExpiryHours === 1 ? "" : "s"}; unpaid orders are cancelled automatically.`}
         </p>
       </div>
 

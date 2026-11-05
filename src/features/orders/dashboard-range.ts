@@ -4,12 +4,13 @@
  */
 
 export const RANGE_PRESETS = [
-  { key: "7d", label: "7 days" },
-  { key: "30d", label: "30 days" },
-  { key: "90d", label: "90 days" },
+  { key: "year", label: "This year" },
+  { key: "last-year", label: "Last year" },
   { key: "month", label: "This month" },
   { key: "last-month", label: "Last month" },
-  { key: "year", label: "This year" },
+  { key: "90d", label: "Last 90 days" },
+  { key: "30d", label: "Last 30 days" },
+  { key: "7d", label: "Last 7 days" },
   { key: "all", label: "All time" },
 ] as const
 
@@ -89,6 +90,10 @@ export function resolveRange(input: { range?: string; from?: string; to?: string
     case "year": {
       const start = startOfDay(`${today.slice(0, 4)}-01-01`)
       return make("year", "This year", start, tomorrow)
+    }
+    case "last-year": {
+      const y = Number(today.slice(0, 4))
+      return make("last-year", String(y - 1), startOfDay(`${y - 1}-01-01`), startOfDay(`${y}-01-01`))
     }
     case "all":
       // the real first order date is filled in by the query; this is just a floor

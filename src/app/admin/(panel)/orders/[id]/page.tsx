@@ -3,9 +3,11 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { ReactNode } from "react"
+import { AdminReturnOrder } from "@/components/admin/return-order"
 import { AdminCancelOrder, AdminNoteForm, OrderStatusControl } from "@/components/admin/order-controls"
 import { PaymentControl } from "@/components/admin/payment-control"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
+import { ReturnsList } from "@/components/shared/returns-list"
 import { CopyButton } from "@/components/shared/copy-button"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
@@ -62,6 +64,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
           {order.cancellation && (
             <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="admin" />
           )}
+          <ReturnsList returns={order.returns} audience="admin" />
           <OrderSummary order={order} openLinksInNewTab />
 
           <Card>
@@ -85,7 +88,15 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
                 <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} />
               </div>
             </div>
-            <div data-ui="page:/admin/orders/[id]/div-3" className="mt-6 border-t pt-5 sm:max-w-xs">
+            <div data-ui="page:/admin/orders/[id]/div-3" className="mt-6 space-y-3 border-t pt-5 sm:max-w-xs">
+              <AdminReturnOrder
+                orderId={order.id}
+                orderCode={order.orderCode}
+                status={order.status}
+                paymentStatus={order.paymentStatus}
+                items={order.items}
+                returns={order.returns}
+              />
               <AdminCancelOrder
                 orderId={order.id}
                 orderCode={order.orderCode}

@@ -79,7 +79,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note)")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, created_at)")
     .eq("id", id)
     .maybeSingle<OrderRow>()
   if (error) throw new Error(error.message)

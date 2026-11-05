@@ -10,6 +10,7 @@ export const SETTINGS_TAG = "settings"
 type SettingsRow = {
   delivery_fee: number | string
   free_delivery_above: number | string
+  unpaid_order_expiry_hours: number | null
   upi_id: string | null
   upi_payee_name: string | null
   shop_name: string | null
@@ -29,7 +30,7 @@ type SettingsRow = {
 }
 
 const COLUMNS =
-  "delivery_fee, free_delivery_above, upi_id, upi_payee_name, shop_name, tagline, description, seo_keywords, " +
+  "delivery_fee, free_delivery_above, unpaid_order_expiry_hours, upi_id, upi_payee_name, shop_name, tagline, description, seo_keywords, " +
   "announcement, whatsapp_number, contact_email, contact_phone, phone_same_as_whatsapp, contact_city, contact_region, instagram_url, " +
   "facebook_url, order_code_prefix"
 
@@ -74,6 +75,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     instagramUrl: data.instagram_url,
     facebookUrl: data.facebook_url,
     orderCodePrefix: data.order_code_prefix ?? d.orderCodePrefix,
+    unpaidOrderExpiryHours: Number(data.unpaid_order_expiry_hours ?? d.unpaidOrderExpiryHours),
     deliveryFee: Number(data.delivery_fee),
     freeDeliveryAbove: Number(data.free_delivery_above),
     upiId: data.upi_id,

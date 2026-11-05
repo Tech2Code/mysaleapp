@@ -157,10 +157,19 @@ export type DeliveryDetails = {
 /** Why and by whom an order was cancelled, and whether the money was returned. */
 export type Cancellation = {
   reason: string | null
-  by: "customer" | "admin" | null
+  by: "customer" | "admin" | "system" | null
   at: string | null
   refundReference: string | null
   refundedAt: string | null
+}
+
+/** Goods that came back for a delivered order (recorded by the admin). */
+export type OrderReturn = {
+  id: string
+  items: { productId: string; name: string; quantity: number; restock: boolean }[]
+  reason: string | null
+  refunded: boolean
+  createdAt: string
 }
 
 export type Order = {
@@ -184,7 +193,7 @@ export type Order = {
 } & OrderPricing &
   OrderPayment
 
-export type OrderWithHistory = Order & { history: StatusHistoryEntry[] }
+export type OrderWithHistory = Order & { history: StatusHistoryEntry[]; returns: OrderReturn[] }
 
 /** Public tracking result (no address / phone exposed). */
 export type TrackedOrder = {
@@ -234,13 +243,14 @@ export type OrderRow = {
   payment_note?: string | null
   delivery_updated_at?: string | null
   cancel_reason?: string | null
-  cancelled_by?: "customer" | "admin" | null
+  cancelled_by?: "customer" | "admin" | "system" | null
   cancelled_at?: string | null
   refund_reference?: string | null
   refunded_at?: string | null
   created_at: string
   updated_at: string
   history?: { status: OrderStatus; changed_at: string }[]
+  returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; created_at: string }[]
 }
 
 type RawFees =
@@ -320,5 +330,8 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
     history: (row.history ?? [])
       .map((h) => ({ status: h.status, changedAt: h.changed_at }))
       .sort((a, b) => a.changedAt.localeCompare(b.changedAt)),
+    returns: (row.returns ?? [])
+      .map((r) => ({ id: r.id, items: r.items, reason: r.reason, refunded: r.refunded, createdAt: r.created_at }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   }
 }

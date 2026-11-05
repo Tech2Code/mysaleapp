@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
+import { ReturnsList } from "@/components/shared/returns-list"
 import { CopyButton } from "@/components/shared/copy-button"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { CancelOrder } from "@/components/store/cancel-order"
@@ -38,6 +39,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
       {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
       <div data-ui="page:/account/orders/[code]#OrderDetail/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div data-ui="page:/account/orders/[code]#OrderDetail/div-2" className="space-y-6">
+        <ReturnsList returns={order.returns} audience="customer" />
         {order.cancellation && (
           <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="customer" />
         )}

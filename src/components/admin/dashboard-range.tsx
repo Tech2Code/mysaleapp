@@ -3,9 +3,10 @@
 import { CalendarRangeIcon } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useOptimistic, useState, useTransition, type ReactNode } from "react"
-import { TextField } from "@/components/form"
+import { SelectField, TextField } from "@/components/form"
 import { RANGE_PRESETS, type RangeKey } from "@/features/orders/dashboard-range"
-import { cn } from "@/lib/utils"
+
+const CUSTOM = "custom"
 
 type Selected = { key: RangeKey; from: string; to: string }
 
@@ -45,6 +46,9 @@ export function DashboardRangeShell({
   const [selected, setSelected] = useOptimistic<Selected, Selected>(current, (_, next) => next)
   const [from, setFrom] = useState(current.key === "custom" ? current.from : "")
   const [to, setTo] = useState(current.key === "custom" ? current.to : "")
+  // "Custom range…" shows the two date fields; the list only reloads once both dates are chosen
+  const [customOpen, setCustomOpen] = useState(current.key === "custom")
+  const showCustom = customOpen || selected.key === "custom"
 
   const apply = (next: Selected, qs: string) =>
     startTransition(() => {
@@ -59,56 +63,60 @@ export function DashboardRangeShell({
 
   return (
     <div data-ui="admin/DashboardRangeShell" className="space-y-6">
-      <div data-ui="admin/DashboardRangeShell/div-flex" className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <div data-ui="admin/DashboardRangeShell/div-date-range" className="scroll-row flex items-center gap-2" role="group" aria-label="Date range">
-          {RANGE_PRESETS.map((p) => (
-            <button data-ui="admin/DashboardRangeShell/button"
-              key={p.key}
-              type="button"
-              aria-pressed={selected.key === p.key}
-              onClick={() => pickPreset(p.key)}
-              className={cn(
-                "h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium transition-colors",
-                selected.key === p.key ? "border-transparent bg-primary text-primary-foreground" : "bg-card hover:bg-muted"
-              )}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-        <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex items-end gap-2" role="group" aria-label="Custom date range">
-          <CalendarRangeIcon className={cn("mb-2.5 size-4", selected.key === "custom" ? "text-primary" : "text-muted-foreground")} aria-hidden />
-          <TextField
-            label="From"
-            hideLabel
-            type="date"
-            fieldSize="md"
-            max={to || today}
-            value={from}
-            onChange={(e) => {
-              setFrom(e.target.value)
-              applyCustom(e.target.value, to)
-            }}
-            containerClassName="w-40"
-            noErrorSpace
-          />
-          <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">to</span>
-          <TextField
-            label="To"
-            hideLabel
-            type="date"
-            fieldSize="md"
-            min={from || undefined}
-            max={today}
-            value={to}
-            onChange={(e) => {
-              setTo(e.target.value)
-              applyCustom(from, e.target.value)
-            }}
-            containerClassName="w-40"
-            noErrorSpace
-          />
-        </div>
+      <div data-ui="admin/DashboardRangeShell/div-flex" className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <SelectField
+          label="Date range"
+          hideLabel
+          fieldSize="md"
+          noErrorSpace
+          containerClassName="w-full sm:w-52"
+          value={showCustom ? CUSTOM : selected.key}
+          onValueChange={(v) => {
+            if (v === CUSTOM) {
+              setCustomOpen(true)
+              applyCustom(from, to)
+            } else {
+              setCustomOpen(false)
+              pickPreset(v as RangeKey)
+            }
+          }}
+          options={[...RANGE_PRESETS.map((p) => ({ value: p.key, label: p.label })), { value: CUSTOM, label: "Custom range…" }]}
+        />
+        {showCustom && (
+          <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex items-end gap-2" role="group" aria-label="Custom date range">
+            <CalendarRangeIcon className="mb-2.5 size-4 text-primary" aria-hidden />
+            <TextField
+              label="From"
+              hideLabel
+              type="date"
+              fieldSize="md"
+              max={to || today}
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value)
+                applyCustom(e.target.value, to)
+              }}
+              containerClassName="w-40"
+              noErrorSpace
+            />
+            <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">to</span>
+            <TextField
+              label="To"
+              hideLabel
+              type="date"
+              fieldSize="md"
+              min={from || undefined}
+              max={today}
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value)
+                applyCustom(from, e.target.value)
+              }}
+              containerClassName="w-40"
+              noErrorSpace
+            />
+          </div>
+        )}
       </div>
       <div data-ui="admin/DashboardRangeShell/div" aria-busy={pending}>{pending ? <DashboardSkeleton /> : children}</div>
     </div>

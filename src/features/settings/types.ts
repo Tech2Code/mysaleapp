@@ -28,6 +28,8 @@ export type StoreSettings = {
   // ---- Orders ----
   /** Letters before the order number, e.g. "KK" → KK-7F3K9Q. */
   orderCodePrefix: string
+  /** Unpaid orders are cancelled automatically after this many hours (stock goes back on sale). 0 = never. */
+  unpaidOrderExpiryHours: number
 
   // ---- Delivery ----
   /** Flat delivery charge (₹) added to every order. */

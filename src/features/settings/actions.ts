@@ -37,6 +37,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       instagram_url: s.instagramUrl,
       facebook_url: s.facebookUrl,
       order_code_prefix: s.orderCodePrefix,
+      unpaid_order_expiry_hours: s.unpaidOrderExpiryHours,
       delivery_fee: s.deliveryFee,
       free_delivery_above: s.freeDeliveryAbove,
       upi_id: s.upiId,

@@ -43,6 +43,7 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     instagramUrl: s.instagramUrl ?? "",
     facebookUrl: s.facebookUrl ?? "",
     orderCodePrefix: s.orderCodePrefix,
+    unpaidOrderExpiryHours: s.unpaidOrderExpiryHours,
     deliveryFee: s.deliveryFee,
     freeDeliveryAbove: s.freeDeliveryAbove,
     upiId: s.upiId ?? "",
@@ -103,6 +104,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         instagramUrl: values.instagramUrl ?? "",
         facebookUrl: values.facebookUrl ?? "",
         orderCodePrefix: values.orderCodePrefix,
+        unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
         deliveryFee: values.deliveryFee,
         freeDeliveryAbove: values.freeDeliveryAbove,
         upiId: values.upiId ?? "",
@@ -276,7 +278,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
-          <Card title="Orders" description="How your order numbers look.">
+          <Card title="Orders" description="How your order numbers look, and how long an unpaid order is kept.">
             <TextField
               label="Order code prefix" kind="orderPrefix"
               fieldSize="md"
@@ -286,6 +288,16 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
               hint={`New orders look like ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
               error={errors.orderCodePrefix?.message}
               {...form.register("orderCodePrefix")}
+            />
+            <TextField
+              label="Cancel unpaid orders after (hours)" kind="digits"
+              fieldSize="md"
+              inputMode="numeric"
+              maxLength={3}
+              containerClassName="sm:w-64"
+              hint="Frees the reserved stock if nobody pays. 0 = never. Orders where the customer already sent a UTR are never auto-cancelled."
+              error={errors.unpaidOrderExpiryHours?.message}
+              {...form.register("unpaidOrderExpiryHours")}
             />
           </Card>
         </div>

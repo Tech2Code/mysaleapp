@@ -212,3 +212,53 @@ export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> 
   revalidatePath("/admin", "layout")
   return { ok: true }
 }
+
+const returnSchema = z.object({
+  orderId: z.uuid(),
+  items: z
+    .array(
+      z.object({
+        productId: z.uuid(),
+        name: z.string().trim().max(120),
+        quantity: z.number().int().min(1).max(999),
+        restock: z.boolean(),
+      })
+    )
+    .min(1, "Enter how many came back")
+    .max(50),
+  reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
+  refund: z.boolean(),
+})
+
+const RETURN_ERRORS: Record<string, string> = {
+  NOT_DELIVERED: "Returns can only be recorded for delivered orders.",
+  ITEM_NOT_IN_ORDER: "One of the items isn't part of this order.",
+  TOO_MANY_RETURNED: "You're returning more than was ordered (including earlier returns).",
+  NO_ITEMS: "Enter how many came back.",
+}
+
+/** Record goods that came back: per item, choose whether it goes back into stock (resellable) or not (damaged). */
+export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ restocked: number }>> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = returnSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the return details.", z.flattenError(parsed.error).fieldErrors)
+  const { orderId, items, reason, refund } = parsed.data
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("record_order_return", {
+    p_order_id: orderId,
+    p_items: items,
+    p_reason: reason ?? null,
+    p_refund: refund,
+  })
+  if (error) {
+    if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Run the latest database migrations (npm run db:push).")
+    const key = Object.keys(RETURN_ERRORS).find((k) => error.message.includes(k))
+    return fail(key ? RETURN_ERRORS[key] : "Could not record the return")
+  }
+
+  revalidatePath("/admin", "layout")
+  return { ok: true, data: { restocked: Number((data as { restocked?: number } | null)?.restocked ?? 0) } }
+}
