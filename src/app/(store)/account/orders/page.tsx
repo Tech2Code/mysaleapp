@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { getMyOrders } from "@/features/orders/queries"
+import { isAwaitingPayment } from "@/features/orders/types"
 import { getStoreSettings } from "@/features/settings/queries"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -45,7 +46,7 @@ async function OrdersList() {
               <div data-ui="page:/account/orders#OrdersList/div-flex-2" className="flex flex-wrap items-center gap-2">
                 <span data-ui="page:/account/orders#OrdersList/span" className="font-mono font-semibold">{o.orderCode}</span>
                 <StatusBadge status={o.status} />
-                {o.status === "pending" && (o.paymentStatus === "pending" || o.paymentStatus === "failed") && (
+                {isAwaitingPayment(o) && (
                   <span data-ui="page:/account/orders#OrdersList/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Pay now</span>
                 )}
                 {o.status === "pending" && o.paymentStatus === "submitted" && (
@@ -58,7 +59,7 @@ async function OrdersList() {
                 {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
               </p>
               <p data-ui="page:/account/orders#OrdersList/p-4" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
-              {o.status === "pending" && (o.paymentStatus === "pending" || o.paymentStatus === "failed") && shop.unpaidOrderExpiryHours > 0 && (
+              {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
                 <p data-ui="page:/account/orders#OrdersList/p-5" className="text-xs font-medium text-amber-700 dark:text-amber-300">
                   Pay by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours)!)} · unpaid orders are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
                 </p>

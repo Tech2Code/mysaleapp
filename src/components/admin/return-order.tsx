@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { SwitchField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
@@ -84,7 +85,13 @@ export function AdminReturnOrder({
       setRows({})
       setReason("")
       setRefund(false)
-      toast.success(res.data.restocked > 0 ? `Return recorded. ${res.data.restocked} item(s) back in stock.` : "Return recorded")
+      const stockNote = res.data.restocked > 0 ? ` ${res.data.restocked} item(s) back in stock.` : ""
+      const refundNote = !refund
+        ? ""
+        : res.data.fullyRefunded
+          ? " Payment marked refunded."
+          : ` Partly refunded (${formatPrice(res.data.refundedAmount)} so far); the order stays paid until every item is refunded.`
+      toast.success(`Return recorded.${stockNote}${refundNote}`)
       router.refresh()
     })
 
@@ -137,7 +144,7 @@ export function AdminReturnOrder({
 
         <TextAreaField label="Reason (optional)" rows={2} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} />
         {paymentStatus === "paid" && (
-          <SwitchField label="Mark the payment as refunded" description="Turn on once you have sent the money back" checked={refund} onCheckedChange={setRefund} />
+          <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
         )}
         {error && (
           <p data-ui="admin/AdminReturnOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">

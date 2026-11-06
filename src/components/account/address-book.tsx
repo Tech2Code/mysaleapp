@@ -4,8 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { HomeIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, StarIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
+import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { deleteAddress, saveAddress, setDefaultAddress } from "@/features/addresses/actions"
 import { addressSchema, type AddressInput, type AddressValues } from "@/features/addresses/schema"
 import { ADDRESS_LABELS, MAX_ADDRESSES, type Address } from "@/features/addresses/types"
@@ -50,12 +52,19 @@ function AddressDialog({
       fullName: address?.fullName ?? defaults.fullName,
       phone: address?.phone ?? defaults.phone,
       address: address?.address ?? "",
-      city: address?.city ?? "",
+      ...(address ? splitCityState(address.city) : { city: "", state: NO_STATE }),
       pincode: address?.pincode ?? "",
       isDefault: address?.isDefault ?? isFirst,
     },
   })
   const { errors } = form.formState
+  const area = usePincodeLookup({
+    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    getCity: () => form.getValues("city"),
+    setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
+    getState: () => form.getValues("state") as string,
+    setState: (state) => form.setValue("state", state as IndianState, { shouldValidate: true, shouldDirty: true }),
+  })
 
   const onSubmit = form.handleSubmit((values) => {
     setServerError(null)
@@ -104,15 +113,17 @@ function AddressDialog({
             {...form.register("address")}
           />
           <div data-ui="account/AddressDialog/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
-            <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
             <TextField
               label="Pincode" kind="pincode"
               inputMode="numeric"
               maxLength={6}
               autoComplete="postal-code"
+              hint={area.hint}
               error={errors.pincode?.message}
               {...form.register("pincode")}
             />
+            <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+            <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
           </div>
           <Controller
             control={form.control}

@@ -19,6 +19,14 @@ type SettingsRow = {
   description: string | null
   seo_keywords: string | null
   announcement: string | null
+  highlight_line: string | null
+  hero_badge: string | null
+  price_note: string | null
+  gst_registered: boolean | null
+  gstin: string | null
+  gst_rate: number | string | null
+  legal_name: string | null
+  business_address: string | null
   whatsapp_number: string | null
   contact_email: string | null
   contact_phone: string | null
@@ -32,7 +40,7 @@ type SettingsRow = {
 
 const COLUMNS =
   "delivery_fee, free_delivery_above, unpaid_order_expiry_hours, return_window_days, upi_id, upi_payee_name, shop_name, tagline, description, seo_keywords, " +
-  "announcement, whatsapp_number, contact_email, contact_phone, phone_same_as_whatsapp, contact_city, contact_region, instagram_url, " +
+  "announcement, highlight_line, hero_badge, price_note, gst_registered, gstin, gst_rate, legal_name, business_address, whatsapp_number, contact_email, contact_phone, phone_same_as_whatsapp, contact_city, contact_region, instagram_url, " +
   "facebook_url, order_code_prefix"
 
 /**
@@ -50,7 +58,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   if (!supabase) return d
 
   const { data, error } = await supabase.from("store_settings").select(COLUMNS).maybeSingle<SettingsRow>()
-  // table or columns missing (migrations not applied yet) → keep the site working with defaults
+  // no row yet / database unreachable → keep the site working with defaults
   if (error || !data) return d
 
   const keywords = (data.seo_keywords ?? "")
@@ -67,6 +75,14 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     description: data.description ?? d.description,
     keywords: keywords.length ? keywords : d.keywords,
     announcement: data.announcement,
+    highlightLine: data.highlight_line ?? d.highlightLine,
+    heroBadge: data.hero_badge ?? d.heroBadge,
+    priceNote: data.price_note,
+    gstRegistered: data.gst_registered ?? false,
+    gstin: data.gstin,
+    gstRate: Number(data.gst_rate ?? 0),
+    legalName: data.legal_name,
+    businessAddress: data.business_address,
     whatsappNumber,
     email: data.contact_email,
     phone: phoneSame ? formatPhoneDisplay(whatsappNumber) : data.contact_phone,

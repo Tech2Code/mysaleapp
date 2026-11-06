@@ -1,7 +1,5 @@
 import {
-  ArrowDownRightIcon,
   ArrowRightIcon,
-  ArrowUpRightIcon,
   BadgeIndianRupeeIcon,
   ClockIcon,
   ExternalLinkIcon,
@@ -11,13 +9,14 @@ import {
   ReceiptIcon,
   ShoppingBagIcon,
   Undo2Icon,
-  type LucideIcon,
 } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { connection } from "next/server"
-import type { ReactNode } from "react"
-import { Sparkline } from "@/components/admin/charts"
+import { AttentionTile } from "@/components/admin/dashboard/attention-tile"
+import { change } from "@/components/admin/dashboard/delta"
+import { DashboardCard } from "@/components/admin/dashboard/dashboard-card"
+import { KpiCard } from "@/components/admin/dashboard/kpi-card"
 import { SalesChart } from "@/components/admin/sales-chart"
 import { Stagger, StaggerItem } from "@/components/shared/motion"
 import { PaymentBadge } from "@/components/shared/payment-badge"
@@ -32,164 +31,6 @@ import { formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = { title: "Dashboard" }
-
-/** % change vs the previous period. null = nothing to compare with. */
-function change(current: number, previous: number): number | null {
-  if (previous === 0) return current === 0 ? 0 : null
-  return Math.round(((current - previous) / previous) * 100)
-}
-
-function Delta({ value, show = true }: { value: number | null; show?: boolean }) {
-  if (!show) return null
-  if (value === null) {
-    return (
-      <span data-ui="page:/admin#Delta" className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-        New
-      </span>
-    )
-  }
-  const up = value >= 0
-  const Icon = up ? ArrowUpRightIcon : ArrowDownRightIcon
-  return (
-    <span
-      data-ui="page:/admin#Delta"
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold",
-        up
-          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-          : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"
-      )}
-    >
-      <Icon className="size-3" aria-hidden />
-      {Math.abs(value)}%<span data-ui="page:/admin#Delta/span" className="sr-only"> {up ? "up" : "down"} from the previous period</span>
-    </span>
-  )
-}
-
-function Card({ title, action, children, className }: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
-  return (
-    <section data-ui="page:/admin#Card" className={cn("flex flex-col rounded-2xl border bg-card shadow-xs", className)}>
-      <div data-ui="page:/admin#Card/div-flex" className="flex items-center justify-between gap-3 p-5 pb-0 sm:px-6 sm:pt-6">
-        <h2 data-ui="page:/admin#Card/h2" className="font-sans text-base font-semibold">{title}</h2>
-        {action}
-      </div>
-      <div data-ui="page:/admin#Card/div" className="flex-1 p-5 sm:p-6">{children}</div>
-    </section>
-  )
-}
-
-const TONES = {
-  sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-} as const
-
-function AttentionTile({
-  href,
-  icon: Icon,
-  tone,
-  count,
-  label,
-  hint,
-  pulse,
-}: {
-  href: string
-  icon: LucideIcon
-  tone: keyof typeof TONES
-  count: number
-  label: string
-  hint: string
-  pulse?: boolean
-}) {
-  const active = count > 0
-  return (
-    <Link data-ui="page:/admin#AttentionTile"
-      href={href}
-      className={cn(
-        "group flex items-center gap-4 rounded-2xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
-        active ? "shadow-xs" : "opacity-80"
-      )}
-    >
-      <span data-ui="page:/admin#AttentionTile/span" className={cn("relative grid size-12 shrink-0 place-items-center rounded-2xl", TONES[tone])}>
-        {pulse && active && (
-          <span data-ui="page:/admin#AttentionTile/span-absolute" aria-hidden className="absolute inset-0 animate-ping rounded-2xl bg-current opacity-20 animation-duration-[2.4s]" />
-        )}
-        <Icon className="relative size-5" aria-hidden />
-      </span>
-      <div data-ui="page:/admin#AttentionTile/div" className="min-w-0 flex-1">
-        <p data-ui="page:/admin#AttentionTile/p" className="font-heading text-2xl leading-none font-semibold">{count}</p>
-        <p data-ui="page:/admin#AttentionTile/p-2" className="mt-1 truncate text-sm font-medium">{label}</p>
-        <p data-ui="page:/admin#AttentionTile/p-3" className="truncate text-xs text-muted-foreground">{active ? hint : "All clear"}</p>
-      </div>
-      <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
-    </Link>
-  )
-}
-
-const KPI_TONES = {
-  emerald: {
-    glow: "from-emerald-500/12 dark:from-emerald-400/10",
-    chip: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-    line: "text-emerald-500 dark:text-emerald-400",
-  },
-  sky: {
-    glow: "from-sky-500/12 dark:from-sky-400/10",
-    chip: "bg-sky-500/15 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
-    line: "text-sky-500 dark:text-sky-400",
-  },
-  violet: {
-    glow: "from-violet-500/12 dark:from-violet-400/10",
-    chip: "bg-violet-500/15 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
-    line: "text-violet-500 dark:text-violet-400",
-  },
-} as const
-
-function KpiCard({
-  label,
-  period,
-  value,
-  icon: Icon,
-  tone,
-  delta,
-  showDelta,
-  series,
-  seriesLabel,
-}: {
-  label: string
-  period: string
-  value: string
-  icon: LucideIcon
-  tone: keyof typeof KPI_TONES
-  delta: number | null
-  showDelta: boolean
-  series: number[]
-  seriesLabel: string
-}) {
-  const t = KPI_TONES[tone]
-  return (
-    <div
-      data-ui="page:/admin#KpiCard"
-      className={cn("relative flex h-full flex-col overflow-hidden rounded-2xl border bg-linear-to-br to-card to-60% bg-card shadow-xs transition-shadow hover:shadow-md", t.glow)}
-    >
-      <div data-ui="page:/admin#KpiCard/div" className="flex-1 p-5 pb-3">
-        <div data-ui="page:/admin#KpiCard/div-flex" className="flex items-start justify-between gap-3">
-          <span data-ui="page:/admin#KpiCard/span" className={cn("grid size-10 shrink-0 place-items-center rounded-xl", t.chip)}>
-            <Icon className="size-5" aria-hidden />
-          </span>
-          <Delta value={delta} show={showDelta} />
-        </div>
-        <p data-ui="page:/admin#KpiCard/p" className="mt-4 text-sm font-medium text-muted-foreground">{label}</p>
-        <p data-ui="page:/admin#KpiCard/p-2" className="mt-1 font-heading text-3xl leading-none font-semibold tracking-tight tabular-nums sm:text-4xl">{value}</p>
-        <p data-ui="page:/admin#KpiCard/p-3" className="mt-2 text-xs text-muted-foreground">
-          {period}
-          {showDelta && " · vs previous period"}
-        </p>
-      </div>
-      <Sparkline data={series} label={seriesLabel} className={cn("h-14", t.line)} />
-    </div>
-  )
-}
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
@@ -318,7 +159,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         {/* ------------------------------------------------ charts + lists */}
         <div data-ui="page:/admin/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div data-ui="page:/admin/div-flex-2" className="flex min-w-0 flex-col gap-6">
-            <Card
+            <DashboardCard
               title="Sales"
               action={<span data-ui="page:/admin/span" className="text-xs text-muted-foreground">Verified payments only</span>}
             >
@@ -327,9 +168,9 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                 unit={range.bucket}
                 rangeLabel={d.rangeLabel}
               />
-            </Card>
+            </DashboardCard>
 
-            <Card
+            <DashboardCard
               className="flex-1"
               title="Recent orders"
               action={
@@ -367,7 +208,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                         </div>
                         <div data-ui="page:/admin/div-flex-4" className="flex flex-wrap items-center gap-2 sm:justify-end">
                           <StatusBadge status={o.status} />
-                          <PaymentBadge status={o.paymentStatus} orderStatus={o.status} />
+                          <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                           <span data-ui="page:/admin/span-4" className="min-w-16 text-right text-sm font-semibold sm:ml-2">{formatPrice(o.total)}</span>
                         </div>
                       </Link>
@@ -375,11 +216,11 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                   ))}
                 </ul>
               )}
-            </Card>
+            </DashboardCard>
           </div>
 
           <div data-ui="page:/admin/div-flex-5" className="flex min-w-0 flex-col gap-6">
-            <Card title={`Order pipeline · ${d.rangeLabel}`}>
+            <DashboardCard title={`Order pipeline · ${d.rangeLabel}`}>
               <ul data-ui="page:/admin/ul-2" className="space-y-3.5">
                 {ORDER_STATUSES.map((s) => (
                   <li data-ui="page:/admin/li-2" key={s}>
@@ -403,9 +244,9 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                   </li>
                 ))}
               </ul>
-            </Card>
+            </DashboardCard>
 
-            <Card title="Top products" action={<span data-ui="page:/admin/span-7" className="text-xs text-muted-foreground">By revenue</span>}>
+            <DashboardCard title="Top products" action={<span data-ui="page:/admin/span-7" className="text-xs text-muted-foreground">By revenue</span>}>
               {d.topProducts.length === 0 ? (
                 <p data-ui="page:/admin/p-5" className="py-4 text-center text-sm text-muted-foreground">Your best sellers show up here once you get paid orders.</p>
               ) : (
@@ -425,9 +266,9 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                   ))}
                 </ol>
               )}
-            </Card>
+            </DashboardCard>
 
-            <Card
+            <DashboardCard
               className="flex-1"
               title="Low stock"
               action={
@@ -462,7 +303,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
                   ))}
                 </ul>
               )}
-            </Card>
+            </DashboardCard>
           </div>
         </div>
       </DashboardRangeShell>

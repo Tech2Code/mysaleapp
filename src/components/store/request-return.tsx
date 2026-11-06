@@ -8,11 +8,13 @@ import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
+import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, RETURN_REASONS, RETURN_STATUS_META, returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 
 type Window = { open: boolean; until: string | null; days: number }
 
@@ -49,6 +51,7 @@ export function RequestReturn({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  useRevealOnChange(requests.map((r) => `${r.id}:${r.status}`).join(","))
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const lines = useMemo(() => {
@@ -74,6 +77,7 @@ export function RequestReturn({
   const payload = lines
     .map((i) => ({ productId: i.productId, quantity: Number(qty[i.productId]) || 0 }))
     .filter((i) => i.quantity > 0)
+  const needsDetail = otherNeedsDetail(reason, details)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
   const submit = () =>
@@ -139,12 +143,14 @@ export function RequestReturn({
           options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
         />
         <TextAreaField
-          label="Tell us more (optional)"
+          label={reason === OTHER_REASON ? "Please tell us the reason" : "Tell us more (optional)"}
+          required={reason === OTHER_REASON}
           rows={2}
           maxLength={300}
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           hint="For damaged items, describe what happened."
+          error={needsDetail && details.trim() ? OTHER_DETAIL_MESSAGE : undefined}
         />
         {error && (
           <p data-ui="store/RequestReturn/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
@@ -155,7 +161,7 @@ export function RequestReturn({
           <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Close
           </Button>
-          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany} className="rounded-full">
+          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Send request
           </Button>
         </DialogFooter>

@@ -8,6 +8,9 @@ export function normalizeWhatsappNumber(input: string): string {
   return /^[6-9]\d{9}$/.test(digits) ? `91${digits}` : digits
 }
 
+/** 2-digit state code + PAN + entity number + Z + check character. */
+export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
+
 export const storeSettingsSchema = z.object({
   // ---- Shop profile & SEO ----
   shopName: z
@@ -28,6 +31,20 @@ export const storeSettingsSchema = z.object({
   /** Comma-separated; split when read. */
   keywords: z.string().trim().max(LIMITS.keywords.max, "Too long"),
   announcement: v.optionalText(LIMITS.announcement.max),
+  /** Empty = use the built-in default text. */
+  highlightLine: v.optionalText(LIMITS.highlightText.max).pipe(z.string().min(LIMITS.highlightText.min, "Too short").nullable()),
+  heroBadge: v.optionalText(LIMITS.highlightText.max).pipe(z.string().min(LIMITS.highlightText.min, "Too short").nullable()),
+  priceNote: v.optionalText(LIMITS.priceNote.max).pipe(z.string().min(LIMITS.priceNote.min, "Too short").nullable()),
+
+  // ---- Tax & invoices ----
+  gstRegistered: z.boolean(),
+  gstin: z.preprocess(
+    (x) => (typeof x === "string" ? x.trim().toUpperCase() || null : x),
+    z.string().regex(GSTIN_PATTERN, "Enter the 15-character GSTIN").nullable()
+  ),
+  gstRate: v.money(LIMITS.gstRate.max, "Enter the GST rate, e.g. 12"),
+  legalName: v.optionalText(LIMITS.legalName.max),
+  businessAddress: v.optionalText(LIMITS.businessAddress.max),
 
   // ---- Contact ----
   whatsappNumber: z
@@ -68,6 +85,10 @@ export const storeSettingsSchema = z.object({
   upiPayeeName: v.optionalText(LIMITS.payeeName.max).pipe(
     z.string().min(LIMITS.payeeName.min, "Too short").nullable()
   ),
+}).superRefine((s, ctx) => {
+  if (!s.gstRegistered) return
+  if (!s.gstin) ctx.addIssue({ code: "custom", path: ["gstin"], message: "Enter your GSTIN" })
+  if (!(s.gstRate > 0)) ctx.addIssue({ code: "custom", path: ["gstRate"], message: "Enter the GST rate, e.g. 12" })
 })
 
 export type StoreSettingsInput = z.input<typeof storeSettingsSchema>

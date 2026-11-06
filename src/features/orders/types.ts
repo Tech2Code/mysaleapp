@@ -1,3 +1,5 @@
+import { formatPrice } from "@/lib/format"
+
 export const ORDER_STATUSES = [
   "pending",
   "confirmed",
@@ -76,7 +78,9 @@ export type PaymentTone = PaymentStatus | "cancelled" | "refund_due"
 export function paymentDisplay(
   orderStatus: OrderStatus,
   status: PaymentStatus,
-  method: PaymentMethod | null
+  method: PaymentMethod | null,
+  /** Partial refund info: shown as "Partially refunded ₹X of ₹Y" while the payment is still 'paid'. */
+  refund?: { refundedAmount: number; paidAmount: number }
 ): { label: string; tone: PaymentTone } {
   if (orderStatus === "cancelled") {
     if (status === "paid") return { label: "Paid · refund due", tone: "refund_due" }
@@ -84,7 +88,27 @@ export function paymentDisplay(
     if (status === "refunded") return { label: "Refunded", tone: "refunded" }
     return { label: "No payment due", tone: "cancelled" }
   }
+  if (status === "paid" && refund && refund.refundedAmount > 0) {
+    return {
+      label: `Partially refunded ${formatPrice(refund.refundedAmount)} of ${formatPrice(refund.paidAmount)}`,
+      tone: "refunded",
+    }
+  }
   return { label: describePayment(status, method), tone: status }
+}
+
+/**
+ * True while the customer still has to pay: order pending and payment pending/rejected. A cancelled
+ * order is never "awaiting payment". SQL twins: expire_unpaid_orders() and the 'awaiting-payment'
+ * view in admin-queries.ts (applyOrderView).
+ */
+export function isAwaitingPayment(order: { status: OrderStatus; paymentStatus: PaymentStatus }): boolean {
+  return order.status === "pending" && (order.paymentStatus === "pending" || order.paymentStatus === "failed")
+}
+
+/** Can the admin still verify / reject / record a payment? Not for cancelled, already-paid or refunded orders. */
+export function canVerifyPayment(order: { status: OrderStatus; paymentStatus: PaymentStatus }): boolean {
+  return order.status !== "cancelled" && order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +166,8 @@ export type OrderPayment = {
   paymentPaidAt: string | null
   /** Customer-visible remark, e.g. why a payment was rejected. */
   paymentNote: string | null
+  /** Money already returned for a paid order (partial refund). 0 when none. */
+  refundedAmount: number
 }
 
 /** Delivery details that can still be edited while the order is pending. */
@@ -246,28 +272,28 @@ export type OrderRow = {
   status: OrderStatus
   /** Only present on admin queries that embed `order_admin_notes` (customers can never select it). */
   private_note?: { note: string } | { note: string }[] | null
-  // Added by migrations 0002 / 0003; optional so the app keeps working before they are applied.
-  shipping_carrier?: string | null
-  tracking_number?: string | null
-  tracking_url?: string | null
-  expected_delivery?: string | null
-  shipping_fee?: number | string | null
-  shipping_fee_original?: number | string | null
-  extra_fees?: RawFees
-  total?: number | string | null
-  payment_status?: PaymentStatus | null
-  payment_method?: PaymentMethod | null
-  payment_reference?: string | null
-  payment_amount?: number | string | null
-  payment_submitted_at?: string | null
-  payment_paid_at?: string | null
-  payment_note?: string | null
-  delivery_updated_at?: string | null
-  cancel_reason?: string | null
-  cancelled_by?: "customer" | "admin" | "system" | null
-  cancelled_at?: string | null
-  refund_reference?: string | null
-  refunded_at?: string | null
+  shipping_carrier: string | null
+  tracking_number: string | null
+  tracking_url: string | null
+  expected_delivery: string | null
+  shipping_fee: number | string | null
+  shipping_fee_original: number | string | null
+  extra_fees: RawFees
+  total: number | string | null
+  payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  payment_reference: string | null
+  payment_amount: number | string | null
+  payment_submitted_at: string | null
+  payment_paid_at: string | null
+  payment_note: string | null
+  delivery_updated_at: string | null
+  cancel_reason: string | null
+  cancelled_by: "customer" | "admin" | "system" | null
+  cancelled_at: string | null
+  refund_reference: string | null
+  refunded_at: string | null
+  refunded_amount: number | string | null
   created_at: string
   updated_at: string
   history?: { status: OrderStatus; changed_at: string }[]
@@ -298,22 +324,59 @@ export const mapFees = (fees: RawFees): OrderFee[] =>
     ...(f.reason ? { reason: f.reason } : {}),
   }))
 
-function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
-  const subtotal = Number(row.subtotal)
+/** Loosely-typed pricing + payment fields as raw JSON (numbers may arrive as strings, columns may be null). */
+type RawPricing = {
+  subtotal: number | string
+  shippingFee?: number | string | null
+  shippingFeeOriginal?: number | string | null
+  extraFees?: RawFees
+  total?: number | string | null
+  paymentStatus?: PaymentStatus | null
+  paymentMethod?: PaymentMethod | null
+  paymentReference?: string | null
+  paymentAmount?: number | string | null
+  paymentSubmittedAt?: string | null
+  paymentPaidAt?: string | null
+  paymentNote?: string | null
+  refundedAmount?: number | string | null
+}
+
+/** Turns raw pricing/payment fields (camelCase, e.g. from the track_order RPC) into typed numbers with defaults. */
+export function normalizePricing(raw: RawPricing): OrderPricing & OrderPayment {
+  const subtotal = Number(raw.subtotal)
   return {
     subtotal,
-    shippingFee: Number(row.shipping_fee ?? 0),
-    shippingFeeOriginal: Number(row.shipping_fee_original ?? 0),
-    extraFees: mapFees(row.extra_fees),
-    total: Number(row.total ?? subtotal),
-    paymentStatus: row.payment_status ?? "pending",
-    paymentMethod: row.payment_method ?? null,
-    paymentReference: row.payment_reference ?? null,
-    paymentAmount: row.payment_amount == null ? null : Number(row.payment_amount),
-    paymentSubmittedAt: row.payment_submitted_at ?? null,
-    paymentPaidAt: row.payment_paid_at ?? null,
-    paymentNote: row.payment_note ?? null,
+    shippingFee: Number(raw.shippingFee ?? 0),
+    shippingFeeOriginal: Number(raw.shippingFeeOriginal ?? 0),
+    extraFees: mapFees(raw.extraFees),
+    total: Number(raw.total ?? subtotal),
+    paymentStatus: raw.paymentStatus ?? "pending",
+    paymentMethod: raw.paymentMethod ?? null,
+    paymentReference: raw.paymentReference ?? null,
+    paymentAmount: raw.paymentAmount == null ? null : Number(raw.paymentAmount),
+    paymentSubmittedAt: raw.paymentSubmittedAt ?? null,
+    paymentPaidAt: raw.paymentPaidAt ?? null,
+    paymentNote: raw.paymentNote ?? null,
+    refundedAmount: Number(raw.refundedAmount ?? 0),
   }
+}
+
+function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
+  return normalizePricing({
+    subtotal: row.subtotal,
+    shippingFee: row.shipping_fee,
+    shippingFeeOriginal: row.shipping_fee_original,
+    extraFees: row.extra_fees,
+    total: row.total,
+    paymentStatus: row.payment_status,
+    paymentMethod: row.payment_method,
+    paymentReference: row.payment_reference,
+    paymentAmount: row.payment_amount,
+    paymentSubmittedAt: row.payment_submitted_at,
+    paymentPaidAt: row.payment_paid_at,
+    paymentNote: row.payment_note,
+    refundedAmount: row.refunded_amount,
+  })
 }
 
 export function mapOrder(row: OrderRow): Order {

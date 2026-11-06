@@ -1,17 +1,13 @@
-"use client"
-
-import { motion } from "motion/react"
 import type { ReactNode } from "react"
 
-/** Re-mounts on every navigation → gentle page-enter transition. */
+/**
+ * Re-mounts on every navigation → gentle page-enter slide. CSS only (no client JS), translate-only so the
+ * server-rendered first paint is never transparent (keeps LCP fast), and off for "reduce motion".
+ */
 export default function StoreTemplate({ children }: { children: ReactNode }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-    >
+    <div data-ui="page:/(store)/template/div" className="animate-in duration-300 ease-out slide-in-from-bottom-2 motion-reduce:animate-none">
       {children}
-    </motion.div>
+    </div>
   )
 }

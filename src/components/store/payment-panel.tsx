@@ -34,6 +34,7 @@ import { WhatsAppIcon } from "./brand-icons"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { useStoreSettings } from "./store-settings-provider"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
 type FormValues = z.input<typeof formSchema>
@@ -142,6 +143,8 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const { upiId, upiPayeeName } = shop
   const [changing, setChanging] = useState(false)
   const done = onSubmitted ?? (() => router.refresh())
+  // The pay form is tall and the "we're verifying" card is short: without this the reader is left at the bottom.
+  useRevealOnChange(`${payment.paymentStatus}:${payment.paymentReference ?? ""}`)
 
   if (orderStatus === "cancelled" || payment.paymentStatus === "refunded") return null
 

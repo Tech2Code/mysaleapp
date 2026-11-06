@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckIcon, CopyIcon } from "lucide-react"
-import { motion } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
@@ -55,6 +55,7 @@ export function OrderPlaced() {
   }, [raw, code])
 
   const [state, setState] = useState<TrackedOrder | null>(null)
+  const [lookupFailed, setLookupFailed] = useState(false)
 
   const load = useCallback(async () => {
     if (!order) return
@@ -67,7 +68,9 @@ export function OrderPlaced() {
     if (!order) return
     let cancelled = false
     trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 }).then((res) => {
-      if (!cancelled && res.ok) setState(res.data)
+      if (cancelled) return
+      if (res.ok) setState(res.data)
+      else setLookupFailed(true)
     })
     return () => {
       cancelled = true
@@ -78,16 +81,16 @@ export function OrderPlaced() {
 
   return (
     <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">
-      <motion.div data-ui="store/OrderPlaced/m-div-grid"
+      <m.div data-ui="store/OrderPlaced/m.div-grid"
         initial={{ scale: 0, rotate: -45 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
         className="mx-auto grid size-24 place-items-center rounded-full bg-linear-to-br from-success-solid to-whatsapp-solid text-white shadow-2xl shadow-success/30"
       >
         <CheckIcon className="size-12" strokeWidth={3} />
-      </motion.div>
+      </m.div>
 
-      <motion.div data-ui="store/OrderPlaced/m-div" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <m.div data-ui="store/OrderPlaced/m.div" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <h1 data-ui="store/OrderPlaced/h1" className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed!"}</h1>
         <p data-ui="store/OrderPlaced/p" className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.pending.text}</p>
 
@@ -124,6 +127,14 @@ export function OrderPlaced() {
               createdAt={state.createdAt}
               onSubmitted={() => void load()}
             />
+          ) : lookupFailed ? (
+            <p data-ui="store/OrderPlaced/p-3" role="alert" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+              We couldn&apos;t load your payment details just now. Open{" "}
+              <Link data-ui="store/OrderPlaced/Link-track-order-2" href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+                Track order
+              </Link>{" "}
+              and enter your order code with the last 4 digits of your phone to pay.
+            </p>
           ) : (
             // never flash the "pay now" screen before we know the real payment state
             <Skeleton data-ui="store/OrderPlaced/Skeleton" className="h-72 rounded-2xl" aria-hidden />
@@ -147,7 +158,7 @@ export function OrderPlaced() {
         >
           <WhatsAppIcon className="size-4" /> Send order details to us on WhatsApp (optional)
         </a>
-      </motion.div>
+      </m.div>
     </div>
   )
 }

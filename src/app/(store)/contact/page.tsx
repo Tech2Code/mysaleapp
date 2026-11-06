@@ -32,7 +32,7 @@ export default async function ContactPage() {
     {
       icon: WhatsAppIcon,
       title: "WhatsApp",
-      text: "Fastest reply — usually within an hour",
+      text: "The fastest way to reach us",
       href: shopWhatsappLink(shop, `Hi ${shop.shopName}!`),
       cta: "Start chat",
     },

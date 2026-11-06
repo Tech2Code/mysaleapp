@@ -24,10 +24,10 @@ export async function generateMetadata({ params }: PageProps<"/category/[slug]">
   const [category, shop] = await Promise.all([getCategoryBySlug(slug), getStoreSettings()])
   if (!category) return { title: "Category not found", robots: { index: false } }
   return pageMetadata(shop, {
-    title: `Handmade ${category.name}`,
+    title: category.name,
     description:
       category.description ||
-      `Shop handmade ${category.name.toLowerCase()} at ${shop.shopName}. Crafted by artisans, paid securely by UPI.`,
+      `Shop ${category.name.toLowerCase()} at ${shop.shopName}. ${shop.tagline}. Pay securely by UPI.`,
     path: `/category/${category.slug}`,
   })
 }

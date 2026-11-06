@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
 import { getServerSupabase } from "@/lib/supabase/server"
+import { joinCityState } from "@/features/location/states"
 import { addressSchema } from "./schema"
 import { mapAddress, type Address, type AddressRow } from "./types"
 
@@ -40,30 +41,28 @@ export async function saveAddress(id: string | null, input: unknown): Promise<Ac
   const a = parsed.data
   const supabase = await getServerSupabase()
 
-  // The database allows only one default, so clear the old one first.
-  if (a.isDefault) {
-    await supabase.from("addresses").update({ is_default: false }).eq("user_id", user.id).eq("is_default", true)
-  }
-
+  // The row is saved as a non-default first; making it the default (clearing the old one) happens
+  // afterwards in one DB transaction, so a failed save can never leave the user with no default.
   const row = {
     label: a.label,
     full_name: a.fullName,
     phone: normalizeIndianPhone(a.phone)!,
     address: a.address,
-    city: a.city,
+    city: joinCityState(a.city, a.state),
     pincode: a.pincode,
-    is_default: a.isDefault,
   }
 
-  const { error } = id
-    ? await supabase.from("addresses").update(row).eq("id", id).eq("user_id", user.id)
-    : await supabase.from("addresses").insert({ ...row, user_id: user.id })
+  const { data: saved, error } = id
+    ? await supabase.from("addresses").update({ ...row, is_default: false }).eq("id", id).eq("user_id", user.id).select("id").maybeSingle<{ id: string }>()
+    : await supabase.from("addresses").insert({ ...row, user_id: user.id, is_default: false }).select("id").single<{ id: string }>()
+
+  if (!error && a.isDefault && saved) {
+    const { error: defaultError } = await supabase.rpc("set_default_address", { p_id: saved.id })
+    if (defaultError) return fail("Saved, but could not make it the default address.")
+  }
 
   if (error) {
     if (error.message.includes("ADDRESS_LIMIT")) return fail("You can save up to 10 addresses. Delete one to add another.")
-    if (error.code === "42P01" || error.code === "PGRST205") {
-      return fail("Address book isn't set up yet. Apply the latest database migrations (npm run db:push).")
-    }
     return fail("Could not save the address.")
   }
 
@@ -90,8 +89,7 @@ export async function setDefaultAddress(id: string): Promise<ActionResult> {
   if (!z.uuid().safeParse(id).success) return fail("Invalid address")
 
   const supabase = await getServerSupabase()
-  await supabase.from("addresses").update({ is_default: false }).eq("user_id", user.id).eq("is_default", true)
-  const { error } = await supabase.from("addresses").update({ is_default: true }).eq("id", id).eq("user_id", user.id)
+  const { error } = await supabase.rpc("set_default_address", { p_id: id })
   if (error) return fail("Could not set the default address.")
 
   revalidatePath("/account", "layout")

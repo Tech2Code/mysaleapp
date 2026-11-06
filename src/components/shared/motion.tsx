@@ -1,19 +1,23 @@
 "use client"
 
-import { motion, type HTMLMotionProps } from "motion/react"
+import { m, type HTMLMotionProps } from "motion/react"
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-/** Fades + slides children in when they scroll into view (once). */
+// Translate-only on purpose: an opacity-0 start state is rendered into the server HTML, which would leave
+// the content invisible until hydration (and blank for anyone whose JS is slow or blocked). Content is
+// always visible; it only slides into place once the motion features have loaded.
+
+/** Slides children in when they scroll into view (once). */
 export function FadeIn({
   delay = 0,
   y = 24,
   ...props
 }: HTMLMotionProps<"div"> & { delay?: number; y?: number }) {
   return (
-    <motion.div data-ui="shared/FadeIn"
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
+    <m.div data-ui="shared/FadeIn"
+      initial={{ y }}
+      whileInView={{ y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
       transition={{ duration: 0.6, ease, delay }}
       {...props}
@@ -24,7 +28,7 @@ export function FadeIn({
 /** Container that reveals its <StaggerItem> children one after another. */
 export function Stagger({ stagger = 0.07, ...props }: HTMLMotionProps<"div"> & { stagger?: number }) {
   return (
-    <motion.div data-ui="shared/Stagger"
+    <m.div data-ui="shared/Stagger"
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: "-40px" }}
@@ -36,10 +40,10 @@ export function Stagger({ stagger = 0.07, ...props }: HTMLMotionProps<"div"> & {
 
 export function StaggerItem(props: HTMLMotionProps<"div">) {
   return (
-    <motion.div data-ui="shared/StaggerItem"
+    <m.div data-ui="shared/StaggerItem"
       variants={{
-        hidden: { opacity: 0, y: 20, scale: 0.98 },
-        show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease } },
+        hidden: { y: 20, scale: 0.98 },
+        show: { y: 0, scale: 1, transition: { duration: 0.5, ease } },
       }}
       {...props}
     />

@@ -4,9 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, LockIcon, PencilIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { TextAreaField, TextField } from "@/components/form"
+import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
+import { FormSelectField, TextAreaField, TextField } from "@/components/form"
+import { splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -53,12 +55,19 @@ export function DeliveryEditor({
       name: delivery.name,
       phone: delivery.phone,
       address: delivery.address,
-      city: delivery.city,
+      ...splitCityState(delivery.city),
       pincode: delivery.pincode,
       note: delivery.note ?? "",
     },
   })
   const { errors } = form.formState
+  const area = usePincodeLookup({
+    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    getCity: () => form.getValues("city"),
+    setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
+    getState: () => form.getValues("state"),
+    setState: (state) => form.setValue("state", state as IndianState, { shouldValidate: true, shouldDirty: true }),
+  })
 
   const onSubmit = form.handleSubmit((values) => {
     setServerError(null)
@@ -130,14 +139,16 @@ export function DeliveryEditor({
               />
               <TextAreaField label="Full address" maxLength={LIMITS.address.max} rows={3} error={errors.address?.message} {...form.register("address")} />
               <div data-ui="store/DeliveryEditor/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
-                <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
                 <TextField
                   label="Pincode" kind="pincode"
                   inputMode="numeric"
                   maxLength={6}
+                  hint={area.hint}
                   error={errors.pincode?.message}
                   {...form.register("pincode")}
                 />
+                <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
+                <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
               </div>
               <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
               {serverError && (

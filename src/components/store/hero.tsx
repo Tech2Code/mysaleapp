@@ -1,7 +1,7 @@
 "use client"
 
 import { ArrowRightIcon, SparklesIcon } from "lucide-react"
-import { motion } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 import { useStoreSettings } from "./store-settings-provider"
@@ -14,7 +14,7 @@ import { WhatsAppIcon } from "./brand-icons"
 const ease = [0.22, 1, 0.36, 1] as const
 
 export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "name" | "price" | "images">[] }) {
-  const { description } = useStoreSettings()
+  const { description, heroBadge } = useStoreSettings()
   const [a, b, c] = showcase
 
   return (
@@ -28,36 +28,36 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
 
       <div data-ui="store/Hero/div-grid" className="container-page grid items-center gap-8 sm:gap-12 pt-10 pb-20 md:pt-16 lg:grid-cols-2 lg:pb-28">
         <div data-ui="store/Hero/div" className="max-w-xl">
-          <motion.span data-ui="store/Hero/m-span-inline-flex"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
+          <m.span data-ui="store/Hero/m.span-inline-flex"
+            initial={{ y: 12 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.5, ease }}
             className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur"
           >
-            <SparklesIcon className="size-3.5" /> Handmade in India · Made to be gifted
-          </motion.span>
+            <SparklesIcon className="size-3.5" /> {heroBadge}
+          </m.span>
 
-          <motion.h1 data-ui="store/Hero/m-h1"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
+          <m.h1 data-ui="store/Hero/m.h1"
+            initial={{ y: 24 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.08 }}
             className="mt-6 text-5xl font-semibold sm:text-6xl lg:text-7xl"
           >
             Little things, <span data-ui="store/Hero/span" className="text-gradient italic">made by hand</span>, loved for years.
-          </motion.h1>
+          </m.h1>
 
-          <motion.p data-ui="store/Hero/m-p"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
+          <m.p data-ui="store/Hero/m.p"
+            initial={{ y: 24 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.16 }}
             className="mt-6 max-w-lg text-lg/relaxed  text-muted-foreground"
           >
             {description}
-          </motion.p>
+          </m.p>
 
-          <motion.div data-ui="store/Hero/m-div-flex"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
+          <m.div data-ui="store/Hero/m.div-flex"
+            initial={{ y: 24 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, ease, delay: 0.24 }}
             className="mt-8 flex flex-wrap items-center gap-3"
           >
@@ -74,7 +74,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             <span data-ui="store/Hero/span-inline-flex" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <WhatsAppIcon className="size-5 text-whatsapp" /> Easy ordering on WhatsApp
             </span>
-          </motion.div>
+          </m.div>
         </div>
 
         {/* Floating product collage */}
@@ -82,10 +82,10 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
           <div data-ui="store/Hero/div-relative" className="relative mx-auto aspect-square w-full max-w-lg">
             {[a, b, c].map((p, i) =>
               p ? (
-                <motion.div data-ui="store/Hero/m-div"
+                <m.div data-ui="store/Hero/m.div"
                   key={p.id}
-                  initial={{ opacity: 0, scale: 0.85, rotate: 0 }}
-                  animate={{ opacity: 1, scale: 1, rotate: [-6, 5, -3][i] }}
+                  initial={{ scale: 0.85, rotate: 0 }}
+                  animate={{ scale: 1, rotate: [-6, 5, -3][i] }}
                   transition={{ duration: 0.9, ease, delay: 0.2 + i * 0.12 }}
                   className={cn(
                     "absolute",
@@ -113,7 +113,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
                       <span data-ui="store/Hero/span-3" className="shrink-0 text-xs font-bold text-primary">{formatPrice(p.price)}</span>
                     </div>
                   </Link>
-                </motion.div>
+                </m.div>
               ) : null
             )}
           </div>

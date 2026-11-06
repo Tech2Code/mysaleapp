@@ -27,15 +27,20 @@ export function PaymentBadge({
   status,
   orderStatus,
   method = null,
+  refundedAmount = 0,
+  paidAmount = 0,
   className,
 }: {
   status: PaymentStatus
   orderStatus?: OrderStatus
   method?: PaymentMethod | null
+  /** For a partly refunded paid order: shows "Partially refunded ₹X of ₹Y". */
+  refundedAmount?: number
+  paidAmount?: number
   className?: string
 }) {
   const { label, tone } = orderStatus
-    ? paymentDisplay(orderStatus, status, method)
+    ? paymentDisplay(orderStatus, status, method, { refundedAmount, paidAmount })
     : { label: PAYMENT_STATUS_LABEL[status], tone: status as PaymentTone }
   const { icon: Icon, className: toneClass } = PAYMENT_TONE_STYLE[tone]
 

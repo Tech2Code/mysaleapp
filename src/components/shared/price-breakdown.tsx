@@ -23,8 +23,9 @@ export function PriceBreakdown({
   extraFees,
   total,
   totalLabel = "Total",
+  itemCount,
   className,
-}: Breakdown & { totalLabel?: string; className?: string }) {
+}: Breakdown & { totalLabel?: string; itemCount?: number; className?: string }) {
   const deliveryFree = shippingFee === 0
   const saved = deliveryFree ? shippingFeeOriginal : 0
 
@@ -32,7 +33,7 @@ export function PriceBreakdown({
     <div data-ui="shared/PriceBreakdown" className={cn("space-y-3 text-sm", className)}>
       <dl data-ui="shared/PriceBreakdown/dl" className="space-y-2">
         <div data-ui="shared/PriceBreakdown/div-flex" className="flex justify-between gap-4">
-          <dt data-ui="shared/PriceBreakdown/dt" className="text-muted-foreground">Items total</dt>
+          <dt data-ui="shared/PriceBreakdown/dt" className="text-muted-foreground">Items total{itemCount ? ` (${itemCount} ${itemCount === 1 ? "item" : "items"})` : ""}</dt>
           <dd data-ui="shared/PriceBreakdown/dd" className="font-medium">{formatPrice(subtotal)}</dd>
         </div>
       </dl>

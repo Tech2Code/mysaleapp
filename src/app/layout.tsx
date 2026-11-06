@@ -32,11 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: s.shopName }],
     creator: s.shopName,
     formatDetection: { telephone: false },
-    alternates: { canonical: siteConfig.url },
+    // No site-wide canonical: it would be inherited by every page. Pages set their own via pageMetadata().
     openGraph: {
       type: "website",
       locale: siteConfig.locale,
-      url: siteConfig.url,
       siteName: s.shopName,
       title,
       description: s.description,

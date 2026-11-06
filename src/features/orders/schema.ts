@@ -1,5 +1,7 @@
 import { z } from "zod"
-import { v } from "@/lib/validation"
+import { joinCityState } from "@/features/location/states"
+import { LIMITS, v } from "@/lib/validation"
+import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "./reasons"
 
 /** Shared by the checkout form (client) and the placeOrder action (server). Rules live in lib/validation. */
 export const checkoutSchema = z.object({
@@ -7,8 +9,13 @@ export const checkoutSchema = z.object({
   phone: v.phoneIN(),
   address: v.address(),
   city: v.city(),
+  state: v.state(),
   pincode: v.pincode(),
   note: v.note().optional(),
+}).refine((c) => joinCityState(c.city, c.state).length <= LIMITS.city.max, {
+  // the database keeps "City, State" in one column
+  path: ["city"],
+  error: "City name is too long to save with the state",
 })
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>
@@ -86,8 +93,11 @@ export const cancelOrderSchema = z.object({
   code: trackOrderSchema.shape.code,
   /** Needed for guests; signed-in customers are recognised by their account. */
   phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
-  reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
-})
+  /** The reason picked from the list. */
+  reason: z.string().trim().min(2, "Choose a reason").max(80),
+  /** Extra words; required when the reason is "Other". */
+  detail: z.string().trim().max(200, "Keep it under 200 characters").optional(),
+}).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
 export const requestReturnSchema = z.object({
   code: trackOrderSchema.shape.code,
@@ -99,7 +109,7 @@ export const requestReturnSchema = z.object({
     .max(50),
   reason: z.string().trim().min(2, "Choose a reason").max(80),
   details: z.string().trim().max(300, "Keep it under 300 characters").optional(),
-})
+}).refine((v) => !otherNeedsDetail(v.reason, v.details), { path: ["details"], error: OTHER_DETAIL_MESSAGE })
 
 export const withdrawReturnSchema = z.object({
   code: trackOrderSchema.shape.code,

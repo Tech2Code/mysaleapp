@@ -17,7 +17,7 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <section data-ui="admin/Card" className="space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
+    <section data-ui="admin/Card" className="h-full space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
       <div data-ui="admin/Card/div">
         <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
         <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
@@ -183,7 +183,7 @@ function PasswordForm() {
 /** Everything about the signed-in admin: details, login email and password. */
 export function AccountSettings({ name, phone, email }: { name: string; phone: string; email: string }) {
   return (
-    <div data-ui="admin/AccountSettings" className="grid gap-6 xl:grid-cols-2 xl:items-start">
+    <div data-ui="admin/AccountSettings" className="grid gap-6 xl:grid-cols-2 xl:items-stretch">
       <div data-ui="admin/AccountSettings/div" className="space-y-6">
         <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
           <ProfileForm name={name} phone={phone} />

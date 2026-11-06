@@ -30,6 +30,22 @@ Rules:
 - A payment status must be shown with `paymentDisplay()` / `<PaymentBadge orderStatus>` so a cancelled order never says "awaiting payment".
 - Product charges (handling etc.) are added **once per product**, never × quantity, and are always shown with the product name and a reason.
 
+## Scroll position after a change (never leave the reader at the bottom)
+
+- When an action swaps a tall panel for a short one (pay form → "we're verifying", Cancel button → notice) or a filter shortens a list, the page shrinks and the browser leaves the reader at the bottom. Handle it every time:
+  - After a server action changes what a panel shows, call `useRevealOnChange(key)` (`hooks/use-reveal-on-change.ts`) with a value that changes with the result (a status). It scrolls to the nearest `data-reveal-top` region, else to the page top. Already used in `PaymentPanel`, `CancelOrder`, `RequestReturn`.
+  - Filters/sort/search above a list (`ProductBrowser`): after the list changes, scroll the list start back under the sticky bar (see the `useLayoutEffect` there). Keep a `min-h` on the list so a short result doesn't collapse the page.
+- Any new "submit, then the screen changes" flow must do this. Check at 360px with the page scrolled to the bottom.
+
+## Pincode
+
+Every pincode field fills the city and shows "City, State" via `usePincodeLookup` (`components/shared/use-pincode-lookup.ts`, server action `features/location/actions.ts`, India Post free API). City and State are separate fields in forms (State is a `FormSelectField`, `v.state()`); the DB has no `state` column, so the server joins them into `city` as "City, State" (`joinCityState`) and forms split it back (`splitCityState`), both in `features/location/states.ts`. Autofill never overwrites a value the user typed.
+
+## "Other" reasons and guest privacy
+
+- Any reason dropdown with an "Other" (customer cancel, admin cancel, return request) needs a comment: use `otherNeedsDetail()` from `features/orders/reasons.ts` in the form **and** in the zod schema.
+- The guest track page (`/track`, found with code + last 4 digits) shows status, timeline, items (name × qty) and pay-now/verifying cards only. No receipt, no priced summary, no address. The `track_order` RPC (migration 0014) masks the UTR and withholds payment details and the delivery address unless the caller is the signed-in owner. Anything private goes in `/account/orders/[code]`.
+
 ## Other rules
 
 - Pages stay thin; business logic goes in `src/features/<feature>/` (queries, actions, schema, types).

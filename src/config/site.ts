@@ -8,7 +8,10 @@
  */
 export const siteConfig = {
   /** Public URL of the site (no trailing slash). Set NEXT_PUBLIC_SITE_URL per environment. */
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
+  ).replace(/\/$/, ""),
   locale: "en_IN",
   currency: "INR",
   country: "IN",

@@ -5,6 +5,7 @@ import { z } from "zod"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { v } from "@/lib/validation"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
+import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { getServerSupabase } from "@/lib/supabase/server"
 
 const loginSchema = z.object({
@@ -18,6 +19,8 @@ export async function signInAdmin(input: unknown): Promise<ActionResult> {
 
   const parsed = loginSchema.safeParse(input)
   if (!parsed.success) return fail("Enter a valid email and password.")
+
+  if (await limited("login", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.auth.signInWithPassword(parsed.data)

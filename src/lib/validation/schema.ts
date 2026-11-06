@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { normalizeIndianPhone } from "@/lib/format"
+import { INDIAN_STATES } from "@/features/location/states"
 import { LIMITS, PATTERNS } from "./limits"
 import { requiredNumber } from "@/lib/zod-helpers"
 
@@ -28,6 +29,8 @@ export const v = {
       .min(LIMITS.city.min, "Please enter the city")
       .max(LIMITS.city.max, `Keep it under ${LIMITS.city.max} characters`)
       .regex(PATTERNS.personName, "Use letters only"),
+
+  state: () => z.enum(INDIAN_STATES, { error: "Select the state" }),
 
   address: () =>
     z
@@ -67,7 +70,7 @@ export const v = {
       .min(LIMITS.newPassword.min, `Use at least ${LIMITS.newPassword.min} characters`)
       .max(LIMITS.password.max, "Password is too long")
       .regex(/[A-Za-z]/, "Include at least one letter")
-      .regex(/d/, "Include at least one number"),
+      .regex(/\d/, "Include at least one number"),
 
   /** http(s) link only (blocks javascript: and other schemes). */
   url: (what = "link") =>
@@ -100,7 +103,7 @@ export const v = {
   wholeNumber: (max: number, message = "Enter a number") =>
     requiredNumber(message).pipe(z.number().int("Whole numbers only").min(0, "Can't be negative").max(max, "That's too large")),
 
-  orderCode: () => z.string().trim().toUpperCase().regex(PATTERNS.orderCode, "Enter the order code, e.g. KK-7F3K9Q"),
+  orderCode: () => z.string().trim().toUpperCase().regex(PATTERNS.orderCode, "Enter the order code from your confirmation"),
 
   orderLast4: () => z.string().trim().regex(/^\d{4}$/, "Enter the last 4 digits of your phone"),
 

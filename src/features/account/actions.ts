@@ -1,5 +1,7 @@
 "use server"
 
+// Customer account: the signed-in shopper's own profile (name, phone). Admin login/password lives in features/auth/account-*.
+
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getCurrentUser } from "@/features/auth/guards"

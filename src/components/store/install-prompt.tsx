@@ -1,7 +1,8 @@
 "use client"
 
 import { DownloadIcon, ShareIcon, SquarePlusIcon, XIcon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+import * as m from "motion/react-m"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -30,8 +31,8 @@ export function InstallPrompt() {
   return (
     <AnimatePresence>
       {show && (
-        <motion.aside
-          data-ui="store/InstallPrompt/m-aside"
+        <m.aside
+          data-ui="store/InstallPrompt/m.aside"
           role="dialog"
           aria-label={`Install ${shop.shopName}`}
           initial={{ opacity: 0, y: 40 }}
@@ -75,7 +76,7 @@ export function InstallPrompt() {
               <DownloadIcon /> Install app
             </Button>
           )}
-        </motion.aside>
+        </m.aside>
       )}
     </AnimatePresence>
   )

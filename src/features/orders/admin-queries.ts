@@ -17,28 +17,48 @@ import {
 export const ADMIN_ORDERS_PAGE_SIZE = 20
 
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string }
-// Works on any PostgREST filter builder (the exact builder types are too deep to spell out).
-function applyOrderView<Q>(query: Q, view: OrderView): Q {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const q = query as any
+/** Payment filter values the admin orders list accepts (besides "all"). */
+export const PAYMENT_FILTERS = ["submitted", "pending", "paid"] as const
+const isPaymentFilter = (v: unknown): v is (typeof PAYMENT_FILTERS)[number] => (PAYMENT_FILTERS as readonly unknown[]).includes(v)
+
+type Supabase = Awaited<ReturnType<typeof getServerSupabase>>
+
+/**
+ * THE definition of every order view. Used by the dashboard tile counts and by listOrders(), so they
+ * can never disagree. Works on any PostgREST filter builder (the exact builder types are too deep to spell out).
+ */
+async function orderViewFilter(supabase: Supabase, view: OrderView): Promise<<Q>(query: Q) => Q> {
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  // (returns a plain function, not the builder itself: awaiting a PostgREST builder would run the query)
   switch (view) {
     case "to-verify":
-      return q.eq("payment_status", "submitted").neq("status", "cancelled")
+      return (query) => (query as any).eq("payment_status", "submitted").neq("status", "cancelled")
     case "awaiting-payment":
-      return q.eq("status", "pending").in("payment_status", ["pending", "failed"])
+      // SQL twin of isAwaitingPayment() in types.ts (and expire_unpaid_orders() in the migrations)
+      return (query) => (query as any).eq("status", "pending").in("payment_status", ["pending", "failed"])
     case "to-ship":
-      return q.in("status", ["confirmed", "packed"])
-    case "return-requests":
-      return q // filtered by order id in listOrders(): the requests live in their own table
+      return (query) => (query as any).in("status", ["confirmed", "packed"])
+    case "return-requests": {
+      // the requests live in their own table: orders with a request waiting for a decision
+      const { data, error } = await supabase.from("return_requests").select("order_id").eq("status", "requested")
+      if (error) throw new Error(error.message)
+      const ids = (data ?? []).map((r) => r.order_id as string)
+      // no pending requests -> match nothing (an impossible id), not everything
+      return (query) => (query as any).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+    }
     default: {
       const never: never = view
       return never
     }
   }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 }
 
-/** Payment filter values used by the admin orders list. */
-export const PAYMENT_FILTERS = ["all", "submitted", "pending", "paid"] as const
+/** Tile count: how many orders are in a view (same filter as the list). */
+async function countOrdersInView(supabase: Supabase, view: OrderView) {
+  const filter = await orderViewFilter(supabase, view)
+  return filter(supabase.from("orders").select("id", { count: "exact", head: true }))
+}
 
 export async function listOrders(filters: OrderFilters): Promise<{ orders: Order[]; total: number; page: number }> {
   await requireAdmin()
@@ -53,16 +73,10 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
     .range(from, from + ADMIN_ORDERS_PAGE_SIZE - 1)
 
   if (isOrderView(filters.view)) {
-    if (filters.view === "return-requests") {
-      const { data: open } = await supabase.from("return_requests").select("order_id").eq("status", "requested")
-      const ids = (open ?? []).map((r) => r.order_id as string)
-      // no pending requests -> match nothing (an impossible id), not everything
-      query = query.in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
-    }
-    query = applyOrderView(query, filters.view)
+    query = (await orderViewFilter(supabase, filters.view))(query)
   } else {
     if (isOrderStatus(filters.status)) query = query.eq("status", filters.status)
-    if (filters.payment === "submitted" || filters.payment === "pending" || filters.payment === "paid") {
+    if (isPaymentFilter(filters.payment)) {
       query = query.eq("payment_status", filters.payment)
       // a cancelled order is not "waiting" for anything
       if (filters.payment !== "paid") query = query.neq("status", "cancelled")
@@ -77,6 +91,8 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   }
 
   const { data, error, count } = await query.returns<OrderRow[]>()
+  // PGRST103: ?page= is past the last page (e.g. a filter shrank the list) -> show the first page instead of crashing
+  if (error?.code === "PGRST103" && page > 1) return listOrders({ ...filters, page: "1" })
   if (error) throw new Error(error.message)
   return { orders: data.map(mapOrder), total: count ?? 0, page }
 }
@@ -127,76 +143,35 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const dayLabel = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: IST })
 const monthLabel = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: IST })
 
-const PAGE = 1000
-/** Safety cap (50,000 rows). Past it we refuse to show numbers that would silently be wrong. */
-const MAX_PAGES = 50
-
-/** The API caps a response, so read page by page. A unique tiebreaker (id) keeps pages stable. */
-async function readAllPages<T>(
-  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
-): Promise<T[]> {
-  const rows: T[] = []
-  for (let i = 0; i < MAX_PAGES; i++) {
-    const { data, error } = await page(i * PAGE, i * PAGE + PAGE - 1)
-    if (error) throw new Error(error.message)
-    rows.push(...(data ?? []))
-    if ((data?.length ?? 0) < PAGE) return rows
-  }
-  throw new Error("Too many orders in this period to total up. Pick a shorter date range.")
+type StatNumber = number | string
+type DashboardStats = {
+  buckets: { key: string; revenue: StatNumber; orders: StatNumber }[]
+  current: { revenue: StatNumber; orders: StatNumber; paid: StatNumber }
+  previous: { revenue: StatNumber; orders: StatNumber; paid: StatNumber }
+  byStatus: Partial<Record<OrderStatus, StatNumber>>
+  topProducts: { productId: string; name: string; image: string | null; quantity: StatNumber; revenue: StatNumber }[]
 }
 
-/** Light columns for every order in the range (no `items`, which is the heavy part). */
-async function fetchOrdersBetween(from: Date, to: Date): Promise<DashboardOrderRow[]> {
-  const supabase = await getServerSupabase()
-  return readAllPages<DashboardOrderRow>((a, b) =>
-    supabase
-      .from("orders")
-      .select("id, status, total, subtotal, payment_status, created_at")
-      .gte("created_at", from.toISOString())
-      .lt("created_at", to.toISOString())
-      .order("created_at", { ascending: false })
-      .order("id")
-      .range(a, b)
-      .returns<DashboardOrderRow[]>()
-  )
-}
-
-/** Line items are only needed for "top products", which counts paid, non-cancelled orders of the current range. */
-async function fetchPaidItems(from: Date, to: Date): Promise<Map<string, OrderRow["items"]>> {
-  const supabase = await getServerSupabase()
-  const rows = await readAllPages<{ id: string; items: OrderRow["items"] }>((a, b) =>
-    supabase
-      .from("orders")
-      .select("id, items")
-      .eq("payment_status", "paid")
-      .neq("status", "cancelled")
-      .gte("created_at", from.toISOString())
-      .lt("created_at", to.toISOString())
-      .order("created_at", { ascending: false })
-      .order("id")
-      .range(a, b)
-      .returns<{ id: string; items: OrderRow["items"] }[]>()
-  )
-  return new Map(rows.map((r) => [r.id, r.items]))
-}
-
-type DashboardOrderRow = Pick<OrderRow, "id" | "status" | "total" | "subtotal" | "payment_status" | "created_at">
-
-/** Everything the admin dashboard shows, in one go. Small shop → aggregated here, no extra tables needed. */
+/** Everything the admin dashboard shows. The numbers come from one SQL function (migration 0018); only labels and zero-filling happen here. */
 export async function getDashboard(range: DashboardRange): Promise<DashboardData> {
   await requireAdmin()
   const supabase = await getServerSupabase()
 
   const now = new Date()
 
-  const [orderRows, itemsByOrder, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes] = await Promise.all([
-    fetchOrdersBetween(range.previous?.start ?? range.start, range.end),
-    fetchPaidItems(range.start, range.end),
+  const [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes] = await Promise.all([
+    supabase.rpc("dashboard_stats", {
+      p_start: range.start.toISOString(),
+      p_end: range.end.toISOString(),
+      p_prev_start: range.previous?.start.toISOString() ?? null,
+      p_prev_end: range.previous?.end.toISOString() ?? null,
+      p_bucket: range.bucket,
+    }),
     supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
-    applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "to-verify"),
-    applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "awaiting-payment"),
-    applyOrderView(supabase.from("orders").select("id", { count: "exact", head: true }), "to-ship"),
-    supabase.from("return_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
+    countOrdersInView(supabase, "to-verify"),
+    countOrdersInView(supabase, "awaiting-payment"),
+    countOrdersInView(supabase, "to-ship"),
+    countOrdersInView(supabase, "return-requests"),
     supabase
       .from("products")
       .select("id, name, stock, images")
@@ -206,16 +181,15 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       .limit(6)
       .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
   ])
-  const failed = [recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes].find((r) => r.error)
+  const failed = [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes].find((r) => r.error)
   if (failed?.error) throw new Error(failed.error.message)
+  const stats = statsRes.data as DashboardStats
 
-  const start = range.start
-
-  // ---- chart points: one per day, or per month for long ranges ---------------
+  // ---- chart points: one per day, or per month for long ranges (zero-filled; SQL only returns buckets that have orders) ----
   const bucketKey = (d: Date) => (range.bucket === "month" ? istDayKey(d).slice(0, 7) : istDayKey(d))
   const days: DayPoint[] = []
   const index = new Map<string, DayPoint>()
-  for (let t = start.getTime(); t < range.end.getTime(); t += DAY_MS) {
+  for (let t = range.start.getTime(); t < range.end.getTime(); t += DAY_MS) {
     const d = new Date(t)
     const key = bucketKey(d)
     if (index.has(key)) continue
@@ -223,51 +197,18 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
     days.push(point)
     index.set(key, point)
   }
-  const cutoffCurrent = start
-
-  const cur = { revenue: 0, orders: 0, paid: 0 }
-  const prev = { revenue: 0, orders: 0, paid: 0 }
-  const byStatus = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<OrderStatus, number>
-  const productTotals = new Map<string, TopProduct>()
-
-  for (const o of orderRows) {
-    const created = new Date(o.created_at)
-    const isCurrent = created >= cutoffCurrent
-    // the comparison period may not touch the current one (e.g. same months of last year), so skip the gap
-    if (!isCurrent && !(range.previous && created >= range.previous.start && created < range.previous.end)) continue
-    const bucket = isCurrent ? cur : prev
-    const total = Number(o.total ?? o.subtotal)
-    const counts = o.status !== "cancelled"
-    const isPaid = counts && o.payment_status === "paid"
-
-    if (counts) bucket.orders += 1
-    if (isPaid) {
-      bucket.revenue += total
-      bucket.paid += 1
-    }
-    if (!isCurrent) continue
-
-    byStatus[o.status] += 1
-    const point = index.get(bucketKey(created))
+  for (const b of stats.buckets) {
+    const point = index.get(b.key)
     if (point) {
-      if (counts) point.orders += 1
-      if (isPaid) point.revenue += total
-    }
-    if (isPaid) {
-      for (const item of itemsByOrder.get(o.id) ?? []) {
-        const t = productTotals.get(item.productId) ?? {
-          productId: item.productId,
-          name: item.name,
-          image: item.image ?? null,
-          quantity: 0,
-          revenue: 0,
-        }
-        t.quantity += item.quantity
-        t.revenue += Number(item.price) * item.quantity
-        productTotals.set(item.productId, t)
-      }
+      point.revenue = Number(b.revenue)
+      point.orders = Number(b.orders)
     }
   }
+
+  const byStatus = Object.fromEntries(ORDER_STATUSES.map((s) => [s, Number(stats.byStatus[s] ?? 0)])) as Record<OrderStatus, number>
+  const totals = (p: DashboardStats["current"]) => ({ revenue: Number(p.revenue), orders: Number(p.orders), paid: Number(p.paid) })
+  const cur = totals(stats.current)
+  const prev = totals(stats.previous)
 
   const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hour12: false, timeZone: IST }).format(now))
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
@@ -292,7 +233,13 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       toFulfil: fulfilRes.count ?? 0,
       returnRequests: returnsRes.count ?? 0,
     },
-    topProducts: [...productTotals.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5),
+    topProducts: stats.topProducts.map((p) => ({
+      productId: p.productId,
+      name: p.name,
+      image: p.image ?? null,
+      quantity: Number(p.quantity),
+      revenue: Number(p.revenue),
+    })),
     lowStock,
     recent: (recentRes.data ?? []).map(mapOrder),
   }

@@ -1,6 +1,7 @@
 "use client"
 
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+import * as m from "motion/react-m"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { ProductImage } from "./product-image"
@@ -34,7 +35,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
 
       <div data-ui="store/ProductGallery/div-relative" className="relative aspect-4/5 flex-1 overflow-hidden rounded-3xl bg-muted @container">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div data-ui="store/ProductGallery/m-div-absolute"
+          <m.div data-ui="store/ProductGallery/m.div-absolute"
             key={index}
             initial={{ opacity: 0, scale: 1.03 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -48,7 +49,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               priority={index === 0}
               sizes="(min-width: 1024px) 50vw, 100vw"
             />
-          </motion.div>
+          </m.div>
         </AnimatePresence>
       </div>
     </div>

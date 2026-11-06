@@ -1,6 +1,7 @@
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import { Suspense } from "react"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { ReturnsList } from "@/components/shared/returns-list"
@@ -21,6 +22,7 @@ import { getStoreSettings } from "@/features/settings/queries"
 import { formatDate } from "@/lib/format"
 
 async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
+  await connection()
   const { code } = await params
   const [order, shop] = await Promise.all([getMyOrder(code), getStoreSettings()])
   if (!order) notFound()
@@ -36,7 +38,14 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
           </div>
           <p data-ui="page:/account/orders/[code]#OrderDetail/p" className="text-sm text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
         </div>
-        <StatusBadge status={order.status} className="text-sm" pulse />
+        <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex-3" className="flex flex-wrap items-center gap-3">
+          {order.status !== "cancelled" && (
+            <Link data-ui="page:/account/orders/[code]#OrderDetail/Link-invoice" href={`/account/orders/${order.orderCode}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
+              <ReceiptTextIcon className="size-4" /> Invoice
+            </Link>
+          )}
+          <StatusBadge status={order.status} className="text-sm" pulse />
+        </div>
       </div>
 
       {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
@@ -61,7 +70,7 @@ async function OrderDetail({ params }: { params: Promise<{ code: string }> }) {
           </h3>
           <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} />
           {/* Help + cancel live together, under the progress they relate to */}
-          <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex-3" className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
+          <div data-ui="page:/account/orders/[code]#OrderDetail/div-flex-4" className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
             <a data-ui="page:/account/orders/[code]#OrderDetail/a-ask-about-this-order"
               href={shopWhatsappLink(shop, `Hi! I have a question about my order ${order.orderCode}.`)}
               target="_blank"

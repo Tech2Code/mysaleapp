@@ -115,3 +115,39 @@ export function mapCategory(row: CategoryRow): Category {
     sort: row.sort,
   }
 }
+
+/** Everything a product card needs. Keep client props this small: they are serialized into the page. */
+export type ProductCardData = Pick<
+  Product,
+  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category"
+>
+
+/** What the client-side shop browser needs: card fields + sort keys + a precomputed lowercase search string. */
+export type ProductListItem = ProductCardData & {
+  isFeatured: boolean
+  createdAt: string
+  searchText: string
+}
+
+/** Picks only the card fields (so a full Product is never serialized to the client for a card). */
+export function toCardData(p: ProductCardData): ProductCardData {
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    price: p.price,
+    compareAtPrice: p.compareAtPrice,
+    images: p.images,
+    stock: p.stock,
+    category: p.category,
+  }
+}
+
+export function toListItem(p: Product): ProductListItem {
+  return {
+    ...toCardData(p),
+    isFeatured: p.isFeatured,
+    createdAt: p.createdAt,
+    searchText: [p.name, p.description, p.category?.name ?? ""].join("\n").toLowerCase(),
+  }
+}

@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "motion/react"
+import * as m from "motion/react-m"
 import { useStoreSettings } from "./store-settings-provider"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { WhatsAppIcon } from "./brand-icons"
@@ -8,12 +8,12 @@ import { WhatsAppIcon } from "./brand-icons"
 export function WhatsAppFab() {
   const shop = useStoreSettings()
   return (
-    <motion.a data-ui="store/WhatsAppFab"
+    <m.a data-ui="store/WhatsAppFab"
       href={shopWhatsappLink(shop, `Hi ${shop.shopName}! I have a question.`)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"
-      initial={{ scale: 0, opacity: 0 }}
+      initial={{ scale: 0.6 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ delay: 1, type: "spring", stiffness: 260, damping: 18 }}
       whileHover={{ scale: 1.08 }}
@@ -22,6 +22,6 @@ export function WhatsAppFab() {
     >
       <span data-ui="store/WhatsAppFab/span-absolute" className="absolute inset-0 animate-ping rounded-full bg-whatsapp opacity-20" aria-hidden />
       <WhatsAppIcon className="relative size-7" />
-    </motion.a>
+    </m.a>
   )
 }

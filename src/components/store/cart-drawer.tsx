@@ -1,7 +1,8 @@
 "use client"
 
 import { ArrowRightIcon, ShoppingBagIcon, SparklesIcon, Trash2Icon, TruckIcon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -41,7 +42,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
         )}
       </p>
       <div data-ui="store/FreeShippingBar/div" className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-background/80">
-        <motion.div data-ui="store/FreeShippingBar/m-div"
+        <m.div data-ui="store/FreeShippingBar/m.div"
           className={cn("h-full rounded-full", unlocked ? "bg-success" : "bg-linear-to-r from-primary to-[oklch(0.6_0.16_15)]")}
           initial={false}
           animate={{ width: `${pct}%` }}
@@ -66,7 +67,7 @@ function DrawerItem({
   onRemove: () => void
 }) {
   return (
-    <motion.li data-ui="store/DrawerItem"
+    <m.li data-ui="store/DrawerItem"
       layout
       initial={{ opacity: 0, y: 14, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -78,13 +79,13 @@ function DrawerItem({
       )}
     >
       {highlighted && (
-        <motion.span data-ui="store/DrawerItem/m-span-absolute"
+        <m.span data-ui="store/DrawerItem/m.span-absolute"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[0.65rem] font-bold tracking-wide text-primary-foreground uppercase shadow"
         >
           Just added
-        </motion.span>
+        </m.span>
       )}
 
       <Link data-ui="store/DrawerItem/Link-relative"
@@ -121,7 +122,7 @@ function DrawerItem({
           <span data-ui="store/DrawerItem/span" className="font-heading text-lg font-semibold">{formatPrice(item.price * item.quantity)}</span>
         </div>
       </div>
-    </motion.li>
+    </m.li>
   )
 }
 
@@ -130,7 +131,12 @@ function DrawerItem({
  * It opens whenever something is added and highlights that item.
  */
 export function CartDrawer() {
-  const { items, isOpen, setOpen, setQuantity, remove, lastAddedId } = useCart()
+  const items = useCart((s) => s.items)
+  const isOpen = useCart((s) => s.isOpen)
+  const lastAddedId = useCart((s) => s.lastAddedId)
+  const setOpen = useCart((s) => s.setOpen)
+  const setQuantity = useCart((s) => s.setQuantity)
+  const remove = useCart((s) => s.remove)
   const isPhone = useMediaQuery("(max-width: 639px)")
   const subtotal = cartSubtotal(items)
   const close = () => setOpen(false)
@@ -164,7 +170,7 @@ export function CartDrawer() {
               <ShoppingBagIcon className="size-10 text-primary" />
             </div>
             <p data-ui="store/CartDrawer/p-2" className="font-heading text-2xl">Your cart is empty</p>
-            <p data-ui="store/CartDrawer/p-3" className="max-w-60 text-sm text-muted-foreground">Find something handmade you&apos;ll love.</p>
+            <p data-ui="store/CartDrawer/p-3" className="max-w-60 text-sm text-muted-foreground">Find something you&apos;ll love.</p>
             <Link data-ui="store/CartDrawer/Link-start-shopping" href="/products" onClick={close} className={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}>
               Start shopping
             </Link>

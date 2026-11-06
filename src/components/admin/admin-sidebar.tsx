@@ -75,7 +75,7 @@ function NavItems({
                 )}
               >
                 <l.icon data-ui="admin/NavItems/l.icon" className="size-4 shrink-0" aria-hidden />
-                <span data-ui="admin/NavItems/span" className="flex-1 truncate">{l.label}</span>
+                <span data-ui="admin/NavItems/span" className="flex-1 truncate leading-normal">{l.label}</span>
                 {l.badge === "orders" && ordersBadge}
               </Link>
             )

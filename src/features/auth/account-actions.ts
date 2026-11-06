@@ -1,5 +1,7 @@
 "use server"
 
+// Admin account: login email, password change and reset. The customer's profile lives in features/account.
+
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
@@ -18,10 +20,12 @@ import { changePasswordSchema, emailSchema, profileSchema, resetSchema } from ".
 /**
  * Base URL for links inside auth emails. In production this is the configured site URL, never a
  * request header, so a forged Origin/Host can't point a reset link at another site. The request
- * Origin is only used as a fallback while NEXT_PUBLIC_SITE_URL is unset (local development).
+ * Origin is only used as a fallback in local development; in production a missing
+ * NEXT_PUBLIC_SITE_URL yields no redirect override (Supabase falls back to its own Site URL).
  */
 async function trustedOrigin(): Promise<string | undefined> {
   if (process.env.NEXT_PUBLIC_SITE_URL) return siteConfig.url
+  if (process.env.NODE_ENV === "production") return undefined
   return (await headers()).get("origin") ?? undefined
 }
 

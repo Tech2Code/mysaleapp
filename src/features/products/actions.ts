@@ -9,6 +9,12 @@ import { CACHE_TAGS } from "./queries"
 import { categorySchema, productSchema, type ProductValues } from "./schema"
 
 function toRow(p: ProductValues) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stock is applied separately, as a delta
+  const { stock: _stock, ...rest } = toRowWithStock(p)
+  return rest
+}
+
+function toRowWithStock(p: ProductValues) {
   return {
     name: p.name,
     slug: p.slug,
@@ -43,30 +49,59 @@ function refreshCatalogue() {
   updateTag(CACHE_TAGS.categories)
 }
 
+/**
+ * `expectedStock` is the stock the form was loaded with. On edit the server applies the admin's
+ * change as a delta to the CURRENT stock (customers reserve stock when ordering, so overwriting with
+ * an absolute number could erase a reservation). The result carries the stock after saving.
+ */
 export async function saveProduct(
   id: string | null,
-  input: unknown
-): Promise<ActionResult<{ id: string }>> {
+  input: unknown,
+  expectedStock?: number
+): Promise<ActionResult<{ id: string; stock: number }>> {
   const auth = await assertAdmin()
   if (!auth.ok) return fail(auth.error)
 
+  if (id !== null && !z.uuid().safeParse(id).success) return fail("Invalid product")
   const parsed = productSchema.safeParse(input)
   if (!parsed.success) {
     return fail("Please fix the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
   }
 
   const supabase = await getServerSupabase()
-  const row = toRow(parsed.data)
 
-  const query = id
-    ? supabase.from("products").update(row).eq("id", id).select("id").single<{ id: string }>()
-    : supabase.from("products").insert(row).select("id").single<{ id: string }>()
+  if (!id) {
+    const { data, error } = await supabase
+      .from("products")
+      .insert(toRowWithStock(parsed.data))
+      .select("id, stock")
+      .single<{ id: string; stock: number }>()
+    if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
+    refreshCatalogue()
+    return { ok: true, data: { id: data.id, stock: data.stock } }
+  }
 
-  const { data, error } = await query
+  const { data, error } = await supabase
+    .from("products")
+    .update(toRow(parsed.data))
+    .eq("id", id)
+    .select("id, stock")
+    .single<{ id: string; stock: number }>()
   if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
 
+  let stock = data.stock
+  const expected = Number.isInteger(expectedStock) ? (expectedStock as number) : null
+  const delta = expected === null ? 0 : parsed.data.stock - expected
+  if (delta !== 0) {
+    const { data: after, error: stockError } = await supabase.rpc("adjust_product_stock", { p_id: id, p_delta: delta })
+    if (stockError) {
+      return fail("Saved, but the stock could not be updated. Please try again.")
+    }
+    stock = Number(after)
+  }
+
   refreshCatalogue()
-  return { ok: true, data: { id: data.id } }
+  return { ok: true, data: { id: data.id, stock } }
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
@@ -119,6 +154,7 @@ export async function saveCategory(id: string | null, input: unknown): Promise<A
   const auth = await assertAdmin()
   if (!auth.ok) return fail(auth.error)
 
+  if (id !== null && !z.uuid().safeParse(id).success) return fail("Invalid category")
   const parsed = categorySchema.safeParse(input)
   if (!parsed.success) {
     return fail("Please fix the highlighted fields.", z.flattenError(parsed.error).fieldErrors)

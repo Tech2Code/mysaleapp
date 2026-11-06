@@ -29,6 +29,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
   const [error, setError] = useState<string | null>(null)
 
   const ready = checklist.every((c) => c.done)
+  const placeholders = checklist.filter((c) => c.settings && !c.done)
   const canRun = scopes.length > 0 && confirm.trim() === RESET_CONFIRM_WORD && !pending
 
   const toggle = (s: ResetScope) => setScopes((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]))
@@ -42,17 +43,22 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
         return
       }
       const d = res.data
-      toast.success(
-        `Cleared: ${[d.orders && `${d.orders} orders`, d.products && `${d.products} products`, d.categories && `${d.categories} categories`, d.addresses && `${d.addresses} addresses`, d.wishlists && `${d.wishlists} wishlist items`, d.images && `${d.images} photos`]
+      const msg = `Cleared: ${[d.orders && `${d.orders} orders`, d.products && `${d.products} products`, d.categories && `${d.categories} categories`, d.addresses && `${d.addresses} addresses`, d.wishlists && `${d.wishlists} wishlist items`, d.images && `${d.images} photos`]
           .filter(Boolean)
           .join(", ") || "nothing to clear"}`
-      )
+      if (d.imagesFailed > 0 || d.imagesUnlisted) toast.warning(msg)
+      else toast.success(msg)
+      if (d.imagesFailed > 0 || d.imagesUnlisted) {
+        setError(
+          `The database data was cleared, but ${d.imagesFailed > 0 ? `${d.imagesFailed} product photo${d.imagesFailed === 1 ? "" : "s"} could not be removed from storage` : "the photo storage could not be fully listed"}${d.imagesFailed > 0 && d.imagesUnlisted ? ", and some folders could not be read" : ""}. Delete the leftovers in Supabase Storage (product-images).`
+        )
+      }
       setConfirm("")
       router.refresh()
     })
 
   return (
-    <div data-ui="admin/LaunchPanel" className="grid gap-6 xl:grid-cols-2 xl:items-start">
+    <div data-ui="admin/LaunchPanel" className="grid gap-6 xl:grid-cols-2 xl:items-stretch">
       <section data-ui="admin/LaunchPanel/section" className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
         <div data-ui="admin/LaunchPanel/div">
           <h2 data-ui="admin/LaunchPanel/h2-ready-to-launch" className="font-sans text-lg font-semibold">Ready to launch?</h2>
@@ -60,6 +66,17 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
             {ready ? "Everything is in place. You can go live." : "Finish these before sharing the store link."}
           </p>
         </div>
+        {placeholders.length > 0 && (
+          <div data-ui="admin/LaunchPanel/div-2" role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+            <p data-ui="admin/LaunchPanel/p-flex" className="flex items-center gap-2 font-semibold">
+              <TriangleAlertIcon className="size-4 shrink-0" aria-hidden /> Placeholder settings found
+            </p>
+            <p data-ui="admin/LaunchPanel/p-2" className="mt-1">
+              {placeholders.map((p) => p.label).join(", ")} still hold starter or empty values that customers would see.{" "}
+              <Link data-ui="admin/LaunchPanel/Link-open-settings" href="/admin/settings" className="font-semibold underline underline-offset-2">Open Settings</Link>
+            </p>
+          </div>
+        )}
         <ul data-ui="admin/LaunchPanel/ul" className="divide-y rounded-xl border">
           {checklist.map((c) => (
             <li data-ui="admin/LaunchPanel/li" key={c.label}>
@@ -81,11 +98,11 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
       </section>
 
       <section data-ui="admin/LaunchPanel/section-2" className="space-y-5 rounded-2xl border border-destructive/30 bg-card p-5 sm:p-6">
-        <div data-ui="admin/LaunchPanel/div-2">
+        <div data-ui="admin/LaunchPanel/div-3">
           <h2 data-ui="admin/LaunchPanel/h2-clear-test-data" className="flex items-center gap-2 font-sans text-lg font-semibold text-destructive">
             <TriangleAlertIcon className="size-5" aria-hidden /> Clear test data
           </h2>
-          <p data-ui="admin/LaunchPanel/p-2" className="mt-0.5 text-sm text-muted-foreground">
+          <p data-ui="admin/LaunchPanel/p-3" className="mt-0.5 text-sm text-muted-foreground">
             Testing is done? Remove the practice data and start fresh. Your shop settings and admin login are never touched. This can&apos;t be undone.
           </p>
         </div>
@@ -127,7 +144,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
           placeholder={RESET_CONFIRM_WORD}
         />
         {error && (
-          <p data-ui="admin/LaunchPanel/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          <p data-ui="admin/LaunchPanel/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {error}
           </p>
         )}

@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { SwitchField, TextAreaField, TextField } from "@/components/form"
 import { siteConfig } from "@/config/site"
 import { saveStoreSettings } from "@/features/settings/actions"
+import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 import { storeSettingsSchema, type StoreSettingsInput, type StoreSettingsValues } from "@/features/settings/schema"
 import type { StoreSettings } from "@/features/settings/types"
 import { formatPrice } from "@/lib/format"
@@ -34,6 +35,14 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     description: s.description,
     keywords: s.keywords.join(", "),
     announcement: s.announcement ?? "",
+    highlightLine: s.highlightLine,
+    heroBadge: s.heroBadge,
+    priceNote: s.priceNote ?? "",
+    gstRegistered: s.gstRegistered,
+    gstin: s.gstin ?? "",
+    gstRate: s.gstRate,
+    legalName: s.legalName ?? "",
+    businessAddress: s.businessAddress ?? "",
     whatsappNumber: s.whatsappNumber,
     phoneSameAsWhatsapp: s.phoneSameAsWhatsapp,
     email: s.email ?? "",
@@ -66,9 +75,9 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
     defaultValues: toFormValues(settings),
   })
   const { errors, isDirty } = form.formState
-  const [fee, freeAbove, prefix, description, name, phoneSame] = useWatch({
+  const [fee, freeAbove, prefix, description, name, phoneSame, gstOn] = useWatch({
     control: form.control,
-    name: ["deliveryFee", "freeDeliveryAbove", "orderCodePrefix", "description", "shopName", "phoneSameAsWhatsapp"],
+    name: ["deliveryFee", "freeDeliveryAbove", "orderCodePrefix", "description", "shopName", "phoneSameAsWhatsapp", "gstRegistered"],
   })
 
   const feeNum = Number(fee)
@@ -98,6 +107,14 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         description: values.description,
         keywords: values.keywords,
         announcement: values.announcement ?? "",
+        highlightLine: values.highlightLine ?? DEFAULT_SETTINGS.highlightLine,
+        heroBadge: values.heroBadge ?? DEFAULT_SETTINGS.heroBadge,
+        priceNote: values.priceNote ?? "",
+        gstRegistered: values.gstRegistered,
+        gstin: values.gstin ?? "",
+        gstRate: values.gstRate,
+        legalName: values.legalName ?? "",
+        businessAddress: values.businessAddress ?? "",
         whatsappNumber: values.whatsappNumber,
         phoneSameAsWhatsapp: values.phoneSameAsWhatsapp,
         email: values.email ?? "",
@@ -145,10 +162,24 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
               error={errors.announcement?.message}
               {...form.register("announcement")}
             />
+            <div data-ui="admin/StoreSettingsForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <TextField
+                label="Product page highlight" maxLength={LIMITS.highlightText.max} fieldSize="md"
+                hint="Short line with an icon on every product page. Leave empty for the default."
+                error={errors.highlightLine?.message}
+                {...form.register("highlightLine")}
+              />
+              <TextField
+                label="Home page badge" maxLength={LIMITS.highlightText.max} fieldSize="md"
+                hint="Small badge above the home headline. Leave empty for the default."
+                error={errors.heroBadge?.message}
+                {...form.register("heroBadge")}
+              />
+            </div>
           </Card>
 
           <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link.">
-            <div data-ui="admin/StoreSettingsForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Instagram" kind="url"
                 fieldSize="md"
@@ -224,7 +255,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 {...form.register("phone")}
               />
             )}
-            <div data-ui="admin/StoreSettingsForm/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
               <TextField label="City" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
               <TextField label="State" maxLength={LIMITS.region.max} fieldSize="md" error={errors.region?.message} {...form.register("region")} />
@@ -236,7 +267,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             title="Payment (UPI)"
             description="Customers pay this UPI ID after placing an order, then enter the UTR. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
           >
-            <div data-ui="admin/StoreSettingsForm/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="UPI ID" kind="upiId"
                 fieldSize="md"
@@ -258,8 +289,68 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             </div>
           </Card>
 
+          <Card
+            title="Tax & invoices"
+            description="Not registered for GST? Leave this off: invoices are a Bill of Supply and no tax is shown. After you get a GSTIN, turn it on to switch to Tax Invoices."
+          >
+            <Controller
+              control={form.control}
+              name="gstRegistered"
+              render={({ field }) => (
+                <SwitchField
+                  label="I am registered under GST"
+                  description="Prices you enter are treated as already including GST."
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+            {gstOn && (
+              <div data-ui="admin/StoreSettingsForm/div-grid-6" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+                <TextField
+                  label="GSTIN" fieldSize="md" maxLength={15}
+                  placeholder="22AAAAA0000A1Z5"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  error={errors.gstin?.message}
+                  {...form.register("gstin")}
+                />
+                <TextField
+                  label="GST rate included in prices (%)" fieldSize="md"
+                  inputMode="decimal"
+                  placeholder="12"
+                  hint="One rate for every product, e.g. 5, 12 or 18. Ask your CA which applies."
+                  error={errors.gstRate?.message}
+                  {...form.register("gstRate")}
+                />
+              </div>
+            )}
+            <TextField
+              label="Price note" maxLength={LIMITS.priceNote.max} fieldSize="md"
+              placeholder={gstOn ? "Inclusive of all taxes" : "Optional"}
+              hint={gstOn ? "Shown under the price. Leave empty to use “Inclusive of all taxes”." : "Shown under the price on product pages. Leave empty to show nothing."}
+              error={errors.priceNote?.message}
+              {...form.register("priceNote")}
+            />
+            <div data-ui="admin/StoreSettingsForm/div-grid-7" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <TextField
+                label="Name on invoices" maxLength={LIMITS.legalName.max} fieldSize="md"
+                hint="Leave empty to use your shop name."
+                error={errors.legalName?.message}
+                {...form.register("legalName")}
+              />
+              <TextAreaField
+                label="Address on invoices" maxLength={LIMITS.businessAddress.max}
+                rows={2}
+                hint="Leave empty to use your city and state."
+                error={errors.businessAddress?.message}
+                {...form.register("businessAddress")}
+              />
+            </div>
+          </Card>
+
           <Card title="Delivery charges" description="Applied to every order. Per-product charges (like handling) are set on each product.">
-            <div data-ui="admin/StoreSettingsForm/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Delivery charge" kind="money"
                 fieldSize="md"

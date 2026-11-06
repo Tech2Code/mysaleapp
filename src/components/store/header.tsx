@@ -1,7 +1,8 @@
 "use client"
 
 import { HeartIcon, MenuIcon, SearchIcon, ShoppingBagIcon } from "lucide-react"
-import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react"
+import { AnimatePresence, useMotionValueEvent, useScroll } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { ScrollLink } from "@/components/shared/scroll-link"
 import { usePathname } from "next/navigation"
@@ -26,7 +27,7 @@ function CountBadge({ count }: { count: number }) {
   return (
     <AnimatePresence>
       {count > 0 && (
-        <motion.span data-ui="store/CountBadge/m-span-grid"
+        <m.span data-ui="store/CountBadge/m.span-grid"
           key={count}
           initial={{ scale: 0.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -35,7 +36,7 @@ function CountBadge({ count }: { count: number }) {
           className="absolute top-0.5 right-0.5 grid min-w-4.6 place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-4.6 font-bold text-primary-foreground ring-2 ring-background"
         >
           {count > 99 ? "99+" : count}
-        </motion.span>
+        </m.span>
       )}
     </AnimatePresence>
   )
@@ -57,7 +58,7 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
             )}
           >
             {active && (
-              <motion.span data-ui="store/DesktopNavItems/m-span-absolute"
+              <m.span data-ui="store/DesktopNavItems/m.span-absolute"
                 layoutId="nav-pill"
                 className="absolute inset-0 -z-10 rounded-full bg-secondary"
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
@@ -88,7 +89,7 @@ function MobileNavItems({
   return (
     <>
       {links.map((l, i) => (
-        <motion.div data-ui="store/MobileNavItems/m-div" key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
+        <m.div data-ui="store/MobileNavItems/m.div" key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
           <ScrollLink data-ui="store/MobileNavItems/ScrollLink"
             href={l.href}
             onClick={onNavigate}
@@ -100,7 +101,7 @@ function MobileNavItems({
           >
             {l.label}
           </ScrollLink>
-        </motion.div>
+        </m.div>
       ))}
     </>
   )
@@ -112,7 +113,7 @@ function MobileNavWithPath(props: { links: NavLinkItem[]; onNavigate: () => void
 
 export function Header({ categories }: { categories: NavCategory[] }) {
   const mounted = useMounted()
-  const items = useCart((s) => s.items)
+  const itemCount = useCart((s) => cartCount(s.items))
   const openCart = useCart((s) => s.setOpen)
   const wishCount = useWishlist((s) => s.ids.length)
   const [scrolled, setScrolled] = useState(false)
@@ -193,10 +194,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             type="button"
             onClick={() => openCart(true)}
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full max-sm:size-9")}
-            aria-label={`Open cart${mounted ? `, ${cartCount(items)} items` : ""}`}
+            aria-label={`Open cart${mounted ? `, ${itemCount} items` : ""}`}
           >
             <ShoppingBagIcon className="size-4.6" />
-            {mounted && <CountBadge count={cartCount(items)} />}
+            {mounted && <CountBadge count={itemCount} />}
           </button>
           <span data-ui="store/Header/span" className="max-sm:ml-1.5"><AccountMenu /></span>
         </div>

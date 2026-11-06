@@ -84,7 +84,7 @@ export function ProductForm({
 
   const onSubmit = form.handleSubmit((values) =>
     startTransition(async () => {
-      const res = await saveProduct(product?.id ?? null, values)
+      const res = await saveProduct(product?.id ?? null, values, product?.stock)
       if (!res.ok) {
         toast.error(res.error)
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
@@ -93,6 +93,9 @@ export function ProductForm({
         return
       }
       toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store.")
+      if (product && res.data.stock !== values.stock) {
+        toast.info(`Stock is now ${res.data.stock} (it changed while you were editing, e.g. a new order).`)
+      }
       router.push("/admin/products")
       router.refresh()
     })
@@ -205,7 +208,7 @@ export function ProductForm({
             <Controller
               control={form.control}
               name="images"
-              render={({ field }) => <ImageUploader value={(field.value as string[]) ?? []} onChange={field.onChange} />}
+              render={({ field }) => <ImageUploader value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
             />
             {errors.images && <p data-ui="admin/ProductForm/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>

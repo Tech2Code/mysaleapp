@@ -2,18 +2,16 @@
 
 import { PlusIcon } from "lucide-react"
 import Link from "next/link"
-import type { Product } from "@/features/products/types"
+import { memo } from "react"
+import type { ProductCardData } from "@/features/products/types"
 import { discountPercent, formatPrice } from "@/lib/format"
 import { useCart } from "@/store/cart"
 import { ProductImage } from "./product-image"
 import { WishlistButton } from "./wishlist-button"
 
-export type ProductCardData = Pick<
-  Product,
-  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category"
->
+export type { ProductCardData }
 
-export function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
+export const ProductCard = memo(function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
   const add = useCart((s) => s.add)
   const off = discountPercent(product.price, product.compareAtPrice)
   const soldOut = product.stock <= 0
@@ -61,7 +59,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
               })
             }}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute right-3 bottom-3 grid size-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 focus-visible:translate-y-0 focus-visible:opacity-100 md:translate-y-2 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
+            className="absolute right-3 bottom-3 grid size-10 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 focus-visible:translate-y-0 focus-visible:opacity-100 md:pointer-fine:translate-y-2 md:pointer-fine:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
           >
             <PlusIcon className="size-5" />
           </button>
@@ -90,4 +88,4 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
       </div>
     </article>
   )
-}
+})

@@ -1,18 +1,23 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
+import { CACHE_TAGS } from "@/features/products/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { optionalNumber } from "@/lib/zod-helpers"
 import { paymentReferenceSchema, shippingSchema } from "./schema"
+import { mapRpcError } from "./rpc-errors"
+import { OTHER_DETAIL_MESSAGE, cancelReasonText, otherNeedsDetail } from "./reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition } from "./transitions"
 import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "./types"
 
 const updateStatusSchema = z.object({
   orderId: z.uuid(),
   status: z.enum(ORDER_STATUSES),
+  /** The status the admin's screen was showing; if the order has moved on since (another tab, the customer), refuse. */
+  expectedStatus: z.enum(ORDER_STATUSES).optional(),
   /** Courier / tracking info; optional, normally sent together with "shipped". */
   shipping: shippingSchema.optional(),
 })
@@ -36,6 +41,9 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
     .eq("id", orderId)
     .maybeSingle<{ status: OrderStatus; payment_status: PaymentStatus | null; shipping_carrier: string | null }>()
   if (!current) return fail("Order not found")
+  if (parsed.data.expectedStatus && parsed.data.expectedStatus !== current.status) {
+    return fail("This order was just changed by someone else. Refresh the page and try again.")
+  }
 
   // One rule set for every move (see transitions.ts): allowed next step, payment first, courier before "shipped".
   const problem = checkTransition({
@@ -47,7 +55,9 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   if (problem) return fail(problem)
 
   // The DB trigger writes the status-history row when the status changes.
-  const { error } = await supabase
+  // `.eq("status", current.status)` makes this a compare-and-set: if another tab or the customer
+  // changed the order since we read it, nothing is updated and we ask for a refresh.
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({
       status,
@@ -61,14 +71,13 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
         : {}),
     })
     .eq("id", orderId)
+    .eq("status", current.status)
+    .select("id")
 
   if (error) {
-    // 42703 / PGRST204 = column missing → migration 0002 hasn't been run yet.
-    if (shipping && (error.code === "42703" || error.code === "PGRST204")) {
-      return fail("Shipping columns are missing. Run the latest database migrations (npm run db:push).")
-    }
     return fail("Could not update status")
   }
+  if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
   revalidatePath("/admin", "layout")
   return { ok: true }
@@ -105,19 +114,53 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   const supabase = await getServerSupabase()
   const { data: order } = await supabase
     .from("orders")
-    .select("status, total, payment_status")
+    .select("status, total, payment_status, payment_amount, refunded_amount, payment_reference")
     .eq("id", p.orderId)
-    .maybeSingle<{ status: OrderStatus; total: number | string; payment_status: PaymentStatus | null }>()
+    .maybeSingle<{
+      status: OrderStatus
+      total: number | string
+      payment_status: PaymentStatus | null
+      payment_amount: number | string | null
+      refunded_amount: number | string | null
+      payment_reference: string | null
+    }>()
   if (!order) return fail("Order not found")
 
   if (order.status === "cancelled" && (p.status === "paid" || p.status === "submitted")) {
     return fail("This order is cancelled. Record a refund instead of a payment.")
   }
 
+  // Refunds have one path (refund_order RPC): it keeps payment_status, refunded_at and refunded_amount in step.
+  if (p.status === "refunded" && order.payment_status === "paid") {
+    const paid = Number(order.payment_amount ?? order.total)
+    const left = Math.max(0, paid - Number(order.refunded_amount ?? 0))
+    if (p.amount !== null && p.amount > left + 0.005) return fail(`You can refund at most ₹${left.toFixed(2)}.`, { amount: [`At most ₹${left.toFixed(2)}`] })
+    if (p.amount === 0) return fail("Enter an amount above 0, or leave it blank to refund everything.", { amount: ["Enter an amount above 0"] })
+    const { error: refundError } = await supabase.rpc("refund_order", {
+      p_order_id: p.orderId,
+      // blank or the whole remaining amount = full refund
+      p_amount: p.amount === null || p.amount >= left - 0.005 ? null : p.amount,
+      p_expected_status: order.status,
+      // the form pre-fills the customer's own payment UTR; that is not a refund reference, so only a different value is kept
+      p_reference: p.reference && p.reference !== order.payment_reference ? p.reference : null,
+      p_note: p.note,
+    })
+    if (refundError) {
+      if (refundError.message.includes("ORDER_CHANGED") || refundError.message.includes("NOT_PAID")) return fail("This order was just changed by someone else. Refresh the page and try again.")
+      if (refundError.message.includes("BAD_AMOUNT")) return fail("That refund amount is not valid for this order.", { amount: ["Not a valid amount"] })
+      return fail("Could not record the refund")
+    }
+    revalidatePath("/admin", "layout")
+    return { ok: true, data: { confirmed: false } }
+  }
+  if (p.status === "refunded" && order.payment_status !== "refunded") {
+    return fail("Only a paid order can be refunded.")
+  }
+
   const markPaid = p.status === "paid"
   const confirmNow = markPaid && order.status === "pending"
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({
       payment_status: p.status,
@@ -125,20 +168,19 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
       payment_reference: p.reference,
       payment_amount: markPaid ? (p.amount ?? Number(order.total)) : p.amount,
       payment_note: p.note,
-      ...(p.status === "refunded" ? { refunded_at: new Date().toISOString() } : {}),
       // keep the original paid time if it was already paid
       ...(markPaid && order.payment_status !== "paid" ? { payment_paid_at: new Date().toISOString() } : {}),
       ...(confirmNow ? { status: "confirmed" as const } : {}),
     })
     .eq("id", p.orderId)
+    .eq("status", order.status) // compare-and-set: a customer cancel in between must not be overwritten
+    .select("id")
 
   if (error) {
     if (error.code === "23505") return fail("This reference number is already attached to another order.")
-    if (error.code === "42703" || error.code === "PGRST204") {
-      return fail("Payment columns are missing. Run the latest database migrations (npm run db:push).")
-    }
     return fail("Could not save payment details")
   }
+  if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
   revalidatePath("/admin", "layout")
   return { ok: true, data: { confirmed: confirmNow } }
@@ -171,7 +213,7 @@ const cancelSchema = z.object({
   reason: z.enum(ADMIN_CANCEL_REASONS),
   /** Extra detail shown to the customer. */
   detail: z.string().trim().max(200, "Keep it under 200 characters").optional(),
-})
+}).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
 /** Cancel an order (until it is packed). The customer sees the reason; a paid order is flagged "refund due". */
 export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> {
@@ -193,22 +235,23 @@ export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> 
     )
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("orders")
     .update({
       status: "cancelled",
-      cancel_reason: detail ? `${reason}: ${detail}` : reason,
+      cancel_reason: cancelReasonText(reason, detail),
       cancelled_by: "admin",
       cancelled_at: new Date().toISOString(),
     })
     .eq("id", orderId)
+    .eq("status", current.status)
+    .select("id")
   if (error) {
-    if (error.code === "42703" || error.code === "PGRST204") {
-      return fail("Cancellation columns are missing. Run the latest database migrations (npm run db:push).")
-    }
     return fail("Could not cancel the order")
   }
+  if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
+  updateTag(CACHE_TAGS.products) // the DB trigger gave the reserved stock back
   revalidatePath("/admin", "layout")
   return { ok: true }
 }
@@ -232,16 +275,8 @@ const returnSchema = z.object({
   requestId: z.uuid().optional(),
 })
 
-const RETURN_ERRORS: Record<string, string> = {
-  NOT_DELIVERED: "Returns can only be recorded for delivered orders.",
-  ITEM_NOT_IN_ORDER: "One of the items isn't part of this order.",
-  TOO_MANY_RETURNED: "You're returning more than was ordered (including earlier returns).",
-  NO_ITEMS: "Enter how many came back.",
-  REQUEST_NOT_OPEN: "That return request is no longer open.",
-}
-
 /** Record goods that came back: per item, choose whether it goes back into stock (resellable) or not (damaged). */
-export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ restocked: number }>> {
+export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ restocked: number; refundedAmount: number; fullyRefunded: boolean }>> {
   const auth = await assertAdmin()
   if (!auth.ok) return fail(auth.error)
 
@@ -258,13 +293,20 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
     ...(requestId ? { p_request_id: requestId } : {}),
   })
   if (error) {
-    if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Run the latest database migrations (npm run db:push).")
-    const key = Object.keys(RETURN_ERRORS).find((k) => error.message.includes(k))
-    return fail(key ? RETURN_ERRORS[key] : "Could not record the return")
+    return fail(mapRpcError(error.message, "Could not record the return"))
   }
 
+  updateTag(CACHE_TAGS.products) // restocked items are sellable again
   revalidatePath("/admin", "layout")
-  return { ok: true, data: { restocked: Number((data as { restocked?: number } | null)?.restocked ?? 0) } }
+  const out = (data ?? {}) as { restocked?: number; refundedAmount?: number; fullyRefunded?: boolean }
+  return {
+    ok: true,
+    data: {
+      restocked: Number(out.restocked ?? 0),
+      refundedAmount: Number(out.refundedAmount ?? 0),
+      fullyRefunded: Boolean(out.fullyRefunded),
+    },
+  }
 }
 
 const decideSchema = z.object({
@@ -287,7 +329,6 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("decide_return_request", { p_request_id: requestId, p_approve: approve, p_note: note ?? null })
   if (error) {
-    if (error.code === "42883" || error.code === "PGRST202") return fail("Returns aren't set up yet. Run the latest database migrations (npm run db:push).")
     if (error.message.includes("NOT_PENDING")) return fail("This request was already decided or withdrawn.")
     return fail("Could not save your decision")
   }

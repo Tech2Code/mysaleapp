@@ -73,6 +73,12 @@ const YMD = /^\d{4}-\d{2}-\d{2}$/
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/
 
 export const istDayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+/** A real calendar date: "2026-02-31" matches the pattern but Date would silently roll it into March. */
+const isRealDate = (ymd: string) => {
+  if (!YMD.test(ymd)) return false
+  const d = new Date(`${ymd}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === ymd
+}
 const startOfDay = (ymd: string) => new Date(`${ymd}T00:00:00${IST_OFFSET}`)
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY)
 const fmt = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })
@@ -103,11 +109,12 @@ export function resolveRange(input: { range?: string; month?: string; fy?: strin
     to: istDayKey(new Date(end.getTime() - 1)),
   })
 
-  if (input.from && input.to && YMD.test(input.from) && YMD.test(input.to)) {
+  if (input.from && input.to && isRealDate(input.from) && isRealDate(input.to)) {
     const [a, b] = input.from <= input.to ? [input.from, input.to] : [input.to, input.from]
     const start = startOfDay(a)
     const end = addDays(startOfDay(b), 1)
-    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+    // A huge span (?from=1900-01-01&to=2100-12-31) would pull the whole orders table, so it is ignored.
+    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end.getTime() - start.getTime() <= 1100 * DAY) {
       const span = end.getTime() - start.getTime()
       return make("custom", a === b ? fmt(start) : `${fmt(start)} – ${fmt(addDays(end, -1))}`, start, end, {
         start: new Date(start.getTime() - span),

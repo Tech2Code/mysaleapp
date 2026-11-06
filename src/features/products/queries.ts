@@ -9,7 +9,9 @@ import {
   type Category,
   type CategoryRow,
   type Product,
+  type ProductListItem,
   type ProductRow,
+  toListItem,
 } from "./types"
 
 /** Cache tags — admin mutations call updateTag() with these. */
@@ -25,7 +27,9 @@ export const CACHE_TAGS = {
  */
 export async function getActiveProducts(): Promise<Product[]> {
   "use cache"
-  cacheLife("days")
+  // Stock changes from orders, cancellations, returns and the pg_cron expiry job, and the last one
+  // can't call updateTag — so keep this short instead of "days".
+  cacheLife("minutes")
   cacheTag(CACHE_TAGS.products)
 
   const supabase = getPublicSupabase()
@@ -96,4 +100,10 @@ export async function getCategoriesWithCounts(): Promise<(Category & { count: nu
   return categories
     .map((c) => ({ ...c, count: products.filter((p) => p.categoryId === c.id).length }))
     .filter((c) => c.count > 0)
+}
+
+/** Slim projection for the client shop browser (no descriptions/SEO/fees in the page payload). */
+export async function getProductListItems(): Promise<ProductListItem[]> {
+  const products = await getActiveProducts()
+  return products.map(toListItem)
 }

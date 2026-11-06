@@ -2,7 +2,7 @@ import { BadgeIndianRupeeIcon, HeartHandshakeIcon, ShoppingBagIcon, TruckIcon } 
 import { FadeIn } from "@/components/shared/motion"
 
 const steps = [
-  { icon: ShoppingBagIcon, title: "Pick what you love", text: "Add handmade pieces to your cart — no account needed." },
+  { icon: ShoppingBagIcon, title: "Pick what you love", text: "Add what you love to your cart — no account needed." },
   { icon: BadgeIndianRupeeIcon, title: "Pay by UPI", text: "Pay securely with any UPI app and share the reference number." },
   { icon: HeartHandshakeIcon, title: "We confirm & craft", text: "Once your payment is verified, we confirm and start crafting." },
   { icon: TruckIcon, title: "Delivered with care", text: "Track every step online with your order code." },

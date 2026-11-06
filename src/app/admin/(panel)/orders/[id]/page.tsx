@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, PhoneIcon } from "lucide-react"
+import { ArrowLeftIcon, PhoneIcon, ReceiptTextIcon } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -18,6 +18,7 @@ import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { getOrderById } from "@/features/orders/admin-queries"
 import { whatsappLink } from "@/features/orders/whatsapp"
 import { formatDeadline, paymentDeadline } from "@/features/orders/deadline"
+import { isAwaitingPayment } from "@/features/orders/types"
 import { getStoreSettings } from "@/features/settings/queries"
 import { formatDateTime } from "@/lib/format"
 
@@ -42,7 +43,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
   const [order, shop] = await Promise.all([getOrderById(id), getStoreSettings()])
   if (!order) notFound()
   const autoCancelAt =
-    order.status === "pending" && (order.paymentStatus === "pending" || order.paymentStatus === "failed")
+    isAwaitingPayment(order)
       ? paymentDeadline(order.createdAt, shop.unpaidOrderExpiryHours)
       : null
 
@@ -61,9 +62,14 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
         <CopyButton value={order.orderCode} label="Order ID" />
         <div data-ui="page:/admin/orders/[id]/div-flex" className="flex flex-wrap items-center gap-2">
           <StatusBadge status={order.status} className="text-sm" pulse />
-          <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} className="text-sm" />
+          <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} refundedAmount={order.refundedAmount} paidAmount={order.paymentAmount ?? order.total} className="text-sm" />
         </div>
         <span data-ui="page:/admin/orders/[id]/span" className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</span>
+        {order.status !== "cancelled" && (
+          <Link data-ui="page:/admin/orders/[id]/Link-invoice" href={`/admin/orders/${order.id}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
+            <ReceiptTextIcon className="size-4" /> Invoice
+          </Link>
+        )}
         {autoCancelAt && (
           <span data-ui="page:/admin/orders/[id]/span-2" className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
             Auto-cancels {formatDeadline(autoCancelAt)} if unpaid

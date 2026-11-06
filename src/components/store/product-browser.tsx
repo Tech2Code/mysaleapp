@@ -1,13 +1,17 @@
 "use client"
 
 import { SearchXIcon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence, LazyMotion } from "motion/react"
+import * as m from "motion/react-m"
 import { useSearchParams } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { SearchField, SelectField } from "@/components/form"
-import type { Category, Product } from "@/features/products/types"
+import type { Category, ProductListItem } from "@/features/products/types"
 import { cn } from "@/lib/utils"
 import { ProductCard } from "./product-card"
+
+// Layout animations (layout / layoutId) need the bigger feature set; load it only for this page.
+const loadLayoutFeatures = () => import("@/components/shared/motion-features-max").then((mod) => mod.default)
 
 const SORTS = {
   featured: "Featured",
@@ -26,7 +30,7 @@ export function ProductBrowser({
   products,
   categories,
 }: {
-  products: Product[]
+  products: ProductListItem[]
   categories: Pick<Category, "id" | "name" | "slug">[]
 }) {
   const params = useSearchParams()
@@ -34,28 +38,33 @@ export function ProductBrowser({
   const [category, setCategory] = useState(params.get("category") ?? "all")
   const [sort, setSort] = useState<SortKey>(isSortKey(params.get("sort")) ? (params.get("sort") as SortKey) : "featured")
 
-  // Keep the URL shareable without triggering a server round-trip.
-  const syncUrl = (next: { q?: string; category?: string; sort?: SortKey }) => {
-    const sp = new URLSearchParams()
-    const q = next.q ?? query
-    const c = next.category ?? category
-    const s = next.sort ?? sort
-    if (q) sp.set("q", q)
-    if (c !== "all") sp.set("category", c)
-    if (s !== "featured") sp.set("sort", s)
-    const qs = sp.toString()
-    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname)
-  }
+  // Keep the URL shareable without a server round-trip. Debounced: Safari rate-limits replaceState.
+  const urlReady = useRef(false)
+  useEffect(() => {
+    if (!urlReady.current) {
+      urlReady.current = true
+      return
+    }
+    const t = setTimeout(() => {
+      const sp = new URLSearchParams()
+      if (query) sp.set("q", query)
+      if (category !== "all") sp.set("category", category)
+      if (sort !== "featured") sp.set("sort", sort)
+      const qs = sp.toString()
+      window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [query, category, sort])
+
+  // The input updates at once; the (animated) list catches up when React has time.
+  const deferredQuery = useDeferredValue(query)
 
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     const list = products.filter(
       (p) =>
         (category === "all" || p.category?.slug === category) &&
-        (!q ||
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.category?.name.toLowerCase().includes(q))
+        (!q || p.searchText.includes(q))
     )
     switch (sort) {
       case "new":
@@ -67,27 +76,39 @@ export function ProductBrowser({
       default:
         return [...list].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
     }
-  }, [products, query, category, sort])
+  }, [products, deferredQuery, category, sort])
 
   const chips = [{ slug: "all", name: "All" }, ...categories]
 
+  // Picking a filter shortens the page. If the reader had scrolled down, the browser clamps them to the very
+  // bottom (footer). Put the start of the results back right under the sticky bar instead.
+  const barRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const firstRun = useRef(true)
+  useLayoutEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false
+      return
+    }
+    const bar = barRef.current
+    const list = listRef.current
+    if (!bar || !list) return
+    const gap = list.getBoundingClientRect().top - bar.getBoundingClientRect().bottom - 12
+    if (gap < 0) window.scrollBy({ top: gap, behavior: "instant" })
+  }, [deferredQuery, category, sort])
+
   return (
-    <div data-ui="store/ProductBrowser">
-      <div data-ui="store/ProductBrowser/div" className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+    <LazyMotion features={loadLayoutFeatures}>
+    <div data-ui="store/ProductBrowser/div">
+      <div ref={barRef} data-ui="store/ProductBrowser/div-2" className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div data-ui="store/ProductBrowser/div-flex" className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchField
             label="Search products"
             pill
             containerClassName="flex-1"
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              syncUrl({ q: e.target.value })
-            }}
-            onClear={() => {
-              setQuery("")
-              syncUrl({ q: "" })
-            }}
+            onChange={(e) => setQuery(e.target.value)}
+            onClear={() => setQuery("")}
             placeholder="Search candles, vases, gifts…"
           />
           <SelectField
@@ -97,9 +118,7 @@ export function ProductBrowser({
             containerClassName="sm:w-56"
             value={sort}
             onValueChange={(next) => {
-              const s = next as SortKey
-              setSort(s)
-              syncUrl({ sort: s })
+              setSort(next as SortKey)
             }}
             options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
           />
@@ -113,17 +132,14 @@ export function ProductBrowser({
                 key={c.slug}
                 type="button"
                 aria-pressed={active}
-                onClick={() => {
-                  setCategory(c.slug)
-                  syncUrl({ category: c.slug })
-                }}
+                onClick={() => setCategory(c.slug)}
                 className={cn(
                   "relative shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
                   active ? "border-transparent text-primary-foreground" : "bg-card hover:bg-muted"
                 )}
               >
                 {active && (
-                  <motion.span data-ui="store/ProductBrowser/m-span-absolute"
+                  <m.span data-ui="store/ProductBrowser/m.span-absolute"
                     layoutId="chip-active"
                     className="absolute inset-0 z-0 rounded-full bg-primary"
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
@@ -136,6 +152,7 @@ export function ProductBrowser({
         </div>
       </div>
 
+      <div ref={listRef} data-ui="store/ProductBrowser/div-3" className="min-h-[70svh]">
       <p data-ui="store/ProductBrowser/p" className="mb-4 text-sm text-muted-foreground" aria-live="polite">
         {visible.length} {visible.length === 1 ? "product" : "products"}
       </p>
@@ -147,23 +164,25 @@ export function ProductBrowser({
           <p data-ui="store/ProductBrowser/p-3" className="text-sm text-muted-foreground">Try a different word or category.</p>
         </div>
       ) : (
-        <motion.div data-ui="store/ProductBrowser/m-div-grid" layout className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+        <m.div data-ui="store/ProductBrowser/m.div-grid" layout className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
           <AnimatePresence mode="popLayout">
             {visible.map((p, i) => (
-              <motion.div data-ui="store/ProductBrowser/m-div"
+              <m.div data-ui="store/ProductBrowser/m.div"
                 key={p.id}
                 layout
-                initial={{ opacity: 0, scale: 0.96 }}
+                initial={{ scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.25 }}
               >
                 <ProductCard product={p} priority={i < 4} />
-              </motion.div>
+              </m.div>
             ))}
           </AnimatePresence>
-        </motion.div>
+        </m.div>
       )}
+      </div>
     </div>
+    </LazyMotion>
   )
 }

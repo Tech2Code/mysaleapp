@@ -1,7 +1,8 @@
 "use client"
 
 import { AlertTriangleIcon, ArrowRightIcon, ShoppingBagIcon, Trash2Icon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { buttonVariants } from "@/components/ui/button"
@@ -58,7 +59,7 @@ export function CartView({ products }: { products: LiveProduct[] }) {
         <ul data-ui="store/CartView/ul" className="space-y-3">
           <AnimatePresence initial={false}>
             {lines.map((item) => (
-              <motion.li data-ui="store/CartView/m-li"
+              <m.li data-ui="store/CartView/m.li"
                 key={item.productId}
                 layout
                 exit={{ opacity: 0, x: -40 }}
@@ -107,7 +108,7 @@ export function CartView({ products }: { products: LiveProduct[] }) {
                     </div>
                   )}
                 </div>
-              </motion.li>
+              </m.li>
             ))}
           </AnimatePresence>
         </ul>
@@ -128,6 +129,7 @@ export function CartView({ products }: { products: LiveProduct[] }) {
         <Link data-ui="store/CartView/Link-proceed-to-checkout"
           href="/checkout"
           aria-disabled={hasUnavailable}
+          tabIndex={hasUnavailable ? -1 : undefined}
           className={cn(
             buttonVariants({ size: "lg" }),
             "group h-12 w-full rounded-full text-base shadow-lg shadow-primary/25",

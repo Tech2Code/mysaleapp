@@ -14,6 +14,7 @@ import { ProductGrid } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
 import { getActiveProducts, getProductBySlug, getRelatedProducts } from "@/features/products/queries"
 import { getStoreSettings } from "@/features/settings/queries"
+import { priceNote } from "@/features/settings/tax"
 import { discountPercent, formatPrice } from "@/lib/format"
 import { breadcrumbJsonLd, pageMetadata, productJsonLd } from "@/lib/seo"
 
@@ -55,8 +56,9 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
 
   const [related, settings] = await Promise.all([getRelatedProducts(product), getStoreSettings()])
   const off = discountPercent(product.price, product.compareAtPrice)
+  const taxNote = priceNote(settings)
   const perks = [
-    { icon: HandHeartIcon, text: "Handmade by skilled artisans" },
+    { icon: HandHeartIcon, text: settings.highlightLine },
     {
       icon: TruckIcon,
       text:
@@ -117,7 +119,7 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
               <span data-ui="page:/products/[slug]#ProductDetails/span-3" className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">Save {off}%</span>
             )}
           </div>
-          <p data-ui="page:/products/[slug]#ProductDetails/p-2" className="mt-1 text-xs text-muted-foreground">Inclusive of all taxes</p>
+          {taxNote && <p data-ui="page:/products/[slug]#ProductDetails/p-2" className="mt-1 text-xs text-muted-foreground">{taxNote}</p>}
 
           {summary && <p data-ui="page:/products/[slug]#ProductDetails/p-3" className="mt-5 leading-relaxed text-muted-foreground">{summary}</p>}
 
@@ -201,7 +203,7 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
 
       {related.length > 0 && (
         <section data-ui="page:/products/[slug]#ProductDetails/section" className="container-page mt-16 sm:mt-24" aria-labelledby="related-title">
-          <SectionHeading id="related-title" eyebrow="You may also like" title="More handmade picks" href="/products" />
+          <SectionHeading id="related-title" eyebrow="You may also like" title="More you may like" href="/products" />
           <ProductGrid products={related} priorityCount={0} />
         </section>
       )}

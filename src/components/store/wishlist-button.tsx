@@ -1,7 +1,7 @@
 "use client"
 
 import { HeartIcon } from "lucide-react"
-import { motion } from "motion/react"
+import * as m from "motion/react-m"
 import { useWishlistToggle } from "@/hooks/use-wishlist-toggle"
 import { cn } from "@/lib/utils"
 
@@ -19,7 +19,7 @@ export function WishlistButton({
   const { active, toggle } = useWishlistToggle(productId, productName)
 
   return (
-    <motion.button data-ui="store/WishlistButton"
+    <m.button data-ui="store/WishlistButton"
       type="button"
       whileTap={{ scale: 0.85 }}
       onClick={(e) => {
@@ -35,7 +35,7 @@ export function WishlistButton({
         className
       )}
     >
-      <motion.span data-ui="store/WishlistButton/m-span"
+      <m.span data-ui="store/WishlistButton/m.span"
         key={active ? "on" : "off"}
         initial={{ scale: 0.6 }}
         animate={{ scale: 1 }}
@@ -47,7 +47,7 @@ export function WishlistButton({
             active ? "fill-rose-500 text-rose-500" : "text-foreground/70"
           )}
         />
-      </motion.span>
-    </motion.button>
+      </m.span>
+    </m.button>
   )
 }

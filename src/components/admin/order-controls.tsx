@@ -11,6 +11,7 @@ import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
+import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, statusChoices } from "@/features/orders/transitions"
 import { COURIER_SUGGESTIONS, shippingSchema } from "@/features/orders/schema"
 import { STATUS_META, type OrderStatus, type PaymentStatus, type ShippingDetails } from "@/features/orders/types"
@@ -119,7 +120,7 @@ export function OrderStatusControl({
     }
 
     startTransition(async () => {
-      const res = await updateOrderStatus({ orderId, status: values.status, shipping: shippingPayload })
+      const res = await updateOrderStatus({ orderId, status: values.status, expectedStatus: status, shipping: shippingPayload })
       if (!res.ok) {
         toast.error(res.error)
         return
@@ -204,6 +205,8 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 
   if (!CANCELLABLE_BY_ADMIN.includes(status)) return null
 
+  const needsDetail = otherNeedsDetail(reason, detail)
+
   const submit = () =>
     startTransition(async () => {
       setError(null)
@@ -241,7 +244,15 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             onValueChange={setReason}
             options={ADMIN_CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
           />
-          <TextAreaField label="Message to the customer (optional)" rows={2} maxLength={200} value={detail} onChange={(e) => setDetail(e.target.value)} />
+          <TextAreaField
+            label={reason === OTHER_REASON ? "Reason (the customer will see it)" : "Message to the customer (optional)"}
+            required={reason === OTHER_REASON}
+            rows={2}
+            maxLength={200}
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+            error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+          />
           {error && (
             <p data-ui="admin/AdminCancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {error}
@@ -252,7 +263,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
           <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Keep order
           </Button>
-          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
+          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Cancel order
           </Button>
         </DialogFooter>

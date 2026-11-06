@@ -5,9 +5,11 @@ import { BanIcon, CheckCircle2Icon, Loader2Icon, MapPinIcon, PlusIcon } from "lu
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { SwitchField, TextAreaField, TextField } from "@/components/form"
+import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
+import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
+import { NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,9 +49,16 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { name: "", phone: "", address: "", city: "", pincode: "", note: "" },
+    defaultValues: { name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" },
   })
   const { errors } = form.formState
+  const area = usePincodeLookup({
+    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    getCity: () => form.getValues("city"),
+    setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
+    getState: () => form.getValues("state"),
+    setState: (state) => form.setValue("state", state as IndianState, { shouldValidate: true, shouldDirty: true }),
+  })
 
   const fillFrom = (a: Address) => {
     setSelected(a.id)
@@ -57,7 +66,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
       name: a.fullName,
       phone: a.phone,
       address: a.address,
-      city: a.city,
+      ...splitCityState(a.city),
       pincode: a.pincode,
       note: form.getValues("note"),
     })
@@ -66,7 +75,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   const useNewAddress = () => {
     setSelected("new")
     const current = form.getValues()
-    form.reset({ name: current.name, phone: current.phone, address: "", city: "", pincode: "", note: current.note })
+    form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
   }
 
   // Signed-in customers: load the address book (default address pre-selected), else their profile name/phone.
@@ -83,7 +92,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
           name: first.fullName,
           phone: first.phone,
           address: first.address,
-          city: first.city,
+          ...splitCityState(first.city),
           pincode: first.pincode,
           note: form.getValues("note"),
         })
@@ -228,15 +237,17 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
             error={errors.address?.message}
             {...form.register("address")}
           />
-          <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
           <TextField
             label="Pincode" kind="pincode"
             inputMode="numeric"
             autoComplete="postal-code"
             maxLength={6}
+            hint={area.hint}
             error={errors.pincode?.message}
             {...form.register("pincode")}
           />
+          <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+          <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
           <TextAreaField
             label="Note (optional)" maxLength={LIMITS.note.max}
             rows={2}
@@ -273,15 +284,18 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
                   {l.quantity}
                 </span>
               </div>
-              <span data-ui="store/CheckoutForm/span-5" className="flex-1 text-sm font-medium">
+              <span data-ui="store/CheckoutForm/span-5" className="min-w-0 flex-1 text-sm font-medium">
                 <span data-ui="store/CheckoutForm/span-6" className="line-clamp-2">{l.name}</span>
+                <span data-ui="store/CheckoutForm/span-7" className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                  {formatPrice(l.price)} × {l.quantity}
+                </span>
                 {l.fees.length > 0 && (
-                  <span data-ui="store/CheckoutForm/span-7" className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                  <span data-ui="store/CheckoutForm/span-8" className="mt-0.5 block text-xs font-normal text-muted-foreground">
                     + {l.fees.map((f) => f.label.toLowerCase()).join(", ")} (once)
                   </span>
                 )}
               </span>
-              <span data-ui="store/CheckoutForm/span-8" className="text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
+              <span data-ui="store/CheckoutForm/span-9" className="shrink-0 text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
             </li>
           ))}
         </ul>
@@ -289,7 +303,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
           <p data-ui="store/CheckoutForm/p-4" className="text-xs text-destructive">Unavailable items were left out of this order.</p>
         )}
         <FreeShippingBar subtotal={charges.subtotal} />
-        <PriceBreakdown {...charges} totalLabel="Total to pay" className="border-t pt-4" />
+        <PriceBreakdown {...charges} itemCount={itemCount} totalLabel="Total to pay" className="border-t pt-4" />
         {serverError && (
           <p data-ui="store/CheckoutForm/p-5" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {serverError}
@@ -307,15 +321,15 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
         <div data-ui="store/CheckoutForm/div-3" className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
           <p data-ui="store/CheckoutForm/p-flex" className="flex items-start gap-2">
             <BanIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span data-ui="store/CheckoutForm/span-9">
-              <span data-ui="store/CheckoutForm/span-10" className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
+            <span data-ui="store/CheckoutForm/span-10">
+              <span data-ui="store/CheckoutForm/span-11" className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
               right after placing the order.
             </span>
           </p>
           <p data-ui="store/CheckoutForm/p-6" className="pl-5.5">Your order is confirmed once we verify the payment.</p>
           {shop.unpaidOrderExpiryHours > 0 && (
             <p data-ui="store/CheckoutForm/p-7" className="pl-5.5">
-              Pay within <span data-ui="store/CheckoutForm/span-11" className="font-semibold text-foreground">{describeHours(shop.unpaidOrderExpiryHours)}</span> of ordering. Unpaid orders are cancelled automatically.
+              Pay within <span data-ui="store/CheckoutForm/span-12" className="font-semibold text-foreground">{describeHours(shop.unpaidOrderExpiryHours)}</span> of ordering. Unpaid orders are cancelled automatically.
             </p>
           )}
         </div>

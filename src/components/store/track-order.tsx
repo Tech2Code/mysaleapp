@@ -2,14 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HashIcon, Loader2Icon, PackageSearchIcon, PhoneIcon, SearchIcon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
+import { AnimatePresence } from "motion/react"
+import * as m from "motion/react-m"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
-import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
@@ -67,7 +67,7 @@ function EmptyState() {
 
 function ResultSkeleton() {
   return (
-    <div data-ui="store/ResultSkeleton" className="space-y-5 rounded-3xl border bg-card p-6 sm:p-8" aria-hidden>
+    <div data-ui="store/ResultSkeleton" className="h-full space-y-5 rounded-3xl border bg-card p-6 sm:p-8" aria-hidden>
       <div data-ui="store/ResultSkeleton/div-flex" className="flex justify-between">
         <Skeleton data-ui="store/ResultSkeleton/Skeleton" className="h-10 w-48 rounded-xl" />
         <Skeleton data-ui="store/ResultSkeleton/Skeleton-2" className="h-8 w-24 rounded-full" />
@@ -94,6 +94,7 @@ export function TrackOrder() {
   useBlockWhile(pending)
   const [query, setQuery] = useState<{ code: string; phoneLast4: string } | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
+  const itemCount = result?.items.reduce((n, i) => n + i.quantity, 0) ?? 0
 
   const form = useForm<TrackInput>({
     resolver: zodResolver(trackOrderSchema),
@@ -133,9 +134,9 @@ export function TrackOrder() {
   }
 
   return (
-    <div data-ui="store/TrackOrder" className="grid items-start gap-x-6 gap-y-1 lg:grid-cols-[380px_1fr] lg:gap-8">
+    <div data-ui="store/TrackOrder" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
       {/* Left: find your order */}
-      <form data-ui="store/TrackOrder/form" onSubmit={onSubmit} noValidate className="space-y-2 rounded-3xl border bg-card p-6 sm:p-7 lg:sticky-store">
+      <form data-ui="store/TrackOrder/form" onSubmit={onSubmit} noValidate className={`flex flex-col gap-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
         <div data-ui="store/TrackOrder/div">
           <h2 data-ui="store/TrackOrder/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
           <p data-ui="store/TrackOrder/p" className="mt-1 text-sm text-muted-foreground">Takes 5 seconds. No login needed.</p>
@@ -164,7 +165,7 @@ export function TrackOrder() {
             {error}
           </p>
         )}
-        <div data-ui="store/TrackOrder/div-2" className="border-t pt-4 text-sm">
+        <div data-ui="store/TrackOrder/div-2" className="mt-auto border-t pt-4 text-sm">
           <p data-ui="store/TrackOrder/p-3" className="text-muted-foreground">Can&apos;t find your order code?</p>
           <a data-ui="store/TrackOrder/a-ask-us-on-whatsapp"
             href={shopWhatsappLink(shop, "Hi! I need help finding my order.")}
@@ -178,14 +179,14 @@ export function TrackOrder() {
       </form>
 
       {/* Right: order details */}
-      <div data-ui="store/TrackOrder/div-3" ref={resultRef} aria-live="polite" className="scroll-mt-24">
+      <div data-ui="store/TrackOrder/div-3" ref={resultRef} aria-live="polite" data-reveal-top className="scroll-mt-24 *:h-full">
         <AnimatePresence mode="wait">
           {pending ? (
-            <motion.div data-ui="store/TrackOrder/m-div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <m.div data-ui="store/TrackOrder/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ResultSkeleton />
-            </motion.div>
+            </m.div>
           ) : result ? (
-            <motion.section data-ui="store/TrackOrder/m-section"
+            <m.section data-ui="store/TrackOrder/m.section"
               key={result.orderCode}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -210,7 +211,9 @@ export function TrackOrder() {
               {result.cancellation && (
                 <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
               )}
-              {query && (
+              {/* Guests only get what they can act on (pay / "we're verifying"). The receipt, UTR and the priced item list
+                  need no code+4-digits lookup to be readable by anyone, so they stay in the signed-in order page. */}
+              {query && result.paymentStatus !== "paid" && (
                 <PaymentPanel
                   orderCode={result.orderCode}
                   phoneLast4={query.phoneLast4}
@@ -245,7 +248,25 @@ export function TrackOrder() {
                   />
                 </div>
               )}
-              <OrderSummary order={result} bare />
+              <section data-ui="store/TrackOrder/section-items-in-this-order" aria-label="Items in this order" className="border-t pt-5 text-sm">
+                <h3 data-ui="store/TrackOrder/h3-item" className="font-sans font-semibold">
+                  {itemCount} item{itemCount === 1 ? "" : "s"} in this order
+                </h3>
+                <ul data-ui="store/TrackOrder/ul" className="mt-2 space-y-1 text-muted-foreground">
+                  {result.items.map((i) => (
+                    <li data-ui="store/TrackOrder/li-flex" key={i.productId} className="flex gap-2">
+                      <span data-ui="store/TrackOrder/span" className="min-w-0 flex-1 truncate leading-normal">{i.name}</span>
+                      <span data-ui="store/TrackOrder/span-2" className="shrink-0">× {i.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p data-ui="store/TrackOrder/p-7" className="mt-3 text-xs text-muted-foreground">
+                  Need the invoice or payment details?{" "}
+                  <Link data-ui="store/TrackOrder/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Sign in and open My orders
+                  </Link>
+                </p>
+              </section>
               {query && result.delivery && (
                 <DeliveryEditor
                   orderCode={result.orderCode}
@@ -255,11 +276,28 @@ export function TrackOrder() {
                   onChanged={(newLast4) => void refetch(newLast4)}
                 />
               )}
-            </motion.section>
+              {/* Guests don't get the address back (anyone with the code + 4 digits could read it): only the city,
+                  and a way to change it while the order is still pending. */}
+              {!result.delivery && result.status === "pending" && (
+                <p data-ui="store/TrackOrder/p-8" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
+                  Delivering to <span data-ui="store/TrackOrder/span-3" className="font-semibold text-foreground">{result.city}</span>. To change the address,{" "}
+                  <a
+                    data-ui="store/TrackOrder/a-message-us-on-whatsapp"
+                    href={shopWhatsappLink(shop, `Hi! I want to change the delivery address of my order ${result.orderCode}.`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-foreground underline underline-offset-4"
+                  >
+                    message us on WhatsApp
+                  </a>{" "}
+                  or sign in.
+                </p>
+              )}
+            </m.section>
           ) : (
-            <motion.div data-ui="store/TrackOrder/m-div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+            <m.div data-ui="store/TrackOrder/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
               <EmptyState />
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

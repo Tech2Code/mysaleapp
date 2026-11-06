@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const shop = await getStoreSettings()
   return pageMetadata(shop, {
     title: "Our story",
-    description: `${shop.shopName} brings you handmade gifts and decor crafted by artisans${shop.city ? ` in ${shop.city}` : ""}, India.`,
+    description: shop.description,
     path: "/about",
   })
 }

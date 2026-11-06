@@ -54,7 +54,7 @@ export default async function ProductOgImage({ params }: { params: Promise<{ slu
           {product && (
             <div style={{ fontSize: 52, fontWeight: 700, marginTop: 28, color: "#b85c38" }}>{formatPrice(product.price)}</div>
           )}
-          <div style={{ fontSize: 26, marginTop: 28, color: "#6b5348" }}>Handmade · Pay securely by UPI</div>
+          <div style={{ fontSize: 26, marginTop: 28, color: "#6b5348" }}>Pay securely by UPI</div>
         </div>
       </div>
     ),

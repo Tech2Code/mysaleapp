@@ -5,7 +5,7 @@
  *  - Page navigations: network-first, fall back to the cached page, then /offline.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v1"
+const VERSION = "v2"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
@@ -26,7 +26,9 @@ self.addEventListener("activate", (event) => {
   )
 })
 
-const PRIVATE = ["/admin", "/account", "/auth", "/api", "/checkout", "/order-placed"]
+const PRIVATE = ["/admin", "/account", "/auth", "/api", "/checkout", "/order-placed", "/track", "/cart", "/wishlist", "/login"]
+// Only public catalogue pages are kept for offline use; anything personalised is never stored.
+const CACHEABLE_PAGE = /^\/($|products|category|about|contact)/
 
 async function trimCache(name, max) {
   const cache = await caches.open(name)
@@ -44,7 +46,7 @@ self.addEventListener("fetch", (event) => {
   // React Server Component payloads are handled by Next.js itself.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return
 
-  if (url.pathname.startsWith("/_next/static") || url.pathname.startsWith("/icons/")) {
+  if (url.pathname.startsWith("/_next/static")) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
@@ -84,7 +86,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res.ok) {
+          if (res.ok && CACHEABLE_PAGE.test(url.pathname) && !/no-store|private/.test(res.headers.get("Cache-Control") || "")) {
             const copy = res.clone()
             caches.open(PAGES_CACHE).then((c) => {
               c.put(request, copy)

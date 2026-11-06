@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cancelOrder } from "@/features/orders/actions"
 import { CANCELLABLE_BY_CUSTOMER, CANCEL_REASONS } from "@/features/orders/transitions"
 import type { OrderStatus, PaymentStatus } from "@/features/orders/types"
+import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 
 /**
  * "Cancel order" for customers. Available until the order is packed; after that it points to WhatsApp.
@@ -38,6 +40,7 @@ export function CancelOrder({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  useRevealOnChange(status)
 
   if (status === "cancelled" || status === "delivered") return null
 
@@ -54,12 +57,12 @@ export function CancelOrder({
   }
 
   const paid = paymentStatus === "paid" || paymentStatus === "submitted"
-  const reasonText = reason === "Other" ? detail.trim() || "Other" : detail.trim() ? `${reason}: ${detail.trim()}` : reason
+  const needsDetail = otherNeedsDetail(reason, detail)
 
   const submit = () =>
     startTransition(async () => {
       setError(null)
-      const res = await cancelOrder({ code: orderCode, phoneLast4, reason: reasonText.slice(0, 300) })
+      const res = await cancelOrder({ code: orderCode, phoneLast4, reason, detail: detail.trim() || undefined })
       if (!res.ok) {
         setError(res.error)
         return
@@ -97,11 +100,13 @@ export function CancelOrder({
             options={CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
           />
           <TextAreaField
-            label="Anything else? (optional)"
+            label={reason === OTHER_REASON ? "Please tell us the reason" : "Anything else? (optional)"}
+            required={reason === OTHER_REASON}
             rows={2}
             maxLength={200}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
+            error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
           />
           {error && (
             <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
@@ -113,7 +118,7 @@ export function CancelOrder({
           <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Keep order
           </Button>
-          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="rounded-full">
+          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Yes, cancel order
           </Button>
         </DialogFooter>

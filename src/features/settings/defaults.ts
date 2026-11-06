@@ -19,6 +19,15 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     "wall art",
   ],
   announcement: null,
+  highlightLine: "Handmade by skilled artisans",
+  heroBadge: "Handmade in India · Made to be gifted",
+  priceNote: null,
+
+  gstRegistered: false,
+  gstin: null,
+  gstRate: 0,
+  legalName: null,
+  businessAddress: null,
 
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "919999999999",
   email: null,

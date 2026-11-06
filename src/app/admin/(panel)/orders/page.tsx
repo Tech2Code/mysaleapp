@@ -72,7 +72,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
                     <StatusBadge status={o.status} />
                   </TableCell>
                   <TableCell data-ui="page:/admin/orders/TableCell-hidden-2" className="hidden lg:table-cell">
-                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} />
+                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                   </TableCell>
                   <TableCell data-ui="page:/admin/orders/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
                   <TableCell data-ui="page:/admin/orders/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
@@ -90,6 +90,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           <Link data-ui="page:/admin/orders/Link-previous"
             href={pageHref(page - 1)}
             aria-disabled={page <= 1}
+            tabIndex={page <= 1 ? -1 : undefined}
             className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page <= 1 && "pointer-events-none opacity-50")}
           >
             <ChevronLeftIcon /> Previous
@@ -100,6 +101,7 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
           <Link data-ui="page:/admin/orders/Link-next"
             href={pageHref(page + 1)}
             aria-disabled={page >= pages}
+            tabIndex={page >= pages ? -1 : undefined}
             className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page >= pages && "pointer-events-none opacity-50")}
           >
             Next <ChevronRightIcon />

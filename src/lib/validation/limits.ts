@@ -37,6 +37,12 @@ export const LIMITS = {
   shopDescription: { min: 10, max: 300 },
   keywords: { max: 400 },
   announcement: { max: 160 },
+  highlightText: { min: 2, max: 60 },
+  priceNote: { min: 2, max: 80 },
+  legalName: { max: 100 },
+  businessAddress: { max: 250 },
+  /** GST rate in percent (India slabs go up to 28). */
+  gstRate: { max: 28 },
   orderPrefix: { min: 1, max: 5 },
   upiId: { max: 100 },
   payeeName: { min: 2, max: 60 },

@@ -24,7 +24,7 @@ export async function addAddressFromOrder(
     const key = (address: string, pincode: string) => `${address.trim().toLowerCase()}|${pincode}`
     if (rows.some((r) => key(r.address, r.pincode) === key(a.address, a.pincode))) return
 
-    await supabase.from("addresses").insert({
+    const { error } = await supabase.from("addresses").insert({
       user_id: userId,
       label: rows.length === 0 ? "Home" : "Other",
       full_name: a.name,
@@ -34,7 +34,9 @@ export async function addAddressFromOrder(
       pincode: a.pincode,
       is_default: rows.length === 0,
     })
-  } catch {
-    // ignore: the address book is a convenience
+    if (error) console.warn(`[addresses] saving order address failed (${error.code ?? "error"})`)
+  } catch (e) {
+    // The address book is a convenience; log without PII and carry on.
+    console.warn("[addresses] saving order address threw:", e instanceof Error ? e.name : "unknown error")
   }
 }

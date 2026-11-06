@@ -3,7 +3,7 @@
 import { ChevronDownIcon, Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, TextAreaField, TextField } from "@/components/form"
 import { PaymentBadge } from "@/components/shared/payment-badge"
@@ -14,6 +14,7 @@ import {
   PAYMENT_METHODS,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
+  canVerifyPayment,
   type OrderPayment,
   type OrderStatus,
   type PaymentStatus,
@@ -76,6 +77,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
     },
   })
   const { errors, isDirty } = form.formState
+  const statusNow = useWatch({ control: form.control, name: "status" })
 
   const notifyUrl = (result: "paid" | "failed", amount?: number | null, why?: string | null) =>
     whatsappLink(
@@ -130,13 +132,13 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   )
 
   const needsVerification = order.paymentStatus === "submitted"
-  const canVerify = order.status !== "cancelled" && order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
+  const canVerify = canVerifyPayment(order)
 
   return (
     <div data-ui="admin/PaymentControl" className="space-y-5">
       <div data-ui="admin/PaymentControl/div-flex" className="flex flex-wrap items-center justify-between gap-2">
         <h2 data-ui="admin/PaymentControl/h2-payment" className="font-sans text-lg font-semibold">Payment</h2>
-        <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} />
+        <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} refundedAmount={order.refundedAmount} paidAmount={order.paymentAmount ?? order.total} />
       </div>
 
       <dl data-ui="admin/PaymentControl/dl-grid" className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -166,8 +168,8 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                 {
                   status: "refunded",
                   method: order.paymentMethod ?? "",
-                  reference: order.paymentReference ?? "",
-                  amount: String(order.paymentAmount ?? order.total),
+                  reference: "",
+                  amount: "", // blank = refund everything still owed (works after a partial refund too)
                   note: "Refund sent",
                 },
                 () => toast.success("Marked as refunded")
@@ -235,11 +237,15 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             {...form.register("reference")}
           />
           <TextField
-            label="Amount received" kind="money"
+            label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
             fieldSize="md"
             inputMode="decimal"
             leading="₹"
-            hint="Leave blank to use the order total when marking as paid."
+            hint={
+              statusNow === "refunded"
+                ? "Blank = refund everything still owed. A smaller amount records a partial refund."
+                : "Leave blank to use the order total when marking as paid."
+            }
             error={errors.amount?.message}
             {...form.register("amount")}
           />

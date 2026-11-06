@@ -1,7 +1,7 @@
 import { CreditCardIcon } from "lucide-react"
 import Link from "next/link"
 import { ProductImage } from "@/components/store/product-image"
-import { paymentDisplay, type OrderItem, type OrderPayment, type OrderPricing, type OrderStatus } from "@/features/orders/types"
+import { isAwaitingPayment, paymentDisplay, type OrderItem, type OrderPayment, type OrderPricing, type OrderStatus } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { PAYMENT_TONE_STYLE } from "./payment-badge"
@@ -26,7 +26,10 @@ export function OrderSummary({
   className?: string
 }) {
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0)
-  const display = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod)
+  const display = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod, {
+    refundedAmount: order.refundedAmount,
+    paidAmount: order.paymentAmount ?? order.total,
+  })
   const pay = PAYMENT_TONE_STYLE[display.tone]
   const PayIcon = pay.icon
   const linkProps = openLinksInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {}
@@ -85,7 +88,7 @@ export function OrderSummary({
           {display.label}
         </span>
       </div>
-      {order.status !== "cancelled" && (order.paymentStatus === "pending" || order.paymentStatus === "failed") && (
+      {isAwaitingPayment(order) && (
         <p data-ui="shared/OrderSummary/p-3" className="mt-2 text-xs text-muted-foreground">
           Your order is confirmed after the payment is verified. Cash on delivery isn&apos;t available.
         </p>

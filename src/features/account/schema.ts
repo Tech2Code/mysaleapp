@@ -1,3 +1,4 @@
+// Customer account: validation for the shopper's own profile. Admin login/password schemas live in features/auth/account-schema.ts.
 import { z } from "zod"
 import { v } from "@/lib/validation"
 

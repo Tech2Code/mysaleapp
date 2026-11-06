@@ -4,7 +4,7 @@
 export function SuccessTick() {
   return (
     <span data-ui="shared/SuccessTick" aria-hidden className="tick-pop grid size-7 place-items-center rounded-full bg-success-solid">
-      <svg viewBox="0 0 24 24" className="size-4.5" fill="none">
+      <svg data-ui="shared/SuccessTick/svg" viewBox="0 0 24 24" className="size-4.5" fill="none">
         <path
           className="tick-draw"
           d="M6 12.5 L10.5 17 L18 8"

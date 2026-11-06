@@ -83,7 +83,7 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
             </div>
           )}
         </dl>
-        <div data-ui="admin/SalesChart/div-group" role="group" aria-label="Chart shows" className="inline-flex h-9 items-center rounded-full bg-muted p-1">
+        <div data-ui="admin/SalesChart/div-chart-shows" role="group" aria-label="Chart shows" className="inline-flex h-9 items-center rounded-full bg-muted p-1">
           {METRICS.map((m) => (
             <button
               data-ui="admin/SalesChart/button"
@@ -109,17 +109,17 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
       ) : (
         <div data-ui="admin/SalesChart/div-flex-2" className="flex gap-2">
           {/* left axis */}
-          <div data-ui="admin/SalesChart/div-flex-3" className="relative h-56 w-11 shrink-0 text-right text-[11px] text-muted-foreground tabular-nums" aria-hidden>
+          <div data-ui="admin/SalesChart/div-relative" className="relative h-56 w-11 shrink-0 text-right text-[11px] text-muted-foreground tabular-nums" aria-hidden>
             {ticks.map((t) => (
-              <span data-ui="admin/SalesChart/span-2" key={t} className="absolute right-0 -translate-y-1/2 leading-none" style={{ top: `${(1 - t) * 100}%` }}>
+              <span data-ui="admin/SalesChart/span-absolute" key={t} className="absolute right-0 -translate-y-1/2 leading-none" style={{ top: `${(1 - t) * 100}%` }}>
                 {compact(top * t, money)}
               </span>
             ))}
           </div>
 
-          <div data-ui="admin/SalesChart/div-2" className="min-w-0 flex-1">
+          <div data-ui="admin/SalesChart/div-4" className="min-w-0 flex-1">
             <div
-              data-ui="admin/SalesChart/div-application"
+              data-ui="admin/SalesChart/div-relative-2"
               className="relative h-56 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
               tabIndex={0}
               role="application"
@@ -130,22 +130,22 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
             >
               {/* gridlines */}
               {ticks.map((t) => (
-                <div data-ui="admin/SalesChart/div-3" key={t} aria-hidden className={cn("absolute inset-x-0 border-t", t === 0 ? "border-border" : "border-dashed border-border/70")} style={{ top: `${(1 - t) * 100}%` }} />
+                <div data-ui="admin/SalesChart/div-5" key={t} aria-hidden className={cn("absolute inset-x-0 border-t", t === 0 ? "border-border" : "border-dashed border-border/70")} style={{ top: `${(1 - t) * 100}%` }} />
               ))}
               {/* average line */}
               {average > 0 && (
-                <div data-ui="admin/SalesChart/div-4" aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-primary/60" style={{ bottom: `${avgPct}%` }}>
-                  <span data-ui="admin/SalesChart/span-3" className="absolute right-0 -translate-y-full rounded-sm bg-card/80 px-1 text-[10px] font-medium text-primary">avg</span>
+                <div data-ui="admin/SalesChart/div-absolute" aria-hidden className="pointer-events-none absolute inset-x-0 border-t border-dashed border-primary/60" style={{ bottom: `${avgPct}%` }}>
+                  <span data-ui="admin/SalesChart/span-absolute-2" className="absolute right-0 -translate-y-full rounded-sm bg-card/80 px-1 text-[11px] font-medium text-primary">avg</span>
                 </div>
               )}
               {/* bars */}
-              <div data-ui="admin/SalesChart/div-flex-4" className="absolute inset-0 flex items-end gap-[3px]">
+              <div data-ui="admin/SalesChart/div-flex-3" className="absolute inset-0 flex items-end gap-[3px]">
                 {points.map((p, i) => {
                   const v = p[metric]
                   const isActive = shown === i
                   return (
                     <div
-                      data-ui="admin/SalesChart/div-5"
+                      data-ui="admin/SalesChart/div-flex-4"
                       key={`${p.label}-${i}`}
                       className="group relative flex h-full min-w-0 flex-1 items-end"
                       onMouseEnter={() => setActive(i)}
@@ -162,7 +162,7 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                       />
                       {isActive && (
                         <div
-                          data-ui="admin/SalesChart/div-status"
+                          data-ui="admin/SalesChart/div-absolute-2"
                           role="status"
                           className="pointer-events-none absolute z-10 w-max max-w-44 rounded-lg bg-foreground px-3 py-2 text-xs text-background shadow-lg"
                           style={{
@@ -185,8 +185,8 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
             {/* x labels */}
             <div data-ui="admin/SalesChart/div-flex-5" className="mt-2 flex h-4 gap-[3px] text-[11px] text-muted-foreground" aria-hidden>
               {points.map((p, i) => (
-                <span data-ui="admin/SalesChart/span-4" key={`${p.label}-${i}`} className="relative min-w-0 flex-1">
-                  {i % every === 0 && <span data-ui="admin/SalesChart/span-5" className="absolute left-0 whitespace-nowrap">{p.label}</span>}
+                <span data-ui="admin/SalesChart/span-relative" key={`${p.label}-${i}`} className="relative min-w-0 flex-1">
+                  {i % every === 0 && <span data-ui="admin/SalesChart/span-absolute-3" className="absolute left-0 whitespace-nowrap">{p.label}</span>}
                 </span>
               ))}
             </div>

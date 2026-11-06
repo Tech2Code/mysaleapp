@@ -28,7 +28,8 @@ export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === 
 /** When the order was delivered: the latest "delivered" entry in its history. */
 export function deliveredAt(history: StatusHistoryEntry[]): string | null {
   const times = history.filter((h) => h.status === "delivered").map((h) => h.changedAt)
-  return times.length ? times.reduce((a, b) => (a > b ? a : b)) : null
+  // Compare as instants, not strings: "…Z" and "…+00:00" (or different fraction digits) don't sort as text.
+  return times.length ? times.reduce((a, b) => (Date.parse(a) > Date.parse(b) ? a : b)) : null
 }
 
 /**

@@ -19,7 +19,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   const s = parsed.data
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase
+  const { data: saved, error } = await supabase
     .from("store_settings")
     .update({
       shop_name: s.shopName,
@@ -27,6 +27,14 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       description: s.description,
       seo_keywords: s.keywords || null,
       announcement: s.announcement,
+      highlight_line: s.highlightLine,
+      hero_badge: s.heroBadge,
+      price_note: s.priceNote,
+      gst_registered: s.gstRegistered,
+      gstin: s.gstin,
+      gst_rate: s.gstRate,
+      legal_name: s.legalName,
+      business_address: s.businessAddress,
       whatsapp_number: s.whatsappNumber,
       contact_email: s.email,
       // a separate calling number is stored only when the toggle is off
@@ -45,13 +53,13 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       upi_payee_name: s.upiPayeeName,
     })
     .eq("id", true)
+    .select("id")
 
   if (error) {
-    if (["42P01", "PGRST205", "42703", "PGRST204"].includes(error.code)) {
-      return fail("Settings columns are missing. Apply the latest database migrations (npm run db:push).")
-    }
     return fail("Could not save settings.")
   }
+
+  if (!saved?.length) return fail("Settings row not found.")
 
   // The name, contact details etc. appear on every page, so refresh the whole site.
   updateTag(SETTINGS_TAG)

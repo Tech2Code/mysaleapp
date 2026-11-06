@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 
 const BUCKET = "product-images"
 const MAX_IMAGES = 8
+const MAX_INPUT_BYTES = 25 * 1024 * 1024 // refuse huge originals before compressing in the browser
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/avif"]
 
 /**
@@ -17,7 +18,14 @@ const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/avif"]
  * them straight to Supabase Storage. Storage policies only allow admins to write.
  * The first image is used as the cover photo.
  */
-export function ImageUploader({ value, onChange }: { value: string[]; onChange: (urls: string[]) => void }) {
+export function ImageUploader({
+  value,
+  onChange,
+}: {
+  value: string[]
+  /** Accepts a new list, or an updater that receives the CURRENT list (uploads finish later than they start). */
+  onChange: (urls: string[] | ((current: string[]) => string[])) => void
+}) {
   const inputId = useId()
   const [uploading, setUploading] = useState(0)
 
@@ -26,8 +34,10 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
     if (!files?.length || !supabase) return
 
     const room = MAX_IMAGES - value.length
-    const picked = Array.from(files).filter((f) => ACCEPTED.includes(f.type)).slice(0, room)
-    if (picked.length < files.length) toast.warning(`Only JPG/PNG/WebP images, up to ${MAX_IMAGES} per product.`)
+    const all = Array.from(files)
+    if (all.some((f) => f.size > MAX_INPUT_BYTES)) toast.warning("Photos over 25 MB were skipped.")
+    const picked = all.filter((f) => ACCEPTED.includes(f.type) && f.size <= MAX_INPUT_BYTES).slice(0, room)
+    if (picked.length < all.length) toast.warning(`Only JPG, PNG, WebP or AVIF photos, up to ${MAX_IMAGES} per product.`)
 
     setUploading(picked.length)
     const urls: string[] = []
@@ -54,14 +64,17 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
         setUploading((n) => n - 1)
       }
     }
-    if (urls.length) onChange([...value, ...urls])
+    if (urls.length) onChange((current) => [...current, ...urls].slice(0, MAX_IMAGES))
   }
 
   const move = (from: number, to: number) => {
-    const next = [...value]
-    const [item] = next.splice(from, 1)
-    next.splice(to, 0, item)
-    onChange(next)
+    onChange((current) => {
+      if (from < 0 || to < 0 || from >= current.length || to >= current.length) return current
+      const next = [...current]
+      const [item] = next.splice(from, 1)
+      next.splice(to, 0, item)
+      return next
+    })
   }
 
   return (
@@ -87,7 +100,7 @@ export function ImageUploader({ value, onChange }: { value: string[]; onChange: 
               </button>
               <button data-ui="admin/ImageUploader/button-remove-photo"
                 type="button"
-                onClick={() => onChange(value.filter((u) => u !== url))}
+                onClick={() => onChange((current) => current.filter((u) => u !== url))}
                 className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
                 aria-label="Remove photo"
               >

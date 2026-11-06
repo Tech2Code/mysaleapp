@@ -1,3 +1,4 @@
+// Admin account: login email / password schemas. The customer's profile schema lives in features/account/schema.ts.
 import { z } from "zod"
 import { v } from "@/lib/validation"
 

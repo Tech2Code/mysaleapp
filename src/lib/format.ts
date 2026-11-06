@@ -8,6 +8,13 @@ export function formatPrice(value: number): string {
   return inr.format(value)
 }
 
+const inrExact = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+/** Rupees with paise, for invoices where tax is split out (formatPrice rounds to whole rupees). */
+export function formatMoney(value: number): string {
+  return inrExact.format(value)
+}
+
 export function discountPercent(price: number, compareAt: number | null): number | null {
   if (!compareAt || compareAt <= price) return null
   return Math.round(((compareAt - price) / compareAt) * 100)

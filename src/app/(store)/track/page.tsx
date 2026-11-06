@@ -11,6 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Track your order",
     description: `Check the status of your ${shop.shopName} order with your order code.`,
     path: "/track",
+    noIndex: true,
   })
 }
 
