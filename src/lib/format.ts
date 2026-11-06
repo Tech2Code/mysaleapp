@@ -30,24 +30,51 @@ export function slugify(input: string): string {
     .slice(0, 80)
 }
 
+const IST = "Asia/Kolkata"
+
 const dateFmt = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
   month: "short",
   year: "numeric",
+  timeZone: IST,
 })
+
 const dateTimeFmt = new Intl.DateTimeFormat("en-IN", {
   day: "numeric",
   month: "short",
   hour: "numeric",
   minute: "2-digit",
+  hour12: true,
+  timeZone: IST,
 })
 
-export function formatDate(iso: string): string {
-  return dateFmt.format(new Date(iso))
+/** Parse a date-like input safely into a Date in Asia/Kolkata context. */
+function parseDateInput(input: string | Date | number): Date {
+  if (typeof input === "object" && input instanceof Date) return input
+  if (typeof input === "string") {
+    const trimmed = input.trim()
+    // "2026-11-06" -> treat as IST midnight
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}T00:00:00+05:30`)
+    }
+    // "2026-11-06T00:00:00" without timezone offset -> treat as IST
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}+05:30`)
+    }
+  }
+  return new Date(input)
 }
 
-export function formatDateTime(iso: string): string {
-  return dateTimeFmt.format(new Date(iso))
+export function formatDate(iso: string | Date | number | null | undefined): string {
+  if (!iso) return ""
+  const d = parseDateInput(iso)
+  return Number.isNaN(d.getTime()) ? "" : dateFmt.format(d)
+}
+
+export function formatDateTime(iso: string | Date | number | null | undefined): string {
+  if (!iso) return ""
+  const d = parseDateInput(iso)
+  return Number.isNaN(d.getTime()) ? "" : dateTimeFmt.format(d)
 }
 
 /** "919876543210" → "+91 98765 43210" (other lengths: "+" and the digits). */
