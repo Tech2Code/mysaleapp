@@ -3,6 +3,7 @@
 import { XIcon } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react"
+import { OrdersTableSkeleton } from "@/components/admin/admin-skeletons"
 import { SearchField } from "@/components/form"
 import { isOrderView, ORDER_VIEWS } from "@/features/orders/views"
 import { ORDER_STATUSES, STATUS_META } from "@/features/orders/types"
@@ -16,24 +17,6 @@ const PAYMENT_TABS = [
 ]
 
 type Filters = { status?: string; payment?: string; view?: string; q?: string }
-
-function ResultsSkeleton() {
-  return (
-    <div data-ui="admin/ResultsSkeleton" className="overflow-hidden rounded-2xl border bg-card" aria-hidden>
-      {Array.from({ length: 6 }, (_, i) => (
-        <div data-ui="admin/ResultsSkeleton/div-flex" key={i} className="flex items-center gap-4 border-b p-4 last:border-0">
-          <div data-ui="admin/ResultsSkeleton/div" className="h-4 w-20 animate-pulse rounded bg-muted" />
-          <div data-ui="admin/ResultsSkeleton/div-2" className="flex-1 space-y-2">
-            <div data-ui="admin/ResultsSkeleton/div-3" className="h-3.5 w-1/3 animate-pulse rounded bg-muted" />
-            <div data-ui="admin/ResultsSkeleton/div-4" className="h-3 w-1/4 animate-pulse rounded bg-muted/70" />
-          </div>
-          <div data-ui="admin/ResultsSkeleton/div-5" className="h-6 w-20 animate-pulse rounded-full bg-muted" />
-          <div data-ui="admin/ResultsSkeleton/div-6" className="h-4 w-14 animate-pulse rounded bg-muted" />
-        </div>
-      ))}
-    </div>
-  )
-}
 
 /**
  * Filters + results for the admin orders list.
@@ -159,7 +142,7 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
         </div>
       </div>
 
-      <div data-ui="admin/OrdersBrowser/div-2" aria-busy={pending}>{pending ? <ResultsSkeleton /> : children}</div>
+      <div data-ui="admin/OrdersBrowser/div-2" aria-busy={pending}>{pending ? <OrdersTableSkeleton /> : children}</div>
     </div>
   )
 }

@@ -21,6 +21,7 @@ import { categorySchema, type CategoryInput, type CategoryValues } from "@/featu
 import type { Category } from "@/features/products/types"
 import { slugify } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type Row = Category & { productCount: number }
 
@@ -37,6 +38,7 @@ function CategoryDialog({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const form = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
     values: {
@@ -115,7 +117,8 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
   const [editing, setEditing] = useState<Row | null>(null)
   const [open, setOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [, startTransition] = useTransition()
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const nextSort = categories.reduce((m, c) => Math.max(m, c.sort), 0) + 1
 
   const remove = (c: Row) => {

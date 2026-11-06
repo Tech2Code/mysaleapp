@@ -1,7 +1,5 @@
-import { PanelSkeleton } from "@/components/admin/panel-skeleton"
+import { SettingsPageSkeleton } from "@/components/admin/admin-skeletons"
 
-// Gives this page its own <Suspense> boundary, so navigating here shows a skeleton instantly
-// while the data loads (Next.js "instant navigation" rule).
 export default function Loading() {
-  return <PanelSkeleton />
+  return <SettingsPageSkeleton />
 }

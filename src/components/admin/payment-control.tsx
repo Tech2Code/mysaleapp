@@ -22,6 +22,7 @@ import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { buildPaymentMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type PaymentOrder = OrderPayment & {
   id: string
@@ -61,6 +62,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const router = useRouter()
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState("")
 

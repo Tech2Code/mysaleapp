@@ -13,6 +13,7 @@ import { changeAdminPassword, requestAdminEmailChange, updateAdminProfile } from
 import { changePasswordSchema, emailSchema, profileSchema } from "@/features/auth/account-schema"
 import type { ActionResult } from "@/lib/action-result"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -29,6 +30,7 @@ function Card({ title, description, children }: { title: string; description: st
 /** Run a server action; show field errors from the server next to the fields. */
 function useSubmit<T extends Record<string, string>>(setError: (name: keyof T & string, message: string) => void) {
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const run = (action: () => Promise<ActionResult>, onOk: () => void) =>
     startTransition(async () => {
       const res = await action()

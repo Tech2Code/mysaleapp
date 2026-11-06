@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus } from "@/features/orders/types"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type Row = { qty: string; restock: boolean }
 
@@ -53,6 +54,7 @@ export function AdminReturnOrder({
   const [refund, setRefund] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   const left = useMemo(() => remainingByProduct(items, returns), [items, returns])
   // one line per product (an order can list a product once, but be safe)

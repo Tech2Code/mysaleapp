@@ -2,7 +2,7 @@ import { CheckCircle2Icon, HandHeartIcon, InfoIcon, ShieldCheckIcon, TruckIcon }
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { ProductDetailSkeleton } from "@/components/store/store-skeletons"
 import { JsonLd } from "@/components/shared/json-ld"
 import { Accordion, AccordionItem } from "@/components/shared/accordion"
 import { FadeIn } from "@/components/shared/motion"
@@ -38,25 +38,11 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
   })
 }
 
-function ProductSkeleton() {
-  return (
-    <div data-ui="page:/products/[slug]#ProductSkeleton" className="container-page grid gap-10 pt-10 lg:grid-cols-2 lg:gap-16" aria-hidden>
-      <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton" className="aspect-4/5 rounded-3xl" />
-      <div data-ui="page:/products/[slug]#ProductSkeleton/div" className="space-y-4">
-        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-2" className="h-4 w-24" />
-        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-3" className="h-12 w-3/4" />
-        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-4" className="h-8 w-40" />
-        <Skeleton data-ui="page:/products/[slug]#ProductSkeleton/Skeleton-5" className="h-40 rounded-3xl" />
-      </div>
-    </div>
-  )
-}
-
 // The page itself only forwards the `params` promise. Reading it inside <Suspense>
 // lets Next.js show this shell instantly while the product streams in.
 export default function ProductPage({ params }: PageProps<"/products/[slug]">) {
   return (
-    <Suspense fallback={<ProductSkeleton />}>
+    <Suspense fallback={<ProductDetailSkeleton />}>
       <ProductDetails params={params} />
     </Suspense>
   )

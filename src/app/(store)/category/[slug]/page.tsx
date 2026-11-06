@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { CategorySkeleton } from "@/components/store/store-skeletons"
 import { JsonLd } from "@/components/shared/json-ld"
 import { PageHeader } from "@/components/store/page-header"
 import { ProductGrid } from "@/components/store/product-grid"
@@ -30,24 +30,6 @@ export async function generateMetadata({ params }: PageProps<"/category/[slug]">
       `Shop handmade ${category.name.toLowerCase()} at ${shop.shopName}. Crafted by artisans, paid securely by UPI.`,
     path: `/category/${category.slug}`,
   })
-}
-
-function CategorySkeleton() {
-  return (
-    <div data-ui="page:/category/[slug]#CategorySkeleton" aria-hidden>
-      <div data-ui="page:/category/[slug]#CategorySkeleton/div" className="bg-hero">
-        <div data-ui="page:/category/[slug]#CategorySkeleton/div-2" className="container-page space-y-4 py-14">
-          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton" className="h-4 w-48" />
-          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton-2" className="h-12 w-72" />
-        </div>
-      </div>
-      <div data-ui="page:/category/[slug]#CategorySkeleton/div-grid" className="container-page grid grid-cols-2 gap-6 pt-4 sm:pt-6 md:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton data-ui="page:/category/[slug]#CategorySkeleton/Skeleton-3" key={i} className="aspect-4/5 rounded-2xl" />
-        ))}
-      </div>
-    </div>
-  )
 }
 
 // Reading `params` inside <Suspense> keeps navigation instant (see products/[slug]).

@@ -20,6 +20,7 @@ import { deleteAddress, saveAddress, setDefaultAddress } from "@/features/addres
 import { addressSchema, type AddressInput, type AddressValues } from "@/features/addresses/schema"
 import { ADDRESS_LABELS, MAX_ADDRESSES, type Address } from "@/features/addresses/types"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 const labelOptions = ADDRESS_LABELS.map((l) => ({ value: l, label: l }))
 
@@ -38,6 +39,7 @@ function AddressDialog({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm<AddressInput, unknown, AddressValues>({
@@ -158,6 +160,7 @@ export function AddressBook({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState<Address | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   const openNew = () => {
     setEditing(null)

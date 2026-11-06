@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { signInAdmin } from "@/features/auth/actions"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { LIMITS, v } from "@/lib/validation"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 
 const schema = z.object({
   email: v.email(),
@@ -23,6 +24,8 @@ export function AdminLoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+  const showSuccess = useBusySuccess()
   const [error, setError] = useState<string | null>(
     params.get("error") === "not-admin" ? "This account doesn't have admin access." : null
   )
@@ -36,6 +39,7 @@ export function AdminLoginForm() {
         setError(res.error)
         return
       }
+      showSuccess("Login successful")
       const next = safeNextPath(params.get("next"), "/admin")
       router.replace(next.startsWith("/admin") ? next : "/admin")
       router.refresh()

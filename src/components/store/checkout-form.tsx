@@ -26,6 +26,7 @@ import { FreeShippingBar } from "./cart-drawer"
 import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 
@@ -37,6 +38,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
   const shop = useStoreSettings()
   const { user, ready: authReady } = useAuth()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
   const [addresses, setAddresses] = useState<Address[]>([])
   /** id of the saved address in use, or "new" when typing a different one */

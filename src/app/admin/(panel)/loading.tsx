@@ -1,7 +1,7 @@
-import { PanelSkeleton } from "@/components/admin/panel-skeleton"
+import { DashboardPageSkeleton } from "@/components/admin/admin-skeletons"
 
-// Wraps every admin page in <Suspense>, so pages can read params/searchParams
-// and fetch data without blocking navigation.
+// Wraps every admin page in <Suspense>. This file is the dashboard's loading state; every other
+// admin route has its own loading.tsx with a skeleton that matches its layout.
 export default function AdminPanelLoading() {
-  return <PanelSkeleton />
+  return <DashboardPageSkeleton />
 }

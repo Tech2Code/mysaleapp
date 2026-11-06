@@ -18,6 +18,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { deleteProduct, toggleProductFlag } from "@/features/products/actions"
 import { cn } from "@/lib/utils"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export function ProductFlagSwitch({
   productId,
@@ -32,7 +33,8 @@ export function ProductFlagSwitch({
 }) {
   const router = useRouter()
   const [optimistic, setOptimistic] = useOptimistic(value)
-  const [, startTransition] = useTransition()
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   return (
     <Switch
@@ -54,6 +56,7 @@ export function ProductRowActions({ productId, name }: { productId: string; name
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   return (
     <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">

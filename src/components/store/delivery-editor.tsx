@@ -20,6 +20,7 @@ import { updateOrderDelivery } from "@/features/orders/actions"
 import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import type { DeliveryDetails } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 /**
  * Delivery address of an order. While the order is still pending (not confirmed)
@@ -43,6 +44,7 @@ export function DeliveryEditor({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm<CheckoutInput>({

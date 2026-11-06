@@ -2,20 +2,55 @@
  * Date ranges for the admin dashboard. All dates are India time, and the default is the current
  * financial year (1 April to 31 March):
  *   /admin                       this financial year so far (default)
+ *   /admin?fy=2025               a whole past financial year (FY 2025-26)
  *   /admin?range=month           this month so far
  *   /admin?month=2026-03         one particular month
  *   /admin?from=…&to=…           custom dates
  * Pure functions, used by both the server query and the range picker.
  */
 
-export const RANGE_OPTIONS = [
-  { key: "fy", label: "This financial year" },
-  { key: "month", label: "This month" },
-  { key: "pick-month", label: "Choose a month…" },
-  { key: "custom", label: "Custom dates…" },
-] as const
+export type RangeKey = "fy" | "past-fy" | "month" | "pick-month" | "custom"
 
-export type RangeKey = (typeof RANGE_OPTIONS)[number]["key"]
+export type RangeOption = { value: string; label: string }
+
+const fyLabel = (startYear: number) => `FY ${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`
+const fyStartYearOf = (ymd: string) => (Number(ymd.slice(5, 7)) >= 4 ? Number(ymd.slice(0, 4)) : Number(ymd.slice(0, 4)) - 1)
+const monthLabelUtc = (ym: string) => new Date(`${ym}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })
+
+/** Financial years in the first dropdown: the current one and the 4 before it (value = start year). */
+export function fyOptions(today: string, current?: { from: string }): RangeOption[] {
+  const fy = fyStartYearOf(today)
+  const years = [fy, fy - 1, fy - 2, fy - 3, fy - 4]
+  if (current) {
+    const y = fyStartYearOf(current.from)
+    if (!years.includes(y)) years.push(y)
+  }
+  return years.map((y) => ({ value: String(y), label: `${fyLabel(y)}${y === fy ? " (current)" : ""}` }))
+}
+
+/** Months of one financial year (April → March, up to today), plus "Whole year" and "Custom dates…". */
+export function monthOptions(today: string, fyYear: number): RangeOption[] {
+  const options: RangeOption[] = [{ value: "all", label: "Whole year" }]
+  const thisMonth = today.slice(0, 7)
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(fyYear, 3 + i, 1))
+    const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+    if (ym > thisMonth) break
+    options.push({ value: ym, label: monthLabelUtc(ym) })
+  }
+  options.push({ value: "custom", label: "Custom dates…" })
+  return options
+}
+
+/** Financial year (start year) a resolved range belongs to. */
+export const fyYearOf = (from: string) => fyStartYearOf(from)
+
+/** Value of the month dropdown for a resolved range. */
+export function monthValue(key: RangeKey, from: string): string {
+  if (key === "custom") return "custom"
+  if (key === "pick-month" || key === "month") return from.slice(0, 7)
+  return "all"
+}
 
 export type DashboardRange = {
   key: RangeKey
@@ -53,7 +88,7 @@ function monthStart(ymd: string, offsetMonths = 0): Date {
 const earlier = (a: Date, b: Date) => (a.getTime() <= b.getTime() ? a : b)
 
 /** `now` is passed in (not read here) so callers read the clock only after a dynamic API like connection(). */
-export function resolveRange(input: { range?: string; month?: string; from?: string; to?: string }, now: Date): DashboardRange {
+export function resolveRange(input: { range?: string; month?: string; fy?: string; from?: string; to?: string }, now: Date): DashboardRange {
   const today = istDayKey(now)
   const tomorrow = addDays(startOfDay(today), 1)
 
@@ -94,6 +129,13 @@ export function resolveRange(input: { range?: string; month?: string; from?: str
     }
   }
 
+  if (input.fy && /^\d{4}$/.test(input.fy) && Number(input.fy) < fyStartYearOf(today)) {
+    const fyYear = Number(input.fy)
+    const start = startOfDay(`${fyYear}-04-01`)
+    const end = startOfDay(`${fyYear + 1}-04-01`)
+    return make("past-fy", fyLabel(fyYear), start, end, { start: startOfDay(`${fyYear - 1}-04-01`), end: start })
+  }
+
   if (input.range === "month") {
     const start = monthStart(today)
     const prevStart = monthStart(today, -1)
@@ -104,11 +146,10 @@ export function resolveRange(input: { range?: string; month?: string; from?: str
   }
 
   // default: this financial year (April → March), compared with the same stretch of last year
-  const year = Number(today.slice(0, 4))
-  const fyStartYear = Number(today.slice(5, 7)) >= 4 ? year : year - 1
+  const fyStartYear = fyStartYearOf(today)
   const start = startOfDay(`${fyStartYear}-04-01`)
   const prevStart = startOfDay(`${fyStartYear - 1}-04-01`)
-  return make("fy", `FY ${fyStartYear}-${String((fyStartYear + 1) % 100).padStart(2, "0")}`, start, tomorrow, {
+  return make("fy", fyLabel(fyStartYear), start, tomorrow, {
     start: prevStart,
     end: earlier(new Date(prevStart.getTime() + (tomorrow.getTime() - start.getTime())), start),
   })

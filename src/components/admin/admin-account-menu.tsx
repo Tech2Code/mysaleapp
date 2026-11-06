@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { signOutAdmin } from "@/features/auth/actions"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export type AdminAccount = { name: string; email: string; avatarUrl: string | null; lastSignIn: string | null }
 
@@ -21,6 +22,7 @@ export type AdminAccount = { name: string; email: string; avatarUrl: string | nu
 export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const initial = (account.name || account.email).charAt(0).toUpperCase()
 
   return (

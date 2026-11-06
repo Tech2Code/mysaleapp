@@ -13,6 +13,7 @@ import type { StoreSettings } from "@/features/settings/types"
 import { formatPrice } from "@/lib/format"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -59,6 +60,7 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
 export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const form = useForm<StoreSettingsInput, unknown, StoreSettingsValues>({
     resolver: zodResolver(storeSettingsSchema),
     defaultValues: toFormValues(settings),

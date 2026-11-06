@@ -26,6 +26,7 @@ import { slugify } from "@/lib/format"
 import { ImageUploader } from "./image-uploader"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -46,6 +47,7 @@ export function ProductForm({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
   const { shopName } = useStoreSettings()
 

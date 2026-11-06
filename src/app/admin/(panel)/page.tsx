@@ -5,8 +5,11 @@ import {
   BadgeIndianRupeeIcon,
   ClockIcon,
   ExternalLinkIcon,
+  IndianRupeeIcon,
   PackageCheckIcon,
   PlusIcon,
+  ReceiptIcon,
+  ShoppingBagIcon,
   Undo2Icon,
   type LucideIcon,
 } from "lucide-react"
@@ -14,7 +17,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { connection } from "next/server"
 import type { ReactNode } from "react"
-import { AreaChart, Sparkline } from "@/components/admin/charts"
+import { Sparkline } from "@/components/admin/charts"
+import { SalesChart } from "@/components/admin/sales-chart"
 import { Stagger, StaggerItem } from "@/components/shared/motion"
 import { PaymentBadge } from "@/components/shared/payment-badge"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -123,29 +127,66 @@ function AttentionTile({
   )
 }
 
+const KPI_TONES = {
+  emerald: {
+    glow: "from-emerald-500/12 dark:from-emerald-400/10",
+    chip: "bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+    line: "text-emerald-500 dark:text-emerald-400",
+  },
+  sky: {
+    glow: "from-sky-500/12 dark:from-sky-400/10",
+    chip: "bg-sky-500/15 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
+    line: "text-sky-500 dark:text-sky-400",
+  },
+  violet: {
+    glow: "from-violet-500/12 dark:from-violet-400/10",
+    chip: "bg-violet-500/15 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
+    line: "text-violet-500 dark:text-violet-400",
+  },
+} as const
+
 function KpiCard({
   label,
+  period,
   value,
+  icon: Icon,
+  tone,
   delta,
   showDelta,
   series,
   seriesLabel,
 }: {
   label: string
+  period: string
   value: string
+  icon: LucideIcon
+  tone: keyof typeof KPI_TONES
   delta: number | null
   showDelta: boolean
   series: number[]
   seriesLabel: string
 }) {
+  const t = KPI_TONES[tone]
   return (
-    <div data-ui="page:/admin#KpiCard" className="h-full rounded-2xl border bg-card p-5 shadow-xs">
-      <div data-ui="page:/admin#KpiCard/div-flex" className="flex items-center justify-between gap-2">
-        <p data-ui="page:/admin#KpiCard/p" className="text-sm text-muted-foreground">{label}</p>
-        <Delta value={delta} show={showDelta} />
+    <div
+      data-ui="page:/admin#KpiCard"
+      className={cn("relative flex h-full flex-col overflow-hidden rounded-2xl border bg-linear-to-br to-card to-60% bg-card shadow-xs transition-shadow hover:shadow-md", t.glow)}
+    >
+      <div data-ui="page:/admin#KpiCard/div" className="flex-1 p-5 pb-3">
+        <div data-ui="page:/admin#KpiCard/div-flex" className="flex items-start justify-between gap-3">
+          <span data-ui="page:/admin#KpiCard/span" className={cn("grid size-10 shrink-0 place-items-center rounded-xl", t.chip)}>
+            <Icon className="size-5" aria-hidden />
+          </span>
+          <Delta value={delta} show={showDelta} />
+        </div>
+        <p data-ui="page:/admin#KpiCard/p" className="mt-4 text-sm font-medium text-muted-foreground">{label}</p>
+        <p data-ui="page:/admin#KpiCard/p-2" className="mt-1 font-heading text-3xl leading-none font-semibold tracking-tight tabular-nums sm:text-4xl">{value}</p>
+        <p data-ui="page:/admin#KpiCard/p-3" className="mt-2 text-xs text-muted-foreground">
+          {period}
+          {showDelta && " · vs previous period"}
+        </p>
       </div>
-      <p data-ui="page:/admin#KpiCard/p-2" className="mt-2 font-heading text-3xl font-semibold tracking-tight">{value}</p>
-      <Sparkline data={series} label={seriesLabel} className="mt-3" />
+      <Sparkline data={series} label={seriesLabel} className={cn("h-14", t.line)} />
     </div>
   )
 }
@@ -156,7 +197,7 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
   const sp = await searchParams
   await connection() // the date range depends on "today", so this page is rendered per request
   const now = new Date()
-  const range = resolveRange({ range: one(sp.range), month: one(sp.month), from: one(sp.from), to: one(sp.to) }, now)
+  const range = resolveRange({ range: one(sp.range), month: one(sp.month), fy: one(sp.fy), from: one(sp.from), to: one(sp.to) }, now)
   const d = await getDashboard(range)
   const maxStatus = Math.max(1, ...Object.values(d.byStatus))
   const aovSeries = d.days.map((p) => (p.orders ? p.revenue / p.orders : 0))
@@ -235,7 +276,10 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         <Stagger className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" stagger={0.06}>
           <StaggerItem>
             <KpiCard
-              label={`Revenue · ${d.rangeLabel}`}
+              label="Revenue"
+              period={d.rangeLabel}
+              icon={IndianRupeeIcon}
+              tone="emerald"
               value={formatPrice(d.revenue.current)}
               showDelta={d.hasPrevious}
               delta={change(d.revenue.current, d.revenue.previous)}
@@ -245,7 +289,10 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
           </StaggerItem>
           <StaggerItem>
             <KpiCard
-              label={`Orders · ${d.rangeLabel}`}
+              label="Orders"
+              period={d.rangeLabel}
+              icon={ShoppingBagIcon}
+              tone="sky"
               value={String(d.orders.current)}
               showDelta={d.hasPrevious}
               delta={change(d.orders.current, d.orders.previous)}
@@ -255,7 +302,10 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
           </StaggerItem>
           <StaggerItem className="sm:col-span-2 xl:col-span-1">
             <KpiCard
-              label={`Average order · ${d.rangeLabel}`}
+              label="Average order"
+              period={d.rangeLabel}
+              icon={ReceiptIcon}
+              tone="violet"
               value={formatPrice(Math.round(d.averageOrder.current))}
               showDelta={d.hasPrevious}
               delta={change(d.averageOrder.current, d.averageOrder.previous)}
@@ -269,14 +319,13 @@ export default async function AdminDashboard({ searchParams }: PageProps<"/admin
         <div data-ui="page:/admin/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div data-ui="page:/admin/div-flex-2" className="flex min-w-0 flex-col gap-6">
             <Card
-              title={`Revenue · ${d.rangeLabel}`}
+              title="Sales"
               action={<span data-ui="page:/admin/span" className="text-xs text-muted-foreground">Verified payments only</span>}
             >
-              <AreaChart
-                data={d.days.map((p) => p.revenue)}
-                labels={d.days.map((p) => p.label)}
-                label={`Revenue over ${d.rangeLabel}`}
-                formatValue={formatPrice}
+              <SalesChart
+                points={d.days.map((p) => ({ label: p.label, revenue: p.revenue, orders: p.orders }))}
+                unit={range.bucket}
+                rangeLabel={d.rangeLabel}
               />
             </Card>
 

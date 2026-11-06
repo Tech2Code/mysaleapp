@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cancelOrder } from "@/features/orders/actions"
 import { CANCELLABLE_BY_CUSTOMER, CANCEL_REASONS } from "@/features/orders/transitions"
 import type { OrderStatus, PaymentStatus } from "@/features/orders/types"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 /**
  * "Cancel order" for customers. Available until the order is packed; after that it points to WhatsApp.
@@ -36,6 +37,7 @@ export function CancelOrder({
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   if (status === "cancelled" || status === "delivered") return null
 

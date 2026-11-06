@@ -11,11 +11,13 @@ import { Button } from "@/components/ui/button"
 import { requestPasswordReset, resetAdminPassword } from "@/features/auth/account-actions"
 import { emailSchema, resetSchema } from "@/features/auth/account-schema"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 /** Step 1: ask for the account email; a reset link is sent. */
 export function ForgotPasswordForm() {
   const params = useSearchParams()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(
     params.get("error") === "expired" ? "That link has expired or was already used. Request a new one below." : null
@@ -65,6 +67,7 @@ export function ForgotPasswordForm() {
 /** Step 2: the link signed the admin in; choose a new password. */
 export function ResetPasswordForm() {
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [error, setError] = useState<string | null>(null)
   const form = useForm<z.input<typeof resetSchema>>({ resolver: zodResolver(resetSchema), defaultValues: { next: "", confirm: "" } })
   const { errors } = form.formState

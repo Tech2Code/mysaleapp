@@ -9,9 +9,11 @@ import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { updateProfile } from "@/features/account/actions"
 import { profileSchema, type Profile, type ProfileInput } from "@/features/account/schema"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: profile.fullName, phone: profile.phone },

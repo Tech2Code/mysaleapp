@@ -15,6 +15,7 @@ import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest 
 import { buildReturnDecisionMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 const TONE = {
   info: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
@@ -43,6 +44,7 @@ function DecideDialog({
   const [note, setNote] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   const submit = () =>
     startTransition(async () => {

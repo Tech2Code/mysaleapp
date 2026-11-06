@@ -12,6 +12,7 @@ import { isOpenRequest, RETURN_REASONS, RETURN_STATUS_META, returnableQuantities
 import type { OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type Window = { open: boolean; until: string | null; days: number }
 
@@ -47,6 +48,7 @@ export function RequestReturn({
   const [details, setDetails] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const lines = useMemo(() => {
@@ -183,6 +185,7 @@ export function ReturnRequestsPanel({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   if (requests.length === 0) return null
 
   const withdraw = (id: string) =>

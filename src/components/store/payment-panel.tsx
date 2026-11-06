@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { WhatsAppIcon } from "./brand-icons"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { useStoreSettings } from "./store-settings-provider"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
 type FormValues = z.input<typeof formSchema>
@@ -88,6 +89,7 @@ function ReferenceForm({
   onSubmitted: () => void
 }) {
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { reference: "" } })
 

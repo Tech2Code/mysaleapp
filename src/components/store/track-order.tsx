@@ -28,6 +28,7 @@ import { ReturnsList } from "@/components/shared/returns-list"
 import { DeliveryEditor } from "./delivery-editor"
 import { useStoreSettings } from "./store-settings-provider"
 import { PaymentPanel } from "./payment-panel"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type TrackInput = z.input<typeof trackOrderSchema>
 
@@ -90,6 +91,7 @@ export function TrackOrder() {
   const [result, setResult] = useState<TrackedOrder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [query, setQuery] = useState<{ code: string; phoneLast4: string } | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
 

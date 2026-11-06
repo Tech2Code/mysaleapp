@@ -11,6 +11,7 @@ import { resetStoreData } from "@/features/settings/launch-actions"
 import { RESET_CONFIRM_WORD, RESET_SCOPE_INFO, RESET_SCOPES, type LaunchCounts, type ResetScope } from "@/features/settings/launch"
 import type { ChecklistItem } from "@/features/settings/launch-queries"
 import { cn } from "@/lib/utils"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 const COUNT_LABEL: Record<ResetScope, (c: LaunchCounts) => string> = {
   orders: (c) => `${c.orders} order${c.orders === 1 ? "" : "s"}`,
@@ -24,6 +25,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
   const [scopes, setScopes] = useState<ResetScope[]>(["orders", "customers"])
   const [confirm, setConfirm] = useState("")
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
   const [error, setError] = useState<string | null>(null)
 
   const ready = checklist.every((c) => c.done)

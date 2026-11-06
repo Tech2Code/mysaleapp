@@ -17,6 +17,7 @@ import { STATUS_META, type OrderStatus, type PaymentStatus, type ShippingDetails
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { buildStatusUpdateMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { LIMITS } from "@/lib/validation"
+import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type Values = {
   status: OrderStatus
@@ -51,6 +52,7 @@ export function OrderStatusControl({
   const router = useRouter()
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   const form = useForm<Values>({
     defaultValues: {
@@ -198,6 +200,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   if (!CANCELLABLE_BY_ADMIN.includes(status)) return null
 
@@ -261,6 +264,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 export function AdminNoteForm({ orderId, note }: { orderId: string; note: string | null }) {
   const [value, setValue] = useState(note ?? "")
   const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
 
   return (
     <form data-ui="admin/AdminNoteForm"
