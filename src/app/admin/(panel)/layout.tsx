@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
 import { AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
+import { ScrollReset } from "@/components/shared/scroll-reset"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
@@ -78,6 +79,9 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
         <main data-ui="layout:/admin/main" className="p-4 sm:p-6 lg:p-8">
           <Suspense fallback={null}>
             <AdminGate />
+          </Suspense>
+          <Suspense fallback={null}>
+            <ScrollReset />
           </Suspense>
           {children}
         </main>

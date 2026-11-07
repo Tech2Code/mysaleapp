@@ -42,6 +42,15 @@ Rules:
   - Filters/sort/search above a list (`ProductBrowser`): after the list changes, scroll the list start back under the sticky bar (see the `useLayoutEffect` there). Keep a `min-h` on the list so a short result doesn't collapse the page.
 - Any new "submit, then the screen changes" flow must do this. Check at 360px with the page scrolled to the bottom.
 
+## Scroll position on navigation (a new page always opens at the top)
+
+- **Symptom this prevents:** a page opened from a link landing halfway down, at the bottom, or a bit above the top (worst on phones). Cause: Next scrolls to the top only ONCE, on the first commit of a navigation (the `loading.tsx` skeleton); the real page then streams in, the document height changes and the browser clamps/anchors the scroll position.
+- **`<ScrollReset />`** (`components/shared/scroll-reset.tsx`, rules in `lib/scroll-reset.ts`, tested) is mounted once in every layout that hosts pages, inside `<Suspense fallback={null}>`: `(store)/layout.tsx` and `admin/(panel)/layout.tsx`. It scrolls to the top when the PATH changes and holds the top until the page height has been stable for 400 ms (cap 2.5 s) or the reader scrolls. It leaves back/forward (the browser restores the position), `#hash` links and same-path changes (filters, `?query`) alone. **A new layout group (new area of the site) must mount it too.**
+- **Never move the scroll from an effect that runs on mount.** `scrollTo` / `scrollBy` / `scrollIntoView` are only for a real change the reader caused (a filter, an action result): use `revealTop()` / `useRevealOnChange(key)`, or the `ProductBrowser` pattern.
+- **A "first run" flag (`useRef(true)`) is not a guard.** React Strict Mode and Next's hidden-page cache (Cache Components keeps old pages mounted and re-runs their effects when they are shown again) run effects again with nothing changed. Compare against the last value instead (`lastFilters` in `ProductBrowser`).
+- To watch the page height use `document.body` (or the element), never `<html>`: `html` is `h-full`, so its size does not follow the content.
+- Don't add `scroll-behavior: smooth` tricks per page: `html` has `scroll-smooth` + `data-scroll-behavior="smooth"` so Next turns smooth scrolling off during route changes. Programmatic scrolls that must be instant pass `behavior: "instant"`.
+
 ## Pincode
 
 Every pincode field fills the city and shows "City, State" via `usePincodeLookup` (`components/shared/use-pincode-lookup.ts`, server action `features/location/actions.ts`, India Post free API). City and State are separate fields in forms (State is a `FormSelectField`, `v.state()`); the DB has no `state` column, so the server joins them into `city` as "City, State" (`joinCityState`) and forms split it back (`splitCityState`), both in `features/location/states.ts`. Autofill never overwrites a value the user typed.
@@ -181,6 +190,8 @@ Not verified in a browser yet (code is done, `tsc` / `eslint` / `npm run test` a
 2. UI changes only checked by types / lint / tests: `/track` courier + tracking wrap at 360 px, "Part refunded" vs "Refund done" label (`returns-list.tsx`), return form quantity defaults to 1 for a single one-piece line, "Withdraw request" confirm dialog. Also not opened: the WhatsApp message text for a delivered order with a return stage (customer text must have no amounts) and "Reject" with an empty reason.
 3. Console warnings on the product page ("state update on a component that hasn't mounted yet"; Next dev warning about uncached data outside Suspense on `/products/[slug]`) were never reproduced. Needs the stack trace from the `next dev` terminal.
 4. Run `select proname, proconfig from pg_proc join pg_namespace n on n.oid = pronamespace where nspname = 'public' and prosecdef;` in the Supabase SQL editor and confirm every row has `search_path=public, pg_temp`; confirm `orders_created_cover_idx` and the three `*_trgm_idx` indexes exist (PostgREST can't read `pg_proc` / `pg_indexes`, so this was never checked directly).
+
+12. Scroll on navigation (`<ScrollReset />`, `ProductBrowser` effect): only the pure rules are unit-tested, nothing was run in a browser. On a phone and on desktop, scroll down on the home page and open a category, a product, Cart, Account, then scroll down on those and open another page: each must open at the top and stay there. Also check back/forward restores the old position, a `#hash` link still jumps, and changing a filter on `/products` still keeps the list under the sticky bar.
 
 Deploy / environment (the user does these)
 5. Vercel: set `RATE_LIMIT_SALT` for Production (production logs a warning while it is unset) and `NEXT_PUBLIC_SITE_URL` to the real domain (it feeds sitemap, canonical, OG URLs and the admin slug hint), then redeploy. Deploy the code together with migrations 0022+: since 0022 a guest needs the FULL phone number to cancel an order, so older deployed code gets "order not found" on guest cancel.

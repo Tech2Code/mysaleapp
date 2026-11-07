@@ -137,12 +137,14 @@ export function ProductBrowser({
   // bottom (footer). Put the start of the results back right under the sticky bar instead.
   const barRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const firstRun = useRef(true)
+  // Run only when the filters REALLY changed. A "first run" flag is not enough: React Strict Mode and Next's
+  // hidden-page cache (Cache Components keeps old pages mounted and re-runs their effects when they are shown
+  // again) run this effect again with nothing changed, which scrolled the page to a random spot on arrival.
+  const lastFilters = useRef(`${deferredQuery}|${category}|${sort}`)
   useLayoutEffect(() => {
-    if (firstRun.current) {
-      firstRun.current = false
-      return
-    }
+    const filters = `${deferredQuery}|${category}|${sort}`
+    if (lastFilters.current === filters) return
+    lastFilters.current = filters
     const bar = barRef.current
     const list = listRef.current
     if (!bar || !list) return
@@ -167,7 +169,7 @@ export function ProductBrowser({
       align()
     }
     const ro = new ResizeObserver(bump)
-    ro.observe(document.documentElement)
+    ro.observe(document.body) // not <html>: it is h-full, so its size never follows the content height
     ro.observe(list)
     // Stop once the height has been stable for 300 ms (hard cap 2.5 s) or as soon as the reader scrolls.
     const started = last

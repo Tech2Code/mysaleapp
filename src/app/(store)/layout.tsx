@@ -1,4 +1,6 @@
+import { Suspense } from "react"
 import { JsonLd } from "@/components/shared/json-ld"
+import { ScrollReset } from "@/components/shared/scroll-reset"
 import { AnnouncementBar } from "@/components/store/announcement-bar"
 import { CartDrawer } from "@/components/store/cart-drawer"
 import { Footer } from "@/components/store/footer"
@@ -21,6 +23,9 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
       >
         Skip to content
       </a>
+      <Suspense fallback={null}>
+        <ScrollReset />
+      </Suspense>
       <AnnouncementBar text={settings.announcement} />
       <Header categories={nav} />
       <main data-ui="layout://main-main" id="main" className="flex-1">
