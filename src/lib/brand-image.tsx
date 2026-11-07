@@ -1,5 +1,7 @@
+import { BrandGlyph } from "@/components/shared/brand-glyph"
+
 /** Shared JSX for generated icons (rendered by next/og ImageResponse). */
-export function BrandMark({ size, padding = 0, letter }: { size: number; padding?: number; letter: string }) {
+export function BrandMark({ size, padding = 0 }: { size: number; padding?: number }) {
   const inner = size - padding * 2
   return (
     <div
@@ -21,13 +23,9 @@ export function BrandMark({ size, padding = 0, letter }: { size: number; padding
           alignItems: "center",
           justifyContent: "center",
           background: "linear-gradient(135deg, #c0643c 0%, #b34a4f 100%)",
-          color: "#fff8f0",
-          fontSize: inner * 0.58,
-          fontWeight: 700,
-          fontFamily: "serif",
         }}
       >
-        {letter.charAt(0).toUpperCase()}
+        <div style={{ display: "flex", color: "#fff8f0" }}><BrandGlyph size={Math.round(inner * 0.66)} /></div>
       </div>
     </div>
   )

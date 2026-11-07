@@ -1,11 +1,11 @@
 "use client"
 
+import { BrandGlyph } from "./brand-glyph"
 import { ScrollLink } from "./scroll-link"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { cn } from "@/lib/utils"
 
 export function LogoMark({ className }: { className?: string }) {
-  const { shopName } = useStoreSettings()
   return (
     <span data-ui="shared/LogoMark"
       aria-hidden
@@ -14,7 +14,7 @@ export function LogoMark({ className }: { className?: string }) {
         className
       )}
     >
-      {shopName.charAt(0).toUpperCase()}
+      <BrandGlyph size={22} ribbon="var(--primary)" />
     </span>
   )
 }
