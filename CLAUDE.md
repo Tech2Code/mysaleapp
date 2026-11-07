@@ -50,7 +50,7 @@ Every pincode field fills the city and shows "City, State" via `usePincodeLookup
 
 - Pages stay thin; business logic goes in `src/features/<feature>/` (queries, actions, schema, types).
 - Every Server Action validates with Zod and checks auth itself (`assertAdmin()` / `getCurrentUser()`).
-- Database changes go in a new numbered file in `supabase/migrations/` (never edit an applied one) and need to be mentioned to the user, who runs them in the Supabase SQL Editor.
+- Database changes go in a new numbered file in `supabase/migrations/` (never edit an applied one). **Claude applies them itself** with the Supabase CLI (see "Database migrations" below); the user never runs them by hand. Mention in the reply which migrations were applied.
 - **No shop details in code.** Name, tagline, description, SEO keywords, WhatsApp number, email/phone/city, social links, announcement banner, order-code prefix, delivery fee, free-delivery amount and UPI details are all owner-editable in **Admin → Settings** (table `store_settings`). Never hard-code them.
   - Server code: `await getStoreSettings()` (`features/settings/queries.ts`). Client components: `useStoreSettings()`. Page metadata: use `generateMetadata` + `pageMetadata(shop, …)`.
   - WhatsApp links/messages always take the settings object: `shopWhatsappLink(shop, text)`, `buildOrderMessage(shop, …)`.
@@ -120,4 +120,58 @@ Customer flow: delivered order → **Request a return** (inside `store_settings.
 
 ## Dashboard range
 
-Default is the current **financial year** (April–March, India), compared with the same stretch of last year. Other options: this month, a particular month (`?month=YYYY-MM`), custom dates. See `features/orders/dashboard-range.ts`.
+Default is the current **financial year** (April–March, India), compared with the same stretch of last year. Other options: this month, a particular month (`?month=YYYY-MM`), custom dates (spans over ~3 years and impossible dates like `2026-02-31` are ignored and fall back to the default). See `features/orders/dashboard-range.ts`.
+
+## Database migrations (Claude applies them)
+
+- The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
+- Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
+- Migrations 0001–0021 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
+
+## Verifying against production (no staging)
+
+- Use throw-away Node scripts in the scratchpad (supabase-js from `node_modules`, URL and anon key read from `.env`, never printed). For test logins ask the user; don't write passwords into the repo or memory.
+- Only create clearly marked test data (customer name "AUDIT TEST", products "AUDIT TEST …"), delete it in a `finally`, and check that real products' stock is unchanged. Never run `admin_reset_data`.
+- Browser checks: install Playwright in the scratchpad (not in the project); the user's `next dev` runs on port 3000.
+
+## Tests
+
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, validation. Run it with `npx tsc --noEmit` and `npx eslint src` before every push.
+- A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
+
+## Rate limiting and abuse
+
+- `src/features/security/rate-limit.ts` → `limited(scope, extra?)`, called BEFORE the RPC in guest order actions, `placeOrder`, admin login and the pincode lookup. The limits live in the DB function `check_rate_limit(p_scope, p_key)` (migration 0021), never in the caller. Add a scope there (new migration) before using a new one.
+- The IP comes from `x-vercel-forwarded-for` / `x-real-ip` / `x-forwarded-for`, is hashed with `RATE_LIMIT_SALT` (**must be set in production**; the local `.env` has one) and is never stored raw. The limiter fails open if it errors.
+
+## Refunds, stock cache, dashboard numbers
+
+- Refunds: the `refund_order` RPC (admin only) is the one path for "mark refunded"; a partial refund keeps `payment_status = 'paid'` with `refunded_amount > 0`. `record_order_return` decides "fully refunded" from the value of items refunded and adds item value to `refunded_amount`.
+- The catalogue cache (`getActiveProducts`) is `cacheLife("minutes")` because stock also changes from pg_cron expiry, which can't call `updateTag`. Server actions that change stock (place order, cancel, record return) call `updateTag(CACHE_TAGS.products)`.
+- The dashboard reads one RPC, `dashboard_stats` (revenue net of refunds, top products net of returns). Don't reintroduce per-row downloads.
+- Admin status / payment / cancel updates are compare-and-set (`.eq("status", …).select("id")`, plus `expectedStatus` from the client for status changes) so a stale tab can't overwrite a newer state.
+- `getCurrentUser` / `isAdminUser` are wrapped in React `cache()` (once per request). Don't read the user after changing the session inside the same request.
+- Motion: `LazyMotion` (the domMax chunk) is in `providers.tsx`; use `m.*` from `motion/react-m`, never `motion.*`, and never start above-the-fold content at `opacity: 0` (the server HTML must be visible).
+
+## Pending work (remove each item when done; delete this section when the list is empty)
+
+When the user asks to "clear the pending list" (or before a push), work through these, verify each, then delete the item here.
+
+Bugs / UX
+1. Mobile (360px): after tapping a category chip while scrolled down, the first row of cards sits under the sticky filter bar. Cause: the `useLayoutEffect` in `components/store/product-browser.tsx` (~88-98) measures before the AnimatePresence exit animation shrinks the list. Also: `useSearchParams` is read once, so a client-side link to `/products?sort=…` while already on `/products` doesn't update the chips, and the debounced `replaceState` is dropped if the user navigates within 300 ms.
+2. Admin order page: "To collect ₹X" shows next to "Received ₹X" once paid; "Record a return" stays available after everything was already returned.
+3. Console warnings on the product page ("state update on a component that hasn't mounted yet"; Next dev warning about uncached data outside Suspense on `/products/[slug]`).
+
+Not yet browser-tested (do these, then delete the item)
+4. "Shipped" refuses without a courier; dashboard ranges (`?range=month`, `?month=`, custom, an absurd `from/to` falls back) and every tile link matching its count; the login rate-limit message (use a different email for hammering, don't lock the real admin); `/admin/account` password rules (letters-only / digits-only rejected, don't actually change it); admin cancel with "Other"; address book (add two, one default, un-default, delete); keyboard / a11y pass on header and checkout; SSR HTML of `/` and `/products` has no `opacity:0`; filter scroll at 360px (item 1); after the E2E cleanup confirm no leftover rows in `return_requests`, `order_returns`, `order_status_history` (they should cascade with the orders).
+
+Hardening / cleanup (lower priority)
+5. Vercel: set `RATE_LIMIT_SALT` for Production and redeploy (the user does this).
+6. Confirm the pg_cron job `expire-unpaid-orders` is scheduled and running (`cron.job`, `cron.job_run_details`); the migration swallows errors if `pg_cron` couldn't be enabled. Add a cleanup for `rate_limits` (anon can create rows via the RPC) and `order_lookup_failures`.
+7. Guest order lookup: a known order code can still be locked out for 15 minutes with 10 wrong last-4 guesses (per-order throttle, migration 0009). Consider asking for the full phone number for cancel / change-address.
+8. `refund_order` has no idempotency key (a double-click on a partial refund refunds twice); `admin_reset_data` locks products before orders (rare, admin only) and also restocks delivered orders; `dashboard_stats`: a NULL `p_bucket` passes and ties in top products are unordered; add `pg_temp` to the `search_path` of the older SECURITY DEFINER functions.
+9. The CSP has no `script-src` / `default-src` (needs a nonce-based policy via the proxy); the admin login limiter fails open.
+10. Perf at scale: `dashboard_stats` scans the whole range (add a covering partial index or a rollup when orders reach tens of thousands); the rate-limit RPC is awaited serially before the real work (the pincode lookup could run it in parallel); `ProductGrid` calls `toCardData` inline, which defeats `memo(ProductCard)` if it ever becomes a client component; admin search is `ilike '%q%'` (use `pg_trgm` when it grows).
+11. Tests still missing: server actions, `views.ts`, and SQL (pgTAP or RPC scripts against a local Supabase). `vitest.config.ts` logs an ESM warning and `vite-tsconfig-paths` is now redundant there.
+12. Optional: demo mode (`isSupabaseConfigured` guards, `features/products/demo-data.ts`) could move to one boundary or go; `features/account/*` vs `features/auth/account-*` naming overlap.
