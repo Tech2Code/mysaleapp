@@ -40,7 +40,7 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
   ]
 
   return (
-    <footer data-ui="store/Footer" className="mt-16 sm:mt-24 border-t bg-linear-to-b from-secondary/40 to-secondary/80">
+    <footer data-ui="store/Footer" className="mt-10 sm:mt-14 border-t bg-linear-to-b from-secondary/40 to-secondary/80">
       <div data-ui="store/Footer/div-grid" className="container-page grid gap-8 sm:gap-12 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div data-ui="store/Footer/div" className="space-y-4">
           <Logo />

@@ -1,4 +1,7 @@
+"use client"
+
 import Image from "next/image"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 function hueFrom(text: string): number {
@@ -9,7 +12,8 @@ function hueFrom(text: string): number {
 
 /**
  * Optimised product photo (AVIF/WebP via next/image). Falls back to a soft,
- * on-brand gradient tile until the admin uploads a real photo.
+ * on-brand gradient tile until the admin uploads a real photo, or if the photo fails to load.
+ * `text-transparent` hides the alt text while the photo downloads (the parent's muted background shows).
  */
 export function ProductImage({
   src,
@@ -24,7 +28,10 @@ export function ProductImage({
   priority?: boolean
   className?: string
 }) {
-  if (src) {
+  // Remember WHICH src failed, so a changed src (gallery thumbnail) starts fresh without an effect.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+
+  if (src && failedSrc !== src) {
     return (
       <Image data-ui="store/ProductImage"
         src={src}
@@ -32,7 +39,8 @@ export function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
-        className={cn("object-cover", className)}
+        onError={() => setFailedSrc(src)}
+        className={cn("object-cover text-transparent", className)}
       />
     )
   }

@@ -14,7 +14,7 @@ export function shouldResetScroll(input: { previousPath: string; nextPath: strin
 }
 
 /** How long the page is held at the top while the new page streams in and changes height. */
-export const SCROLL_HOLD = { stableMs: 400, maxMs: 2500, pollMs: 50 } as const
+export const SCROLL_HOLD = { stableMs: 700, maxMs: 3500, pollMs: 50 } as const
 
 /**
  * Should the hold on the top of the page end?

@@ -185,8 +185,12 @@
     scroll-padding-top: calc(var(--store-header-h) + 1rem);
     @apply font-sans scroll-smooth;
     -webkit-tap-highlight-color: transparent;
+    /* The skeleton -> real page swap changes content above the viewport; scroll anchoring would then move
+       the reader to a random spot (worst on phones). ScrollReset owns the position instead. */
+    overflow-anchor: none;
   }
   body {
+    overflow-anchor: none;
     @apply bg-background text-foreground;
   }
   h1, h2, h3 {

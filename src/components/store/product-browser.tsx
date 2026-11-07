@@ -244,7 +244,7 @@ export function ProductBrowser({
         </div>
       </div>
 
-      <div ref={listRef} data-ui="store/ProductBrowser/div-2" className="min-h-[70svh]">
+      <div ref={listRef} data-ui="store/ProductBrowser/div-2">
       <p data-ui="store/ProductBrowser/p" className="mb-4 text-sm text-muted-foreground" aria-live="polite">
         {visible.length} {visible.length === 1 ? "product" : "products"}
       </p>
