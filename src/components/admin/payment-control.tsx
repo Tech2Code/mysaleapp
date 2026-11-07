@@ -29,6 +29,7 @@ import { buildPaymentMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 type PaymentOrder = OrderPayment & {
   id: string
@@ -50,9 +51,9 @@ type PaymentValues = {
 const statusOptions = PAYMENT_STATUSES.map((s) => ({ value: s, label: PAYMENT_STATUS_LABEL[s] }))
 const methodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_METHOD_LABEL[m] }))
 
-function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div data-ui="admin/Fact" className={wide ? "col-span-2" : undefined}>
+    <div data-ui="admin/Fact">
       <dt data-ui="admin/Fact/dt" className="text-xs text-muted-foreground">{label}</dt>
       <dd data-ui="admin/Fact/dd" className="mt-0.5 text-sm font-medium">{children}</dd>
     </div>
@@ -69,6 +70,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState("")
   // Which action is waiting for "are you sure?" (verify / reject / refund change money records).
@@ -123,9 +125,9 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       },
       (confirmed) => {
         setRejecting(false)
-        toast.success(confirmed ? "Payment verified. Order confirmed." : "Payment marked as paid", {
+        later(() => toast.success(confirmed ? "Payment verified. Order confirmed." : "Payment marked as paid", {
           action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("paid", order.total), "_blank", "noopener") },
-        })
+        }))
       }
     )
 
@@ -134,9 +136,9 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       { status: "failed", method: order.paymentMethod ?? "upi", reference: order.paymentReference ?? "", amount: "", note: reason },
       () => {
         setRejecting(false)
-        toast.success("Payment rejected. The customer can submit it again.", {
+        later(() => toast.success("Payment rejected. The customer can submit it again.", {
           action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("failed", null, reason || null), "_blank", "noopener") },
-        })
+        }))
       }
     )
 
@@ -149,13 +151,13 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         amount: "", // blank = refund everything still owed (works after a partial refund too)
         note: "Refund sent",
       },
-      () => toast.success("Marked as refunded")
+      () => later(() => toast.success("Marked as refunded"))
     )
 
   const onSave = form.handleSubmit((values) =>
     refundOnly || values.status === "refunded"
       ? (setRefundOpen(false), setRefundValues(values)) // a refund moves money: ask first
-      : run(values, (confirmed) => { setRefundOpen(false); toast.success(confirmed ? "Payment saved. Order confirmed." : "Payment record saved") })
+      : run(values, (confirmed) => { setRefundOpen(false); later(() => toast.success(confirmed ? "Payment saved. Order confirmed." : "Payment record saved")) })
   )
 
   const needsVerification = order.paymentStatus === "submitted"
@@ -182,7 +184,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         {due && <Fact label={due.label}>{formatPrice(due.amount)}</Fact>}
         <Fact label="Received">{order.paymentAmount == null ? "—" : formatPrice(order.paymentAmount)}</Fact>
         <Fact label="Method">{order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "—"}</Fact>
-        <Fact label="UTR / reference" wide>
+        <Fact label="UTR / reference">
           {order.paymentReference ? <CopyableReference value={order.paymentReference} /> : "—"}
         </Fact>
         {order.paymentSubmittedAt && <Fact label="Customer submitted">{formatDateTime(order.paymentSubmittedAt)}</Fact>}
@@ -192,7 +194,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       {order.status === "cancelled" && order.paymentStatus === "paid" && (
         <div data-ui="admin/PaymentControl/div" className="space-y-3 rounded-xl border border-orange-200 bg-orange-50/70 p-4 text-sm dark:border-orange-900/50 dark:bg-orange-950/20">
           <p data-ui="admin/PaymentControl/p">
-            <span data-ui="admin/PaymentControl/span-2" className="font-semibold">This order was cancelled after the customer paid.</span> Send{" "}
+            <span data-ui="admin/PaymentControl/span" className="font-semibold">This order was cancelled after the customer paid.</span> Send{" "}
             {formatPrice(order.paymentAmount ?? order.total)} back to them, then mark it refunded.
           </p>
           <Button data-ui="admin/PaymentControl/Button-mark-as-refunded"
@@ -209,7 +211,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
       {needsVerification && order.status !== "cancelled" && (
         <p data-ui="admin/PaymentControl/p-2" className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-sm dark:border-sky-900/50 dark:bg-sky-950/20">
-          <span data-ui="admin/PaymentControl/span-3" className="font-semibold">The customer says they paid.</span> Look for {formatPrice(order.total)} with this
+          <span data-ui="admin/PaymentControl/span-2" className="font-semibold">The customer says they paid.</span> Look for {formatPrice(order.total)} with this
           reference in your UPI/bank app, then verify.
         </p>
       )}
@@ -250,7 +252,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       {/* A refunded payment is final: nothing left to edit, so no form is offered. Refund / edit both open in a dialog. */}
       {showManual && (
         <>
-          <Button data-ui="admin/PaymentControl/Button-edit-payment" type="button" variant="outline" onClick={() => setRefundOpen(true)} className="w-full rounded-full sm:w-auto">
+          <Button data-ui="admin/PaymentControl/Button" type="button" variant="outline" onClick={() => setRefundOpen(true)} className="w-full rounded-full sm:w-auto">
             {refundOnly ? "Refund this payment" : "Edit payment record manually"}
           </Button>
           <Dialog open={refundOpen} onOpenChange={(o) => !pending && setRefundOpen(o)}>
@@ -282,6 +284,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                 />
                 <TextField
                   label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
+                  maxLength={String(LIMITS.paymentAmount.max).length + 3}
                   fieldSize="md"
                   inputMode="decimal"
                   leading="₹"
@@ -300,11 +303,11 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                   error={errors.note?.message}
                   {...form.register("note")}
                 />
-                <div data-ui="admin/PaymentControl/div-3" className="mt-2 flex flex-wrap justify-end gap-2">
+                <div data-ui="admin/PaymentControl/div-flex-4" className="mt-2 flex flex-wrap justify-end gap-2">
                   <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="ghost" onClick={() => setRefundOpen(false)} disabled={pending} className="rounded-full">
                     Cancel
                   </Button>
-                  <Button data-ui="admin/PaymentControl/Button" type="submit" disabled={(!isDirty && !refundOnly) || pending} className="rounded-full">
+                  <Button data-ui="admin/PaymentControl/Button-2" type="submit" disabled={(!isDirty && !refundOnly) || pending} className="rounded-full">
                     {pending && <Loader2Icon className="animate-spin" />} {refundOnly ? "Refund payment" : "Save payment record"}
                   </Button>
                 </div>
@@ -321,7 +324,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         description="Only do this after you have sent the money back to the customer. A refund can't be undone."
         confirmLabel="Yes, mark refunded"
         pending={pending}
-        onConfirm={() => refundValues && run(refundValues, () => { setRefundValues(null); toast.success("Refund recorded") })}
+        onConfirm={() => refundValues && run(refundValues, () => { setRefundValues(null); later(() => toast.success("Refund recorded")) })}
       />
       <ConfirmDialog
         open={ask !== null}

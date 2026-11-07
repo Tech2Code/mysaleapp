@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { refundReturn } from "@/features/orders/admin-actions"
@@ -19,6 +20,7 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   const run = () =>
     startTransition(async () => {
@@ -28,7 +30,7 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
         return
       }
       setOpen(false)
-      toast.success(res.data.fullyRefunded ? "Refund recorded. Payment marked refunded." : `Refund recorded (${formatPrice(res.data.refundedAmount)} refunded so far).`)
+      later(() => toast.success(res.data.fullyRefunded ? "Refund recorded. Payment marked refunded." : `Refund recorded (${formatPrice(res.data.refundedAmount)} refunded so far).`))
       router.refresh()
     })
 

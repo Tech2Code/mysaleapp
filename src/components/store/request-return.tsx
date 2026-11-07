@@ -17,7 +17,9 @@ import { formatDate, formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
+import { LIMITS } from "@/lib/validation"
 
 type Window = { open: boolean; until: string | null; days: number }
 
@@ -57,6 +59,7 @@ export function RequestReturn({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   useRevealOnChange(requests.map((r) => `${r.id}:${r.status}`).join(","))
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
@@ -103,7 +106,7 @@ export function RequestReturn({
       setOpen(false)
       setQty({})
       setDetails("")
-      toast.success("Return request sent. We'll review it and update you here.")
+      later(() => toast.success("Return request sent. We'll review it and update you here."))
       onDone?.()
       router.refresh()
     })
@@ -136,7 +139,7 @@ export function RequestReturn({
                   kind="digits"
                   fieldSize="md"
                   inputMode="numeric"
-                  maxLength={3}
+                  maxLength={String(LIMITS.returnQuantity.max).length}
                   placeholder="0"
                   value={qtyOf(i.productId)}
                   onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
@@ -169,7 +172,7 @@ export function RequestReturn({
           label={reason === OTHER_REASON ? "Please tell us the reason" : "Tell us more (optional)"}
           required={reason === OTHER_REASON}
           rows={2}
-          maxLength={300}
+          maxLength={LIMITS.returnDetail.max}
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           hint="For damaged items, describe what happened."
@@ -213,6 +216,7 @@ export function ReturnRequestsPanel({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
   if (requests.length === 0) return <ReturnsList returns={returns} audience="customer" refundedInFull={refundedInFull} />
 
@@ -224,7 +228,7 @@ export function ReturnRequestsPanel({
         return
       }
       setConfirmId(null)
-      toast.success("Return request withdrawn")
+      later(() => toast.success("Return request withdrawn"))
       onChanged?.()
       router.refresh()
     })

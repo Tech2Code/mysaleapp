@@ -27,6 +27,7 @@ import { ImageUploader } from "./image-uploader"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -48,6 +49,7 @@ export function ProductForm({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
   const [uploading, setUploading] = useState(false)
   const { shopName } = useStoreSettings()
@@ -97,7 +99,7 @@ export function ProductForm({
         }
         return
       }
-      toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store.")
+      later(() => toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store."))
       if (product && res.data.stock !== values.stock) {
         toast.info(`Stock is now ${res.data.stock} (it changed while you were editing, e.g. a new order).`)
       }

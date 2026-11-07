@@ -35,6 +35,7 @@ import { WhatsAppIcon } from "./brand-icons"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
 import { useStoreSettings } from "./store-settings-provider"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
@@ -92,6 +93,7 @@ function ReferenceForm({
 }) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { reference: "" } })
 
@@ -103,7 +105,7 @@ function ReferenceForm({
         setServerError(res.error)
         return
       }
-      toast.success("Payment submitted. We'll verify it shortly.")
+      later(() => toast.success("Payment submitted. We'll verify it shortly."))
       onSubmitted()
     })
   })
@@ -225,14 +227,14 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         {deadline && (
           <p data-ui="store/PaymentPanel/p-flex" className="mt-2 flex items-start gap-2 rounded-xl bg-amber-100 p-3 text-xs/snug  text-amber-950 dark:bg-amber-900/30 dark:text-amber-100">
             <ClockIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span data-ui="store/PaymentPanel/span-2">
+            <span data-ui="store/PaymentPanel/span">
               {deadline.exact ? (
                 <>
-                  Please pay by <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.exact}</span>. If we don&apos;t receive the payment by then, this order is cancelled automatically and the items go back on sale.
+                  Please pay by <span data-ui="store/PaymentPanel/span-2" className="font-semibold">{deadline.exact}</span>. If we don&apos;t receive the payment by then, this order is cancelled automatically and the items go back on sale.
                 </>
               ) : (
                 <>
-                  Please pay within <span data-ui="store/PaymentPanel/span-4" className="font-semibold">{deadline.within}</span>. Unpaid orders are cancelled automatically after that and the items go back on sale.
+                  Please pay within <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.within}</span>. Unpaid orders are cancelled automatically after that and the items go back on sale.
                 </>
               )}
               {" "}Already paid? Enter your UTR below and we&apos;ll keep your order.
@@ -244,8 +246,8 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
       {rejected && (
         <p data-ui="store/PaymentPanel/p-flex-2" role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
-          <span data-ui="store/PaymentPanel/span-5">
-            <span data-ui="store/PaymentPanel/span-6" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
+          <span data-ui="store/PaymentPanel/span-4">
+            <span data-ui="store/PaymentPanel/span-5" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
             {payment.paymentNote ?? "Please check the reference number and submit it again."}
           </span>
         </p>

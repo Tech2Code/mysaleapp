@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { LIMITS, v } from "@/lib/validation"
+import { LIMITS, PATTERNS, v } from "@/lib/validation"
 import { requiredNumber } from "@/lib/zod-helpers"
 
 /** 10-digit Indian numbers get +91 added; anything else must already include the country code. */
@@ -40,7 +40,7 @@ export const storeSettingsSchema = z.object({
   gstRegistered: z.boolean(),
   gstin: z.preprocess(
     (x) => (typeof x === "string" ? x.trim().toUpperCase() || null : x),
-    z.string().regex(GSTIN_PATTERN, "Enter the 15-character GSTIN").nullable()
+    z.string().regex(GSTIN_PATTERN, `Enter the ${LIMITS.gstin}-character GSTIN`).nullable()
   ),
   gstRate: v.money(LIMITS.gstRate.max, "Enter the GST rate, e.g. 12"),
   legalName: v.optionalText(LIMITS.legalName.max),
@@ -57,7 +57,7 @@ export const storeSettingsSchema = z.object({
   /** true = calling number is the WhatsApp number; `phone` is then ignored. */
   phoneSameAsWhatsapp: z.boolean(),
   email: v.optionalEmail(),
-  phone: v.optionalText(LIMITS.displayPhone.max),
+  phone: v.optionalDisplayPhone(),
   city: v.optionalText(LIMITS.city.max),
   region: v.optionalText(LIMITS.region.max),
   instagramUrl: v.optionalUrl("Instagram link"),
@@ -68,10 +68,10 @@ export const storeSettingsSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-Z]{1,5}$/, `${LIMITS.orderPrefix.min} to ${LIMITS.orderPrefix.max} letters, like KK`),
+    .regex(PATTERNS.orderPrefix, `${LIMITS.orderPrefix.min} to ${LIMITS.orderPrefix.max} letters, like KK`),
 
-  unpaidOrderExpiryHours: v.wholeNumber(720, "Enter hours (0 = never cancel)"),
-  returnWindowDays: v.wholeNumber(90, "Enter days (0 = no returns)"),
+  unpaidOrderExpiryHours: v.wholeNumber(LIMITS.unpaidExpiryHours.max, "Enter hours (0 = never cancel)"),
+  returnWindowDays: v.wholeNumber(LIMITS.returnWindowDays.max, "Enter days (0 = no returns)"),
 
   // ---- Delivery ----
   deliveryFee: v.money(LIMITS.deliveryFee.max, "Enter the delivery charge"),

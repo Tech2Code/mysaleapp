@@ -1,5 +1,6 @@
 import "server-only"
 import { requireAdmin } from "@/features/auth/guards"
+import { LIMITS } from "@/lib/validation"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { istDayKey, type DashboardRange } from "./dashboard-range"
 import { isOrderView, RETURN_VIEWS, type OrderView } from "./views"
@@ -134,7 +135,7 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
 
   // Search by order code, phone or customer name. Strip characters that have
   // meaning in PostgREST filter syntax so user input can't alter the filter.
-  const q = (filters.q ?? "").replace(/[^a-zA-Z0-9\s-]/g, "").trim().slice(0, 40)
+  const q = (filters.q ?? "").replace(/[^a-zA-Z0-9\s-]/g, "").trim().slice(0, LIMITS.orderSearch.max)
   if (q) {
     query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
   }

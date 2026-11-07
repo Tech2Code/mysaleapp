@@ -14,6 +14,7 @@ import { changePasswordSchema, emailSchema, profileSchema } from "@/features/aut
 import type { ActionResult } from "@/lib/action-result"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -31,6 +32,7 @@ function Card({ title, description, children }: { title: string; description: st
 function useSubmit<T extends Record<string, string>>(setError: (name: keyof T & string, message: string) => void) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const run = (action: () => Promise<ActionResult>, onOk: () => void) =>
     startTransition(async () => {
       const res = await action()
@@ -38,7 +40,7 @@ function useSubmit<T extends Record<string, string>>(setError: (name: keyof T & 
       for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) if (msgs?.[0]) setError(field as keyof T & string, msgs[0])
       toast.error(res.error)
     })
-  return { pending, run }
+  return { pending, run, later }
 }
 
 type ProfileValues = z.input<typeof profileSchema>
@@ -50,7 +52,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
     defaultValues: { name, phone },
   })
   const { errors, isDirty } = form.formState
-  const { pending, run } = useSubmit<{ name: string; phone: string }>((n, m) => form.setError(n, { message: m }))
+  const { pending, run, later } = useSubmit<{ name: string; phone: string }>((n, m) => form.setError(n, { message: m }))
 
   return (
     <form
@@ -61,7 +63,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
         run(
           () => updateAdminProfile(values),
           () => {
-            toast.success("Details saved")
+            later(() => toast.success("Details saved"))
             form.reset(form.getValues())
             router.refresh()
           }
@@ -126,7 +128,7 @@ function PasswordForm() {
     defaultValues: { current: "", next: "", confirm: "" },
   })
   const { errors } = form.formState
-  const { pending, run } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
+  const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
 
   return (
     <form
@@ -137,7 +139,7 @@ function PasswordForm() {
         run(
           () => changeAdminPassword(values),
           () => {
-            toast.success("Password changed")
+            later(() => toast.success("Password changed"))
             form.reset()
           }
         )

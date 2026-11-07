@@ -13,7 +13,9 @@ import { CANCELLABLE_BY_CUSTOMER, CANCEL_REASONS } from "@/features/orders/trans
 import type { OrderStatus, PaymentStatus } from "@/features/orders/types"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
+import { LIMITS } from "@/lib/validation"
 
 /**
  * "Cancel order" for customers. Available until the order is packed; after that it points to WhatsApp.
@@ -42,6 +44,7 @@ export function CancelOrder({
   const [phone, setPhone] = useState("")
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   useRevealOnChange(status)
 
   if (status === "cancelled" || status === "delivered") return null
@@ -87,7 +90,7 @@ export function CancelOrder({
         return
       }
       setOpen(false)
-      toast.success(res.data.refundDue ? "Order cancelled. Your refund is on its way." : "Order cancelled")
+      later(() => toast.success(res.data.refundDue ? "Order cancelled. Your refund is on its way." : "Order cancelled"))
       onCancelled?.()
       router.refresh()
     })
@@ -122,7 +125,7 @@ export function CancelOrder({
             label={reason === OTHER_REASON ? "Please tell us the reason" : "Anything else? (optional)"}
             required={reason === OTHER_REASON}
             rows={2}
-            maxLength={200}
+            maxLength={LIMITS.cancelDetail.max}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
             error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}

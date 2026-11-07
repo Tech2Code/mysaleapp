@@ -6,15 +6,16 @@ import { useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
-import { FormSelectField, SelectField, TextAreaField, TextField } from "@/components/form"
+import { FormSelectField, SelectField, TextAreaField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { CourierDialog, courierValues } from "./courier-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, statusChoices } from "@/features/orders/transitions"
-import { COURIER_SUGGESTIONS, shippingSchema } from "@/features/orders/schema"
+import { expectedDeliveryProblem, shippingSchema } from "@/features/orders/schema"
 import { isOrderLocked, lockNote } from "@/features/orders/locking"
 import type { ReturnStage } from "@/features/orders/returns"
 import { STATUS_META, type OrderStatus, type PaymentStatus, type ShippingDetails } from "@/features/orders/types"
@@ -22,6 +23,7 @@ import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { buildStatusUpdateMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 type Values = {
   status: OrderStatus
@@ -67,6 +69,7 @@ export function OrderStatusControl({
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   // The validated change waits here for "are you sure?" (a status change notifies the customer's order page).
   const [toConfirm, setToConfirm] = useState<{ values: Values; shipping: z.output<typeof shippingSchema> | undefined } | null>(null)
 
@@ -79,14 +82,16 @@ export function OrderStatusControl({
       expectedDelivery: shipping?.expectedDelivery ?? "",
     },
   })
-  const { errors, isDirty } = form.formState
+  const { isDirty } = form.formState
   const [value, carrier, trackingNumber, trackingUrl, expectedDelivery] = useWatch({
     control: form.control,
     name: ["status", ...SHIPPING_FIELDS],
   })
 
   // Shipping fields appear when marking an order "Shipped" (or when details already exist, so they can be edited).
-  const showShipping = value === "shipped" || Boolean(shipping)
+  // Choosing "Shipped" asks for the courier details in a popup (CourierDialog). Once shipped, they are edited from the shipping card's Edit button.
+  const showShipping = value === "shipped" && status !== "shipped"
+  const [courierOpen, setCourierOpen] = useState(false)
   const hasAnyShipping = [carrier, trackingNumber, trackingUrl, expectedDelivery].some((v) => v?.trim())
 
   const notifyShipping: ShippingDetails | null = carrier?.trim()
@@ -111,7 +116,7 @@ export function OrderStatusControl({
       hasCourier: Boolean(values.carrier.trim()),
     })
     if (problem) {
-      if (values.status === "shipped") form.setError("carrier", { message: "Enter the courier name to mark as shipped" })
+      if (values.status === "shipped") setCourierOpen(true)
       toast.error(problem)
       return
     }
@@ -119,6 +124,11 @@ export function OrderStatusControl({
     let shippingPayload: z.output<typeof shippingSchema> | undefined
 
     if (showShipping && hasAnyShipping) {
+      const dateProblem = expectedDeliveryProblem(values.expectedDelivery, shipping?.expectedDelivery)
+      if (dateProblem) {
+        form.setError("expectedDelivery", { message: dateProblem })
+        return
+      }
       const parsed = shippingSchema.safeParse({
         carrier: values.carrier,
         trackingNumber: values.trackingNumber,
@@ -145,9 +155,9 @@ export function OrderStatusControl({
         toast.error(res.error)
         return
       }
-      toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
+      later(() => toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
         action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl, "_blank", "noopener") },
-      })
+      }))
       form.reset(values)
       router.refresh()
     })
@@ -175,44 +185,22 @@ export function OrderStatusControl({
       )}
 
       {!locked && showShipping && (
-        <fieldset data-ui="admin/OrderStatusControl/fieldset" className="space-y-1 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
-          <legend data-ui="admin/OrderStatusControl/legend-shipping-details" className="px-1 text-sm font-semibold">Shipping details</legend>
-          <p data-ui="admin/OrderStatusControl/p-2" className="-mt-2 text-xs text-muted-foreground">
-            {value === "shipped" ? "Courier name is required to mark an order as shipped. " : ""}Customers see these on their order page.
+        <div data-ui="admin/OrderStatusControl/div-flex" className="flex items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 text-sm dark:border-violet-900/50 dark:bg-violet-950/20">
+          <p data-ui="admin/OrderStatusControl/p-2" className="min-w-0 wrap-anywhere">
+            {carrier?.trim() ? (
+              <>
+                <span data-ui="admin/OrderStatusControl/span" className="text-muted-foreground">Courier: </span>
+                <span data-ui="admin/OrderStatusControl/span-2" className="font-medium">{carrier.trim()}</span>
+                {trackingNumber?.trim() ? <span data-ui="admin/OrderStatusControl/span-3" className="font-mono"> · {trackingNumber.trim()}</span> : null}
+              </>
+            ) : (
+              "Courier details are needed to mark this order as shipped."
+            )}
           </p>
-          <TextField
-            label="Courier" maxLength={LIMITS.carrier.max}
-            fieldSize="md"
-            placeholder="e.g. Delhivery"
-            suggestions={COURIER_SUGGESTIONS}
-            error={errors.carrier?.message}
-            {...form.register("carrier")}
-          />
-          <TextField
-            label="Tracking / AWB number" kind="trackingNumber"
-            fieldSize="md"
-            className="font-mono"
-            error={errors.trackingNumber?.message}
-            {...form.register("trackingNumber")}
-          />
-          <TextField
-            label="Tracking link" kind="url"
-            fieldSize="md"
-            type="url"
-            inputMode="url"
-            placeholder="https://…"
-            hint="Optional. Customers get a “Track shipment” button."
-            error={errors.trackingUrl?.message}
-            {...form.register("trackingUrl")}
-          />
-          <TextField
-            label="Expected delivery date"
-            fieldSize="md"
-            type="date"
-            error={errors.expectedDelivery?.message}
-            {...form.register("expectedDelivery")}
-          />
-        </fieldset>
+          <Button data-ui="admin/OrderStatusControl/Button" type="button" variant="outline" size="sm" onClick={() => setCourierOpen(true)} className="shrink-0 rounded-full">
+            {carrier?.trim() ? "Edit" : "Add details"}
+          </Button>
+        </div>
       )}
 
       {!locked && (
@@ -237,6 +225,24 @@ export function OrderStatusControl({
         onConfirm={() => toConfirm && apply(toConfirm)}
       />
     </form>
+    {courierOpen && (
+      <CourierDialog
+        open={courierOpen}
+        onOpenChange={setCourierOpen}
+        initial={courierValues(shipping)}
+        previousExpected={shipping?.expectedDelivery}
+        title="Courier details"
+        description="Shown to the customer on their order page once the order is shipped."
+        saveLabel="Use these details"
+        onSave={(_payload, v) => {
+          form.setValue("carrier", v.carrier, { shouldDirty: true })
+          form.setValue("trackingNumber", v.trackingNumber, { shouldDirty: true })
+          form.setValue("trackingUrl", v.trackingUrl, { shouldDirty: true })
+          form.setValue("expectedDelivery", v.expectedDelivery, { shouldDirty: true })
+          setCourierOpen(false)
+        }}
+      />
+    )}
     </div>
   )
 }
@@ -249,6 +255,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   if (!CANCELLABLE_BY_ADMIN.includes(status)) return null
@@ -264,7 +271,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
         return
       }
       setOpen(false)
-      toast.success("Order cancelled")
+      later(() => toast.success("Order cancelled"))
       router.refresh()
     })
 
@@ -296,7 +303,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             label={reason === OTHER_REASON ? "Reason (the customer will see it)" : "Message to the customer (optional)"}
             required={reason === OTHER_REASON}
             rows={2}
-            maxLength={200}
+            maxLength={LIMITS.cancelDetail.max}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
             error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
@@ -324,6 +331,7 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
   const router = useRouter()
   const [value, setValue] = useState(note ?? "")
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   return (
@@ -334,7 +342,7 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
         startTransition(async () => {
           const res = await updateAdminNote({ orderId, note: value })
           if (res.ok) {
-            toast.success("Note saved")
+            later(() => toast.success("Note saved"))
             router.refresh()
           }
           else toast.error(res.error)

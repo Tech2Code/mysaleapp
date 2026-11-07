@@ -1,6 +1,7 @@
 "use client"
 
 import { XIcon } from "lucide-react"
+import { LIMITS } from "@/lib/validation"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react"
 import { OrdersTable } from "@/components/admin/orders-table"
@@ -82,6 +83,7 @@ export function OrdersBrowser({ children, returnCounts, ...current }: Filters & 
         >
           <SearchField
             label="Search orders"
+            maxLength={LIMITS.orderSearch.max}
             fieldSize="md"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

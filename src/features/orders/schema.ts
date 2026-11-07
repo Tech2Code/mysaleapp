@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { joinCityState } from "@/features/location/states"
-import { LIMITS, v } from "@/lib/validation"
+import { LIMITS, addDays, todayIST, v } from "@/lib/validation"
 import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "./reasons"
 
 /** Shared by the checkout form (client) and the placeOrder action (server). Rules live in lib/validation. */
@@ -22,12 +22,12 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>
 
 export const cartLineSchema = z.object({
   productId: z.uuid(),
-  quantity: z.number().int().min(1).max(20),
+  quantity: v.quantity(),
 })
 
 export const placeOrderSchema = z.object({
   customer: checkoutSchema,
-  items: z.array(cartLineSchema).min(1, "Your cart is empty").max(30),
+  items: z.array(cartLineSchema).min(1, "Your cart is empty").max(LIMITS.orderLines.max),
   /** Signed-in customers: also save this delivery address to their address book. */
   saveAddress: z.boolean().optional(),
 })
@@ -47,37 +47,31 @@ export const COURIER_SUGGESTIONS = [
   "Self delivery",
 ]
 
-const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v)
+const blankToUndefined = (x: unknown) => (typeof x === "string" && x.trim() === "" ? undefined : x)
 
 /** Shipping details the admin adds when marking an order as shipped. Shared by form and server. */
 export const shippingSchema = z.object({
-  carrier: z.string().trim().min(2, "Enter the courier name").max(60, "Too long"),
-  trackingNumber: z.preprocess(blankToUndefined, z.string().trim().max(60, "Too long").optional()),
-  trackingUrl: z.preprocess(
-    blankToUndefined,
-    z
-      .string()
-      .trim()
-      .max(500, "Link is too long")
-      .refine((u) => {
-        try {
-          const { protocol } = new URL(u)
-          return protocol === "http:" || protocol === "https:"
-        } catch {
-          return false
-        }
-      }, "Enter a full link starting with https://")
-      .optional()
-  ),
+  carrier: z.string().trim().min(LIMITS.carrier.min, "Enter the courier name").max(LIMITS.carrier.max, "Too long"),
+  trackingNumber: z.preprocess(blankToUndefined, v.trackingNumber().optional()),
+  trackingUrl: z.preprocess(blankToUndefined, v.httpsUrl("tracking link").optional()),
+  /** Real day, at most LIMITS.expectedDeliveryDays ahead. "Not in the past" is checked on change only: see expectedDeliveryProblem. */
   expectedDelivery: z.preprocess(
     blankToUndefined,
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
-      .refine((d) => !Number.isNaN(Date.parse(d)), "Pick a valid date")
+    v
+      .isoDate()
+      .refine((d) => d <= addDays(todayIST(), LIMITS.expectedDeliveryDays.max), `Within the next ${LIMITS.expectedDeliveryDays.max} days`)
       .optional()
   ),
 })
+
+/**
+ * A date the admin CHANGED must not be in the past. An unchanged date is left alone, otherwise an order that is
+ * running late could never be marked delivered. Returns the message, or null when fine.
+ */
+export function expectedDeliveryProblem(next: string | null | undefined, previous: string | null | undefined, today = todayIST()): string | null {
+  if (!next || next === previous) return null
+  return next < today ? "Pick today or a later date" : null
+}
 
 export type ShippingInput = z.output<typeof shippingSchema>
 
@@ -99,9 +93,9 @@ export const cancelOrderSchema = z.object({
    */
   phone: v.phoneIN().optional(),
   /** The reason picked from the list. */
-  reason: z.string().trim().min(2, "Choose a reason").max(80),
+  reason: v.reason(),
   /** Extra words; required when the reason is "Other". */
-  detail: z.string().trim().max(200, "Keep it under 200 characters").optional(),
+  detail: v.note(LIMITS.cancelDetail.max).optional(),
 }).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
 export const requestReturnSchema = z.object({
@@ -109,11 +103,11 @@ export const requestReturnSchema = z.object({
   /** Needed for guests; signed-in customers are recognised by their account. */
   phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
   items: z
-    .array(z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(999) }))
+    .array(z.object({ productId: z.uuid(), quantity: v.quantity(LIMITS.returnQuantity.max) }))
     .min(1, "Choose at least one item to return")
-    .max(50),
-  reason: z.string().trim().min(2, "Choose a reason").max(80),
-  details: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+    .max(LIMITS.returnLines.max),
+  reason: v.reason(),
+  details: v.note(LIMITS.returnDetail.max).optional(),
 }).refine((v) => !otherNeedsDetail(v.reason, v.details), { path: ["details"], error: OTHER_DETAIL_MESSAGE })
 
 export const withdrawReturnSchema = z.object({
@@ -131,7 +125,7 @@ export const submitPaymentSchema = z.object({
 export const updateDeliverySchema = z.object({
   code: trackOrderSchema.shape.code,
   /** Needed for guests; signed-in owners are recognised by their session. */
-  phoneLast4: z.string().trim().regex(/^\d{4}$/).optional(),
+  phoneLast4: v.orderLast4().optional(),
   /** The order's CURRENT full mobile number; required from guests (migration 0022), not from signed-in owners. */
   phone: v.phoneIN().optional(),
   customer: checkoutSchema,

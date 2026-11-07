@@ -23,6 +23,7 @@ import { addressSchema, type AddressInput, type AddressValues } from "@/features
 import { ADDRESS_LABELS, MAX_ADDRESSES, type Address } from "@/features/addresses/types"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 const labelOptions = ADDRESS_LABELS.map((l) => ({ value: l, label: l }))
 
@@ -42,6 +43,7 @@ function AddressDialog({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm<AddressInput, unknown, AddressValues>({
@@ -78,7 +80,7 @@ function AddressDialog({
         }
         return
       }
-      toast.success(address ? "Address updated" : "Address added")
+      later(() => toast.success(address ? "Address updated" : "Address added"))
       onOpenChange(false)
       router.refresh()
     })
@@ -173,6 +175,7 @@ export function AddressBook({
   const [openCount, setOpenCount] = useState(0)
   const [deleting, setDeleting] = useState<Address | null>(null)
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   const openNew = () => {
@@ -185,7 +188,7 @@ export function AddressBook({
     startTransition(async () => {
       const res = await setDefaultAddress(a.id)
       if (res.ok) {
-        toast.success(`“${a.label}” is now your default address`)
+        later(() => toast.success(`“${a.label}” is now your default address`))
         router.refresh()
       } else toast.error(res.error)
     })
@@ -195,7 +198,7 @@ export function AddressBook({
     startTransition(async () => {
       const res = await deleteAddress(deleting.id)
       if (res.ok) {
-        toast.success("Address deleted")
+        later(() => toast.success("Address deleted"))
         setDeleting(null)
         router.refresh()
       } else toast.error(res.error)

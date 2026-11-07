@@ -1,6 +1,7 @@
 "use server"
 
 import { z } from "zod"
+import { LIMITS } from "@/lib/validation"
 import { getActiveProducts } from "./queries"
 
 export type SearchHit = {
@@ -17,7 +18,7 @@ export type SearchHit = {
 export type SearchResult = { hits: SearchHit[]; total: number }
 
 const MAX_HITS = 6
-const querySchema = z.string().trim().min(1).max(80)
+const querySchema = z.string().trim().min(1).max(LIMITS.search.max)
 
 /**
  * Global store search (header search box). Reads the cached active catalogue, so it is cheap and public:

@@ -23,6 +23,7 @@ import type { Category } from "@/features/products/types"
 import { slugify } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 type Row = Category & { productCount: number }
 
@@ -40,6 +41,7 @@ function CategoryDialog({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const form = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
     values: {
@@ -58,7 +60,7 @@ function CategoryDialog({
         toast.error(res.error)
         return
       }
-      toast.success(category ? "Category updated" : "Category added")
+      later(() => toast.success(category ? "Category updated" : "Category added"))
       onOpenChange(false)
       router.refresh()
     })
@@ -119,6 +121,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
   const [open, setOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
   const nextSort = categories.reduce((m, c) => Math.max(m, c.sort), 0) + 1
 
@@ -131,7 +134,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
       const res = await deleteCategory(c.id)
       setDeletingId(null)
       if (res.ok) {
-        toast.success("Category deleted")
+        later(() => toast.success("Category deleted"))
         router.refresh()
       } else toast.error(res.error)
     })

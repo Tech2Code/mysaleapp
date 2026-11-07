@@ -66,7 +66,7 @@ export function BusyOverlayProvider({ children }: { children: ReactNode }) {
           data-ui="shared/BusyOverlayProvider/div-grid"
           role="status"
           aria-live="polite"
-          className="fixed inset-0 z-90 grid cursor-wait place-items-center bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-150"
+          className="fixed inset-0 z-90 grid cursor-default place-items-center bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-150"
         >
           <div data-ui="shared/BusyOverlayProvider/div-flex" className="flex items-center gap-3 rounded-full bg-card px-5 py-3 text-sm font-medium text-card-foreground shadow-lg ring-1 ring-foreground/10">
             {success ? <SuccessTick /> : <Loader2Icon className="size-5 animate-spin text-primary" aria-hidden />}

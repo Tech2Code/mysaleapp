@@ -12,6 +12,7 @@ import { RESET_CONFIRM_WORD, RESET_SCOPE_INFO, RESET_SCOPES, type LaunchCounts, 
 import type { ChecklistItem } from "@/features/settings/launch-queries"
 import { cn } from "@/lib/utils"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 const COUNT_LABEL: Record<ResetScope, (c: LaunchCounts) => string> = {
   orders: (c) => `${c.orders} order${c.orders === 1 ? "" : "s"}`,
@@ -26,6 +27,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
   const [confirm, setConfirm] = useState("")
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [error, setError] = useState<string | null>(null)
 
   const ready = checklist.every((c) => c.done)
@@ -47,7 +49,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
           .filter(Boolean)
           .join(", ") || "nothing to clear"}`
       if (d.imagesFailed > 0 || d.imagesUnlisted) toast.warning(msg)
-      else toast.success(msg)
+      else later(() => toast.success(msg))
       if (d.imagesFailed > 0 || d.imagesUnlisted) {
         setError(
           `The database data was cleared, but ${d.imagesFailed > 0 ? `${d.imagesFailed} product photo${d.imagesFailed === 1 ? "" : "s"} could not be removed from storage` : "the photo storage could not be fully listed"}${d.imagesFailed > 0 && d.imagesUnlisted ? ", and some folders could not be read" : ""}. Delete the leftovers in Supabase Storage (product-images).`

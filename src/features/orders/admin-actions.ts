@@ -6,8 +6,8 @@ import { assertAdmin } from "@/features/auth/guards"
 import { CACHE_TAGS } from "@/features/products/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
-import { optionalNumber } from "@/lib/zod-helpers"
-import { paymentReferenceSchema, shippingSchema } from "./schema"
+import { LIMITS, v } from "@/lib/validation"
+import { expectedDeliveryProblem, paymentReferenceSchema, shippingSchema } from "./schema"
 import { lockedMessage } from "./locking"
 import { isPaymentMoneyLocked, paymentUpdateProblem } from "./payment-rules"
 import { mapRpcError } from "./rpc-errors"
@@ -39,10 +39,12 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
 
   const { data: current } = await supabase
     .from("orders")
-    .select("status, payment_status, shipping_carrier")
+    .select("status, payment_status, shipping_carrier, expected_delivery")
     .eq("id", orderId)
-    .maybeSingle<{ status: OrderStatus; payment_status: PaymentStatus | null; shipping_carrier: string | null }>()
+    .maybeSingle<{ status: OrderStatus; payment_status: PaymentStatus | null; shipping_carrier: string | null; expected_delivery: string | null }>()
   if (!current) return fail("Order not found")
+  const dateProblem = expectedDeliveryProblem(shipping?.expectedDelivery, current.expected_delivery)
+  if (dateProblem) return fail("Please check the shipping details.", { expectedDelivery: [dateProblem] })
   if (parsed.data.expectedStatus && parsed.data.expectedStatus !== current.status) {
     return fail("This order was just changed by someone else. Refresh the page and try again.")
   }
@@ -98,11 +100,11 @@ const updatePaymentSchema = z.object({
   /** UTR / transaction id. */
   reference: z.preprocess(blankToNull, paymentReferenceSchema.nullable()),
   /** Amount actually received (₹). Defaults to the order total when marking as paid. */
-  amount: optionalNumber.pipe(z.number().min(0).max(10_000_000).nullable()),
+  amount: v.optionalMoney(LIMITS.paymentAmount.max),
   /** Shown to the customer (e.g. why a payment was rejected). */
-  note: z.preprocess(blankToNull, z.string().trim().max(300, "Keep the note under 300 characters").nullable()),
+  note: z.preprocess(blankToNull, v.note(LIMITS.paymentNote.max).nullable()),
   /** The refunded_amount the screen was showing; a refund is refused if it has changed (double click / stale tab). */
-  expectedRefunded: z.number().min(0).max(10_000_000).optional(),
+  expectedRefunded: z.number().min(0).max(LIMITS.paymentAmount.max).optional(),
 })
 
 /**
@@ -219,7 +221,7 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   return { ok: true, data: { confirmed: confirmNow } }
 }
 
-const noteSchema = z.object({ orderId: z.uuid(), note: z.string().trim().max(1000) })
+const noteSchema = z.object({ orderId: z.uuid(), note: v.note(LIMITS.adminNote.max) })
 
 export async function updateAdminNote(input: unknown): Promise<ActionResult> {
   const auth = await assertAdmin()
@@ -245,7 +247,7 @@ const cancelSchema = z.object({
   orderId: z.uuid(),
   reason: z.enum(ADMIN_CANCEL_REASONS),
   /** Extra detail shown to the customer. */
-  detail: z.string().trim().max(200, "Keep it under 200 characters").optional(),
+  detail: v.note(LIMITS.cancelDetail.max).optional(),
 }).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
 /** Cancel an order (until it is packed). The customer sees the reason; a paid order is flagged "refund due". */
@@ -296,14 +298,14 @@ const returnSchema = z.object({
     .array(
       z.object({
         productId: z.uuid(),
-        name: z.string().trim().max(120),
-        quantity: z.number().int().min(1).max(999),
+        name: z.string().trim().max(LIMITS.productName.max),
+        quantity: v.quantity(LIMITS.returnQuantity.max),
         restock: z.boolean(),
       })
     )
     .min(1, "Enter how many came back")
-    .max(50),
-  reason: z.string().trim().max(300, "Keep the reason under 300 characters").optional(),
+    .max(LIMITS.returnLines.max),
+  reason: v.note(LIMITS.returnDetail.max).optional(),
   refund: z.boolean(),
   /** The customer's return request this return closes (if it came from one). */
   requestId: z.uuid().optional(),
@@ -348,13 +350,9 @@ const decideSchema = z.object({
   requestId: z.uuid(),
   approve: z.boolean(),
   /** Approve: pickup / shipping instructions (optional). Reject: the reason (required). */
-  note: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+  note: v.note(LIMITS.returnDetail.max).optional(),
   /** Approve: the day the goods are collected (YYYY-MM-DD). */
-  pickupDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
-    .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), "Pick a valid date") // rejects 2026-02-31
-    .optional(),
+  pickupDate: v.futureDate(LIMITS.pickupDays.max).optional(),
 })
 
 /** Approve a customer's return request (with instructions) or reject it (with a reason the customer sees). */
@@ -424,7 +422,7 @@ export async function undoReturnStep(input: unknown): Promise<ActionResult> {
 const refundReturnSchema = z.object({
   returnId: z.uuid(),
   /** The refunded_amount the screen showed; the DB refuses if it moved on (double click / stale tab). */
-  expectedRefunded: z.number().min(0).max(10_000_000).optional(),
+  expectedRefunded: z.number().min(0).max(LIMITS.paymentAmount.max).optional(),
 })
 
 /**
@@ -453,11 +451,11 @@ export async function refundReturn(input: unknown): Promise<ActionResult<{ refun
 const createRequestSchema = z.object({
   orderId: z.uuid(),
   items: z
-    .array(z.object({ productId: z.uuid(), name: z.string().max(120), quantity: z.number().int().min(1).max(999) }))
+    .array(z.object({ productId: z.uuid(), name: z.string().max(LIMITS.productName.max), quantity: v.quantity(LIMITS.returnQuantity.max) }))
     .min(1, "Choose at least one item")
-    .max(50),
-  reason: z.string().trim().min(2, "Choose a reason").max(80),
-  details: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+    .max(LIMITS.returnLines.max),
+  reason: v.reason(),
+  details: v.note(LIMITS.returnDetail.max).optional(),
 })
 
 /**

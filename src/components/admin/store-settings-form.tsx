@@ -15,6 +15,7 @@ import { formatPrice } from "@/lib/format"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
@@ -70,6 +71,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const form = useForm<StoreSettingsInput, unknown, StoreSettingsValues>({
     resolver: zodResolver(storeSettingsSchema),
     defaultValues: toFormValues(settings),
@@ -99,7 +101,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         }
         return
       }
-      toast.success("Settings saved. Your website is updated.")
+      later(() => toast.success("Settings saved. Your website is updated."))
       // keep exactly what was saved (normalised phone number, upper-case prefix…) as the new baseline
       form.reset({
         shopName: values.shopName,
@@ -308,7 +310,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             {gstOn && (
               <div data-ui="admin/StoreSettingsForm/div-grid-6" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
                 <TextField
-                  label="GSTIN" fieldSize="md" maxLength={15}
+                  label="GSTIN" kind="gstin" fieldSize="md"
                   placeholder="22AAAAA0000A1Z5"
                   autoCapitalize="characters"
                   autoComplete="off"
@@ -317,7 +319,8 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 />
                 <TextField
                   label="GST rate included in prices (%)" fieldSize="md"
-                  inputMode="decimal"
+                  kind="money"
+                  maxLength={5}
                   placeholder="12"
                   hint="One rate for every product, e.g. 5, 12 or 18. Ask your CA which applies."
                   error={errors.gstRate?.message}

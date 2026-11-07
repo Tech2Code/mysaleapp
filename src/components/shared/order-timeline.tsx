@@ -1,4 +1,5 @@
 import { CheckIcon, XIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import { returnTimeline, type ReturnStageInput } from "@/features/orders/returns"
 import { STATUS_META, type OrderStatus, type ShippingDetails, type StatusHistoryEntry } from "@/features/orders/types"
 import { formatDateTime } from "@/lib/format"
@@ -95,6 +96,7 @@ export function OrderTimeline({
   status,
   history,
   shipping,
+  shippingAction,
   returnInput,
   audience = "customer",
 }: {
@@ -102,6 +104,8 @@ export function OrderTimeline({
   history: StatusHistoryEntry[]
   /** Courier / tracking info; shown right under the "Shipped" step, before "Delivered". */
   shipping?: ShippingDetails | null
+  /** Admin only: rendered on the right of the shipping card (the courier "Edit" button). */
+  shippingAction?: ReactNode
   /** When the order has a return, its steps are added after Delivered. */
   returnInput?: ReturnStageInput
   audience?: "admin" | "customer"
@@ -169,13 +173,13 @@ export function OrderTimeline({
               />
             )}
             </div>
-            <div data-ui="shared/OrderTimeline/div" className={cn("min-w-0 flex-1 pt-1.5 leading-snug", next && "pb-6")}>
+            <div data-ui="shared/OrderTimeline/div" className={cn("min-w-0 flex-1 pt-1.5 leading-snug", next && (step.key === "shipped" && shipping ? "pb-4" : "pb-6"))}>
               <p data-ui="shared/OrderTimeline/p" className={cn("font-semibold", !reached && "text-muted-foreground", isCancelled && "text-destructive")}>
                 {step.label}
                 {step.state === "current" && <span data-ui="shared/OrderTimeline/span-6" className="sr-only"> (current status)</span>}
               </p>
               <p data-ui="shared/OrderTimeline/p-2" className="text-sm text-muted-foreground">{step.detail}</p>
-              {step.key === "shipped" && reached && shipping && <ShippingInfo shipping={shipping} className="mt-3" />}
+              {step.key === "shipped" && reached && shipping && <ShippingInfo shipping={shipping} className="mt-3" action={shippingAction} />}
             </div>
           </li>
         )

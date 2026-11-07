@@ -371,7 +371,7 @@
 [data-skeleton] {
   pointer-events: none;
   user-select: none;
-  cursor: progress;
+  cursor: default;
 }
 /* 1. No visible text, no motion-driven hiding (Stagger/FadeIn start at opacity 0). */
 [data-skeleton] *,

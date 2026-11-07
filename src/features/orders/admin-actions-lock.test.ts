@@ -10,7 +10,7 @@ vi.mock("@/features/products/queries", () => ({ CACHE_TAGS: { products: "product
 import { updateOrderStatus } from "./admin-actions"
 
 const ID = "11111111-1111-4111-8111-111111111111"
-const SHIPPING = { carrier: "Delhivery", trackingNumber: "AWB1", trackingUrl: "", expectedDelivery: "" }
+const SHIPPING = { carrier: "Delhivery", trackingNumber: "AWB12345", trackingUrl: "", expectedDelivery: "" }
 
 function setup(status: string) {
   const fake = fakeSupabase((call: Call) => {

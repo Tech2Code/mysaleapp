@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button"
 import { updateProfile } from "@/features/account/actions"
 import { profileSchema, type Profile, type ProfileInput } from "@/features/account/schema"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: profile.fullName, phone: profile.phone },
@@ -24,7 +26,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     startTransition(async () => {
       const res = await updateProfile(values)
       if (res.ok) {
-        toast.success("Profile saved")
+        later(() => toast.success("Profile saved"))
         form.reset(values)
       } else toast.error(res.error)
     })

@@ -8,6 +8,7 @@ import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, use
 import { SearchField, SelectField } from "@/components/form"
 import type { Category, ProductListItem } from "@/features/products/types"
 import { cn } from "@/lib/utils"
+import { LIMITS } from "@/lib/validation"
 import { ProductCard } from "./product-card"
 
 const SORTS = {
@@ -197,6 +198,7 @@ export function ProductBrowser({
           <SearchField
             label="Search products"
             pill
+            maxLength={LIMITS.search.max}
             containerClassName="flex-1"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

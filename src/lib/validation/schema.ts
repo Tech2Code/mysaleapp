@@ -2,7 +2,8 @@ import { z } from "zod"
 import { normalizeIndianPhone } from "@/lib/format"
 import { INDIAN_STATES } from "@/features/location/states"
 import { LIMITS, PATTERNS } from "./limits"
-import { requiredNumber } from "@/lib/zod-helpers"
+import { hasMaxTwoDecimals, optionalNumber, requiredNumber } from "@/lib/zod-helpers"
+import { addDays, isRealIsoDate, todayIST } from "./dates"
 
 /**
  * Reusable zod rules ("primitives"). Every schema in the app builds on these, so the same kind of data
@@ -11,6 +12,8 @@ import { requiredNumber } from "@/lib/zod-helpers"
  */
 
 const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v)
+
+const isoDate = () => z.string().regex(PATTERNS.isoDate, "Pick a valid date").refine(isRealIsoDate, "Pick a valid date")
 
 export const v = {
   /** A person's name: letters, spaces and . ' - */
@@ -54,6 +57,7 @@ export const v = {
     z
       .string()
       .trim()
+      .toLowerCase()
       .max(LIMITS.email.max, `Keep it under ${LIMITS.email.max} characters`)
       .pipe(z.email("Enter a valid email address")),
 
@@ -87,6 +91,51 @@ export const v = {
         }
       }, `Enter the full ${what}, starting with https://`),
 
+  /** https link only (tracking pages, anything a customer will click on). */
+  httpsUrl: (what = "link") =>
+    z
+      .string()
+      .trim()
+      .max(LIMITS.url.max, `Keep it under ${LIMITS.url.max} characters`)
+      .refine((u) => {
+        try {
+          return new URL(u).protocol === "https:"
+        } catch {
+          return false
+        }
+      }, `Enter the full ${what}, starting with https://`),
+
+  /** A real calendar day, YYYY-MM-DD (rejects 2026-02-31). */
+  isoDate,
+
+  /** A day from today (India time) up to `maxDays` ahead. Past dates are refused. */
+  futureDate: (maxDays: number) =>
+    isoDate().refine((d) => d >= todayIST(), "Pick today or a later date").refine((d) => d <= addDays(todayIST(), maxDays), `Within the next ${maxDays} days`),
+
+  /** Courier tracking / AWB number: 5-30 letters, digits, - / _ ; upper-cased; no spaces. */
+  trackingNumber: () =>
+    z
+      .string()
+      .trim()
+      .toUpperCase()
+      .min(LIMITS.trackingNumber.min, `At least ${LIMITS.trackingNumber.min} characters`)
+      .max(LIMITS.trackingNumber.max, `At most ${LIMITS.trackingNumber.max} characters`)
+      .regex(PATTERNS.trackingNumber, "Letters, numbers, - / _ only (no spaces)"),
+
+  /** The reason picked from a cancel / return dropdown. */
+  reason: () => z.string().trim().min(LIMITS.reason.min, "Choose a reason").max(LIMITS.reason.max, "Reason is too long"),
+
+  /** Display phone like "+91 98765 43210": 7 to 15 digits, only digits + - ( ) and spaces. */
+  displayPhone: () =>
+    z
+      .string()
+      .trim()
+      .max(LIMITS.displayPhone.max, `Keep it under ${LIMITS.displayPhone.max} characters`)
+      .refine((p) => {
+        const digits = p.replace(/\D/g, "").length
+        return /^[\d+\-\s()]+$/.test(p) && digits >= 7 && digits <= 15
+      }, "Enter a valid phone number"),
+
   slug: () =>
     z
       .string()
@@ -97,7 +146,19 @@ export const v = {
 
   /** Rupee amount typed into a form field ("12", "12.5"), required. */
   money: (max: number = LIMITS.money.max, message = "Enter an amount") =>
-    requiredNumber(message).pipe(z.number().min(0, "Can't be negative").max(max, "That's too large")),
+    requiredNumber(message).pipe(
+      z.number().min(0, "Can't be negative").max(max, "That's too large").refine(hasMaxTwoDecimals, "Use at most 2 decimal places")
+    ),
+
+  /** Optional rupee amount: empty → null, otherwise 0..max with at most 2 decimals. */
+  optionalMoney: (max: number = LIMITS.money.max) =>
+    optionalNumber.pipe(
+      z.number().min(0, "Can't be negative").max(max, "That's too large").refine(hasMaxTwoDecimals, "Use at most 2 decimal places").nullable()
+    ),
+
+  /** Whole quantity of one product: 1..max (defaults to the per-item order cap). */
+  quantity: (max: number = LIMITS.quantityPerItem.max) =>
+    z.number().int("Whole numbers only").min(1, "At least 1").max(max, `At most ${max}`),
 
   /** Whole number typed into a form field (stock, sort order…). */
   wholeNumber: (max: number, message = "Enter a number") =>
@@ -120,6 +181,8 @@ export const v = {
   /** Optional text: empty → null. */
   optionalText: (max: number) =>
     z.preprocess(blankToNull, z.string().trim().max(max, `Keep it under ${max} characters`).nullable()),
+
+  optionalDisplayPhone: () => z.preprocess(blankToNull, v.displayPhone().nullable()),
 
   optionalPhone: () => z.preprocess(blankToNull, v.phoneIN().nullable()),
 

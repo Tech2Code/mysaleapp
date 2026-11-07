@@ -23,6 +23,7 @@ import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import type { DeliveryDetails } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 /**
  * Delivery address of an order. While the order is still pending (not confirmed)
@@ -47,6 +48,7 @@ export function DeliveryEditor({
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const form = useForm<CheckoutInput>({
@@ -80,7 +82,7 @@ export function DeliveryEditor({
         }
         return
       }
-      toast.success("Delivery details updated")
+      later(() => toast.success("Delivery details updated"))
       setOpen(false)
       if (onChanged) onChanged(res.data.phoneLast4)
       else router.refresh()

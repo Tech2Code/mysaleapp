@@ -20,6 +20,7 @@ export type FieldKind =
   | "orderLast4"
   | "paymentRef"
   | "trackingNumber"
+  | "gstin"
   | "upiId"
   | "slug"
   | "orderPrefix"
@@ -96,11 +97,12 @@ export const FIELD_KINDS: Record<FieldKind, FieldKindSpec> = {
     spellCheck: false,
   },
   trackingNumber: {
-    sanitize: (v) => v.replace(/[^A-Za-z0-9\-/]/g, ""),
+    sanitize: (v) => v.toUpperCase().replace(/[^A-Z0-9/_-]/g, ""),
     maxLength: LIMITS.trackingNumber.max,
     autoCapitalize: "characters",
     spellCheck: false,
   },
+  gstin: { sanitize: (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, ""), maxLength: LIMITS.gstin, autoCapitalize: "characters", spellCheck: false },
   upiId: { sanitize: (v) => v.replace(/[^A-Za-z0-9._@-]/g, ""), maxLength: LIMITS.upiId.max, autoCapitalize: "none", spellCheck: false },
   slug: {
     sanitize: (v) => v.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-{2,}/g, "-"),

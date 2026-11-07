@@ -6,12 +6,14 @@ import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "@/features/orders/reasons"
 import { RETURN_REASONS, returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn } from "@/features/orders/types"
+import { LIMITS } from "@/lib/validation"
 
 /**
  * "Create return request" for a customer who asked outside the app (WhatsApp / phone). It opens a normal request
@@ -27,6 +29,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const [detailsError, setDetailsError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const lines = useMemo(() => {
@@ -54,7 +57,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       setOpen(false)
       setQty({})
       setDetails("")
-      toast.success("Return request created. Approve it from the status dropdown.")
+      later(() => toast.success("Return request created. Approve it from the status dropdown."))
       router.refresh()
     })
 
@@ -77,7 +80,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
                 kind="digits"
                 fieldSize="md"
                 inputMode="numeric"
-                maxLength={3}
+                maxLength={String(LIMITS.returnQuantity.max).length}
                 value={qty[i.productId] ?? ""}
                 onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
                 error={over(i.productId) ? `At most ${left.get(i.productId) ?? 0}` : undefined}
@@ -86,7 +89,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
           ))}
         </ul>
         <SelectField label="Reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
-        <TextAreaField label="Details (optional)" rows={2} maxLength={300} value={details} onChange={(e) => setDetails(e.target.value)} error={detailsError ?? undefined} />
+        <TextAreaField label="Details (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={details} onChange={(e) => setDetails(e.target.value)} error={detailsError ?? undefined} />
         {error && !detailsError && (
           <p data-ui="admin/CreateReturnRequest/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>
         )}

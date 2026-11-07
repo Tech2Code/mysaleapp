@@ -2,6 +2,7 @@
 
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
+import { LIMITS } from "@/lib/validation"
 
 export type CartItem = {
   productId: string
@@ -13,7 +14,7 @@ export type CartItem = {
   maxQuantity: number
 }
 
-export const MAX_QTY_PER_ITEM = 20
+export const MAX_QTY_PER_ITEM = LIMITS.quantityPerItem.max
 
 type CartState = {
   items: CartItem[]

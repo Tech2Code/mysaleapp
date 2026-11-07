@@ -11,5 +11,8 @@ export const toNumberOrUndefined = (v: unknown) => {
 export const requiredNumber = (message: string) =>
   z.preprocess(toNumberOrUndefined, z.number({ error: message }))
 
+/** Rupee amounts have at most 2 decimals ("12.345" is refused; tolerant of float noise like 0.1 * 3). */
+export const hasMaxTwoDecimals = (n: number) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-6
+
 /** An optional number field: empty input becomes null. */
 export const optionalNumber = z.preprocess((v) => toNumberOrUndefined(v) ?? null, z.number().nullable())

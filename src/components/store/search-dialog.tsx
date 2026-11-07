@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowRightIcon, Loader2Icon, SearchXIcon } from "lucide-react"
+import { LIMITS } from "@/lib/validation"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -65,7 +66,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
             seeAll()
           }}
         >
-          <SearchField label="Search products" placeholder="Search products…" autoFocus autoComplete="off" pill value={query} onChange={(e) => setQuery(e.target.value)} onClear={() => setQuery("")} />
+          <SearchField label="Search products" maxLength={LIMITS.search.max} placeholder="Search products…" autoFocus autoComplete="off" pill value={query} onChange={(e) => setQuery(e.target.value)} onClear={() => setQuery("")} />
         </form>
 
         <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-24">

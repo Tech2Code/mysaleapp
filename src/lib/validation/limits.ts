@@ -76,7 +76,31 @@ export const LIMITS = {
   orderCode: { max: 12 },
   utr: { min: 8, max: 35 },
   carrier: { min: 2, max: 60 },
-  trackingNumber: { max: 60 },
+  /** Courier consignment / AWB: India Post 13, Delhivery 11-14, DTDC 9-12, Blue Dart 11; 30 leaves room for aggregators. */
+  trackingNumber: { min: 5, max: 30 },
+  /** Largest payment / refund the admin can record (an order holds up to 30 lines). */
+  paymentAmount: { max: 10_000_000 },
+  /** How far ahead an expected-delivery / pickup date may be (days). Pickup is also enforced in SQL (decide_return_request). */
+  expectedDeliveryDays: { max: 90 },
+  pickupDays: { max: 90 },
+  /** Dropdown reason for a cancel / return (the picked label). */
+  reason: { min: 2, max: 80 },
+  /** Extra words next to a cancel reason. */
+  cancelDetail: { max: 200 },
+  /** Return details, decision note, return reason (admin and customer). */
+  returnDetail: { max: 300 },
+  /** Quantity typed for one product in a return (orders cap a line at quantityPerItem). */
+  returnQuantity: { min: 1, max: 20 },
+  gstin: 15,
+  /** Hours before an unpaid order is cancelled (0 = never); DB check in migration 0011. */
+  unpaidExpiryHours: { max: 720 },
+  /** Days a customer may request a return after delivery (0 = off); DB check in migration 0012. */
+  returnWindowDays: { max: 90 },
+  /** Search boxes: storefront product search, admin order search (letters, digits, space, hyphen). */
+  search: { max: 80 },
+  orderSearch: { max: 40 },
+  orderLines: { max: 30 },
+  returnLines: { max: 50 },
 } as const
 
 export const PATTERNS = {
@@ -89,4 +113,7 @@ export const PATTERNS = {
   orderPrefix: /^[A-Z]{1,5}$/,
   upiId: /^[A-Za-z0-9._-]{2,64}@[A-Za-z0-9]{2,32}$/,
   utr: /^[A-Z0-9]{8,35}$/,
+  /** Courier AWB after upper-casing: letters, digits, - / _ (starts with a letter or digit, no spaces). */
+  trackingNumber: /^[A-Z0-9][A-Z0-9/_-]*$/,
+  isoDate: /^\d{4}-\d{2}-\d{2}$/,
 } as const

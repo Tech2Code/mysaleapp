@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch"
 import { deleteProduct, toggleProductFlag } from "@/features/products/actions"
 import { cn } from "@/lib/utils"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
 
 export function ProductFlagSwitch({
   productId,
@@ -57,6 +58,7 @@ export function ProductRowActions({ productId, name }: { productId: string; name
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   return (
     <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">
@@ -88,7 +90,7 @@ export function ProductRowActions({ productId, name }: { productId: string; name
                 startTransition(async () => {
                   const res = await deleteProduct(productId)
                   if (res.ok) {
-                    toast.success("Product deleted")
+                    later(() => toast.success("Product deleted"))
                     setOpen(false)
                     router.refresh()
                   } else toast.error(res.error)

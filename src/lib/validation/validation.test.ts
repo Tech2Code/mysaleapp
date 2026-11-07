@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { FIELD_KINDS, PATTERNS, v } from "./index"
+import { FIELD_KINDS, PATTERNS, addDays, todayIST, v } from "./index"
 
 const ok = (s: { safeParse: (x: unknown) => { success: boolean } }, x: unknown) => s.safeParse(x).success
 
@@ -104,5 +104,84 @@ describe("personName", () => {
   })
   it("sanitiser strips bad characters and collapses spaces", () => {
     expect(FIELD_KINDS.personName.sanitize!("Ra<j>1  Kumar")).toBe("Raj Kumar")
+  })
+})
+
+describe("tracking number", () => {
+  const san = FIELD_KINDS.trackingNumber.sanitize!
+  it("is upper-cased and trimmed", () => {
+    expect(v.trackingNumber().parse("  dtdc1234  ")).toBe("DTDC1234")
+    expect(v.trackingNumber().parse("ee123456789in")).toBe("EE123456789IN")
+  })
+  it("rejects too short, too long, spaces and symbols", () => {
+    expect(ok(v.trackingNumber(), "ABCD")).toBe(false) // 4
+    expect(ok(v.trackingNumber(), "ABCDE")).toBe(true) // 5
+    expect(ok(v.trackingNumber(), "A".repeat(30))).toBe(true)
+    expect(ok(v.trackingNumber(), "A".repeat(31))).toBe(false)
+    expect(ok(v.trackingNumber(), "AB CD 12345")).toBe(false)
+    expect(ok(v.trackingNumber(), "AWB#12345")).toBe(false)
+    expect(ok(v.trackingNumber(), "-ABC12345")).toBe(false)
+    expect(ok(v.trackingNumber(), "AB-12/34_5")).toBe(true)
+  })
+  it("the input mask removes spaces and symbols and upper-cases", () => {
+    expect(san("ab 12-3/4_5!#")).toBe("AB12-3/4_5")
+  })
+  it("pattern", () => {
+    expect(PATTERNS.trackingNumber.test("AWB0123123")).toBe(true)
+    expect(PATTERNS.trackingNumber.test("awb0123123")).toBe(false)
+  })
+})
+
+describe("money decimals", () => {
+  it("accepts at most 2 decimals", () => {
+    expect(ok(v.money(), "12.34")).toBe(true)
+    expect(ok(v.money(), "12.345")).toBe(false)
+    expect(ok(v.money(), 0.1 * 3)).toBe(true) // float noise is tolerated
+  })
+  it("optionalMoney: blank is null, bounds and decimals apply", () => {
+    const m = v.optionalMoney(100)
+    expect(m.parse("")).toBeNull()
+    expect(m.parse("99.5")).toBe(99.5)
+    expect(ok(m, "100.01")).toBe(false)
+    expect(ok(m, "-1")).toBe(false)
+    expect(ok(m, "1.234")).toBe(false)
+    expect(ok(m, "abc")).toBe(true) // NaN-like text is treated as blank
+  })
+})
+
+describe("urls, dates, quantities", () => {
+  it("httpsUrl refuses http and other schemes", () => {
+    expect(ok(v.httpsUrl(), "https://track.example.com/x?id=1")).toBe(true)
+    expect(ok(v.httpsUrl(), "http://track.example.com")).toBe(false)
+    expect(ok(v.httpsUrl(), "javascript:alert(1)")).toBe(false)
+    expect(ok(v.httpsUrl(), `https://a.com/${"x".repeat(300)}`)).toBe(false)
+  })
+  it("isoDate needs a real calendar day", () => {
+    expect(ok(v.isoDate(), "2026-02-28")).toBe(true)
+    expect(ok(v.isoDate(), "2026-02-31")).toBe(false)
+    expect(ok(v.isoDate(), "2026-13-01")).toBe(false)
+    expect(ok(v.isoDate(), "26-1-1")).toBe(false)
+  })
+  it("futureDate: today..+N days", () => {
+    const today = todayIST()
+    expect(ok(v.futureDate(90), today)).toBe(true)
+    expect(ok(v.futureDate(90), addDays(today, 90))).toBe(true)
+    expect(ok(v.futureDate(90), addDays(today, 91))).toBe(false)
+    expect(ok(v.futureDate(90), addDays(today, -1))).toBe(false)
+  })
+  it("quantity 1..20 whole numbers", () => {
+    expect(ok(v.quantity(), 1)).toBe(true)
+    expect(ok(v.quantity(), 20)).toBe(true)
+    expect(ok(v.quantity(), 0)).toBe(false)
+    expect(ok(v.quantity(), 21)).toBe(false)
+    expect(ok(v.quantity(), 1.5)).toBe(false)
+  })
+  it("email is lower-cased and trimmed", () => {
+    expect(v.email().parse("  Shop@Example.COM ")).toBe("shop@example.com")
+  })
+  it("displayPhone needs 7-15 digits", () => {
+    expect(ok(v.displayPhone(), "+91 98765 43210")).toBe(true)
+    expect(ok(v.displayPhone(), "12345")).toBe(false)
+    expect(ok(v.displayPhone(), "call me maybe 1234567")).toBe(false)
   })
 })

@@ -4,13 +4,18 @@ import { PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "./types"
 /**
  * Which payment states an admin may move an order's payment to. One rule set for the manual-payment form
  * (what to offer), the server action (what to refuse) and the DB trigger `guard_payment_status` (0024).
- *   paid     -> paid | refunded      (never back to unpaid: record a refund instead)
+ *   paid     -> paid | refunded      (never back to unpaid: record a refund instead). Refunded only once the order is shipped,
+ *                                    delivered or cancelled: before dispatch (pending / confirmed / packed) the order must be CANCELLED first,
+ *                                    otherwise it would still be packed and sent with no money behind it.
  *   refunded -> refunded             (terminal)
  *   unpaid   -> anything, except that a cancelled order can't become paid / submitted (a submitted payment may be confirmed as paid so it can be refunded)
  */
+/** Order statuses in which a paid payment may be marked refunded (before dispatch: cancel the order first). */
+export const REFUNDABLE_STATUSES: OrderStatus[] = ["shipped", "delivered", "cancelled"]
+
 export function allowedPaymentStatuses(o: { status: OrderStatus; paymentStatus: PaymentStatus }): PaymentStatus[] {
   if (o.paymentStatus === "refunded") return ["refunded"]
-  if (o.paymentStatus === "paid") return ["paid", "refunded"]
+  if (o.paymentStatus === "paid") return REFUNDABLE_STATUSES.includes(o.status) ? ["paid", "refunded"] : ["paid"]
   if (o.status === "cancelled") {
     // A payment the customer already sent (UTR submitted) before cancelling can still be confirmed as received, so the refund can be recorded.
     return PAYMENT_STATUSES.filter((s) => s === o.paymentStatus || s === "pending" || s === "failed" || (s === "paid" && o.paymentStatus === "submitted"))
@@ -28,7 +33,9 @@ export function paymentEditNote(o: { status: OrderStatus; paymentStatus: Payment
   if (o.paymentStatus === "paid") {
     return isOrderLocked(o.status)
       ? "Paid and the order is closed — the amount and reference are locked. The payment can only be refunded."
-      : "Paid — it can only be refunded, not set back to unpaid."
+      : REFUNDABLE_STATUSES.includes(o.status)
+        ? "Paid — it can only be refunded, not set back to unpaid."
+        : "Paid — it can only be refunded once the order ships or is cancelled. To refund earlier, cancel the order first."
   }
   if (o.status === "cancelled") {
     return o.paymentStatus === "submitted"
@@ -47,6 +54,7 @@ export function paymentUpdateProblem(
 ): string | null {
   if (!allowedPaymentStatuses(current).includes(next.status)) {
     if (current.paymentStatus === "refunded") return "This payment is refunded and can't be changed any more."
+    if (next.status === "refunded" && current.paymentStatus === "paid") return "To refund before the order ships, cancel the order first. The refund is recorded after the cancellation."
     if (next.status === "refunded") return "Only a paid order can be refunded."
     if (current.paymentStatus === "paid") return "A paid order can't go back to unpaid. If you sent the money back, record a refund instead."
     return "This order is cancelled. Record a refund instead of a payment."

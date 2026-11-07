@@ -33,6 +33,7 @@ const RPC_ERRORS: Record<string, string> = {
   RETURN_NOT_FOUND: "That return no longer exists. Refresh the page.",
   ALREADY_REFUNDED: "This return was already refunded.",
   NOT_PAID: "This order isn't marked as paid, so there is nothing to refund.",
+  REFUND_BEFORE_DISPATCH: "To refund before the order ships, cancel the order first. The refund is recorded after the cancellation.",
   PAYMENT_LOCKED: "A paid order can't go back to unpaid, and a refunded one can't change. Record a refund instead.",
   ORDER_LOCKED: "This order is delivered or cancelled, so its details are locked.",
   REQUEST_NOT_OPEN: "That return request is no longer open.",

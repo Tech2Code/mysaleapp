@@ -94,6 +94,9 @@ Every pincode field fills the city and shows "City, State" via `usePincodeLookup
 
 `src/lib/validation/` holds every limit and format: `LIMITS`, `PATTERNS`, `FIELD_KINDS` (input masks) and the zod primitives `v` (`v.email()`, `v.phone()`, `v.utr()`…). Schemas in `features/*/schema.ts` are built from `v`; inputs get their mask with `<TextField kind="phone" />`. To change a rule, change it there once.
 
+- No inline numbers in schemas or `maxLength`: use `LIMITS.*`. Money goes through `v.money` / `v.optionalMoney` (0..max, max 2 decimals); quantities through `v.quantity()` (1..20); tracking/AWB through `v.trackingNumber()` + `kind="trackingNumber"` (5-30 of A-Z 0-9 - / _, upper-cased); tracking links through `v.httpsUrl()`; dates through `v.isoDate()` / `v.futureDate(days)` (`todayIST()`, `addDays()` in `lib/validation/dates.ts`). Don't read the clock in a client component's render (Cache Components): validate on submit instead.
+- DB mirrors: migrations 0045+ hold the matching CHECKs (tracking, UTR, amounts, stock, text lengths). A new LIMIT that has a column needs a new migration.
+
 ## Dropdowns
 
 `SelectField` is a custom (Base UI) dropdown, not a native `<select>`. With react-hook-form use `FormSelectField` (`control`, `name`).
@@ -171,6 +174,16 @@ Customer flow: delivered order → **Request a return** (inside `store_settings.
 - The header search icon (all sizes) opens `<SearchDialog>` (`components/store/search-dialog.tsx`, server action `searchProducts` in `features/products/search-actions.ts` over the cached catalogue): live results, Enter or "See all results" goes to `/products?q=`. Don't link the search icon to /products.
 - Below `sm` the wishlist and cart icons are not in the header: they are rows in the account dropdown (`AccountMenu`, opens on click, with a dot on the icon when either has items). Guests get Sign in + Track order there on phones; on web the guest icon is a plain link straight to /login. From `sm` up the icons stay in the header.
 
+- A paid payment can only be marked refunded once the order is shipped, delivered or cancelled (`REFUNDABLE_STATUSES` in payment-rules.ts, DB guard in migration 0043). Before dispatch (pending / confirmed / packed) the admin cancels the order first, then records the refund.
+
+## Courier details
+
+Courier / AWB / tracking link / expected date are entered ONLY in `<CourierDialog>` (`components/admin/courier-dialog.tsx`): opened by "Add details" when the status dropdown is on Shipped, and by the Edit button on the shipping card (`CourierEditButton`, shown on a shipped order). No inline courier form in Fulfilment. Keep the dialog outside any parent `<form>` (React bubbles submit through portals).
+
+## Toasts after actions
+
+In a `useTransition` flow that ends with `router.refresh()`, show the SUCCESS toast with `later(() => toast.success(...))` from `useToastAfter(pending)` (`hooks/use-toast-after.ts`) so it appears right after the loader ends, not while it still spins. Error toasts stay immediate.
+
 ## Confirm before acting
 
 Any click that changes data and is hard to undo opens `<ConfirmDialog>` (`components/shared/confirm-dialog.tsx`) first: cancel, delete, refund, verify/reject payment, status change, pickup, sign out. Not for add-to-cart, wishlist, filters or forms saved with `StickySaveBar`.
@@ -183,7 +196,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 - The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
 - Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
-- Migrations 0001–0029 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- Migrations 0001–0045 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
 - SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
 
 ## Verifying against production (no staging)

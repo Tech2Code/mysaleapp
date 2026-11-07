@@ -19,6 +19,8 @@ import { TONES } from "@/components/shared/status-badge"
 import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
+import { LIMITS, addDays, todayIST } from "@/lib/validation"
 
 /** Approve (with instructions) or reject (with a reason) one pending request. */
 export function DecideDialog({
@@ -43,6 +45,7 @@ export function DecideDialog({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   const submit = () =>
     startTransition(async () => {
@@ -60,9 +63,9 @@ export function DecideDialog({
       }
       setOpen(false)
       const url = whatsappLink(`91${phone}`, buildReturnDecisionMessage(shop, { orderCode, customerName, approved: approve, note: note.trim() || null, pickupDate: approve ? pickupDate : null }))
-      toast.success(approve ? "Return approved" : "Return rejected", {
+      later(() => toast.success(approve ? "Return approved" : "Return rejected", {
         action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
-      })
+      }))
       router.refresh()
     })
 
@@ -90,7 +93,8 @@ export function DecideDialog({
             label="Pickup date"
             type="date"
             fieldSize="md"
-            min={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
+            min={todayIST()}
+            max={addDays(todayIST(), LIMITS.pickupDays.max)}
             value={pickupDate}
             onChange={(e) => setPickupDate(e.target.value)}
             error={pickupError ?? undefined}
@@ -99,7 +103,7 @@ export function DecideDialog({
         <TextAreaField
           label={approve ? "Note for the customer (optional)" : "Reason (required)"}
           rows={3}
-          maxLength={300}
+          maxLength={LIMITS.returnDetail.max}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           error={error ?? undefined}
@@ -123,6 +127,7 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   const confirm = () =>
@@ -134,7 +139,7 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
         return
       }
       setOpen(false)
-      toast.success("Pickup marked successful")
+      later(() => toast.success("Pickup marked successful"))
       router.refresh()
     })
 
@@ -166,6 +171,7 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   const confirm = () =>
@@ -177,7 +183,7 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
         return
       }
       setOpen(false)
-      toast.success("Step undone")
+      later(() => toast.success("Step undone"))
       router.refresh()
     })
 

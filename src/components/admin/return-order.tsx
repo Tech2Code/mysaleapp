@@ -12,6 +12,8 @@ import { recordOrderReturn } from "@/features/orders/admin-actions"
 import { returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
+import { LIMITS } from "@/lib/validation"
 
 type Row = { qty: string; restock: boolean }
 
@@ -49,6 +51,7 @@ export function AdminReturnOrder({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   const left = useMemo(() => returnableQuantities(items, returns),[items, returns])
   // one line per product (an order can list a product once, but be safe)
@@ -98,7 +101,7 @@ export function AdminReturnOrder({
         : res.data.fullyRefunded
           ? " Payment marked refunded."
           : ` Partly refunded (${formatPrice(res.data.refundedAmount)} so far); the order stays paid until every item is refunded.`
-      toast.success(`Return recorded.${stockNote}${refundNote}`)
+      later(() => toast.success(`Return recorded.${stockNote}${refundNote}`))
       router.refresh()
     })
 
@@ -130,7 +133,7 @@ export function AdminReturnOrder({
                     kind="digits"
                     fieldSize="md"
                     inputMode="numeric"
-                    maxLength={3}
+                    maxLength={String(LIMITS.returnQuantity.max).length}
                     value={row.qty}
                     onChange={(e) => setRow(i.productId, { qty: e.target.value })}
                     error={over ? `At most ${max}` : undefined}
@@ -149,7 +152,7 @@ export function AdminReturnOrder({
           })}
         </ul>
 
-        <TextAreaField label="Reason (optional)" rows={2} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} />
+        <TextAreaField label="Reason (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={reason} onChange={(e) => setReason(e.target.value)} />
         {paymentStatus === "paid" && (
           <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
         )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { allowedPaymentStatuses, isPaymentMoneyLocked, paymentEditNote, paymentUpdateProblem } from "./payment-rules"
+import { REFUNDABLE_STATUSES, allowedPaymentStatuses, isPaymentMoneyLocked, paymentEditNote, paymentUpdateProblem } from "./payment-rules"
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "./types"
 
 const cur = (o: Partial<Parameters<typeof paymentUpdateProblem>[0]> = {}) => ({
@@ -9,9 +9,16 @@ const cur = (o: Partial<Parameters<typeof paymentUpdateProblem>[0]> = {}) => ({
 describe("allowedPaymentStatuses", () => {
   it("paid can only stay paid or be refunded; refunded is terminal", () => {
     for (const status of ORDER_STATUSES) {
-      expect(allowedPaymentStatuses({ status, paymentStatus: "paid" })).toEqual(["paid", "refunded"])
+      expect(allowedPaymentStatuses({ status, paymentStatus: "paid" })).toEqual(REFUNDABLE_STATUSES.includes(status) ? ["paid", "refunded"] : ["paid"])
       expect(allowedPaymentStatuses({ status, paymentStatus: "refunded" })).toEqual(["refunded"])
     }
+  })
+  it("before dispatch a paid order can't be marked refunded: cancel it first", () => {
+    for (const status of ["pending", "confirmed", "packed"] as const) {
+      expect(paymentUpdateProblem(cur({ status }), { status: "refunded", amount: null, reference: null })).toMatch(/cancel the order first/i)
+    }
+    expect(paymentUpdateProblem(cur({ status: "cancelled" }), { status: "refunded", amount: null, reference: null })).toBeNull()
+    expect(paymentUpdateProblem(cur({ status: "shipped" }), { status: "refunded", amount: null, reference: null })).toBeNull()
   })
   it("unpaid orders can move freely, but never to refunded", () => {
     for (const p of ["pending", "submitted", "failed"] as const) {
