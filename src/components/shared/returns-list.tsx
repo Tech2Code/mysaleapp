@@ -17,6 +17,7 @@ export function ReturnsList({
   audience,
   admin,
   refundedInFull = false,
+  bare = false,
 }: {
   returns: OrderReturn[]
   audience: "customer" | "admin"
@@ -24,16 +25,23 @@ export function ReturnsList({
   refundedInFull?: boolean
   /** Admin only: lets a return recorded without a refund be refunded later (the order must still be 'paid'). */
   admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number }
+  /** Rendered inside another card (the Returns card): no outer card, a small sub-heading instead. */
+  bare?: boolean
 }) {
   if (returns.length === 0) return null
+  const Wrapper = bare ? "div" : "section"
   return (
-    <section data-ui="shared/ReturnsList" aria-label="Returns" className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
-      <h3 data-ui="shared/ReturnsList/h3-returns" className="flex items-center gap-2 font-sans text-base font-semibold">
-        <PackageOpenIcon className="size-4 text-primary" aria-hidden /> Returns
-      </h3>
-      <ul data-ui="shared/ReturnsList/ul" className="divide-y">
+    <Wrapper data-ui="shared/ReturnsList" aria-label="Items received back" className={bare ? "space-y-3" : "space-y-3 rounded-2xl border bg-card p-4 sm:p-5"}>
+      {bare ? (
+        <h4 data-ui="shared/ReturnsList/h4-items-received-back" className="text-sm font-semibold text-muted-foreground">Items received back</h4>
+      ) : (
+        <h3 data-ui="shared/ReturnsList/h3-items-received-back" className="flex items-center gap-2 font-sans text-base font-semibold">
+          <PackageOpenIcon className="size-4 text-primary" aria-hidden /> Items received back
+        </h3>
+      )}
+      <ul data-ui="shared/ReturnsList/ul" className="space-y-3">
         {returns.map((r) => (
-          <li data-ui="shared/ReturnsList/li" key={r.id} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
+          <li data-ui="shared/ReturnsList/li" key={r.id} className="space-y-2 rounded-xl border p-3.5 sm:p-4">
             <p data-ui="shared/ReturnsList/p" className="text-xs text-muted-foreground">Received {formatDateTime(r.createdAt)}</p>
             <ul data-ui="shared/ReturnsList/ul-2" className="space-y-1 text-sm">
               {r.items.map((i) => (
@@ -67,6 +75,6 @@ export function ReturnsList({
           </li>
         ))}
       </ul>
-    </section>
+    </Wrapper>
   )
 }

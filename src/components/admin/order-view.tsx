@@ -1,23 +1,22 @@
+import { RefundSummary } from "@/components/shared/refund-summary"
+import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import { ArrowLeftIcon, PhoneIcon, ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
 import type { ReactNode } from "react"
-import { AdminReturnOrder } from "@/components/admin/return-order"
+import { RefreshButton } from "@/components/shared/refresh-button"
+import { ReturnStatusControl } from "@/components/admin/return-status-control"
 import { AdminReturnRequests } from "@/components/admin/return-requests"
 import { AdminCancelOrder, AdminNoteForm, OrderStatusControl } from "@/components/admin/order-controls"
 import { PaymentControl } from "@/components/admin/payment-control"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
-import { ReturnsList } from "@/components/shared/returns-list"
-import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
-import { ReturnTimeline } from "@/components/shared/return-timeline"
 import { stageInputOf } from "@/features/orders/returns"
 import { CopyButton } from "@/components/shared/copy-button"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
-import { PaymentBadge } from "@/components/shared/payment-badge"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { whatsappLink } from "@/features/orders/whatsapp"
 import { formatDeadline } from "@/features/orders/deadline"
+import { CANCELLABLE_BY_ADMIN } from "@/features/orders/transitions"
 import type { OrderWithHistory } from "@/features/orders/types"
 import { formatDateTime } from "@/lib/format"
 
@@ -38,6 +37,13 @@ function Card({ title, children }: { title?: string; children: ReactNode }) {
 export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistory; autoCancelAt: Date | null }) {
   // Changes whenever the order changes (e.g. payment verified → status becomes "confirmed"),
   // so the forms below always start from the saved values instead of stale ones.
+  // An unpaid order needs its payment checked before the status can move, so Payment leads then.
+  const paymentFirst = order.status !== "cancelled" && order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
+  const paymentSection = (
+    <div data-ui="admin/AdminOrderView/div" className="rounded-xl border p-4">
+      <PaymentControl key={`pay-${order.paymentStatus}-${order.updatedAt}`} order={order} />
+    </div>
+  )
   const version = `${order.status}-${order.paymentStatus}-${order.updatedAt}`
 
   return (
@@ -50,11 +56,10 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
         <h1 data-ui="admin/AdminOrderView/h1" className="font-mono text-2xl font-semibold sm:text-3xl">{order.orderCode}</h1>
         <CopyButton value={order.orderCode} label="Order ID" />
         <div data-ui="admin/AdminOrderView/div-flex" className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={order.status} className="text-sm" pulse />
-          <ReturnStageBadge stage={order.returnStage} audience="admin" className="text-sm" alwaysShow />
-          <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} refundedAmount={order.refundedAmount} paidAmount={order.paymentAmount ?? order.total} className="text-sm" />
+          <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="admin" className="text-sm" pulse alwaysShow />
         </div>
         <span data-ui="admin/AdminOrderView/span" className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</span>
+        <RefreshButton />
         {order.status !== "cancelled" && (
           <Link data-ui="admin/AdminOrderView/Link-invoice" href={`/admin/orders/${order.id}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
             <ReceiptTextIcon className="size-4" /> Invoice
@@ -68,64 +73,65 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
       </header>
 
       <div data-ui="admin/AdminOrderView/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-        <div data-ui="admin/AdminOrderView/div" className="min-w-0 space-y-6">
+        <div data-ui="admin/AdminOrderView/div-2" className="min-w-0 space-y-6">
           {order.cancellation && (
             <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="admin" />
           )}
-          <AdminReturnRequests
-            requests={order.returnRequests}
-            orderId={order.id}
-            orderCode={order.orderCode}
-            customerName={order.customerName}
-            phone={order.phone}
-            status={order.status}
-            paymentStatus={order.paymentStatus}
-            items={order.items}
-            returns={order.returns}
-          />
-          <ReturnsList returns={order.returns} audience="admin" admin={{ items: order.items, paymentStatus: order.paymentStatus, refundedAmount: order.refundedAmount }} />
-          <OrderSummary order={order} openLinksInNewTab audience="admin" />
-
-          <Card>
-            <PaymentControl key={`pay-${version}`} order={order} />
-          </Card>
-
+          {/* ONE work card. Left: payment, status, cancel. STICKY: it follows the reader while the long timeline scrolls on the right
+              (a sticky box only moves while the right side is taller; capped to the screen so it scrolls inside itself if it is taller). */}
           <Card title="Fulfilment">
-            <div data-ui="admin/AdminOrderView/div-grid-2" className="grid gap-8 md:grid-cols-2">
-              <OrderStatusControl
-                key={`status-${version}`}
-                orderId={order.id}
-                orderCode={order.orderCode}
-                customerName={order.customerName}
-                phone={order.phone}
-                status={order.status}
-                paymentStatus={order.paymentStatus}
-                shipping={order.shipping}
-                returnStage={order.returnStage}
-              />
-              <div data-ui="admin/AdminOrderView/div-2">
-                <h3 data-ui="admin/AdminOrderView/h3-progress" className="mb-4 text-sm font-medium">Progress</h3>
-                <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} />
-                <div data-ui="admin/AdminOrderView/div-3" className="mt-6 empty:hidden"><ReturnTimeline input={stageInputOf(order)} audience="admin" /></div>
+            <div data-ui="admin/AdminOrderView/div-grid-2" className="grid gap-8 md:grid-cols-2 md:items-start">
+              <div data-ui="admin/AdminOrderView/div-3" className="space-y-6 md:sticky-admin md:-m-1 md:max-h-[calc(100dvh-var(--admin-topbar-h)-3rem)] md:overflow-y-auto md:p-1">
+                {paymentFirst && paymentSection}
+                <OrderStatusControl
+                  key={`status-${version}`}
+                  orderId={order.id}
+                  orderCode={order.orderCode}
+                  customerName={order.customerName}
+                  phone={order.phone}
+                  status={order.status}
+                  paymentStatus={order.paymentStatus}
+                  shipping={order.shipping}
+                  returnStage={order.returnStage}
+                  returnControl={
+                    <ReturnStatusControl
+                      orderId={order.id}
+                      orderCode={order.orderCode}
+                      customerName={order.customerName}
+                      phone={order.phone}
+                      status={order.status}
+                      paymentStatus={order.paymentStatus}
+                      refundedAmount={order.refundedAmount}
+                      items={order.items}
+                      requests={order.returnRequests}
+                      returns={order.returns}
+                      stage={order.returnStage}
+                    />
+                  }
+                />
+                {!paymentFirst && paymentSection}
+                {CANCELLABLE_BY_ADMIN.includes(order.status) && (
+                <div data-ui="admin/AdminOrderView/div-4" className="space-y-3 border-t pt-5 sm:max-w-xs">
+                  <AdminCancelOrder
+                    orderId={order.id}
+                    orderCode={order.orderCode}
+                    status={order.status}
+                    paidOrSent={order.paymentStatus === "paid" || order.paymentStatus === "submitted"}
+                  />
+                </div>
+                )}
+              </div>
+              <div data-ui="admin/AdminOrderView/div-5">
+                <div data-ui="admin/AdminOrderView/div-progress">
+                  <h3 data-ui="admin/AdminOrderView/h3-progress" className="mb-4 text-sm font-medium">Progress</h3>
+                  <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} returnInput={stageInputOf(order)} audience="admin" />
+                </div>
               </div>
             </div>
-            <div data-ui="admin/AdminOrderView/div-4" className="mt-6 space-y-3 border-t pt-5 sm:max-w-xs">
-              <AdminReturnOrder
-                orderId={order.id}
-                orderCode={order.orderCode}
-                status={order.status}
-                paymentStatus={order.paymentStatus}
-                items={order.items}
-                returns={order.returns}
-              />
-              <AdminCancelOrder
-                orderId={order.id}
-                orderCode={order.orderCode}
-                status={order.status}
-                paidOrSent={order.paymentStatus === "paid" || order.paymentStatus === "submitted"}
-              />
-            </div>
           </Card>
+          <AdminReturnRequests requests={order.returnRequests} returns={order.returns} returnStage={order.returnStage} />
+          <RefundSummary order={order} />
+          <OrderSummary order={order} openLinksInNewTab audience="admin" />
         </div>
 
         <aside data-ui="admin/AdminOrderView/aside" className="space-y-6 xl:sticky-admin">

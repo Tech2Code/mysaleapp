@@ -1,4 +1,4 @@
-import { formatPrice } from "@/lib/format"
+import { formatDate, formatPrice } from "@/lib/format"
 import type { OrderItem, OrderReturn, PaymentStatus, ReturnRequest, ReturnRequestStatus, StatusHistoryEntry } from "./types"
 
 /**
@@ -51,7 +51,7 @@ export function returnableQuantities(items: OrderItem[], returns: OrderReturn[])
 // guest track page, timeline, WhatsApp messages), so the wording can't drift.
 // ---------------------------------------------------------------------------
 
-export type ReturnStageKey = "requested" | "approved" | "rejected" | "withdrawn" | "received" | "partly_refunded" | "refunded"
+export type ReturnStageKey = "requested" | "approved" | "picked_up" | "rejected" | "withdrawn" | "received" | "partly_refunded" | "refunded"
 export type ReturnStageTone = "info" | "progress" | "success" | "danger" | "neutral"
 
 /** After this many days a rejected request stops showing as a badge in LISTS (it stays in the order's detail and timeline). */
@@ -66,6 +66,10 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
   approved: {
     step: 2, tone: "progress", label: "Return approved", customerLabel: "Return approved",
     detail: "Waiting for the goods to come back", customerDetail: "Send the items back as the shop asked",
+  },
+  picked_up: {
+    step: 2, tone: "progress", label: "Pickup successful", customerLabel: "Pickup successful",
+    detail: "Picked up, waiting for the goods to reach you", customerDetail: "We have collected your items. Your refund follows once they reach us",
   },
   rejected: {
     step: 1, tone: "danger", label: "Return rejected", customerLabel: "Return not approved",
@@ -92,12 +96,12 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
 
 /** Label + tone of a return REQUEST's own status (the small pill on each request), from the same table as the stages. */
 export function requestStatusMeta(status: ReturnRequestStatus, audience: "admin" | "customer"): { label: string; tone: ReturnStageTone } {
-  const c = STAGE_COPY[status] // request statuses are stage keys too
+  const c = STAGE_COPY[status] // request statuses are stage keys too (picked_up is derived, not a status)
   return { label: audience === "admin" ? c.label : c.customerLabel, tone: c.tone }
 }
 
 export type ReturnStageInput = {
-  requests: { status: ReturnRequestStatus; createdAt: string; decidedAt?: string | null; adminNote?: string | null }[]
+  requests: { status: ReturnRequestStatus; createdAt: string; decidedAt?: string | null; adminNote?: string | null; pickupDate?: string | null; pickedUpAt?: string | null }[]
   /** `refundAmount` (item value refunded for that return) is admin-only data; guests don't have it. */
   returns: { refunded: boolean; createdAt: string; refundAmount?: number | null }[]
   paymentStatus: PaymentStatus
@@ -163,7 +167,7 @@ function refundState(i: ReturnStageInput): "none" | "partly" | "full" {
 const stage = (key: ReturnStageKey, extra: Partial<ReturnStage> = {}): ReturnStage => ({
   key,
   ...STAGE_COPY[key],
-  active: key === "requested" || key === "approved" || key === "received" || key === "partly_refunded",
+  active: key === "requested" || key === "approved" || key === "picked_up" || key === "received" || key === "partly_refunded",
   badge: key !== "withdrawn",
   ...extra,
 })
@@ -175,7 +179,11 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
 
   // An open request (waiting for a decision / for the goods) is what needs attention, even after an earlier return.
   if (request?.status === "requested") return stage("requested")
-  if (request?.status === "approved") return stage("approved")
+  if (request?.status === "approved") {
+    if (request.pickedUpAt) return stage("picked_up")
+    const on = request.pickupDate ? formatDate(request.pickupDate) : null
+    return stage("approved", on ? { detail: `Pickup scheduled for ${on}`, customerDetail: `Pickup scheduled for ${on}. Keep the items ready` } : {})
+  }
 
   if (hasReturns) {
     const refund = refundState(input)
@@ -221,7 +229,9 @@ export function customerStatusLine(orderDescription: string, s: ReturnStage | nu
     case "requested":
       return "Your return is being reviewed."
     case "approved":
-      return "Return approved — send the items back as asked."
+      return s.customerDetail.startsWith("Pickup scheduled") ? `Return approved. ${s.customerDetail}.` : "Return approved — send the items back as asked."
+    case "picked_up":
+      return "Pickup successful. Your refund follows once we receive the items."
     case "received":
       return "We have your items. Your refund will follow."
     case "partly_refunded":
@@ -236,7 +246,7 @@ export function customerStatusLine(orderDescription: string, s: ReturnStage | nu
 }
 
 export type ReturnTimelineEntry = {
-  key: "requested" | "approved" | "rejected" | "withdrawn" | "received" | "refund"
+  key: "requested" | "approved" | "pickup" | "picked_up" | "rejected" | "withdrawn" | "received" | "refund"
   label: string
   customerLabel: string
   /** ISO time it happened; null while still to come (or unknown). */
@@ -270,12 +280,16 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   const request = latest(input.requests)
   const lastReturn = latest(input.returns)
   const entries: ReturnTimelineEntry[] = []
-  const open = stage.key === "requested" || stage.key === "approved"
+  const open = stage.key === "requested" || stage.key === "approved" || stage.key === "picked_up"
   const stopped = stage.key === "rejected" || stage.key === "withdrawn"
 
+  // A rejected / withdrawn request that was followed by goods recorded another way is not part of the story any more:
+  // only a live or completed request gets the request, approval and pickup steps.
+  const stepRequest = stopped ? request : latest(input.requests.filter((q) => q.status !== "rejected" && q.status !== "withdrawn"))
+
   // a request exists for every stage except "goods recorded directly by the admin"
-  if (request) {
-    entries.push({ key: "requested", label: "Return requested", customerLabel: "Return requested", at: request.createdAt, note: null, state: "done" })
+  if (stepRequest) {
+    entries.push({ key: "requested", label: "Return requested", customerLabel: "Return requested", at: stepRequest.createdAt, note: null, state: "done" })
   }
 
   if (stopped) {
@@ -288,7 +302,8 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   }
 
   // approval (skipped when the admin recorded goods without any request)
-  if (request) {
+  if (stepRequest) {
+    const request = stepRequest
     const approved = stage.key !== "requested"
     entries.push({
       key: "approved",
@@ -296,7 +311,20 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
       customerLabel: approved ? "Return approved" : "Waiting for approval",
       at: approved ? (request.decidedAt ?? null) : null,
       note: approved ? (request.adminNote?.trim() || null) : null,
-      state: approved ? (stage.key === "approved" ? "current" : "done") : "current",
+      state: approved ? "done" : "current",
+    })
+    // Myntra-style pickup steps: scheduled (with the date) -> successful
+    const waiting = stage.key === "requested"
+    const pickedUp = !waiting && stage.key !== "approved"
+    entries.push({
+      key: "pickup", label: "Pickup scheduled", customerLabel: waiting ? "Pickup to be scheduled" : "Pickup scheduled", at: null,
+      note: !waiting && request.pickupDate ? `Pickup on ${formatDate(request.pickupDate)}` : null,
+      state: waiting ? "upcoming" : pickedUp ? "done" : "current",
+    })
+    entries.push({
+      key: "picked_up", label: "Pickup successful", customerLabel: "Pickup successful",
+      at: request.pickedUpAt ?? null, note: null,
+      state: stage.key === "picked_up" ? "current" : pickedUp ? "done" : "upcoming",
     })
   }
 

@@ -15,7 +15,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Suspense, useState, type ReactNode } from "react"
+import { Suspense, useState, useTransition, type ReactNode } from "react"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Logo } from "@/components/shared/logo"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
@@ -91,6 +92,8 @@ function NavItemsWithPath(props: { onNavigate?: () => void; ordersBadge?: ReactN
 }
 
 function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ordersBadge?: ReactNode }) {
+  const [askSignOut, setAskSignOut] = useState(false)
+  const [signingOut, startSignOut] = useTransition()
   return (
     <div data-ui="admin/SidebarBody" className="flex h-full flex-col gap-6 p-4">
       {/* Same height as the top bar, so the two divider lines meet. */}
@@ -110,14 +113,23 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
         >
           <ExternalLinkIcon className="size-4" aria-hidden /> View store
         </Link>
-        <form data-ui="admin/SidebarBody/form" action={signOutAdmin}>
-          <button data-ui="admin/SidebarBody/button-sign-out"
-            type="submit"
-            className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm leading-none font-medium text-destructive transition-colors hover:bg-destructive/10"
-          >
-            <LogOutIcon className="size-4" aria-hidden /> Sign out
-          </button>
-        </form>
+        <button data-ui="admin/SidebarBody/button-sign-out"
+          type="button"
+          onClick={() => setAskSignOut(true)}
+          className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm leading-none font-medium text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <LogOutIcon className="size-4" aria-hidden /> Sign out
+        </button>
+        <ConfirmDialog
+          open={askSignOut}
+          onOpenChange={setAskSignOut}
+          title="Sign out?"
+          description="You will need to sign in again to use the admin panel."
+          confirmLabel="Sign out"
+          destructive
+          pending={signingOut}
+          onConfirm={() => startSignOut(() => signOutAdmin())}
+        />
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
+import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import Link from "next/link"
 import { PaymentBadge } from "@/components/shared/payment-badge"
-import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Order } from "@/features/orders/types"
 import { formatDateTime, formatPrice } from "@/lib/format"
@@ -44,8 +43,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                 </TableCell>
                 <TableCell data-ui="admin/OrdersTable/TableCell-3">
                   <div data-ui="admin/OrdersTable/div-flex" className="flex flex-col items-start gap-1">
-                    <StatusBadge status={o.status} />
-                    <ReturnStageBadge stage={o.returnStage} audience="admin" />
+                    <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
                   </div>
                 </TableCell>
                 <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">

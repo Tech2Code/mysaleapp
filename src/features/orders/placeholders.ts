@@ -120,7 +120,7 @@ export const placeholderOrderWithHistory = (): OrderWithHistory => {
     { id: "ph-return-2", items: [{ productId: "ph-1", name: ITEMS[1].name, quantity: 1, restock: false }], reason: "Changed my mind", refunded: false, refundAmount: null, createdAt: day(10) },
   ]
   const returnRequests = [
-    { id: "ph-request-1", items: [{ productId: "ph-0", name: ITEMS[0].name, quantity: 1 }], reason: "Damaged in transit", details: "The piece arrived with a crack.", status: "received" as const, adminNote: "Send it to the studio address.", createdAt: day(7), decidedAt: day(8) },
+    { id: "ph-request-1", items: [{ productId: "ph-0", name: ITEMS[0].name, quantity: 1 }], reason: "Damaged in transit", details: "The piece arrived with a crack.", status: "received" as const, adminNote: "Send it to the studio address.", createdAt: day(7), decidedAt: day(8), pickupDate: null, pickedUpAt: null },
   ]
   return {
     ...base,

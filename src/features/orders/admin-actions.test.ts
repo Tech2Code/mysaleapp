@@ -197,10 +197,16 @@ describe("updateOrderPayment non-refund paths", () => {
     })
   })
 
-  it("a cancelled order cannot be marked paid", async () => {
-    const { calls } = setup({ ...pending, status: "cancelled" })
+  it("a cancelled order with no payment sent cannot be marked paid", async () => {
+    const { calls } = setup({ ...pending, status: "cancelled", payment_status: "pending" })
     expect(await updateOrderPayment({ orderId: ID, ...BLANK, status: "paid" })).toMatchObject({ ok: false })
     expect(updateCall(calls)).toBeUndefined()
+  })
+
+  it("a payment submitted before the order was cancelled can be confirmed, so the refund can be recorded", async () => {
+    const { calls } = setup({ ...pending, status: "cancelled" })
+    expect(await updateOrderPayment({ orderId: ID, ...BLANK, status: "paid" })).toMatchObject({ ok: true })
+    expect(updateCall(calls)).toBeDefined()
   })
 
   it("invalid input returns field errors", async () => {
@@ -270,7 +276,9 @@ describe("recordOrderReturn / decideReturnRequest", () => {
     const { calls } = setup(null)
     expect(await decideReturnRequest({ requestId: ID, approve: false })).toMatchObject({ ok: false, fieldErrors: { note: ["Write a reason"] } })
     expect(calls).toHaveLength(0)
+    expect(await decideReturnRequest({ requestId: ID, approve: true })).toMatchObject({ ok: false, fieldErrors: { pickupDate: ["Pick the pickup date"] } })
+    expect(calls).toHaveLength(0)
     setup(null, { rpc: { error: { message: "NOT_PENDING" } } })
-    expect(await decideReturnRequest({ requestId: ID, approve: true })).toMatchObject({ error: "This request was already decided or withdrawn." })
+    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: "2026-11-20" })).toMatchObject({ error: "This request was already decided or withdrawn." })
   })
 })

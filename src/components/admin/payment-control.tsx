@@ -1,13 +1,16 @@
 "use client"
 
-import { ChevronDownIcon, Loader2Icon } from "lucide-react"
+import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, TextAreaField, TextField } from "@/components/form"
+import { CopyableReference } from "@/components/shared/copyable-reference"
 import { PaymentBadge } from "@/components/shared/payment-badge"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { updateOrderPayment } from "@/features/orders/admin-actions"
 import {
   PAYMENT_METHOD_LABEL,
@@ -47,9 +50,9 @@ type PaymentValues = {
 const statusOptions = PAYMENT_STATUSES.map((s) => ({ value: s, label: PAYMENT_STATUS_LABEL[s] }))
 const methodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_METHOD_LABEL[m] }))
 
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div data-ui="admin/Fact">
+    <div data-ui="admin/Fact" className={wide ? "col-span-2" : undefined}>
       <dt data-ui="admin/Fact/dt" className="text-xs text-muted-foreground">{label}</dt>
       <dd data-ui="admin/Fact/dd" className="mt-0.5 text-sm font-medium">{children}</dd>
     </div>
@@ -68,14 +71,21 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   useBlockWhile(pending)
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState("")
+  // Which action is waiting for "are you sure?" (verify / reject / refund change money records).
+  const [refundValues, setRefundValues] = useState<PaymentValues | null>(null)
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [ask, setAsk] = useState<"verify" | "reject" | "refund" | null>(null)
 
+  // Paid and the order is closed: the amount / UTR / method are locked and the only thing left is a refund,
+  // so the manual form turns into a small "Refund this payment" form (nothing to edit is shown).
+  const refundOnly = isPaymentMoneyLocked(order) && order.paymentStatus === "paid"
   const form = useForm<PaymentValues>({
     defaultValues: {
-      status: order.paymentStatus,
+      status: refundOnly ? "refunded" : order.paymentStatus,
       method: order.paymentMethod ?? "",
-      reference: order.paymentReference ?? "",
-      amount: order.paymentAmount == null ? "" : String(order.paymentAmount),
-      note: order.paymentNote ?? "",
+      reference: refundOnly ? "" : (order.paymentReference ?? ""),
+      amount: refundOnly || order.paymentAmount == null ? "" : String(order.paymentAmount),
+      note: refundOnly ? "" : (order.paymentNote ?? ""),
     },
   })
   const { errors, isDirty } = form.formState
@@ -130,8 +140,22 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       }
     )
 
+  const refund = () =>
+    run(
+      {
+        status: "refunded",
+        method: order.paymentMethod ?? "",
+        reference: "",
+        amount: "", // blank = refund everything still owed (works after a partial refund too)
+        note: "Refund sent",
+      },
+      () => toast.success("Marked as refunded")
+    )
+
   const onSave = form.handleSubmit((values) =>
-    run(values, (confirmed) => toast.success(confirmed ? "Payment saved. Order confirmed." : "Payment record saved"))
+    refundOnly || values.status === "refunded"
+      ? (setRefundOpen(false), setRefundValues(values)) // a refund moves money: ask first
+      : run(values, (confirmed) => { setRefundOpen(false); toast.success(confirmed ? "Payment saved. Order confirmed." : "Payment record saved") })
   )
 
   const needsVerification = order.paymentStatus === "submitted"
@@ -141,6 +165,10 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const allowed = allowedPaymentStatuses(order)
   const allowedOptions = statusOptions.filter((o) => allowed.includes(o.value))
   const editNote = paymentEditNote(order)
+  // On a closed order a cash refund only makes sense when money is owed back: a CANCELLED order that was paid.
+  // A delivered order is refunded through its return ("Refund the returned items" in the status dropdown), not here.
+  const owedBack = (order.paymentAmount ?? order.total) - Number(order.refundedAmount ?? 0) > 0.005
+  const showManual = order.paymentStatus !== "refunded" && (!refundOnly || (order.status === "cancelled" && owedBack))
   const lockPaidFields = isPaymentMoneyLocked(order) && order.paymentStatus === "paid" && statusNow === "paid"
 
   return (
@@ -150,12 +178,12 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} refundedAmount={order.refundedAmount} paidAmount={order.paymentAmount ?? order.total} />
       </div>
 
-      <dl data-ui="admin/PaymentControl/dl-grid" className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl data-ui="admin/PaymentControl/dl-grid" className="grid gap-x-6 gap-y-3 grid-cols-2">
         {due && <Fact label={due.label}>{formatPrice(due.amount)}</Fact>}
         <Fact label="Received">{order.paymentAmount == null ? "—" : formatPrice(order.paymentAmount)}</Fact>
         <Fact label="Method">{order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "—"}</Fact>
-        <Fact label="UTR / reference">
-          {order.paymentReference ? <span data-ui="admin/PaymentControl/span" className="font-mono">{order.paymentReference}</span> : "—"}
+        <Fact label="UTR / reference" wide>
+          {order.paymentReference ? <CopyableReference value={order.paymentReference} /> : "—"}
         </Fact>
         {order.paymentSubmittedAt && <Fact label="Customer submitted">{formatDateTime(order.paymentSubmittedAt)}</Fact>}
         {order.paymentPaidAt && <Fact label="Marked paid">{formatDateTime(order.paymentPaidAt)}</Fact>}
@@ -172,18 +200,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             variant="outline"
             disabled={pending}
             className="rounded-full"
-            onClick={() =>
-              run(
-                {
-                  status: "refunded",
-                  method: order.paymentMethod ?? "",
-                  reference: "",
-                  amount: "", // blank = refund everything still owed (works after a partial refund too)
-                  note: "Refund sent",
-                },
-                () => toast.success("Marked as refunded")
-              )
-            }
+            onClick={() => setAsk("refund")}
           >
             {pending && <Loader2Icon className="animate-spin" />} Mark as refunded
           </Button>
@@ -199,7 +216,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
       {canVerify && (
         <div data-ui="admin/PaymentControl/div-flex-2" className="flex flex-wrap items-start gap-2">
-          <Button data-ui="admin/PaymentControl/Button-verify-payment-confirm" type="button" onClick={verify} disabled={pending} className="rounded-full bg-success-solid text-white hover:bg-success-solid/90">
+          <Button data-ui="admin/PaymentControl/Button-verify-payment-confirm" type="button" onClick={() => setAsk("verify")} disabled={pending} className="rounded-full bg-success-solid text-white hover:bg-success-solid/90">
             {pending && <Loader2Icon className="animate-spin" />} Verify payment & confirm order
           </Button>
           {needsVerification && !rejecting && (
@@ -220,7 +237,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             placeholder="e.g. We couldn't find this UTR. Please check and resend."
           />
           <div data-ui="admin/PaymentControl/div-flex-3" className="flex gap-2">
-            <Button data-ui="admin/PaymentControl/Button-reject-payment" type="button" variant="destructive" onClick={reject} disabled={pending} className="rounded-full">
+            <Button data-ui="admin/PaymentControl/Button-reject-payment" type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending} className="rounded-full">
               Reject payment
             </Button>
             <Button data-ui="admin/PaymentControl/Button-cancel" type="button" variant="ghost" onClick={() => setRejecting(false)} className="rounded-full">
@@ -230,55 +247,103 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         </div>
       )}
 
-      <details data-ui="admin/PaymentControl/details" className="group rounded-xl border">
-        <summary data-ui="admin/PaymentControl/summary-flex" className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium hover:bg-muted/50">
-          Edit payment record manually
-          <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
-        </summary>
-        <form data-ui="admin/PaymentControl/form-grid" onSubmit={onSave} noValidate className="grid gap-x-4 gap-y-1 border-t p-4 sm:grid-cols-2">
-          {editNote && (
-            <p data-ui="admin/PaymentControl/p-3" role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground sm:col-span-2">
-              {editNote}
-            </p>
-          )}
-          <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={allowedOptions} />
-          <FormSelectField control={form.control} name="method" label="Paid how?" fieldSize="md" placeholder="Not set" options={methodOptions} />
-          <TextField
-            label="UTR / reference"
-            fieldSize="md"
-            disabled={lockPaidFields}
-            className="font-mono"
-            error={errors.reference?.message}
-            {...form.register("reference")}
-          />
-          <TextField
-            label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
-            fieldSize="md"
-            inputMode="decimal"
-            leading="₹"
-            disabled={lockPaidFields}
-            hint={
-              statusNow === "refunded"
-                ? "Blank = refund everything still owed. A smaller amount records a partial refund."
-                : "Leave blank to use the order total when marking as paid."
-            }
-            error={errors.amount?.message}
-            {...form.register("amount")}
-          />
-          <TextAreaField
-            label="Note (visible to the customer)" maxLength={LIMITS.paymentNote.max}
-            rows={2}
-            containerClassName="sm:col-span-2"
-            error={errors.note?.message}
-            {...form.register("note")}
-          />
-          <div data-ui="admin/PaymentControl/div-3" className="sm:col-span-2">
-            <Button data-ui="admin/PaymentControl/Button-save-payment-record" type="submit" variant="outline" disabled={!isDirty || pending} className="rounded-full">
-              {pending && <Loader2Icon className="animate-spin" />} Save payment record
-            </Button>
-          </div>
-        </form>
-      </details>
+      {/* A refunded payment is final: nothing left to edit, so no form is offered. Refund / edit both open in a dialog. */}
+      {showManual && (
+        <>
+          <Button data-ui="admin/PaymentControl/Button-edit-payment" type="button" variant="outline" onClick={() => setRefundOpen(true)} className="w-full rounded-full sm:w-auto">
+            {refundOnly ? "Refund this payment" : "Edit payment record manually"}
+          </Button>
+          <Dialog open={refundOpen} onOpenChange={(o) => !pending && setRefundOpen(o)}>
+            <DialogContent data-ui="admin/PaymentControl/DialogContent" className="max-h-[90dvh] gap-5 overflow-y-auto p-5 sm:max-w-md sm:p-6">
+              <DialogHeader>
+                <DialogTitle>{refundOnly ? "Refund this payment" : "Edit payment record"}</DialogTitle>
+                <DialogDescription>
+                  {refundOnly
+                    ? "Send the money back first, then record it here. Blank amount = refund everything still owed."
+                    : "Fix the payment details by hand. Use this only when the verify button doesn't fit."}
+                </DialogDescription>
+              </DialogHeader>
+              <form data-ui="admin/PaymentControl/form-grid" onSubmit={onSave} noValidate className="grid gap-y-1">
+                {editNote && !refundOnly && (
+                  <p data-ui="admin/PaymentControl/p-3" role="note" className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    {editNote}
+                  </p>
+                )}
+                {!refundOnly && <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={allowedOptions} />}
+                {!refundOnly && <FormSelectField control={form.control} name="method" label="Paid how?" fieldSize="md" placeholder="Not set" options={methodOptions} />}
+                <TextField
+                  label={refundOnly ? "Refund reference (optional)" : "UTR / reference"}
+                  fieldSize="md"
+                  kind="paymentRef"
+                  disabled={lockPaidFields && !refundOnly}
+                  className="font-mono"
+                  error={errors.reference?.message}
+                  {...form.register("reference")}
+                />
+                <TextField
+                  label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  disabled={lockPaidFields && !refundOnly}
+                  hint={
+                    statusNow === "refunded"
+                      ? "Blank = refund everything still owed. A smaller amount records a partial refund."
+                      : "Leave blank to use the order total when marking as paid."
+                  }
+                  error={errors.amount?.message}
+                  {...form.register("amount")}
+                />
+                <TextAreaField
+                  label="Note (visible to the customer)" maxLength={LIMITS.paymentNote.max}
+                  rows={2}
+                  error={errors.note?.message}
+                  {...form.register("note")}
+                />
+                <div data-ui="admin/PaymentControl/div-3" className="mt-2 flex flex-wrap justify-end gap-2">
+                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="ghost" onClick={() => setRefundOpen(false)} disabled={pending} className="rounded-full">
+                    Cancel
+                  </Button>
+                  <Button data-ui="admin/PaymentControl/Button" type="submit" disabled={(!isDirty && !refundOnly) || pending} className="rounded-full">
+                    {pending && <Loader2Icon className="animate-spin" />} {refundOnly ? "Refund payment" : "Save payment record"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+      <ConfirmDialog
+        open={refundValues !== null}
+        onOpenChange={(o) => !o && setRefundValues(null)}
+        destructive
+        title="Refund this payment?"
+        description="Only do this after you have sent the money back to the customer. A refund can't be undone."
+        confirmLabel="Yes, mark refunded"
+        pending={pending}
+        onConfirm={() => refundValues && run(refundValues, () => { setRefundValues(null); toast.success("Refund recorded") })}
+      />
+      <ConfirmDialog
+        open={ask !== null}
+        onOpenChange={(o) => !o && setAsk(null)}
+        destructive={ask === "reject"}
+        title={ask === "verify" ? "Verify this payment?" : ask === "reject" ? "Reject this payment?" : "Mark as refunded?"}
+        description={
+          ask === "verify"
+            ? `Mark ${formatPrice(order.total)} as received and confirm the order. Only do this after you see the money in your UPI/bank app.`
+            : ask === "reject"
+              ? "The customer is told the payment was not found and can submit it again."
+              : `Only do this after you have sent ${formatPrice(order.paymentAmount ?? order.total)} back to the customer. It can't be undone.`
+        }
+        confirmLabel={ask === "verify" ? "Yes, verify" : ask === "reject" ? "Yes, reject" : "Yes, mark refunded"}
+        onConfirm={() => {
+          const which = ask
+          setAsk(null)
+          if (which === "verify") verify()
+          else if (which === "reject") reject()
+          else if (which === "refund") refund()
+        }}
+      />
     </div>
   )
 }

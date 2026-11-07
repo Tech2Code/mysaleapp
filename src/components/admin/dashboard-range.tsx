@@ -95,7 +95,7 @@ export function DashboardRangeShell({
           options={months}
         />
         {monthSel === "custom" && (
-          <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex items-end gap-2" role="group" aria-label="Custom date range">
+          <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex w-full flex-wrap items-end gap-2 sm:w-auto" role="group" aria-label="Custom date range">
             <CalendarRangeIcon className="mb-2.5 size-4 text-primary" aria-hidden />
             <TextField
               label="From"
@@ -108,7 +108,7 @@ export function DashboardRangeShell({
                 setFrom(e.target.value)
                 applyCustom(e.target.value, to)
               }}
-              containerClassName="w-40"
+              containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
               noErrorSpace
             />
             <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">
@@ -126,7 +126,7 @@ export function DashboardRangeShell({
                 setTo(e.target.value)
                 applyCustom(from, e.target.value)
               }}
-              containerClassName="w-40"
+              containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
               noErrorSpace
             />
           </div>

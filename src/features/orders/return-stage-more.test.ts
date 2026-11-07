@@ -106,3 +106,22 @@ describe("per-return refund state (admin)", () => {
     expect(returnTimeline(input).find((e) => e.key === "requested")?.adminDetail).toBeUndefined()
   })
 })
+
+describe("timeline after a rejected / withdrawn request followed by a direct return", () => {
+  const returns = [{ refunded: false, createdAt: "2026-03-05T00:00:00Z" }]
+  it("does not show approval or pickup steps for a request that was rejected", () => {
+    const input = { ...base, requests: [{ status: "rejected" as const, createdAt: "2026-02-27T00:00:00Z", decidedAt: decided }], returns }
+    expect(returnTimeline(input).map((e) => e.key)).toEqual(["received", "refund"])
+  })
+  it("does not show them for a withdrawn request either, but keeps an earlier completed request", () => {
+    const input = {
+      ...base,
+      requests: [
+        { status: "received" as const, createdAt: "2026-02-01T00:00:00Z", decidedAt: "2026-02-02T00:00:00Z" },
+        { status: "withdrawn" as const, createdAt: "2026-03-02T00:00:00Z" },
+      ],
+      returns,
+    }
+    expect(returnTimeline(input).map((e) => e.key)).toEqual(["requested", "approved", "pickup", "picked_up", "received", "refund"])
+  })
+})

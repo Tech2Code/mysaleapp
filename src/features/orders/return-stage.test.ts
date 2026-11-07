@@ -69,12 +69,23 @@ describe("returnTimeline", () => {
   it("is empty without return activity", () => expect(returnTimeline(base)).toEqual([]))
 
   it("requested: approval is the current step, the rest upcoming", () => {
-    expect(keys({ ...base, requests: [req("requested")] })).toEqual(["requested:done", "approved:current", "received:upcoming", "refund:upcoming"])
+    expect(keys({ ...base, requests: [req("requested")] })).toEqual(["requested:done", "approved:current", "pickup:upcoming", "picked_up:upcoming", "received:upcoming", "refund:upcoming"])
   })
 
   it("approved shows the pickup note", () => {
     const t = returnTimeline({ ...base, requests: [req("approved", undefined, { decidedAt: "2026-01-02T00:00:00Z", adminNote: "Courier will call" })] })
-    expect(t.find((e) => e.key === "approved")).toMatchObject({ state: "current", note: "Courier will call", at: "2026-01-02T00:00:00Z" })
+    expect(t.find((e) => e.key === "approved")).toMatchObject({ state: "done", note: "Courier will call", at: "2026-01-02T00:00:00Z" })
+  })
+
+  it("approved: pickup scheduled is current, then pickup successful, then received", () => {
+    const approved = { ...base, requests: [req("approved", undefined, { decidedAt: "2026-01-02T00:00:00Z", pickupDate: "2026-01-05" })] }
+    expect(keys(approved)).toEqual(["requested:done", "approved:done", "pickup:current", "picked_up:upcoming", "received:upcoming", "refund:upcoming"])
+    expect(returnTimeline(approved).find((e) => e.key === "pickup")?.note).toMatch(/^Pickup on /)
+    expect(returnStage(approved)?.key).toBe("approved")
+
+    const pickedUp = { ...base, requests: [req("approved", undefined, { pickupDate: "2026-01-05", pickedUpAt: "2026-01-05T12:00:00Z" })] }
+    expect(keys(pickedUp)).toEqual(["requested:done", "approved:done", "pickup:done", "picked_up:current", "received:upcoming", "refund:upcoming"])
+    expect(returnStage(pickedUp)?.key).toBe("picked_up")
   })
 
   it("rejected / withdrawn stop the line", () => {
@@ -84,7 +95,7 @@ describe("returnTimeline", () => {
 
   it("completed return: received done, refund follows the payment", () => {
     const received = { ...base, requests: [req("received")], returns: [ret()] }
-    expect(keys(received)).toEqual(["requested:done", "approved:done", "received:done", "refund:upcoming"])
+    expect(keys(received)).toEqual(["requested:done", "approved:done", "pickup:done", "picked_up:done", "received:done", "refund:upcoming"])
     expect(keys({ ...received, refundedAmount: 1 })).toContain("refund:current")
     expect(keys({ ...received, paymentStatus: "refunded" })).toContain("refund:done")
   })

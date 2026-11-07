@@ -54,8 +54,16 @@ export function AdminReturnOrder({
   // one line per product (an order can list a product once, but be safe)
   const lines = useMemo(() => {
     const seen = new Set<string>()
-    return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
-  }, [items, left])
+    return items.filter(
+      (i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0 && (!prefill || prefill.items.some((p) => p.productId === i.productId)),
+    )
+  }, [items, left, prefill])
+  // From a customer request only the requested items, and no more than the requested quantity, can come back.
+  const maxOf = (productId: string) => {
+    const returnable = left.get(productId) ?? 0
+    const asked = prefill?.items.find((p) => p.productId === productId)?.quantity
+    return asked === undefined ? returnable : Math.min(returnable, asked)
+  }
 
   if (status !== "delivered") return null
   if (lines.length === 0) {
@@ -105,12 +113,12 @@ export function AdminReturnOrder({
       <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return for {orderCode}</DialogTitle>
-          <DialogDescription>Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
+          <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
         </DialogHeader>
 
         <ul data-ui="admin/AdminReturnOrder/ul" className="space-y-4">
           {lines.map((i) => {
-            const max = left.get(i.productId) ?? 0
+            const max = maxOf(i.productId)
             const row = rowOf(i.productId)
             const over = Number(row.qty) > max
             return (
@@ -154,7 +162,7 @@ export function AdminReturnOrder({
           <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Cancel
           </Button>
-          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))} className="rounded-full">
+          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId))} className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Save return
           </Button>
         </DialogFooter>

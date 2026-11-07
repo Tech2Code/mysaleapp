@@ -20,6 +20,7 @@ import { z } from "zod"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { submitPayment } from "@/features/orders/actions"
+import { CopyableReference } from "@/components/shared/copyable-reference"
 import { paymentReferenceSchema } from "@/features/orders/schema"
 import { buildUpiUrl } from "@/features/orders/upi"
 import {
@@ -169,7 +170,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           {payment.paymentReference && (
             <div data-ui="store/PaymentPanel/div-flex-3" className="flex justify-between gap-4">
               <dt data-ui="store/PaymentPanel/dt-3" className="text-muted-foreground">Reference</dt>
-              <dd data-ui="store/PaymentPanel/dd-3" className="font-mono font-medium">{payment.paymentReference}</dd>
+              <dd data-ui="store/PaymentPanel/dd-3" className="min-w-0 text-right font-medium"><CopyableReference value={payment.paymentReference} /></dd>
             </div>
           )}
           {payment.paymentPaidAt && (
@@ -192,7 +193,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           <HourglassIcon className="size-5 animate-pulse" /> We&apos;re verifying your payment
         </h3>
         <p data-ui="store/PaymentPanel/p-2" className="mt-2 text-sm text-muted-foreground">
-          Reference <span data-ui="store/PaymentPanel/span" className="font-mono font-semibold text-foreground">{payment.paymentReference}</span>
+          Reference <CopyableReference value={payment.paymentReference ?? ""} className="font-semibold text-foreground" />
           {payment.paymentSubmittedAt && <> · sent {formatDateTime(payment.paymentSubmittedAt)}</>}. Your order is
           confirmed as soon as we see the payment, usually within a few hours.
         </p>
@@ -301,6 +302,16 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           }}
         />
       </div>
+
+      {changing && (
+        <button data-ui="store/PaymentPanel/button-keep-my-earlier-refere"
+          type="button"
+          onClick={() => setChanging(false)}
+          className="block text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Keep my earlier reference
+        </button>
+      )}
 
       <a data-ui="store/PaymentPanel/a-send-payment-screensho"
         href={shopWhatsappLink(shop, `Hi! I paid for order ${orderCode}. Sending the payment screenshot.`)}

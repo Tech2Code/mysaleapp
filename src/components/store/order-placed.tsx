@@ -101,9 +101,13 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         {code && (
           <button data-ui="store/OrderPlaced/button-flex"
             type="button"
-            onClick={() => {
-              navigator.clipboard?.writeText(code)
-              toast.success("Order code copied")
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(code)
+                toast.success("Order code copied")
+              } catch {
+                toast.error("Couldn't copy. Please select and copy the code.")
+              }
             }}
             className="mx-auto mt-6 flex items-center gap-2 rounded-full border bg-card px-5 py-2.5 font-mono text-lg font-semibold tracking-wider transition-colors hover:bg-muted"
             aria-label={`Copy order code ${code}`}
@@ -116,7 +120,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
           {!order ? (
             <p data-ui="store/OrderPlaced/p-2" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
               To pay for this order, open{" "}
-              <Link data-ui="store/OrderPlaced/Link-track-order" href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/OrderPlaced/Link-track-order" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Track order
               </Link>{" "}
               and enter your order code with the last 4 digits of your phone.
@@ -134,7 +138,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
           ) : lookupFailed ? (
             <p data-ui="store/OrderPlaced/p-3" role="alert" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
               We couldn&apos;t load your payment details just now. Open{" "}
-              <Link data-ui="store/OrderPlaced/Link-track-order-2" href={`/track?code=${code}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/OrderPlaced/Link-track-order-2" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Track order
               </Link>{" "}
               and enter your order code with the last 4 digits of your phone to pay.
@@ -154,7 +158,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         </div>
 
         <div data-ui="store/OrderPlaced/div-flex" className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={`/track?code=${code}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
+          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={`/track?code=${encodeURIComponent(code)}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
             Track this order
           </Link>
           <Link data-ui="store/OrderPlaced/Link-continue-shopping" href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>

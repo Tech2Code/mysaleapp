@@ -2,9 +2,10 @@
 
 import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useTransition } from "react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { refundReturn } from "@/features/orders/admin-actions"
 import { formatPrice } from "@/lib/format"
@@ -15,6 +16,7 @@ import { formatPrice } from "@/lib/format"
  */
 export function RefundReturnButton({ returnId, value, expectedRefunded }: { returnId: string; value: number; expectedRefunded: number }) {
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
 
@@ -25,13 +27,25 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
         toast.error(res.error)
         return
       }
+      setOpen(false)
       toast.success(res.data.fullyRefunded ? "Refund recorded. Payment marked refunded." : `Refund recorded (${formatPrice(res.data.refundedAmount)} refunded so far).`)
       router.refresh()
     })
 
   return (
-    <Button data-ui="admin/RefundReturnButton" type="button" variant="outline" size="sm" disabled={pending} onClick={run} className="rounded-full">
-      {pending && <Loader2Icon className="animate-spin" />} I have refunded {formatPrice(value)}
-    </Button>
+    <>
+      <Button data-ui="admin/RefundReturnButton/Button-i-have-refunded" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setOpen(true)} className="rounded-full">
+        {pending && <Loader2Icon className="animate-spin" />} I have refunded {formatPrice(value)}
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={`Record a refund of ${formatPrice(value)}?`}
+        description="Only do this after you have sent the money back to the customer. It marks this return as refunded."
+        confirmLabel="Yes, I have refunded"
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   )
 }

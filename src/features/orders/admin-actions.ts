@@ -85,6 +85,7 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
   revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
   return { ok: true }
 }
 
@@ -133,7 +134,8 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
     }>()
   if (!order) return fail("Order not found")
 
-  if (order.status === "cancelled" && (p.status === "paid" || p.status === "submitted")) {
+  // A cancelled order can't take a NEW payment; confirming one the customer already submitted (so it can be refunded) is fine.
+  if (order.status === "cancelled" && (p.status === "submitted" || (p.status === "paid" && order.payment_status !== "submitted" && order.payment_status !== "paid"))) {
     return fail("This order is cancelled. Record a refund instead of a payment.")
   }
 
@@ -173,6 +175,7 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
       return fail("Could not record the refund")
     }
     revalidatePath("/admin", "layout")
+    revalidatePathsForCustomer()
     return { ok: true, data: { confirmed: false } }
   }
   if (p.status === "refunded" && order.payment_status !== "refunded") {
@@ -212,6 +215,7 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
   revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
   return { ok: true, data: { confirmed: confirmNow } }
 }
 
@@ -282,6 +286,7 @@ export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> 
 
   updateTag(CACHE_TAGS.products) // the DB trigger gave the reserved stock back
   revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
   return { ok: true }
 }
 
@@ -327,6 +332,7 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
 
   updateTag(CACHE_TAGS.products) // restocked items are sellable again
   revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
   const out = (data ?? {}) as { restocked?: number; refundedAmount?: number; fullyRefunded?: boolean }
   return {
     ok: true,
@@ -343,6 +349,12 @@ const decideSchema = z.object({
   approve: z.boolean(),
   /** Approve: pickup / shipping instructions (optional). Reject: the reason (required). */
   note: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+  /** Approve: the day the goods are collected (YYYY-MM-DD). */
+  pickupDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
+    .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), "Pick a valid date") // rejects 2026-02-31
+    .optional(),
 })
 
 /** Approve a customer's return request (with instructions) or reject it (with a reason the customer sees). */
@@ -352,17 +364,60 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
 
   const parsed = decideSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
-  const { requestId, approve, note } = parsed.data
+  const { requestId, approve, note, pickupDate } = parsed.data
+  if (approve && !pickupDate) return fail("Pick the pickup date.", { pickupDate: ["Pick the pickup date"] })
   if (!approve && !note) return fail("Tell the customer why the return isn't approved.", { note: ["Write a reason"] })
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase.rpc("decide_return_request", { p_request_id: requestId, p_approve: approve, p_note: note ?? null })
+  const { error } = await supabase.rpc("decide_return_request", { p_request_id: requestId, p_approve: approve, p_note: note ?? null, p_pickup_date: approve ? pickupDate : null })
   if (error) {
     if (error.message.includes("NOT_PENDING")) return fail("This request was already decided or withdrawn.")
+    if (error.message.includes("BAD_PICKUP_DATE")) return fail(mapRpcError("BAD_PICKUP_DATE", "Pick a valid date"), { pickupDate: ["Pick a date from today"] })
     return fail("Could not save your decision")
   }
   revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
+  return { ok: true }
+}
+
+/** The customer, `/track` and order list pages show the order status too: refresh them after any admin change that affects it. */
+function revalidatePathsForCustomer() {
   revalidatePath("/account", "layout")
+  revalidatePath("/track")
+}
+
+const pickedUpSchema = z.object({ requestId: z.uuid() })
+
+/** The courier collected the goods of an approved return ("Pickup successful"). */
+export async function markReturnPickedUp(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const parsed = pickedUpSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.")
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.rpc("mark_return_picked_up", { p_request_id: parsed.data.requestId })
+  if (error) {
+    if (error.message.includes("NOT_PENDING")) return fail("This return is not waiting for a pickup any more. Refresh the page.")
+    return fail("Could not save the pickup")
+  }
+  revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
+  return { ok: true }
+}
+
+/** Take back the last step of a return request (pickup, approval or rejection). Received / refunded steps stay. */
+export async function undoReturnStep(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const parsed = pickedUpSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.")
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.rpc("undo_return_step", { p_request_id: parsed.data.requestId })
+  if (error) return fail(mapRpcError(error.message, "Could not undo this step"))
+  revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
   return { ok: true }
 }
 
@@ -390,7 +445,42 @@ export async function refundReturn(input: unknown): Promise<ActionResult<{ refun
   })
   if (error) return fail(mapRpcError(error.message, "Could not record the refund"))
   revalidatePath("/admin", "layout")
-  revalidatePath("/account", "layout")
+  revalidatePathsForCustomer()
   const out = (data ?? {}) as { refundedAmount?: number; fullyRefunded?: boolean }
   return { ok: true, data: { refundedAmount: Number(out.refundedAmount ?? 0), fullyRefunded: Boolean(out.fullyRefunded) } }
+}
+
+const createRequestSchema = z.object({
+  orderId: z.uuid(),
+  items: z
+    .array(z.object({ productId: z.uuid(), name: z.string().max(120), quantity: z.number().int().min(1).max(999) }))
+    .min(1, "Choose at least one item")
+    .max(50),
+  reason: z.string().trim().min(2, "Choose a reason").max(80),
+  details: z.string().trim().max(300, "Keep it under 300 characters").optional(),
+})
+
+/**
+ * Open a return request for the customer (they asked on WhatsApp / phone). The return window does not apply: the shop
+ * agreed outside the app. The request then waits for the normal approve / reject step.
+ */
+export async function createReturnRequestAsAdmin(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const parsed = createRequestSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
+  const { orderId, items, reason, details } = parsed.data
+  if (otherNeedsDetail(reason, details)) return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.rpc("admin_create_return_request", {
+    p_order_id: orderId,
+    p_items: items,
+    p_reason: reason,
+    p_details: details ?? null,
+  })
+  if (error) return fail(mapRpcError(error.message, "Could not create the return request"))
+  revalidatePath("/admin", "layout")
+  revalidatePathsForCustomer()
+  return { ok: true }
 }

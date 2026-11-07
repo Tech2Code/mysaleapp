@@ -1,0 +1,147 @@
+"use client"
+
+import { ArrowRightIcon, Loader2Icon, SearchXIcon } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import { SearchField } from "@/components/form"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { searchProducts, type SearchResult } from "@/features/products/search-actions"
+import { formatPrice } from "@/lib/format"
+import { ProductImage } from "./product-image"
+
+type Category = { name: string; slug: string }
+
+/**
+ * The store-wide search: opens from the header on every page and size. Results appear as you type (name
+ * matches first); Enter or "See all results" opens the full /products list with the same words.
+ */
+export function SearchDialog({ open, onOpenChange, categories }: { open: boolean; onOpenChange: (open: boolean) => void; categories: Category[] }) {
+  const router = useRouter()
+  const [query, setQuery] = useState("")
+  const [result, setResult] = useState<SearchResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const latest = useRef(0)
+  const trimmed = query.trim()
+
+  // Debounced lookup. A counter drops answers that arrive after a newer keystroke.
+  useEffect(() => {
+    if (!open || !trimmed) return
+    const id = ++latest.current
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+      try {
+        const res = await searchProducts(trimmed)
+        if (id === latest.current) setResult(res)
+      } catch {
+        if (id === latest.current) setResult({ hits: [], total: 0 })
+      } finally {
+        if (id === latest.current) setLoading(false)
+      }
+    }, 200)
+    return () => window.clearTimeout(timer)
+  }, [trimmed, open])
+
+  const close = () => onOpenChange(false)
+  const seeAll = () => {
+    if (!trimmed) return
+    close()
+    router.push(`/products?q=${encodeURIComponent(trimmed)}`)
+  }
+  const shown = trimmed ? result : null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent data-ui="store/SearchDialog/DialogContent" className="max-h-[85dvh] gap-3 overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Search products</DialogTitle>
+          <DialogDescription className="sr-only">Type a product name, material or category.</DialogDescription>
+        </DialogHeader>
+        <form
+          data-ui="store/SearchDialog/form"
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            seeAll()
+          }}
+        >
+          <SearchField label="Search products" placeholder="Search products…" autoFocus autoComplete="off" pill value={query} onChange={(e) => setQuery(e.target.value)} onClear={() => setQuery("")} />
+        </form>
+
+        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-24">
+          {!trimmed && categories.length > 0 && (
+            <div data-ui="store/SearchDialog/div-2" className="space-y-2">
+              <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse</p>
+              <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-2">
+                <li data-ui="store/SearchDialog/li">
+                  <Link data-ui="store/SearchDialog/Link-all-products" href="/products" onClick={close} className="inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium hover:bg-muted">
+                    All products
+                  </Link>
+                </li>
+                {categories.map((c) => (
+                  <li data-ui="store/SearchDialog/li-2" key={c.slug}>
+                    <Link data-ui="store/SearchDialog/Link-inline-flex" href={`/category/${c.slug}`} onClick={close} className="inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium hover:bg-muted">
+                      {c.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {trimmed && !shown && (
+            <p data-ui="store/SearchDialog/p-flex" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2Icon className="size-4 animate-spin" aria-hidden /> Searching…
+            </p>
+          )}
+
+          {shown && shown.hits.length === 0 && (
+            <div data-ui="store/SearchDialog/div-flex" className="flex flex-col items-center gap-2 py-6 text-center">
+              <SearchXIcon className="size-8 text-muted-foreground" aria-hidden />
+              <p data-ui="store/SearchDialog/p-2" className="text-sm font-medium">No products match “{trimmed}”</p>
+              <p data-ui="store/SearchDialog/p-3" className="text-xs text-muted-foreground">Try a shorter word, or browse a category.</p>
+            </div>
+          )}
+
+          {shown && shown.hits.length > 0 && (
+            <>
+              <ul data-ui="store/SearchDialog/ul" className="divide-y">
+                {shown.hits.map((h) => (
+                  <li data-ui="store/SearchDialog/li-3" key={h.id}>
+                    <Link data-ui="store/SearchDialog/Link-flex" href={`/products/${h.slug}`} onClick={close} className="flex items-center gap-3 py-2.5 hover:bg-muted/50">
+                      <span data-ui="store/SearchDialog/span-relative" className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted @container">
+                        <ProductImage src={h.image} alt={h.name} sizes="56px" />
+                      </span>
+                      <span data-ui="store/SearchDialog/span" className="min-w-0 flex-1">
+                        <span data-ui="store/SearchDialog/span-2" className="block truncate text-sm font-medium">{h.name}</span>
+                        <span data-ui="store/SearchDialog/span-3" className="block truncate text-xs text-muted-foreground">
+                          {h.category ?? "Product"}
+                          {!h.inStock ? " · Out of stock" : ""}
+                        </span>
+                      </span>
+                      <span data-ui="store/SearchDialog/span-4" className="shrink-0 text-sm font-semibold">
+                        {formatPrice(h.price)}
+                        {h.compareAtPrice && h.compareAtPrice > h.price && (
+                          <span data-ui="store/SearchDialog/span-5" className="ml-1.5 text-xs font-normal text-muted-foreground line-through">{formatPrice(h.compareAtPrice)}</span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <button
+                data-ui="store/SearchDialog/button-see-all"
+                type="button"
+                onClick={seeAll}
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+              >
+                See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className="size-4" aria-hidden />
+              </button>
+            </>
+          )}
+          {loading && shown && <span data-ui="store/SearchDialog/span-6" className="sr-only">Updating results</span>}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

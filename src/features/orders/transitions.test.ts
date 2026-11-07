@@ -12,7 +12,7 @@ describe("checkTransition matrix", () => {
             if (from === to) return expect(r).toBeNull()
             if (to === "cancelled") return expect(r).not.toBeNull()
             if (!NEXT_STATUSES[from].includes(to)) return expect(r).not.toBeNull()
-            if (from === "pending" && payment !== "paid") return expect(r).toMatch(/Payment/)
+            if (payment !== "paid") return expect(r).toMatch(/[Pp]ayment/)
             if (to === "shipped" && !hasCourier) return expect(r).toMatch(/courier/)
             expect(r).toBeNull()
           })
@@ -34,6 +34,9 @@ describe("rules", () => {
   it("pending -> confirmed needs paid", () => {
     expect(checkTransition({ from: "pending", to: "confirmed", payment: "submitted", hasCourier: false })).not.toBeNull()
     expect(checkTransition({ from: "pending", to: "confirmed", payment: "paid", hasCourier: false })).toBeNull()
+  })
+  it("a refunded payment stops a confirmed order from going forward", () => {
+    expect(checkTransition({ from: "confirmed", to: "packed", payment: "refunded", hasCourier: false })).toMatch(/refunded/)
   })
   it("pending can't skip to shipped", () => {
     expect(checkTransition({ from: "pending", to: "shipped", payment: "paid", hasCourier: true })).not.toBeNull()

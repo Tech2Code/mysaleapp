@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
-import type { OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
-import { formatDate, formatDateTime } from "@/lib/format"
+import { ReturnsList } from "@/components/shared/returns-list"
+import { notRefundedCharges, refundLines } from "@/features/orders/refund"
+import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
+import { formatDate, formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
@@ -33,7 +35,10 @@ export function RequestReturn({
   window: win,
   whatsappUrl,
   onDone,
+  charges,
 }: {
+  /** Delivery + extra charges of the order: shown as "not refunded" in the refund estimate. */
+  charges?: { shippingFee: number; extraFees: OrderFee[] }
   orderCode: string
   phoneLast4?: string
   status: OrderStatus
@@ -81,6 +86,9 @@ export function RequestReturn({
   const payload = lines
     .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
     .filter((i) => i.quantity > 0)
+  const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
+  const estimateTotal = estimate.reduce((n, l) => n + l.amount, 0)
+  const kept = charges ? notRefundedCharges(charges) : []
   const needsDetail = otherNeedsDetail(reason, details)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
@@ -139,6 +147,17 @@ export function RequestReturn({
           })}
         </ul>
 
+        {estimate.length > 0 && (
+          <div data-ui="store/RequestReturn/div" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
+            <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
+              <span data-ui="store/RequestReturn/span">You will get back</span>
+              <span data-ui="store/RequestReturn/span-2">{formatPrice(estimateTotal)}</span>
+            </p>
+            <p data-ui="store/RequestReturn/p-2" className="text-xs text-muted-foreground">
+              Price of the items you return.{kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}
+            </p>
+          </div>
+        )}
         <SelectField
           label="Why are you returning it?"
           fieldSize="md"
@@ -157,7 +176,7 @@ export function RequestReturn({
           error={needsDetail && details.trim() ? OTHER_DETAIL_MESSAGE : undefined}
         />
         {error && (
-          <p data-ui="store/RequestReturn/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+          <p data-ui="store/RequestReturn/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {error}
           </p>
         )}
@@ -180,8 +199,13 @@ export function ReturnRequestsPanel({
   orderCode,
   phoneLast4,
   onChanged,
+  returns = [],
+  refundedInFull = false,
 }: {
   requests: ReturnRequest[]
+  /** Goods already received back: shown in the same card, under the requests. */
+  returns?: OrderReturn[]
+  refundedInFull?: boolean
   orderCode: string
   phoneLast4?: string
   onChanged?: () => void
@@ -190,7 +214,7 @@ export function ReturnRequestsPanel({
   const [pending, startTransition] = useTransition()
   const [confirmId, setConfirmId] = useState<string | null>(null)
   useBlockWhile(pending)
-  if (requests.length === 0) return null
+  if (requests.length === 0) return <ReturnsList returns={returns} audience="customer" refundedInFull={refundedInFull} />
 
   const withdraw = (id: string) =>
     startTransition(async () => {
@@ -207,9 +231,12 @@ export function ReturnRequestsPanel({
 
   return (
     <section data-ui="store/ReturnRequestsPanel" aria-label="Return requests" className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
-      <h3 data-ui="store/ReturnRequestsPanel/h3-return-requests" className="flex items-center gap-2 font-sans text-base font-semibold">
-        <PackageOpenIcon className="size-4 text-primary" aria-hidden /> Return requests
+      <h3 data-ui="store/ReturnRequestsPanel/h3-returns" className="flex items-center gap-2 font-sans text-base font-semibold">
+        <PackageOpenIcon className="size-4 text-primary" aria-hidden /> Returns
       </h3>
+      {/* Newest stage first: goods received back above the requests. */}
+      <ReturnsList bare returns={[...returns].reverse()} audience="customer" refundedInFull={refundedInFull} />
+      <h4 data-ui="store/ReturnRequestsPanel/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>
       <ul data-ui="store/ReturnRequestsPanel/ul" className="space-y-3">
         {[...requests].reverse().map((r) => {
           const meta = requestStatusMeta(r.status, "customer")
@@ -237,7 +264,7 @@ export function ReturnRequestsPanel({
                 </p>
               )}
               {r.status === "approved" && (
-                <p data-ui="store/ReturnRequestsPanel/p-3" className="text-xs text-muted-foreground">Send the items back as described above. Once they reach us and are checked, your refund is processed.</p>
+                <p data-ui="store/ReturnRequestsPanel/p-3" className="text-xs text-muted-foreground">{r.pickedUpAt ? "Pickup successful. Once the items reach us and are checked, your refund is processed." : r.pickupDate ? `Pickup scheduled for ${formatDate(r.pickupDate)}. Keep the items packed and ready.` : "Send the items back as described above. Once they reach us and are checked, your refund is processed."}</p>
               )}
               {r.status === "requested" && (
                 <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className="rounded-full">

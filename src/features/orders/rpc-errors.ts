@@ -36,6 +36,11 @@ const RPC_ERRORS: Record<string, string> = {
   PAYMENT_LOCKED: "A paid order can't go back to unpaid, and a refunded one can't change. Record a refund instead.",
   ORDER_LOCKED: "This order is delivered or cancelled, so its details are locked.",
   REQUEST_NOT_OPEN: "That return request is no longer open.",
+  BAD_PICKUP_DATE: "Pick a pickup date from today up to 90 days ahead.",
+  REQUEST_REQUIRED: "A return needs an approved customer request first.",
+  ANOTHER_OPEN: "The customer already has another open return request, so this one can't be reopened.",
+  CANNOT_UNDO: "This step can't be undone: the items were already received or refunded.",
+  NOT_IN_REQUEST:"You can only record the items and quantities the customer asked to return.",
 }
 
 /** Friendly message for the first known code found in an RPC error message, else `fallback`. */

@@ -17,7 +17,7 @@ import {
 export const ADMIN_ORDERS_PAGE_SIZE = 20
 
 /** Just enough of the return rows for a list row to show its return stage (see returnStage()). */
-const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note)"
+const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at)"
 
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
@@ -152,7 +152,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at)")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at)")
     .eq("id", id)
     .maybeSingle<OrderRow>()
   if (error) throw new Error(error.message)

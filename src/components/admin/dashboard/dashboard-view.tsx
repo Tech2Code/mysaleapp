@@ -33,7 +33,7 @@ export function DashboardView({ d, range, today }: { d: DashboardData; range: Pi
         </div>
       </header>
 
-      <DashboardRangeShell current={{ key: range.key, from: range.from, to: range.to }} today={today}>
+      <DashboardRangeShell key={`${range.key}-${range.from}-${range.to}`} current={{ key: range.key, from: range.from, to: range.to }} today={today}>
         <DashboardBody d={d} bucket={range.bucket} />
       </DashboardRangeShell>
     </div>

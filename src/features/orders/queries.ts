@@ -3,7 +3,7 @@ import { requireUser } from "@/features/auth/guards"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
 
-const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at)"
+const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at)"
 
 /** Orders of the signed-in customer. RLS also limits rows to auth.uid(). */
 export async function getMyOrders(): Promise<Order[]> {
@@ -11,7 +11,7 @@ export async function getMyOrders(): Promise<Order[]> {
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note)")
+    .select("*, returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)

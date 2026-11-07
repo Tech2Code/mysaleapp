@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import {
   Dialog,
   DialogContent,
@@ -121,11 +122,10 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
   useBlockWhile(pending)
   const nextSort = categories.reduce((m, c) => Math.max(m, c.sort), 0) + 1
 
+  const [toDelete, setToDelete] = useState<Row | null>(null)
+
   const remove = (c: Row) => {
-    const msg = c.productCount
-      ? `Delete “${c.name}”? Its ${c.productCount} product(s) will stay in the store without a category.`
-      : `Delete “${c.name}”?`
-    if (!window.confirm(msg)) return
+    setToDelete(null)
     setDeletingId(c.id)
     startTransition(async () => {
       const res = await deleteCategory(c.id)
@@ -181,7 +181,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
               aria-label={`Delete ${c.name}`}
               className="text-destructive hover:bg-destructive/10"
               disabled={deletingId === c.id}
-              onClick={() => remove(c)}
+              onClick={() => setToDelete(c)}
             >
               {deletingId === c.id ? <Loader2Icon className="animate-spin" /> : <Trash2Icon />}
             </Button>
@@ -189,6 +189,15 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
         ))}
       </ul>
 
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        destructive
+        title={`Delete “${toDelete?.name ?? ""}”?`}
+        description={toDelete?.productCount ? `Its ${toDelete.productCount} product(s) will stay in the store without a category.` : "This can't be undone."}
+        confirmLabel="Delete category"
+        onConfirm={() => toDelete && remove(toDelete)}
+      />
       <CategoryDialog category={editing} nextSort={nextSort} open={open} onOpenChange={setOpen} />
     </>
   )

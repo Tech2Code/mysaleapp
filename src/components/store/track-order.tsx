@@ -1,4 +1,6 @@
 "use client"
+import { RefundSummary } from "@/components/shared/refund-summary"
+import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { HashIcon, Loader2Icon, PackageSearchIcon, PhoneIcon, SearchIcon } from "lucide-react"
@@ -11,9 +13,6 @@ import { useForm } from "react-hook-form"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
 import { OrderTimeline } from "@/components/shared/order-timeline"
-import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
-import { ReturnTimeline } from "@/components/shared/return-timeline"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { trackOrder } from "@/features/orders/actions"
@@ -28,6 +27,7 @@ import { WhatsAppIcon } from "./brand-icons"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { CopyButton } from "@/components/shared/copy-button"
 import { CancelOrder } from "./cancel-order"
+import { RefreshButton } from "@/components/shared/refresh-button"
 import { RequestReturn, ReturnRequestsPanel } from "./request-return"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { DeliveryEditor } from "./delivery-editor"
@@ -103,8 +103,8 @@ function TrackResult({
           </p>
         </div>
         <div data-ui="store/TrackResult/div-flex-3" className="flex flex-wrap items-center gap-2">
-          <StatusBadge status={result.status} pulse />
-          <ReturnStageBadge stage={returnStage(stageInputOf(result))} audience="customer" alwaysShow />
+          <RefreshButton onRefresh={() => refetch()} />
+          <OrderStatusBadge status={result.status} returnStage={returnStage(stageInputOf(result))} paymentStatus={result.paymentStatus} audience="customer" pulse alwaysShow />
         </div>
       </div>
       <p data-ui="store/TrackResult/p-3" className="text-sm text-muted-foreground">
@@ -112,8 +112,8 @@ function TrackResult({
                   canRequestAgain: result.status === "delivered" ? canRequestAgain(result.returnRequests, result.returnWindow.open) : undefined,
                 })}
               </p>
-      {query && <ReturnRequestsPanel requests={result.returnRequests} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} />}
-      <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />
+      {query ? <ReturnRequestsPanel requests={result.returnRequests} returns={result.returns} refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} /> : <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />}
+      <RefundSummary order={result} />
       {result.cancellation && (
         <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
       )}
@@ -130,8 +130,7 @@ function TrackResult({
           onSubmitted={() => void refetch()}
         />
       )}
-      <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} />
-      <div data-ui="store/TrackResult/div-2" className="empty:hidden"><ReturnTimeline input={stageInputOf(result)} audience="customer" /></div>
+      <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} returnInput={stageInputOf(result)} audience="customer" />
       {query && (
         <div data-ui="store/TrackResult/div-flex-4" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
           <RequestReturn
@@ -141,6 +140,7 @@ function TrackResult({
             items={result.items}
             returns={result.returns}
             requests={result.returnRequests}
+            charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees }}
             window={result.returnWindow}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
             onDone={() => void refetch()}
@@ -220,18 +220,21 @@ export function TrackOrder() {
     defaultValues: { code: params.get("code") ?? "", phoneLast4: "" },
   })
 
-  // On phones the result sits below the form, so bring it into view once it arrives.
+  // On phones the result sits below the form: bring it into view after the reader's own lookup only
+  // (refresh / payment / cancel re-reads must not move the page).
+  const [lookups, setLookups] = useState(0)
   useEffect(() => {
-    if (result && window.matchMedia("(max-width: 1023px)").matches) {
+    if (lookups > 0 && window.matchMedia("(max-width: 1023px)").matches) {
       resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     }
-  }, [result])
+  }, [lookups])
 
   const onSubmit = form.handleSubmit((values) => {
     setError(null)
     startTransition(async () => {
       const res = await trackOrder(values)
       if (res.ok) {
+        setLookups((n) => n + 1)
         setResult(res.data)
         setQuery({ code: res.data.orderCode, phoneLast4: String(values.phoneLast4) })
       } else {

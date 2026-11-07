@@ -146,15 +146,16 @@ export function buildReturnStageMessage(shop: Shop, input: { orderCode: string; 
 /** Message the ADMIN sends to the customer about their return request. */
 export function buildReturnDecisionMessage(
   shop: Shop,
-  input: { orderCode: string; customerName: string; approved: boolean; note?: string | null }
+  input: { orderCode: string; customerName: string; approved: boolean; note?: string | null; pickupDate?: string | null }
 ): string {
   return [
     `Hi ${input.customerName}! 👋`,
     `Update on your return request for order *${input.orderCode}* from ${shop.shopName}:`,
     "",
     input.approved ? "✅ *Approved.*" : "❌ *We couldn't approve this return.*",
-    ...(input.note ? [input.approved ? `How to send it back: ${input.note}` : `Reason: ${input.note}`] : []),
-    ...(input.approved ? ["Once the items reach us and are checked, we'll process your refund."] : []),
+    ...(input.approved && input.pickupDate ? [`Pickup date: ${formatDate(input.pickupDate)}. Please keep the items packed and ready.`] : []),
+    ...(input.note ? [input.approved ? `Note: ${input.note}` : `Reason: ${input.note}`] : []),
+    ...(input.approved ? ["Once the items reach us and are checked, we'll refund the price of the returned items. Delivery and other charges are not refunded."] : []),
     "",
     "Reply here if you have any questions.",
   ].join("\n")

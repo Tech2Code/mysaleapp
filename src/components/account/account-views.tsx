@@ -1,3 +1,5 @@
+import { RefundSummary } from "@/components/shared/refund-summary"
+import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import { ArrowLeftIcon, ChevronRightIcon, PackageIcon, ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
 import { AddressBook } from "@/components/account/address-book"
@@ -8,10 +10,6 @@ import { InvoiceDocument } from "@/components/shared/invoice-document"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
 import { PrintButton } from "@/components/shared/print-button"
-import { ReturnsList } from "@/components/shared/returns-list"
-import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
-import { ReturnTimeline } from "@/components/shared/return-timeline"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { CancelOrder } from "@/components/store/cancel-order"
 import { DeliveryEditor } from "@/components/store/delivery-editor"
@@ -66,8 +64,7 @@ export function MyOrdersView({ orders, shop }: { orders: Order[]; shop: StoreSet
                 <div data-ui="account/MyOrdersView/div" className="min-w-0 flex-1 space-y-1">
                   <div data-ui="account/MyOrdersView/div-flex-3" className="flex flex-wrap items-center gap-2">
                     <span data-ui="account/MyOrdersView/span" className="font-mono font-semibold">{o.orderCode}</span>
-                    <StatusBadge status={o.status} />
-                    <ReturnStageBadge stage={o.returnStage} audience="customer" />
+                    <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
                     {isAwaitingPayment(o) && (
                       <span data-ui="account/MyOrdersView/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Pay now</span>
                     )}
@@ -133,8 +130,7 @@ export function MyOrderView({
                 <ReceiptTextIcon className="size-4" /> Invoice
               </Link>
             )}
-            <StatusBadge status={order.status} className="text-sm" pulse />
-            <ReturnStageBadge stage={order.returnStage} audience="customer" className="text-sm" alwaysShow />
+            <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="customer" className="text-sm" pulse alwaysShow />
           </div>
           <p data-ui="account/MyOrderView/p-2" className="basis-full text-sm text-muted-foreground">
             {customerStatusLine(STATUS_META[order.status].description, order.returnStage, {
@@ -146,8 +142,8 @@ export function MyOrderView({
         {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
         <div data-ui="account/MyOrderView/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
           <div data-ui="account/MyOrderView/div-3" className="space-y-6">
-            <ReturnRequestsPanel requests={order.returnRequests} orderCode={order.orderCode} phoneLast4={order.phone.slice(-4)} />
-            <ReturnsList returns={order.returns} audience="customer" refundedInFull={order.returnStage?.key === "refunded"} />
+            <ReturnRequestsPanel requests={order.returnRequests} returns={order.returns} refundedInFull={order.returnStage?.key === "refunded"} orderCode={order.orderCode} phoneLast4={order.phone.slice(-4)} />
+            <RefundSummary order={order} />
             {order.cancellation && (
               <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="customer" />
             )}
@@ -163,8 +159,7 @@ export function MyOrderView({
               <h3 data-ui="account/MyOrderView/h3-order-progress" id="progress-title" className="mb-6 font-sans text-lg font-semibold">
                 Order progress
               </h3>
-              <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} />
-              <div data-ui="account/MyOrderView/div-4" className="mt-6 empty:hidden"><ReturnTimeline input={stageInputOf(order)} audience="customer" /></div>
+              <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} returnInput={stageInputOf(order)} audience="customer" />
               {/* Help + cancel live together, under the progress they relate to */}
               <div data-ui="account/MyOrderView/div-flex-4" className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
                 <a data-ui="account/MyOrderView/a-ask-about-this-order"
@@ -181,6 +176,7 @@ export function MyOrderView({
                   items={order.items}
                   returns={order.returns}
                   requests={order.returnRequests}
+                  charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees }}
                   window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: shop.returnWindowDays }}
                   whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${order.orderCode}.`)}
                 />
@@ -194,7 +190,7 @@ export function MyOrderView({
             </section>
           </div>
 
-          <div data-ui="account/MyOrderView/div-5" className="space-y-6 xl:sticky-store xl:self-start">
+          <div data-ui="account/MyOrderView/div-4" className="space-y-6 xl:sticky-store xl:self-start">
             <OrderSummary order={order} />
 
             <DeliveryEditor

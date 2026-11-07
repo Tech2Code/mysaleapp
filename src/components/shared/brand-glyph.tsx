@@ -5,7 +5,7 @@
  */
 export function BrandGlyph({ size, className, ribbon = "#f3c6a3" }: { size: number; className?: string; ribbon?: string }) {
   return (
-    <svg
+    <svg data-ui="shared/BrandGlyph"
       width={size}
       height={size}
       viewBox="0 0 48 48"

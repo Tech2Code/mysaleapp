@@ -20,7 +20,7 @@ describe("allowedPaymentStatuses", () => {
   })
   it("a cancelled unpaid order can't become paid or submitted by hand", () => {
     expect(allowedPaymentStatuses({ status: "cancelled", paymentStatus: "pending" })).toEqual(["pending", "failed"])
-    expect(allowedPaymentStatuses({ status: "cancelled", paymentStatus: "submitted" })).toEqual(["pending", "submitted", "failed"])
+    expect(allowedPaymentStatuses({ status: "cancelled", paymentStatus: "submitted" })).toEqual(["pending", "submitted", "paid", "failed"])
   })
   it("only offers known statuses", () => {
     for (const s of allowedPaymentStatuses({ status: "pending", paymentStatus: "pending" })) expect(PAYMENT_STATUSES).toContain(s)
@@ -48,8 +48,9 @@ describe("paymentUpdateProblem", () => {
   it("a paid order that is still in progress may have its amount corrected", () => {
     expect(paymentUpdateProblem(cur({ status: "confirmed" }), { status: "paid", amount: 400, reference: "UTR1" })).toBeNull()
   })
-  it("cancelled unpaid order: no paid/submitted", () => {
-    expect(paymentUpdateProblem(cur({ status: "cancelled", paymentStatus: "submitted" }), { status: "paid", amount: null, reference: null })).toMatch(/cancelled/i)
+  it("cancelled unpaid order: no paid/submitted, except confirming a payment the customer already submitted", () => {
+    expect(paymentUpdateProblem(cur({ status: "cancelled", paymentStatus: "pending" }), { status: "paid", amount: null, reference: null })).toMatch(/cancelled/i)
+    expect(paymentUpdateProblem(cur({ status: "cancelled", paymentStatus: "submitted" }), { status: "paid", amount: null, reference: null })).toBeNull()
   })
 })
 

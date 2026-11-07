@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { cartCount, useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
 import { AccountMenu } from "./account-menu"
+import { SearchDialog } from "./search-dialog"
 
 export type NavCategory = { name: string; slug: string }
 type NavLinkItem = { href: string; label: string }
@@ -118,6 +119,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const wishCount = useWishlist((s) => s.ids.length)
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const { scrollY } = useScroll()
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12))
@@ -172,20 +174,22 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         </nav>
 
         <div data-ui="store/Header/div-flex-4" className="ml-auto flex items-center gap-1 sm:gap-1.5">
-          <Link data-ui="store/Header/Link-search-products"
-            href="/products"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex")}
+          <button data-ui="store/Header/button-search-products"
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full max-sm:size-9")}
             aria-label="Search products"
+            aria-haspopup="dialog"
           >
             <SearchIcon className="size-4.6" />
-          </Link>
+          </button>
           <div data-ui="store/Header/div-hidden" className="hidden sm:block">
             <ThemeToggle />
           </div>
           <Link data-ui="store/Header/Link"
             href="/wishlist"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full max-sm:size-9")}
-            aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} items` : ""}`}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
           >
             <HeartIcon className="size-4.6" />
             {mounted && <CountBadge count={wishCount} />}
@@ -193,8 +197,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <button data-ui="store/Header/button"
             type="button"
             onClick={() => openCart(true)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full max-sm:size-9")}
-            aria-label={`Open cart${mounted ? `, ${itemCount} items` : ""}`}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
           >
             <ShoppingBagIcon className="size-4.6" />
             {mounted && <CountBadge count={itemCount} />}
@@ -202,6 +206,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <span data-ui="store/Header/span" className="max-sm:ml-1.5"><AccountMenu /></span>
         </div>
       </div>
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
     </header>
   )
 }

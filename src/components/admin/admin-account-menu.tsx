@@ -3,7 +3,7 @@
 import { ExternalLinkIcon, LogOutIcon, SettingsIcon, ShieldCheckIcon, UserRoundCogIcon } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useTransition } from "react"
+import { useTransition, useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { signOutAdmin } from "@/features/auth/actions"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 
@@ -22,6 +23,7 @@ export type AdminAccount = { name: string; email: string; avatarUrl: string | nu
 export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [askSignOut, setAskSignOut] = useState(false)
   useBlockWhile(pending)
   const initial = (account.name || account.email).charAt(0).toUpperCase()
 
@@ -60,10 +62,20 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
           <ExternalLinkIcon /> View store
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => startTransition(() => signOutAdmin())}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
           <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ConfirmDialog
+        open={askSignOut}
+        onOpenChange={setAskSignOut}
+        title="Sign out?"
+        description="You will need to sign in again to use the admin panel."
+        confirmLabel="Sign out"
+        destructive
+        pending={pending}
+        onConfirm={() => startTransition(() => signOutAdmin())}
+      />
     </DropdownMenu>
   )
 }

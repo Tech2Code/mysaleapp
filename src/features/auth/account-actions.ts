@@ -8,6 +8,7 @@ import { z } from "zod"
 import { assertAdmin, getCurrentUser } from "@/features/auth/guards"
 import { siteConfig } from "@/config/site"
 import { fail, type ActionResult } from "@/lib/action-result"
+import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { changePasswordSchema, emailSchema, profileSchema, resetSchema } from "./account-schema"
@@ -83,6 +84,9 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   if (!isSupabaseConfigured) return fail("Connect Supabase first (see README).")
   const parsed = emailSchema.safeParse(input)
   if (!parsed.success) return fail("Enter a valid email address.", z.flattenError(parsed.error).fieldErrors)
+
+  // Per IP + email, so the endpoint can't be used to flood someone's inbox with reset mails.
+  if (await limited("password-reset", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
 
   const origin = await trustedOrigin()
   const supabase = await getServerSupabase()

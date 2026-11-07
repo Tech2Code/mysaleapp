@@ -62,7 +62,7 @@ Every pincode field fills the city and shows "City, State" via `usePincodeLookup
 ## "Other" reasons and guest privacy
 
 - Any reason dropdown with an "Other" (customer cancel, admin cancel, return request) needs a comment: use `otherNeedsDetail()` from `features/orders/reasons.ts` in the form **and** in the zod schema.
-- The guest track page (`/track`, found with code + last 4 digits) shows status, timeline, items (name × qty) and pay-now/verifying cards only. No receipt, no priced summary, no address. The `track_order` RPC (migration 0014) masks the UTR and withholds payment details and the delivery address unless the caller is the signed-in owner. Anything private goes in `/account/orders/[code]`.
+- The guest track page (`/track`, found with code + last 4 digits) shows status, timeline, items (name × qty), pay-now/verifying cards and, when a return exists, the `<RefundSummary>`. No receipt, no address. The `track_order` RPC (migration 0014) masks the UTR and withholds payment details and the delivery address unless the caller is the signed-in owner. Anything private goes in `/account/orders/[code]`.
 
 ## Other rules
 
@@ -114,7 +114,7 @@ Every element in components and pages carries `data-ui`: the root is `area/Compo
 - Cancelling goes through `cancelOrder` (customer RPC `cancel_order`, until packed) or `cancelOrderAsAdmin` (until shipped), always with a reason. Show the result with `<CancellationNotice>`; a paid order shows "refund due" until the payment is marked Refunded.
 - Order ids shown to people get a `<CopyButton>`.
 - **Finished orders are locked.** Delivered and cancelled orders can't change shipping, items, prices, customer/address or status (`features/orders/locking.ts` for the UI note + server refusal; DB trigger `lock_finished_orders`, migration 0023, allow-lists `payment_*`, `refunded_*`, `refund_reference`, `stock_*`, `updated_at`, `user_id → null`). Still allowed: the private admin note, payments/refunds, returns. Payments: `payment_status` never moves away from `paid` (except to `refunded`) or `refunded` on any order, and on a delivered/cancelled paid order the amount, paid time and UTR are frozen (`features/orders/payment-rules.ts`, form + `updateOrderPayment` + trigger `guard_payment_status`, migration 0024). A new column on `orders` is locked on finished orders until added to the trigger's list.
-- **Return stage** (`returnStage()` in `features/orders/returns.ts`) is the ONE derived state for a return (requested → approved / rejected / withdrawn → received → partly refunded / refunded). `orders.status` stays `delivered`. Show it with `<ReturnStageBadge>` / `<ReturnTimeline>` (admin wording vs `customerLabel`; customer/guest text never has amounts); list queries must embed `return_requests` + `order_returns` for `Order.returnStage` to be set. WhatsApp: `buildStatusUpdateMessage(…, { returnStage })`.
+- **Return stage** (`returnStage()` in `features/orders/returns.ts`) is the ONE derived state for a return (requested → approved [pickup scheduled for `pickup_date`] → picked up [`picked_up_at`] / rejected / withdrawn → received → partly refunded / refunded). `orders.status` stays `delivered`. Show it with `<ReturnStageBadge>`; the return steps are NOT a separate card, they continue the order timeline after Delivered (`<OrderTimeline returnInput audience>`, steps from `returnTimeline()`: requested → approved → pickup scheduled (date) → pickup successful → received → refund) (admin wording vs `customerLabel`; customer/guest text never has amounts); list queries must embed `return_requests` + `order_returns` for `Order.returnStage` to be set. WhatsApp: `buildStatusUpdateMessage(…, { returnStage })`.
 
 ## Dark mode
 
@@ -149,6 +149,32 @@ Customer flow: delivered order → **Request a return** (inside `store_settings.
 - A rejected request shows as a badge in lists for `REJECTED_BADGE_DAYS` (7) after the decision, then only in the order's detail/timeline. After a rejection the customer can send a NEW request while the window is open (`canRequestAgain()`; the DB only forbids two OPEN requests). Customer-facing status lines come from `customerStatusLine()` (never "Delivered — enjoy!" while a return exists, never amounts). Request-status pills use `requestStatusMeta()`, the same copy table as the stages.
 - The admin can tell the customer on WhatsApp after deciding (`buildReturnDecisionMessage`).
 
+- Pickup (migration 0025): approving needs a pickup date (`decide_return_request(…, p_pickup_date)`); the admin marks "Pickup successful" (`mark_return_picked_up`, behind a confirm). Every admin action that changes an order or return must call `revalidatePathsForCustomer()` (admin-actions.ts) so the customer order pages and `/track` don't show a stale status.
+
+- Recording a return (any way) closes the order's approved request (inside `record_order_return`, migration 0027; a trigger version in 0026 broke "record from request" and was dropped), so the stage can't stay on "Pickup scheduled" after the goods came back. Return UI is ONE card per side ("Returns": requests as tiles, then `<ReturnsList bare>` "Items received back"): admin `AdminReturnRequests` (`#returns`, linked from the locked Fulfilment card), customer `ReturnRequestsPanel`. On a delivered order the admin Fulfilment **status dropdown** (`ReturnStatusControl`) is the ONE place for every return step (approve/reject, pickup successful, items received, refund); the Returns card only displays. Don't add return action buttons elsewhere. The admin Fulfilment controls are sticky (`md:sticky-admin`) next to the long timeline.
+
+## Refresh
+
+`<RefreshButton>` (`components/shared/refresh-button.tsx`) refetches a page in place (default `router.refresh()`, or `onRefresh` for browser-fetched data like `/track`). It is on admin order detail and `/track`.
+
+## Refunds are items only, one badge per order
+
+- A return refunds the **price of the returned items only**; delivery and other charges are never refunded (SQL: `record_order_return` / `refund_return`, migration 0028; TS: `features/orders/refund.ts`). `refunded_amount` therefore ends below the amount paid when charges were paid. Show it with `<RefundSummary>` (paid, per-item refund, "Not refunded" charges, "You get back") on the customer order page, `/track` (guests too: this is the one priced block they see, no address or payment details), and the admin order page; `RequestReturn` shows a live "You will get back" estimate. Stage text (badges, status lines) still has no amounts.
+- Show ONE badge per order with `<OrderStatusBadge>` (latest thing: return stage, else payment needing attention while pending, else order status). Don't stack StatusBadge + ReturnStageBadge + PaymentBadge. The payment card and the orders table payment column still use `PaymentBadge` on their own.
+
+- A return recorded from a customer request takes back ONLY the requested items and quantities (dialog lists just those; `record_order_return` raises `NOT_IN_REQUEST`, migration 0029). The no-request option in the status dropdown is labelled "Return received (no request)" and exists only for goods agreed outside the app.
+
+- Rules added by the audit (migration 0030): a request must be `approved` before goods can be recorded from it; a cancelled order whose payment is `submitted` may still be marked paid so it can be refunded; every later order step needs a `paid` payment (a refunded order can only be cancelled); pickup dates must be real dates within today..+90 days (IST); `dashboard_stats` revenue = amount received minus refunds. Password reset is rate limited (`password-reset` scope, migration 0040) and `admin_reset_data` is not callable by anon.
+
+## Header, search and account menu
+
+- The header search icon (all sizes) opens `<SearchDialog>` (`components/store/search-dialog.tsx`, server action `searchProducts` in `features/products/search-actions.ts` over the cached catalogue): live results, Enter or "See all results" goes to `/products?q=`. Don't link the search icon to /products.
+- Below `sm` the wishlist and cart icons are not in the header: they are rows in the account dropdown (`AccountMenu`, opens on click, with a dot on the icon when either has items). Guests get Sign in + Track order there on phones; on web the guest icon is a plain link straight to /login. From `sm` up the icons stay in the header.
+
+## Confirm before acting
+
+Any click that changes data and is hard to undo opens `<ConfirmDialog>` (`components/shared/confirm-dialog.tsx`) first: cancel, delete, refund, verify/reject payment, status change, pickup, sign out. Not for add-to-cart, wishlist, filters or forms saved with `StickySaveBar`.
+
 ## Dashboard range
 
 Default is the current **financial year** (April–March, India), compared with the same stretch of last year. Other options: this month, a particular month (`?month=YYYY-MM`), custom dates (spans over ~3 years and impossible dates like `2026-02-31` are ignored and fall back to the default). See `features/orders/dashboard-range.ts`.
@@ -157,7 +183,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 - The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
 - Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
-- Migrations 0001–0024 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- Migrations 0001–0029 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
 - SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
 
 ## Verifying against production (no staging)
@@ -205,4 +231,4 @@ Known limitations / design decisions to revisit
 8. `payment_status` set to `refunded` directly through PostgREST is accepted on any order status (the server action and UI refuse it; no DB guard for unpaid -> refunded).
 9. A signed-in owner of a non-pending order who opens `/track` still sees the "full mobile number" field in the cancel dialog (`track_order` doesn't say who the owner is; the server accepts the owner without a phone). Guests cannot edit delivery on `/track` at all (WhatsApp message instead).
 10. CSP keeps `'unsafe-inline'` in `script-src` (a nonce policy would force every page dynamic and lose the static shell). The admin login limiter fails open on purpose (Supabase Auth has its own limits).
-11. `dashboard_stats` scans the whole date range (add a rollup when orders reach tens of thousands). `getDashboard` tile counts and `orderViewFilter` are not unit-tested (private in `admin-queries.ts`). The admin account page leaves some empty space under the Password card at ≥ 1024 px. Remove the now-unused `vite-tsconfig-paths` dev dependency. Optional: demo mode (`isSupabaseConfigured` guards, `features/products/demo-data.ts`) could move to one boundary or go; `features/account/*` vs `features/auth/account-*` naming overlap.
+11. `dashboard_stats` scans the whole date range (add a rollup when orders reach tens of thousands). `getDashboard` tile counts and `orderViewFilter` are not unit-tested (private in `admin-queries.ts`). The admin account page leaves some empty space under the Password card at ≥ 1024 px. Optional: demo mode (`isSupabaseConfigured` guards, `features/products/demo-data.ts`) could move to one boundary or go; `features/account/*` vs `features/auth/account-*` naming overlap.

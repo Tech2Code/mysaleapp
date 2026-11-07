@@ -1,3 +1,4 @@
+import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import {
   ArrowRightIcon,
   BadgeIndianRupeeIcon,
@@ -17,9 +18,6 @@ import { DashboardCard } from "@/components/admin/dashboard/dashboard-card"
 import { KpiCard } from "@/components/admin/dashboard/kpi-card"
 import { SalesChart } from "@/components/admin/sales-chart"
 import { Stagger, StaggerItem } from "@/components/shared/motion"
-import { PaymentBadge } from "@/components/shared/payment-badge"
-import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
-import { StatusBadge } from "@/components/shared/status-badge"
 import { ProductImage } from "@/components/store/product-image"
 import type { DashboardData } from "@/features/orders/admin-queries"
 import { ORDER_STATUSES, STATUS_META } from "@/features/orders/types"
@@ -192,9 +190,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
                       </div>
                     </div>
                     <div data-ui="admin/DashboardBody/div-flex-3" className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <StatusBadge status={o.status} />
-                      <ReturnStageBadge stage={o.returnStage} audience="admin" />
-                      <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
+                      <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
                       <span data-ui="admin/DashboardBody/span-4" className="min-w-16 text-right text-sm font-semibold sm:ml-2">{formatPrice(o.total)}</span>
                     </div>
                   </Link>

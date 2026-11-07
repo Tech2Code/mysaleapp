@@ -216,6 +216,10 @@ export type ReturnRequest = {
   adminNote: string | null
   createdAt: string
   decidedAt: string | null
+  /** Day the goods are collected (set when approving; null on older requests). */
+  pickupDate: string | null
+  /** When the pickup actually happened (null until the admin marks it). */
+  pickedUpAt: string | null
 }
 
 export type Order = {
@@ -316,6 +320,8 @@ export type OrderRow = {
     admin_note: string | null
     created_at: string
     decided_at: string | null
+    pickup_date?: string | null
+    picked_up_at?: string | null
   }[]
 }
 
@@ -392,7 +398,7 @@ function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
 function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): ReturnStage | null {
   if (!row.return_requests && !row.returns) return null
   return returnStage({
-    requests: (row.return_requests ?? []).map((r) => ({ status: r.status, createdAt: r.created_at, decidedAt: r.decided_at, adminNote: r.admin_note })),
+    requests: (row.return_requests ?? []).map((r) => ({ status: r.status, createdAt: r.created_at, decidedAt: r.decided_at, adminNote: r.admin_note, pickupDate: r.pickup_date ?? null, pickedUpAt: r.picked_up_at ?? null })),
     returns: (row.returns ?? []).map((r) => ({ refunded: r.refunded, createdAt: r.created_at })),
     paymentStatus: pricing.paymentStatus,
     refundedAmount: pricing.refundedAmount,
@@ -459,6 +465,8 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
         adminNote: r.admin_note,
         createdAt: r.created_at,
         decidedAt: r.decided_at,
+        pickupDate: r.pickup_date ?? null,
+        pickedUpAt: r.picked_up_at ?? null,
       }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     returns: (row.returns ?? [])

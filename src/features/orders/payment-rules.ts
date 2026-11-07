@@ -6,12 +6,15 @@ import { PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "./types"
  * (what to offer), the server action (what to refuse) and the DB trigger `guard_payment_status` (0024).
  *   paid     -> paid | refunded      (never back to unpaid: record a refund instead)
  *   refunded -> refunded             (terminal)
- *   unpaid   -> anything, except that a cancelled order can't become paid / submitted
+ *   unpaid   -> anything, except that a cancelled order can't become paid / submitted (a submitted payment may be confirmed as paid so it can be refunded)
  */
 export function allowedPaymentStatuses(o: { status: OrderStatus; paymentStatus: PaymentStatus }): PaymentStatus[] {
   if (o.paymentStatus === "refunded") return ["refunded"]
   if (o.paymentStatus === "paid") return ["paid", "refunded"]
-  if (o.status === "cancelled") return PAYMENT_STATUSES.filter((s) => s === o.paymentStatus || s === "pending" || s === "failed")
+  if (o.status === "cancelled") {
+    // A payment the customer already sent (UTR submitted) before cancelling can still be confirmed as received, so the refund can be recorded.
+    return PAYMENT_STATUSES.filter((s) => s === o.paymentStatus || s === "pending" || s === "failed" || (s === "paid" && o.paymentStatus === "submitted"))
+  }
   return [...PAYMENT_STATUSES].filter((s) => s !== "refunded")
 }
 
@@ -27,7 +30,11 @@ export function paymentEditNote(o: { status: OrderStatus; paymentStatus: Payment
       ? "Paid and the order is closed — the amount and reference are locked. The payment can only be refunded."
       : "Paid — it can only be refunded, not set back to unpaid."
   }
-  if (o.status === "cancelled") return "Cancelled — a payment can't be recorded, only rejected."
+  if (o.status === "cancelled") {
+    return o.paymentStatus === "submitted"
+      ? "Cancelled, but the customer had sent a payment. If the money reached you, mark it paid, then refund it. Otherwise reject it."
+      : "Cancelled — a payment can't be recorded, only rejected."
+  }
   return null
 }
 

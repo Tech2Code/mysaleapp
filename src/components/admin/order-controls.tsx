@@ -2,13 +2,14 @@
 
 import { Loader2Icon, LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { FormSelectField, SelectField, TextAreaField, TextField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
@@ -21,7 +22,6 @@ import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { buildStatusUpdateMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
-import { ShippingInfo } from "@/components/shared/shipping-info"
 
 type Values = {
   status: OrderStatus
@@ -43,6 +43,7 @@ export function OrderStatusControl({
   paymentStatus,
   shipping,
   returnStage = null,
+  returnControl,
 }: {
   orderId: string
   orderCode: string
@@ -53,6 +54,8 @@ export function OrderStatusControl({
   shipping: ShippingDetails | null
   /** A delivered order with a return in progress: the WhatsApp update talks about the return. */
   returnStage?: ReturnStage | null
+  /** Delivered orders: the dropdown that manages the return steps (replaces the "locked" note). */
+  returnControl?: ReactNode
 }) {
   // Delivered / cancelled orders are frozen (features/orders/locking.ts; the server action and a DB trigger enforce it too).
   const locked = isOrderLocked(status)
@@ -64,6 +67,8 @@ export function OrderStatusControl({
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  // The validated change waits here for "are you sure?" (a status change notifies the customer's order page).
+  const [toConfirm, setToConfirm] = useState<{ values: Values; shipping: z.output<typeof shippingSchema> | undefined } | null>(null)
 
   const form = useForm<Values>({
     defaultValues: {
@@ -129,6 +134,11 @@ export function OrderStatusControl({
       shippingPayload = parsed.data
     }
 
+    setToConfirm({ values, shipping: shippingPayload })
+  })
+
+  const apply = ({ values, shipping: shippingPayload }: NonNullable<typeof toConfirm>) => {
+    setToConfirm(null)
     startTransition(async () => {
       const res = await updateOrderStatus({ orderId, status: values.status, expectedStatus: status, shipping: shippingPayload })
       if (!res.ok) {
@@ -141,23 +151,23 @@ export function OrderStatusControl({
       form.reset(values)
       router.refresh()
     })
-  })
+  }
 
   return (
-    <form data-ui="admin/OrderStatusControl" onSubmit={onSubmit} noValidate className="space-y-4">
+    <div data-ui="admin/OrderStatusControl" className="space-y-4">
+    {/* Delivered: the status dropdown manages the return steps (outside the form: it has its own dialogs). */}
+    {status === "delivered" && returnControl}
+    <form data-ui="admin/OrderStatusControl/form" onSubmit={onSubmit} noValidate className="space-y-4">
       {locked ? (
         <div data-ui="admin/OrderStatusControl/div" className="space-y-3">
-          <p data-ui="admin/OrderStatusControl/p-flex" role="note" className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium">
-            <LockIcon className="size-4 shrink-0" aria-hidden /> {note}
-          </p>
-          <h3 data-ui="admin/OrderStatusControl/h3-shipping-details" className="text-sm font-semibold">Shipping details</h3>
-          {shipping ? (
-            <ShippingInfo shipping={shipping} />
-          ) : (
-            <p data-ui="admin/OrderStatusControl/p" className="text-sm text-muted-foreground">No courier details were added to this order.</p>
+          {!(status === "delivered" && returnControl) && (
+            <p data-ui="admin/OrderStatusControl/p-flex" role="note" className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium">
+              <LockIcon className="size-4 shrink-0" aria-hidden /> {note}
+            </p>
           )}
-          <p data-ui="admin/OrderStatusControl/p-2" className="text-xs text-muted-foreground">
-            You can still add a private note, record a return or a refund.
+          {/* Courier details are not repeated here: the progress timeline shows them under "Shipped". */}
+          <p data-ui="admin/OrderStatusControl/p" className="text-xs text-muted-foreground">
+            Delivered order details stay locked. You can still add a private note and manage the return from the status above.
           </p>
         </div>
       ) : (
@@ -167,7 +177,7 @@ export function OrderStatusControl({
       {!locked && showShipping && (
         <fieldset data-ui="admin/OrderStatusControl/fieldset" className="space-y-1 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <legend data-ui="admin/OrderStatusControl/legend-shipping-details" className="px-1 text-sm font-semibold">Shipping details</legend>
-          <p data-ui="admin/OrderStatusControl/p-3" className="-mt-2 text-xs text-muted-foreground">
+          <p data-ui="admin/OrderStatusControl/p-2" className="-mt-2 text-xs text-muted-foreground">
             {value === "shipped" ? "Courier name is required to mark an order as shipped. " : ""}Customers see these on their order page.
           </p>
           <TextField
@@ -218,7 +228,16 @@ export function OrderStatusControl({
       >
         <WhatsAppIcon className="size-4" /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
       </a>
+      <ConfirmDialog
+        open={toConfirm !== null}
+        onOpenChange={(o) => !o && setToConfirm(null)}
+        title={toConfirm && toConfirm.values.status !== status ? `Change status to ${STATUS_META[toConfirm.values.status].label}?` : "Save shipping details?"}
+        description={toConfirm && toConfirm.values.status !== status ? `This order is now “${STATUS_META[status].label}”. The customer sees the new status on their order page.` : "The customer sees the updated courier details."}
+        confirmLabel="Yes, update"
+        onConfirm={() => toConfirm && apply(toConfirm)}
+      />
     </form>
+    </div>
   )
 }
 
@@ -302,6 +321,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 }
 
 export function AdminNoteForm({ orderId, note }: { orderId: string; note: string | null }) {
+  const router = useRouter()
   const [value, setValue] = useState(note ?? "")
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -313,7 +333,10 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
         e.preventDefault()
         startTransition(async () => {
           const res = await updateAdminNote({ orderId, note: value })
-          if (res.ok) toast.success("Note saved")
+          if (res.ok) {
+            toast.success("Note saved")
+            router.refresh()
+          }
           else toast.error(res.error)
         })
       }}

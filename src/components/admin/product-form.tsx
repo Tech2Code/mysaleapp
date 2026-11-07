@@ -49,6 +49,7 @@ export function ProductForm({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
+  const [uploading, setUploading] = useState(false)
   const { shopName } = useStoreSettings()
 
   const form = useForm<ProductInput, unknown, ProductValues>({
@@ -82,7 +83,11 @@ export function ProductForm({
   })
   const highlightCount = String(highlightsText ?? "").split("\n").filter((l) => l.trim()).length
 
-  const onSubmit = form.handleSubmit((values) =>
+  const onSubmit = form.handleSubmit((values) => {
+    if (uploading) {
+      toast.warning("Photos are still uploading. Save once they finish.")
+      return
+    }
     startTransition(async () => {
       const res = await saveProduct(product?.id ?? null, values, product?.stock)
       if (!res.ok) {
@@ -99,7 +104,7 @@ export function ProductForm({
       router.push("/admin/products")
       router.refresh()
     })
-  )
+  })
 
   const previewTitle = (seoTitle as string) || `${name || "Product name"} | ${shopName}`
   const previewDesc = (seoDescription as string) || (description as string)?.slice(0, 155) || "Product description…"
@@ -208,7 +213,7 @@ export function ProductForm({
             <Controller
               control={form.control}
               name="images"
-              render={({ field }) => <ImageUploader value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
+              render={({ field }) => <ImageUploader onUploadingChange={setUploading} value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
             />
             {errors.images && <p data-ui="admin/ProductForm/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>

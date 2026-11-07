@@ -8,7 +8,7 @@ export const RATE_LIMIT_MESSAGE = "Too many attempts. Please try again in a few 
 
 /**
  * Limits (max hits / window per scope) are defined in the database, in check_rate_limit() (migration 0021),
- * so a caller of the public RPC cannot choose its own. Scopes: track-order, submit-payment, update-delivery,
+ * so a caller of the public RPC cannot choose its own. Scopes: track-order, submit-payment, update-delivery, password-reset (0040),
  * cancel-order, request-return, withdraw-return, place-order, login, pincode.
  */
 

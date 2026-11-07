@@ -3,7 +3,7 @@
 import imageCompression from "browser-image-compression"
 import { ArrowLeftIcon, ArrowRightIcon, ImagePlusIcon, Loader2Icon, XIcon } from "lucide-react"
 import Image from "next/image"
-import { useId, useState } from "react"
+import { useEffect, useId, useState } from "react"
 import { toast } from "sonner"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -21,13 +21,19 @@ const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/avif"]
 export function ImageUploader({
   value,
   onChange,
+  onUploadingChange,
 }: {
   value: string[]
   /** Accepts a new list, or an updater that receives the CURRENT list (uploads finish later than they start). */
   onChange: (urls: string[] | ((current: string[]) => string[])) => void
+  /** True while photos are still uploading (the form must not be saved yet: they would be lost). */
+  onUploadingChange?: (busy: boolean) => void
 }) {
   const inputId = useId()
   const [uploading, setUploading] = useState(0)
+  useEffect(() => {
+    onUploadingChange?.(uploading > 0)
+  }, [uploading, onUploadingChange])
 
   const upload = async (files: FileList | null) => {
     const supabase = getBrowserSupabase()
@@ -89,29 +95,29 @@ export function ImageUploader({
               </span>
             )}
             <div data-ui="admin/ImageUploader/div-flex" className="absolute inset-x-1.5 bottom-1.5 flex justify-between gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
-              <button data-ui="admin/ImageUploader/button-move-photo-left"
+              <button data-ui="admin/ImageUploader/button-grid"
                 type="button"
                 onClick={() => move(i, i - 1)}
                 disabled={i === 0}
                 className="grid size-7 place-items-center rounded-full bg-background/90 shadow disabled:opacity-30"
-                aria-label="Move photo left"
+                aria-label={`Move photo ${i + 1} left`}
               >
                 <ArrowLeftIcon className="size-3.5" />
               </button>
-              <button data-ui="admin/ImageUploader/button-remove-photo"
+              <button data-ui="admin/ImageUploader/button-grid-2"
                 type="button"
                 onClick={() => onChange((current) => current.filter((u) => u !== url))}
                 className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
-                aria-label="Remove photo"
+                aria-label={`Remove photo ${i + 1}`}
               >
                 <XIcon className="size-3.5" />
               </button>
-              <button data-ui="admin/ImageUploader/button-move-photo-right"
+              <button data-ui="admin/ImageUploader/button-grid-3"
                 type="button"
                 onClick={() => move(i, i + 1)}
                 disabled={i === value.length - 1}
                 className="grid size-7 place-items-center rounded-full bg-background/90 shadow disabled:opacity-30"
-                aria-label="Move photo right"
+                aria-label={`Move photo ${i + 1} right`}
               >
                 <ArrowRightIcon className="size-3.5" />
               </button>

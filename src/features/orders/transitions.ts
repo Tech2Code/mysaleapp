@@ -36,7 +36,7 @@ export const ADMIN_CANCEL_REASONS = [
   "Other",
 ] as const
 
-/** Statuses that need a verified payment first when the order is still pending. */
+/** Statuses that need a verified (paid) payment. */
 const NEEDS_PAYMENT: readonly OrderStatus[] = ["confirmed", "packed", "shipped", "delivered"]
 
 export type TransitionCheck = { from: OrderStatus; to: OrderStatus; payment: PaymentStatus; hasCourier: boolean }
@@ -50,8 +50,11 @@ export function checkTransition({ from, to, payment, hasCourier }: TransitionChe
       ? `A ${from} order can't be changed any more.`
       : `An order can't go from ${from} to ${to}.`
   }
-  if (from === "pending" && NEEDS_PAYMENT.includes(to) && payment !== "paid") {
-    return "Payment isn't verified yet. Mark the payment as paid first: that also confirms the order."
+  if (NEEDS_PAYMENT.includes(to) && payment !== "paid") {
+    // later steps too: a payment that was refunded in the meantime must not let the parcel go out
+    return payment === "refunded"
+      ? "This payment was refunded, so the order can't go forward. Cancel the order instead."
+      : "Payment isn't verified yet. Mark the payment as paid first: that also confirms the order."
   }
   if (to === "shipped" && !hasCourier) return "Add the courier name before marking the order as shipped."
   return null

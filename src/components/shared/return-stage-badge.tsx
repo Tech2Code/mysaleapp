@@ -1,4 +1,4 @@
-import { BanIcon, CheckCircle2Icon, HourglassIcon, PackageOpenIcon, Undo2Icon, XCircleIcon, type LucideIcon } from "lucide-react"
+import { BanIcon, CheckCircle2Icon, HourglassIcon, PackageOpenIcon, TruckIcon, Undo2Icon, XCircleIcon, type LucideIcon } from "lucide-react"
 import { stageLabel, type ReturnStage, type ReturnStageKey } from "@/features/orders/returns"
 import { cn } from "@/lib/utils"
 import { TONES } from "./status-badge"
@@ -6,6 +6,7 @@ import { TONES } from "./status-badge"
 const ICONS: Record<ReturnStageKey, LucideIcon> = {
   requested: HourglassIcon,
   approved: CheckCircle2Icon,
+  picked_up: TruckIcon,
   rejected: XCircleIcon,
   withdrawn: BanIcon,
   received: PackageOpenIcon,

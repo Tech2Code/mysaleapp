@@ -4,22 +4,24 @@ import { Loader2Icon, PackageOpenIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { TextAreaField } from "@/components/form"
-import { AdminReturnOrder } from "@/components/admin/return-order"
+import { TextAreaField, TextField } from "@/components/form"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { decideReturnRequest } from "@/features/orders/admin-actions"
-import { isOpenRequest, requestStatusMeta } from "@/features/orders/returns"
-import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
+import { decideReturnRequest, markReturnPickedUp, undoReturnStep } from "@/features/orders/admin-actions"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { requestStatusMeta, type ReturnStage } from "@/features/orders/returns"
+import type { OrderReturn, ReturnRequest } from "@/features/orders/types"
 import { buildReturnDecisionMessage, whatsappLink } from "@/features/orders/whatsapp"
-import { formatDateTime } from "@/lib/format"
+import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { TONES } from "@/components/shared/status-badge"
+import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
+import { ReturnsList } from "@/components/shared/returns-list"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 /** Approve (with instructions) or reject (with a reason) one pending request. */
-function DecideDialog({
+export function DecideDialog({
   request,
   approve,
   orderCode,
@@ -36,6 +38,8 @@ function DecideDialog({
   const shop = useStoreSettings()
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState("")
+  const [pickupDate, setPickupDate] = useState("")
+  const [pickupError, setPickupError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -43,13 +47,19 @@ function DecideDialog({
   const submit = () =>
     startTransition(async () => {
       setError(null)
-      const res = await decideReturnRequest({ requestId: request.id, approve, note: note.trim() || undefined })
+      setPickupError(null)
+      if (approve && !pickupDate) {
+        setPickupError("Pick the pickup date")
+        return
+      }
+      const res = await decideReturnRequest({ requestId: request.id, approve, note: note.trim() || undefined, pickupDate: approve ? pickupDate : undefined })
       if (!res.ok) {
-        setError(res.fieldErrors?.note?.[0] ?? res.error)
+        setPickupError(res.fieldErrors?.pickupDate?.[0] ?? null)
+        setError(res.fieldErrors?.note?.[0] ?? (res.fieldErrors?.pickupDate ? null : res.error))
         return
       }
       setOpen(false)
-      const url = whatsappLink(`91${phone}`, buildReturnDecisionMessage(shop, { orderCode, customerName, approved: approve, note: note.trim() || null }))
+      const url = whatsappLink(`91${phone}`, buildReturnDecisionMessage(shop, { orderCode, customerName, approved: approve, note: note.trim() || null, pickupDate: approve ? pickupDate : null }))
       toast.success(approve ? "Return approved" : "Return rejected", {
         action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
       })
@@ -71,12 +81,23 @@ function DecideDialog({
           <DialogTitle>{approve ? "Approve this return?" : "Reject this return?"}</DialogTitle>
           <DialogDescription>
             {approve
-              ? "The customer will see your instructions on their order page. Tell them how to send the items back (courier address, or that you'll arrange pickup)."
+              ? "Choose the day the items will be picked up. The customer sees the date and your note on their order page."
               : "The customer will see your reason on their order page. Be specific and polite."}
           </DialogDescription>
         </DialogHeader>
+        {approve && (
+          <TextField
+            label="Pickup date"
+            type="date"
+            fieldSize="md"
+            min={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })}
+            value={pickupDate}
+            onChange={(e) => setPickupDate(e.target.value)}
+            error={pickupError ?? undefined}
+          />
+        )}
         <TextAreaField
-          label={approve ? "Instructions for the customer (optional)" : "Reason (required)"}
+          label={approve ? "Note for the customer (optional)" : "Reason (required)"}
           rows={3}
           maxLength={300}
           value={note}
@@ -96,40 +117,117 @@ function DecideDialog({
   )
 }
 
+/** "Pickup successful": the courier collected the goods. Asks first, so a mis-click does nothing. */
+export function PickedUpButton({ requestId }: { requestId: string }) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+
+  const confirm = () =>
+    startTransition(async () => {
+      setError(null)
+      const res = await markReturnPickedUp({ requestId })
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      setOpen(false)
+      toast.success("Pickup marked successful")
+      router.refresh()
+    })
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger data-ui="admin/PickedUpButton/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
+        Pickup successful
+      </DialogTrigger>
+      <DialogContent data-ui="admin/PickedUpButton/DialogContent">
+        <DialogHeader>
+          <DialogTitle>Mark the pickup as successful?</DialogTitle>
+          <DialogDescription>The customer will see that their items were collected. Do this only after the courier has the parcel.</DialogDescription>
+        </DialogHeader>
+        {error && <p data-ui="admin/PickedUpButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
+        <DialogFooter>
+          <Button data-ui="admin/PickedUpButton/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">Cancel</Button>
+          <Button data-ui="admin/PickedUpButton/Button-yes-picked-up" type="button" onClick={confirm} disabled={pending} className="rounded-full">
+            {pending && <Loader2Icon className="animate-spin" />} Yes, picked up
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** "Undo the last step" of a return request (mis-click safety net). Asks first. */
+export function UndoStepButton({ requestId, title, description }: { requestId: string; title: string; description: string }) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+
+  const confirm = () =>
+    startTransition(async () => {
+      setError(null)
+      const res = await undoReturnStep({ requestId })
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      setOpen(false)
+      toast.success("Step undone")
+      router.refresh()
+    })
+
+  return (
+    <>
+      <Button data-ui="admin/UndoStepButton/Button-undo-this-step" type="button" variant="outline" onClick={() => setOpen(true)} className="rounded-full">
+        Undo this step
+      </Button>
+      {error && !open && <p data-ui="admin/UndoStepButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={title}
+        description={error ? `${description} (${error})` : description}
+        confirmLabel="Yes, undo"
+        pending={pending}
+        onConfirm={confirm}
+      />
+    </>
+  )
+}
+
 /** Customer return requests on the admin order page. */
 export function AdminReturnRequests({
   requests,
-  orderId,
-  orderCode,
-  customerName,
-  phone,
-  status,
-  paymentStatus,
-  items,
   returns,
+  returnStage,
 }: {
   requests: ReturnRequest[]
-  orderId: string
-  orderCode: string
-  customerName: string
-  phone: string
-  status: OrderStatus
-  paymentStatus: PaymentStatus
-  items: OrderItem[]
   returns: OrderReturn[]
+  returnStage: ReturnStage | null
 }) {
-  if (requests.length === 0) return null
+  if (requests.length === 0 && returns.length === 0) return null
   return (
-    <section data-ui="admin/AdminReturnRequests" aria-label="Return requests" className="space-y-3 rounded-2xl border bg-card p-5 sm:p-6">
-      <h2 data-ui="admin/AdminReturnRequests/h2-return-requests" className="flex items-center gap-2 font-sans text-lg font-semibold">
-        <PackageOpenIcon className="size-5 text-primary" aria-hidden /> Return requests
-      </h2>
-      <ul data-ui="admin/AdminReturnRequests/ul" className="space-y-3">
+    <section data-ui="admin/AdminReturnRequests" id="returns" aria-label="Returns" className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
+      <div data-ui="admin/AdminReturnRequests/div-flex" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 data-ui="admin/AdminReturnRequests/h2-returns" className="flex items-center gap-2 font-sans text-lg font-semibold">
+          <PackageOpenIcon className="size-5 text-primary" aria-hidden /> Returns
+        </h2>
+        <ReturnStageBadge stage={returnStage} audience="admin" alwaysShow />
+      </div>
+      {/* Newest stage first: goods received back (the later stage) above the requests. */}
+      <ReturnsList bare returns={[...returns].reverse()} audience="admin" />
+      {requests.length > 0 && <h4 data-ui="admin/AdminReturnRequests/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>}
+      <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
         {[...requests].reverse().map((r) => {
           const meta = requestStatusMeta(r.status, "admin")
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
-              <div data-ui="admin/AdminReturnRequests/div-flex" className="flex flex-wrap items-center justify-between gap-2">
+              <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
                 <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
                 <span data-ui="admin/AdminReturnRequests/span-2" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
               </div>
@@ -151,26 +249,11 @@ export function AdminReturnRequests({
                   {r.adminNote}
                 </p>
               )}
-              {r.status === "requested" && (
-                <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap gap-2 pt-1">
-                  <DecideDialog request={r} approve orderCode={orderCode} customerName={customerName} phone={phone} />
-                  <DecideDialog request={r} approve={false} orderCode={orderCode} customerName={customerName} phone={phone} />
-                </div>
-              )}
-              {r.status === "approved" && isOpenRequest(r) && (
-                <div data-ui="admin/AdminReturnRequests/div" className="space-y-1.5 pt-1 sm:max-w-xs">
-                  <p data-ui="admin/AdminReturnRequests/p-3" className="text-xs text-muted-foreground">When the items arrive, record them here (choose which go back into stock).</p>
-                  <AdminReturnOrder
-                    orderId={orderId}
-                    orderCode={orderCode}
-                    status={status}
-                    paymentStatus={paymentStatus}
-                    items={items}
-                    returns={returns}
-                    prefill={{ requestId: r.id, items: r.items.map((i) => ({ productId: i.productId, quantity: i.quantity })) }}
-                    triggerLabel="Items received: record return"
-                  />
-                </div>
+              {r.status === "approved" && (
+                <p data-ui="admin/AdminReturnRequests/p-3" className="text-sm">
+                  <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground">Pickup: </span>
+                  {r.pickedUpAt ? `successful on ${formatDateTime(r.pickedUpAt)}` : r.pickupDate ? `scheduled for ${formatDate(r.pickupDate)}` : "date not set"}
+                </p>
               )}
             </li>
           )

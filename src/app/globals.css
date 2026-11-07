@@ -405,6 +405,17 @@
   clip-path: inset(0 round 0.375rem);
   animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
+/* Stacked text lines (title over date, label over value) are block boxes one line-height tall, so painted
+   edge to edge they touch. Inset the paint a little top and bottom, like the gap between real text lines. */
+[data-skeleton] :is(
+  :is(p, h1, h2, h3, h4, h5, h6, dt, dd, legend, figcaption):not(
+    :has(div, p, ul, ol, li, section, article, header, footer, nav, aside, form, table, figure, hr,
+         h1, h2, h3, h4, h5, h6, img, canvas, video, button, input, textarea, select, [role="img"], [role="switch"])
+  ),
+  :is(li, div):not(:has(*)):not(:empty)
+) {
+  clip-path: inset(0.14em 0 round 0.375rem) !important;
+}
 /* Table cells: paint only the text line (cell padding stays empty) as a rounded block, like the real text. */
 [data-skeleton] :is(td, th):not(:has(*)):not(:empty) {
   clip-path: inset(max(0px, calc(50% - 0.5lh)) 0.5rem round 0.375rem);
@@ -421,4 +432,23 @@
 }
 @media (prefers-reduced-motion: reduce) {
   [data-skeleton] * { animation: none !important; }
+}
+
+/* Popups (dialogs, sheets, dropdown lists): a slim scrollbar so it does not eat the width of a small popup. */
+[data-slot="dialog-content"],
+[data-slot="sheet-content"],
+[data-slot="select-content"] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent) transparent;
+}
+[data-slot="dialog-content"]::-webkit-scrollbar,
+[data-slot="sheet-content"]::-webkit-scrollbar,
+[data-slot="select-content"]::-webkit-scrollbar {
+  width: 6px;
+}
+[data-slot="dialog-content"]::-webkit-scrollbar-thumb,
+[data-slot="sheet-content"]::-webkit-scrollbar-thumb,
+[data-slot="select-content"]::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--foreground) 25%, transparent);
 }
