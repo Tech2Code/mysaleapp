@@ -12,11 +12,13 @@ import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/compon
 import { NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { getMyProfile } from "@/features/account/actions"
 import { listMyAddresses } from "@/features/addresses/actions"
 import type { Address } from "@/features/addresses/types"
 import { placeOrder } from "@/features/orders/actions"
+import { calculateCharges } from "@/features/orders/pricing"
+import { placeholderCartLines } from "@/features/products/placeholders"
 import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -32,10 +34,10 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 
-export function CheckoutForm({ products }: { products: LiveProduct[] }) {
+/** `preview`: render the placeholder form as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
+export function CheckoutForm({ products, preview = false }: { products: LiveProduct[]; preview?: boolean }) {
   const router = useRouter()
   const { ready, available, hasUnavailable, charges } = useLiveCart(products)
-  const itemCount = available.reduce((n, l) => n + l.quantity, 0)
   const clearCart = useCart((s) => s.clear)
   const shop = useStoreSettings()
   const { user, ready: authReady } = useAuth()
@@ -134,9 +136,13 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
     })
   })
 
-  if (!ready) return <Skeleton data-ui="store/CheckoutForm" className="h-128 rounded-3xl" />
+  // The real cart is in localStorage (unknown until hydration): show a placeholder order in the real layout meanwhile.
+  const placeholder = !ready || preview
+  const shown = placeholder ? placeholderCartLines() : available
+  const shownCharges = placeholder ? calculateCharges(shown, shop) : charges
+  const shownCount = shown.reduce((n, l) => n + l.quantity, 0)
 
-  if (available.length === 0) {
+  if (!placeholder && available.length === 0) {
     return (
       <div data-ui="store/CheckoutForm" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
         <p data-ui="store/CheckoutForm/p" className="font-heading text-2xl">Your cart is empty</p>
@@ -147,8 +153,8 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
     )
   }
 
-  return (
-    <form data-ui="store/CheckoutForm" onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
+  const view = (
+    <form data-ui="store/CheckoutForm/form-grid" onSubmit={onSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_400px]">
       <div data-ui="store/CheckoutForm/div" className="space-y-1 rounded-3xl border bg-card p-5 sm:p-8">
         <div data-ui="store/CheckoutForm/div-2">
           <h2 data-ui="store/CheckoutForm/h2-delivery-details" className="text-2xl font-semibold">Delivery details</h2>
@@ -272,11 +278,11 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
         <h2 data-ui="store/CheckoutForm/h2-your-order" className="flex items-baseline justify-between gap-3 text-xl font-semibold">
           Your order
           <span data-ui="store/CheckoutForm/span-4" className="text-sm font-medium text-muted-foreground">
-            {itemCount} item{itemCount === 1 ? "" : "s"}
+            {shownCount} item{shownCount === 1 ? "" : "s"}
           </span>
         </h2>
         <ul data-ui="store/CheckoutForm/ul" className="max-h-72 space-y-3 overflow-y-auto pr-1">
-          {available.map((l) => (
+          {shown.map((l) => (
             <li data-ui="store/CheckoutForm/li-flex" key={l.productId} className="flex items-center gap-3">
               <div data-ui="store/CheckoutForm/div-relative" className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted @container">
                 <ProductImage src={l.image} alt={l.name} sizes="56px" />
@@ -299,11 +305,11 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
             </li>
           ))}
         </ul>
-        {hasUnavailable && (
+        {!placeholder && hasUnavailable && (
           <p data-ui="store/CheckoutForm/p-4" className="text-xs text-destructive">Unavailable items were left out of this order.</p>
         )}
-        <FreeShippingBar subtotal={charges.subtotal} />
-        <PriceBreakdown {...charges} itemCount={itemCount} totalLabel="Total to pay" className="border-t pt-4" />
+        <FreeShippingBar subtotal={shownCharges.subtotal} />
+        <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className="border-t pt-4" />
         {serverError && (
           <p data-ui="store/CheckoutForm/p-5" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
             {serverError}
@@ -316,7 +322,7 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
           className="h-13 w-full rounded-full text-base shadow-lg shadow-primary/25"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
-          {pending ? "Placing order…" : `Place order & pay · ${formatPrice(charges.total)}`}
+          {pending ? "Placing order…" : `Place order & pay · ${formatPrice(shownCharges.total)}`}
         </Button>
         <div data-ui="store/CheckoutForm/div-3" className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
           <p data-ui="store/CheckoutForm/p-flex" className="flex items-start gap-2">
@@ -336,4 +342,5 @@ export function CheckoutForm({ products }: { products: LiveProduct[] }) {
       </aside>
     </form>
   )
+  return preview || ready ? view : <Skeletonize>{view}</Skeletonize>
 }

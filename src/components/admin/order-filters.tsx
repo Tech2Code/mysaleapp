@@ -3,9 +3,12 @@
 import { XIcon } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react"
-import { OrdersTableSkeleton } from "@/components/admin/admin-skeletons"
+import { OrdersTable } from "@/components/admin/orders-table"
 import { SearchField } from "@/components/form"
-import { isOrderView, ORDER_VIEWS } from "@/features/orders/views"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { placeholderOrders } from "@/features/orders/placeholders"
+import type { ReturnViewCounts } from "@/features/orders/admin-queries"
+import { isOrderView, ORDER_VIEWS, RETURN_VIEWS } from "@/features/orders/views"
 import { ORDER_STATUSES, STATUS_META } from "@/features/orders/types"
 import { cn } from "@/lib/utils"
 
@@ -16,6 +19,9 @@ const PAYMENT_TABS = [
   { value: "paid", label: "Paid" },
 ]
 
+/** Placeholder rows shown while the list reloads. */
+const ORDERS_SKELETON_ROWS = 20
+
 type Filters = { status?: string; payment?: string; view?: string; q?: string }
 
 /**
@@ -24,7 +30,7 @@ type Filters = { status?: string; payment?: string; view?: string; q?: string }
  * - While the server list reloads, a skeleton replaces it (no top progress bar: that is for page changes).
  * - `children` is the server-rendered list.
  */
-export function OrdersBrowser({ children, ...current }: Filters & { children: ReactNode }) {
+export function OrdersBrowser({ children, returnCounts, ...current }: Filters & { children: ReactNode; returnCounts?: ReturnViewCounts }) {
   const router = useRouter()
   const pathname = usePathname()
   const [pending, startTransition] = useTransition()
@@ -140,9 +146,30 @@ export function OrdersBrowser({ children, ...current }: Filters & { children: Re
             )
           })}
         </div>
+        <div data-ui="admin/OrdersBrowser/div-filter-by-return" className="scroll-row flex gap-2" role="group" aria-label="Filter by return">
+          {RETURN_VIEWS.map((v) => {
+            const active = view === v
+            const count = returnCounts?.[v]
+            return (
+              <button data-ui="admin/OrdersBrowser/button-3"
+                key={v}
+                type="button"
+                aria-pressed={active}
+                onClick={() => (active ? go({ view: "", status: "all", payment: "all" }) : go({ view: v }))}
+                className={cn(
+                  "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+                  active ? "border-transparent bg-primary text-primary-foreground" : "bg-card hover:bg-muted"
+                )}
+              >
+                {ORDER_VIEWS[v].label}
+                {count !== undefined && <span data-ui="admin/OrdersBrowser/span-2" className="ml-1.5 tabular-nums opacity-70">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <div data-ui="admin/OrdersBrowser/div-2" aria-busy={pending}>{pending ? <OrdersTableSkeleton /> : children}</div>
+      <div data-ui="admin/OrdersBrowser/div-2" aria-busy={pending}>{pending ? <Skeletonize><OrdersTable orders={placeholderOrders(ORDERS_SKELETON_ROWS)} /></Skeletonize> : children}</div>
     </div>
   )
 }

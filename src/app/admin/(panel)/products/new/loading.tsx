@@ -1,5 +1,11 @@
-import { ProductFormSkeleton } from "@/components/admin/admin-skeletons"
+import { ProductFormView } from "@/components/admin/page-views"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { placeholderCategories } from "@/features/products/placeholders"
 
 export default function Loading() {
-  return <ProductFormSkeleton mode="new" />
+  return (
+    <Skeletonize>
+      <ProductFormView product={null} categories={placeholderCategories(3)} />
+    </Skeletonize>
+  )
 }

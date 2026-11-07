@@ -1,5 +1,10 @@
-import { PlainPageSkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { OrderPlacedPageView } from "@/components/store/page-views"
 
 export default function Loading() {
-  return <PlainPageSkeleton />
+  return (
+    <Skeletonize>
+      <OrderPlacedPageView preview />
+    </Skeletonize>
+  )
 }

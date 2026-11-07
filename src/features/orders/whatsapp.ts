@@ -1,7 +1,8 @@
 import { siteConfig } from "@/config/site"
 import type { StoreSettings } from "@/features/settings/types"
 import { formatDate, formatPrice } from "@/lib/format"
-import { STATUS_META, type OrderItem, type OrderPricing, type OrderStatus, type ShippingDetails } from "./types"
+import type { ReturnStage } from "./returns"
+import { STATUS_META,type OrderItem, type OrderPricing, type OrderStatus, type ShippingDetails } from "./types"
 
 /** The bits of the owner's settings these messages need. Pass the whole StoreSettings object. */
 type Shop = Pick<StoreSettings, "shopName" | "whatsappNumber">
@@ -97,8 +98,13 @@ export function buildStatusUpdateMessage(
     customerName: string
     status: OrderStatus
     shipping?: ShippingDetails | null
+    /** A delivered order with a return in progress is described by its return stage, not by "Delivered". */
+    returnStage?: ReturnStage | null
   }
 ): string {
+  if (input.returnStage?.badge && input.status === "delivered") {
+    return buildReturnStageMessage(shop, { orderCode: input.orderCode, customerName: input.customerName, stage: input.returnStage })
+  }
   const meta = STATUS_META[input.status]
   const s = input.shipping
   const shippingLines =
@@ -119,6 +125,19 @@ export function buildStatusUpdateMessage(
     `Your order *${input.orderCode}* is now *${meta.label}*.`,
     meta.description + ".",
     ...shippingLines,
+    ``,
+    `Track anytime: ${siteConfig.url}/track?code=${input.orderCode}`,
+  ].join("\n")
+}
+
+/** Message the ADMIN sends about where a return is (customer wording, no amounts: same words as the order page). */
+export function buildReturnStageMessage(shop: Shop, input: { orderCode: string; customerName: string; stage: ReturnStage }): string {
+  return [
+    `Hi ${input.customerName.split(" ")[0]}, this is ${shop.shopName} 🙏`,
+    ``,
+    `Update on the return for your order *${input.orderCode}*:`,
+    `*${input.stage.customerLabel}*`,
+    input.stage.customerDetail + ".",
     ``,
     `Track anytime: ${siteConfig.url}/track?code=${input.orderCode}`,
   ].join("\n")

@@ -1,6 +1,12 @@
-import { HomeSkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { HomeView } from "@/components/store/home-view"
+import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
+import { placeholderCards, placeholderCategoriesWithCounts } from "@/features/products/placeholders"
 
-// Home page loading state. Every other storefront route has its own loading.tsx with a matching skeleton.
 export default function Loading() {
-  return <HomeSkeleton />
+  return (
+    <Skeletonize>
+      <HomeView featured={placeholderCards(8)} all={placeholderCards(8)} categories={placeholderCategoriesWithCounts()} shop={DEFAULT_SETTINGS} />
+    </Skeletonize>
+  )
 }

@@ -292,6 +292,15 @@
   }
 }
 
+/* WhatsApp FAB pulse: grows only 1.45x so the ring stays inside the 16px side gap (animate-ping, 2x, overflowed the page at 360px). */
+@keyframes fab-ping {
+  0% { transform: scale(1); opacity: 0.25; }
+  75%, 100% { transform: scale(1.45); opacity: 0; }
+}
+@utility animate-fab-ping {
+  animation: fab-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
 /* Success tick (components/shared/success-tick.tsx) */
 @keyframes tick-pop {
   0% { transform: scale(0); }
@@ -336,4 +345,76 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * Skeletons (components/shared/skeletonize.tsx). A skeleton is the REAL layout rendered with
+ * placeholder data inside <Skeletonize>; these rules turn every text run, icon, image and control
+ * into a muted block of the same size, so it can never drift from the real page.
+ * Unlayered on purpose: it must beat Tailwind utilities (which live in @layer utilities).
+ */
+:root {
+  --skeleton: var(--muted);
+  --skeleton-pulse: 0.94;
+}
+.dark {
+  --skeleton: var(--muted);
+  --skeleton-pulse: 1.35;
+}
+@keyframes skeleton-pulse {
+  50% { filter: brightness(var(--skeleton-pulse)); }
+}
+[data-skeleton] {
+  pointer-events: none;
+  user-select: none;
+  cursor: progress;
+}
+/* 1. No visible text, no motion-driven hiding (Stagger/FadeIn start at opacity 0). */
+[data-skeleton] *,
+[data-skeleton] *::before,
+[data-skeleton] *::after {
+  color: transparent !important;
+  text-shadow: none !important;
+  caret-color: transparent !important;
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+[data-skeleton] ::placeholder { color: transparent !important; }
+/* 2. Atomic things become one block; whatever is inside keeps its size but is not painted. */
+[data-skeleton] :is(
+  button, input, textarea, select, img, video, canvas, iframe, svg,
+  [role="img"], [role="button"], [role="switch"], [role="combobox"], [role="progressbar"],
+  [data-slot="badge"], [data-skeleton-block],
+  :is(span, a, label, small, strong, em, b, i, time, code, p, h1, h2, h3, h4, h5, h6, dt, dd, legend, figcaption):not(
+    :has(div, p, ul, ol, li, section, article, header, footer, nav, aside, form, table, figure, hr,
+         h1, h2, h3, h4, h5, h6, img, canvas, video, button, input, textarea, select, [role="img"], [role="switch"])
+  ),
+  :is(td, th, li, div):not(:has(*)):not(:empty)
+) {
+  background: var(--skeleton) !important;
+  background-clip: border-box !important;
+  -webkit-background-clip: border-box !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline-color: transparent !important;
+  clip-path: inset(0 round 0.375rem);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+/* Table cells: paint only the text line (cell padding stays empty) as a rounded block, like the real text. */
+[data-skeleton] :is(td, th):not(:has(*)):not(:empty) {
+  clip-path: inset(max(0px, calc(50% - 0.5lh)) 0.5rem round 0.375rem);
+}
+[data-skeleton] :is(td, th):first-child:not(:has(*)):not(:empty) {
+  clip-path: inset(max(0px, calc(50% - 0.5lh)) 0.5rem max(0px, calc(50% - 0.5lh)) 1.25rem round 0.375rem);
+}
+[data-skeleton] :is(td, th):last-child:not(:has(*)):not(:empty) {
+  clip-path: inset(max(0px, calc(50% - 0.5lh)) 1.25rem max(0px, calc(50% - 0.5lh)) 0.5rem round 0.375rem);
+}
+[data-skeleton] :is(button, input, textarea, select, svg, [role="img"], [role="button"], [role="switch"], [role="combobox"], [data-slot="badge"], [data-skeleton-block], a, span, label, p, h1, h2, h3, h4, h5, h6) * {
+  visibility: hidden !important;
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-skeleton] * { animation: none !important; }
 }

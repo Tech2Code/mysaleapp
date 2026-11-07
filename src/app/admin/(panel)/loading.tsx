@@ -1,7 +1,11 @@
-import { DashboardPageSkeleton } from "@/components/admin/admin-skeletons"
+import { DashboardView } from "@/components/admin/dashboard/dashboard-view"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { PLACEHOLDER_TODAY, placeholderDashboard, placeholderDashboardRange } from "@/features/orders/placeholders"
 
-// Wraps every admin page in <Suspense>. This file is the dashboard's loading state; every other
-// admin route has its own loading.tsx with a skeleton that matches its layout.
-export default function AdminPanelLoading() {
-  return <DashboardPageSkeleton />
+export default function Loading() {
+  return (
+    <Skeletonize>
+      <DashboardView d={placeholderDashboard()} range={placeholderDashboardRange()} today={PLACEHOLDER_TODAY} />
+    </Skeletonize>
+  )
 }

@@ -20,7 +20,7 @@ export function WhatsAppFab() {
       whileTap={{ scale: 0.92 }}
       className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 grid size-14 place-items-center rounded-full bg-whatsapp-solid text-white shadow-xl shadow-whatsapp/30 sm:right-6 sm:bottom-6"
     >
-      <span data-ui="store/WhatsAppFab/span-absolute" className="absolute inset-0 animate-ping rounded-full bg-whatsapp opacity-20" aria-hidden />
+      <span data-ui="store/WhatsAppFab/span-absolute" className="absolute inset-0 animate-fab-ping rounded-full bg-whatsapp motion-reduce:animate-none" aria-hidden />
       <WhatsAppIcon className="relative size-7" />
     </m.a>
   )

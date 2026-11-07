@@ -209,6 +209,8 @@ export async function updateOrderDelivery(input: unknown): Promise<ActionResult<
     p_code: code,
     p_phone_last4: phoneLast4 ?? null,
     p_customer: { ...customer, phone },
+    // guests prove the order's current full number; the DB counts a wrong one toward the per-order lockout
+    p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
   if (error) {
     return fail(mapRpcError(error.message, "Could not update the delivery details. Please try again."))
@@ -234,6 +236,8 @@ export async function cancelOrder(input: unknown): Promise<ActionResult<{ refund
     p_code: parsed.data.code,
     p_phone_last4: parsed.data.phoneLast4 ?? null,
     p_reason: cancelReasonText(parsed.data.reason, parsed.data.detail),
+    // guests must give the full number (migration 0022); signed-in owners are recognised by their account
+    p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
   if (error) {
     return fail(mapRpcError(error.message, "Could not cancel the order. Please try again."))

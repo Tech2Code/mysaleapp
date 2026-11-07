@@ -11,7 +11,7 @@ export async function getMyOrders(): Promise<Order[]> {
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*")
+    .select("*, returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)

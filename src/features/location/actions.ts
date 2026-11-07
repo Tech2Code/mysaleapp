@@ -24,12 +24,17 @@ const titleCase = (s: string) =>
 /** City (district) and state for a 6-digit pincode. `{ ok: false }` when unknown or the lookup is unavailable. */
 export async function lookupPincode(pincode: string): Promise<PincodeInfo> {
   if (!PATTERNS.pincode.test(pincode)) return { ok: false }
-  if (await limited("pincode")) {
-    console.warn("[pincode] rate limited")
-    return { ok: false }
-  }
   try {
-    const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`, { signal: AbortSignal.timeout(4000) })
+    // The limiter RPC and the upstream call run in parallel; a tripped limiter discards the fetch result.
+    const [isLimited, res] = await Promise.all([
+      limited("pincode"),
+      fetch(`https://api.postalpincode.in/pincode/${pincode}`, { signal: AbortSignal.timeout(4000) }).catch((e: unknown) => e),
+    ])
+    if (isLimited) {
+      console.warn("[pincode] rate limited")
+      return { ok: false }
+    }
+    if (!(res instanceof Response)) throw res
     if (!res.ok) {
       console.warn(`[pincode] upstream returned HTTP ${res.status}`)
       return { ok: false }

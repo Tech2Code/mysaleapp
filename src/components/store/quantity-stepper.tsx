@@ -9,7 +9,9 @@ export function QuantityStepper({
   onChange,
   size = "sm",
   label,
+  className,
 }: {
+  className?: string
   value: number
   max: number
   onChange: (value: number) => void
@@ -24,7 +26,7 @@ export function QuantityStepper({
     <div data-ui="store/QuantityStepper"
       role="group"
       aria-label={`Quantity for ${label}`}
-      className={cn("inline-flex items-center rounded-full border bg-background", size === "lg" && "p-0.5")}
+      className={cn("inline-flex items-center rounded-full border bg-background", size === "lg" && "p-0.5", className)}
     >
       <button data-ui="store/QuantityStepper/button-decrease-quantity" type="button" className={btn} onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label="Decrease quantity">
         <MinusIcon className="size-3.5" />

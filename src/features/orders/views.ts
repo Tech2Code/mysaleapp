@@ -7,8 +7,14 @@ export const ORDER_VIEWS = {
   "to-verify": { label: "Payments to verify" },
   "awaiting-payment": { label: "Awaiting payment" },
   "to-ship": { label: "To pack & ship" },
-  "return-requests": { label: "Return requests" },
+  "return-requests": { label: "Return requested" },
+  "returns-to-receive": { label: "Return approved" },
+  "return-refund-pending": { label: "Received, refund pending" },
+  "returns-refunded": { label: "Returns refunded" },
 } as const
+
+/** The return chips of the admin orders list, in the order of a return's life. */
+export const RETURN_VIEWS = ["return-requests", "returns-to-receive", "return-refund-pending", "returns-refunded"] as const satisfies readonly (keyof typeof ORDER_VIEWS)[]
 
 export type OrderView = keyof typeof ORDER_VIEWS
 

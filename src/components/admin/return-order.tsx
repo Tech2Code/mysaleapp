@@ -9,18 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
+import { returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 type Row = { qty: string; restock: boolean }
-
-/** Quantity of each product still returnable = ordered minus what earlier returns already took back. */
-function remainingByProduct(items: OrderItem[], returns: OrderReturn[]): Map<string, number> {
-  const left = new Map<string, number>()
-  for (const i of items) left.set(i.productId, (left.get(i.productId) ?? 0) + i.quantity)
-  for (const r of returns) for (const i of r.items) left.set(i.productId, (left.get(i.productId) ?? 0) - i.quantity)
-  return left
-}
 
 /**
  * "Record a return" for a delivered order: pick what came back and, per item, whether it can be sold again.
@@ -57,14 +50,20 @@ export function AdminReturnOrder({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
 
-  const left = useMemo(() => remainingByProduct(items, returns), [items, returns])
+  const left = useMemo(() => returnableQuantities(items, returns),[items, returns])
   // one line per product (an order can list a product once, but be safe)
   const lines = useMemo(() => {
     const seen = new Set<string>()
     return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
   }, [items, left])
 
-  if (status !== "delivered" || lines.length === 0) return null
+  if (status !== "delivered") return null
+  if (lines.length === 0) {
+    // Nothing left to take back. Only say so when something was actually returned (not in the request-prefill dialog).
+    return returns.length > 0 && !prefill ? (
+      <p data-ui="admin/AdminReturnOrder" className="text-sm text-muted-foreground">Everything was returned.</p>
+    ) : null
+  }
 
   const rowOf = (id: string): Row => rows[id] ?? { qty: "", restock: true }
   const setRow = (id: string, patch: Partial<Row>) => setRows((r) => ({ ...r, [id]: { ...rowOf(id), ...patch } }))

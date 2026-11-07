@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
-import { CategorySkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { CategoryView } from "@/components/store/category-view"
 import { JsonLd } from "@/components/shared/json-ld"
-import { PageHeader } from "@/components/store/page-header"
-import { ProductGrid } from "@/components/store/product-grid"
+import { placeholderCards, placeholderCategory } from "@/features/products/placeholders"
 import {
   getCategories,
   getCategoryBySlug,
@@ -35,7 +35,13 @@ export async function generateMetadata({ params }: PageProps<"/category/[slug]">
 // Reading `params` inside <Suspense> keeps navigation instant (see products/[slug]).
 export default function CategoryPage({ params }: PageProps<"/category/[slug]">) {
   return (
-    <Suspense fallback={<CategorySkeleton />}>
+    <Suspense
+      fallback={
+        <Skeletonize>
+          <CategoryView category={placeholderCategory()} products={placeholderCards(8)} />
+        </Skeletonize>
+      }
+    >
       <CategoryContent params={params} />
     </Suspense>
   )
@@ -52,20 +58,7 @@ async function CategoryContent({ params }: Pick<PageProps<"/category/[slug]">, "
 
   return (
     <>
-      <PageHeader
-        title={category.name}
-        description={category.description}
-        breadcrumbs={[{ name: "Home", href: "/" }, { name: "Shop", href: "/products" }, { name: category.name }]}
-      />
-      <div data-ui="page:/category/[slug]#CategoryContent/div" className="container-page pt-4 sm:pt-6">
-        {products.length ? (
-          <ProductGrid products={products} />
-        ) : (
-          <p data-ui="page:/category/[slug]#CategoryContent/p" className="rounded-3xl border border-dashed py-14 sm:py-20 text-center text-muted-foreground">
-            New pieces for this collection are being crafted. Check back soon!
-          </p>
-        )}
-      </div>
+      <CategoryView category={category} products={products} />
       <JsonLd
         data={[
           itemListJsonLd(products, shop, category),

@@ -24,7 +24,12 @@ Rules:
 
 - **Admin forms save with `StickySaveBar`** (`components/admin/sticky-save-bar.tsx`): last child of the `<form>`, spans the whole page, shows "unsaved changes". Never put Save/Cancel inside one side column.
 - **Loading feedback = `RouteProgress`** (`components/shared/route-progress.tsx`): a thin top bar that starts on any in-app link click automatically. For `useTransition` work (filters, tabs, search) call `useProgressWhile(pending)`. Never fade/dim the page (`opacity-*`) while loading.
-- Every dynamic admin or store page needs its own `loading.tsx` (or an inner `<Suspense>`), and `params` / `searchParams` are awaited inside that boundary.
+- **Loading skeletons are derived, never hand-built.** A skeleton is the REAL page rendered with placeholder data inside `<Skeletonize>` (`components/shared/skeletonize.tsx`; CSS in `globals.css` turns every text run, icon, image and control into a muted block of the same size), so it can't drift from the UI. To give a page a skeleton:
+  1. Put the page's markup in a view component that takes props (`components/{admin,store,account}/…-view.tsx`); the page only fetches and renders `<XView data={…} />`. A new UI element goes inside the view and gets its skeleton for free.
+  2. Add the entity's placeholder data to `features/<feature>/placeholders.ts` (typed, so `tsc` forces you to update it when the type grows).
+  3. Add `loading.tsx` next to the page: `<Skeletonize><XView {...placeholders} /></Skeletonize>`. Busy states inside client components do the same (`pending ? <Skeletonize><Table rows={placeholders}/></Skeletonize> : children`); a component whose content lives in the browser (cart, wishlist) takes a `preview` prop and wraps itself in `<Skeletonize>` until hydrated.
+  - Never write skeleton markup (`<Skeleton>`, `animate-pulse bg-muted`, `h-*`/`w-*` blocks, `fallback={<div…>}`). `src/app/loading-contract.test.ts` fails if a dynamic page has no own `loading.tsx`, if a `loading.tsx` contains raw markup/classes or doesn't reuse the page's view, or if hand-built skeletons appear anywhere. Every dynamic admin or store page needs its own `loading.tsx`; `params` / `searchParams` are awaited inside that boundary.
+  - Opt-outs inside a view: `data-skeleton-block` makes an element one block; real text stays hidden, so keep placeholder strings realistic in length.
 - **Never leave a column empty on wide screens.** Use a two-column grid (`xl:grid-cols-2`) or a main + side layout, and keep the side column short.
 - Button heights match inputs: default = `h-10` (admin, `fieldSize="md"`), `size="lg"` = `h-11` (storefront). Don't hand-set heights on buttons that sit next to fields.
 - A payment status must be shown with `paymentDisplay()` / `<PaymentBadge orderStatus>` so a cancelled order never says "awaiting payment".
@@ -51,11 +56,19 @@ Every pincode field fills the city and shows "City, State" via `usePincodeLookup
 - Pages stay thin; business logic goes in `src/features/<feature>/` (queries, actions, schema, types).
 - Every Server Action validates with Zod and checks auth itself (`assertAdmin()` / `getCurrentUser()`).
 - Database changes go in a new numbered file in `supabase/migrations/` (never edit an applied one). **Claude applies them itself** with the Supabase CLI (see "Database migrations" below); the user never runs them by hand. Mention in the reply which migrations were applied.
-- **No shop details in code.** Name, tagline, description, SEO keywords, WhatsApp number, email/phone/city, social links, announcement banner, order-code prefix, delivery fee, free-delivery amount and UPI details are all owner-editable in **Admin → Settings** (table `store_settings`). Never hard-code them.
+- **No shop details in code.** Name, tagline, description, SEO keywords, WhatsApp number, email/phone/city, social links, announcement banner, product-page highlight line (`highlightLine`), home badge (`heroBadge`), price note, GST details, invoice name/address, order-code prefix, delivery fee, free-delivery amount and UPI details are all owner-editable in **Admin → Settings** (table `store_settings`). Never hard-code them.
   - Server code: `await getStoreSettings()` (`features/settings/queries.ts`). Client components: `useStoreSettings()`. Page metadata: use `generateMetadata` + `pageMetadata(shop, …)`.
   - WhatsApp links/messages always take the settings object: `shopWhatsappLink(shop, text)`, `buildOrderMessage(shop, …)`.
   - A new owner-editable setting = a nullable column in a new migration + `types.ts` / `defaults.ts` / `schema.ts` / `queries.ts` / `actions.ts` in `features/settings` + a field in `components/admin/store-settings-form.tsx`.
   - `src/config/site.ts` keeps only deployment constants (site URL, locale, currency).
+
+## Tax, GST and invoices (owner flips one switch)
+
+- The shop starts **not GST-registered**: no tax line anywhere, the bill is a **Bill of Supply** and says no tax is charged. Prices are always the final amount the customer pays.
+- Admin → Settings → **Tax & invoices**: switch "I am registered under GST" on, enter GSTIN (`GSTIN_PATTERN` in `features/settings/schema.ts`) and the one GST rate that is already included in prices. Nothing else changes in code or deploys: the bill becomes a **Tax Invoice** (GSTIN, taxable value, GST included) and product pages show "Inclusive of all taxes". The form and DB both refuse registered without GSTIN + rate.
+- Everything tax-related reads `features/settings/tax.ts` (`gstActive`, `priceNote`, `invoiceTitle`, `gstIncluded`). Never hard-code "Inclusive of all taxes" or a GST rate in a component. The owner's own `priceNote` text always wins. Invoice name/address fall back to shop name and city/state.
+- The bill itself is `<InvoiceDocument>` (`components/shared/invoice-document.tsx`), shown at `/account/orders/[code]/invoice` and `/admin/orders/[id]/invoice` (noindex, not for cancelled orders, print / "Save as PDF" via `<PrintButton>`; `globals.css` prints it black on white and hides everything else). Guests have no invoice.
+- Limits to revisit with a CA: one GST rate for the whole shop (no per-product rate), no CGST/SGST/IGST split (the DB has no customer state), the invoice number is the order code (not sequential).
 
 ## Layout, sticky and alignment rules
 
@@ -79,7 +92,7 @@ Every element in components and pages carries `data-ui`: the root is `area/Compo
 ## Admin orders lists and dashboard
 
 - Dashboard tiles link to `/admin/orders?view=<id>`. A view is defined once in `features/orders/views.ts` and `applyOrderView()` in `admin-queries.ts`; the tile count and the list both use it.
-- Filters (`OrdersBrowser`, `DashboardRangeShell`) are optimistic: chips switch immediately, a skeleton shows while loading, the user can pick again at once. Use the top `RouteProgress` bar for page navigation only, not filters.
+- Filters (`OrdersBrowser`, `DashboardRangeShell`) are optimistic: chips switch immediately, a `<Skeletonize>` placeholder (real table/dashboard with placeholder data) shows while loading, the user can pick again at once. Use the top `RouteProgress` bar for page navigation only, not filters.
 - Dashboard range lives in the URL (`?range=7d|30d|90d|month|last-month|year|all` or `?from=&to=`); see `features/orders/dashboard-range.ts`.
 
 ## Order lifecycle (one rule set)
@@ -87,6 +100,8 @@ Every element in components and pages carries `data-ui`: the root is `area/Compo
 - `features/orders/transitions.ts` is the only place that says which status can follow which (`NEXT_STATUSES`), who can cancel and when, and the cancel reasons. The admin dropdown, the client check and the server action all use `checkTransition()`; never re-implement a rule in a component. Example: "Shipped" needs a courier name; "Confirmed" and later need a paid payment; "Cancelled" is never picked from the dropdown.
 - Cancelling goes through `cancelOrder` (customer RPC `cancel_order`, until packed) or `cancelOrderAsAdmin` (until shipped), always with a reason. Show the result with `<CancellationNotice>`; a paid order shows "refund due" until the payment is marked Refunded.
 - Order ids shown to people get a `<CopyButton>`.
+- **Finished orders are locked.** Delivered and cancelled orders can't change shipping, items, prices, customer/address or status (`features/orders/locking.ts` for the UI note + server refusal; DB trigger `lock_finished_orders`, migration 0023, allow-lists `payment_*`, `refunded_*`, `refund_reference`, `stock_*`, `updated_at`, `user_id → null`). Still allowed: the private admin note, payments/refunds, returns. Payments: `payment_status` never moves away from `paid` (except to `refunded`) or `refunded` on any order, and on a delivered/cancelled paid order the amount, paid time and UTR are frozen (`features/orders/payment-rules.ts`, form + `updateOrderPayment` + trigger `guard_payment_status`, migration 0024). A new column on `orders` is locked on finished orders until added to the trigger's list.
+- **Return stage** (`returnStage()` in `features/orders/returns.ts`) is the ONE derived state for a return (requested → approved / rejected / withdrawn → received → partly refunded / refunded). `orders.status` stays `delivered`. Show it with `<ReturnStageBadge>` / `<ReturnTimeline>` (admin wording vs `customerLabel`; customer/guest text never has amounts); list queries must embed `return_requests` + `order_returns` for `Order.returnStage` to be set. WhatsApp: `buildStatusUpdateMessage(…, { returnStage })`.
 
 ## Dark mode
 
@@ -108,6 +123,7 @@ Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-succes
 
 - Stock is **reserved when the order is placed** (`create_order`, migration 0010) and given back once if the order is cancelled. The `stock` number is the sellable amount; dispatch does not change it.
 - Unpaid orders (status pending, payment pending/failed) are cancelled automatically after `store_settings.unpaid_order_expiry_hours` (default 24, 0 = never) by `expire_unpaid_orders()`, run every 15 minutes by pg_cron. An order where the customer already submitted a UTR is never auto-cancelled. Cancellation `by` can be `system`.
+- Admin stock edits are **deltas**, never absolute: the product form sends the stock it loaded (`expectedStock`) and `saveProduct` applies `new − expected` to the CURRENT stock through the `adjust_product_stock` RPC (migration 0015), so an edit can't wipe stock a customer just reserved. New products are a plain insert.
 - Returns: `record_order_return()` (admin only, delivered orders). Per item the admin chooses "Back into stock" (resellable) or not (damaged). Rows live in `order_returns`; show them with `<ReturnsList>`.
 
 ## Return requests
@@ -115,7 +131,9 @@ Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-succes
 Customer flow: delivered order → **Request a return** (inside `store_settings.return_window_days` of delivery, default 7; 0 = off) → admin **approves** (with pickup/shipping instructions) or **rejects** (reason required) → when the goods arrive the admin **records the return** from the approved request (`record_order_return` with `p_request_id`), choosing per item whether it goes back into stock → the request becomes `received`.
 - One open request per order (DB unique index). The customer can withdraw it until it is reviewed.
 - Rules live in `features/orders/returns.ts` (window, returnable quantities, reasons); the DB enforces the same (migration 0012). RPCs: `request_return`, `withdraw_return_request` (guest by code + last 4, or signed in), `decide_return_request` (admin).
-- Dashboard tile and `/admin/orders?view=return-requests` list orders with a request waiting for a decision.
+- Return views (one definition each in `orderViewFilter()`, used by the list, the dashboard tiles AND the chip counts `getReturnViewCounts()`): `return-requests` (waiting for a decision), `returns-to-receive` (approved, goods not back), `return-refund-pending` (a return recorded without a refund, payment still paid), `returns-refunded`. The admin orders list has a chip row for them (`RETURN_VIEWS`, `scroll-row`); ids are capped at `RETURN_VIEW_ID_LIMIT` (100, newest) because they travel in one URL.
+- A return recorded without a refund can be refunded later per return: `refund_return` RPC (migration 0024) via `refundReturn` / `<RefundReturnButton>` in the admin returns list. It keeps `order_returns.refunded / refund_amount` and `orders.refunded_amount` in step (same bookkeeping as ticking "I have refunded these items"). A refund through the payment card (`refund_order`) is cash only and does not mark any return refunded.
+- A rejected request shows as a badge in lists for `REJECTED_BADGE_DAYS` (7) after the decision, then only in the order's detail/timeline. After a rejection the customer can send a NEW request while the window is open (`canRequestAgain()`; the DB only forbids two OPEN requests). Customer-facing status lines come from `customerStatusLine()` (never "Delivered — enjoy!" while a return exists, never amounts). Request-status pills use `requestStatusMeta()`, the same copy table as the stages.
 - The admin can tell the customer on WhatsApp after deciding (`buildReturnDecisionMessage`).
 
 ## Dashboard range
@@ -126,7 +144,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 - The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
 - Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
-- Migrations 0001–0021 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- Migrations 0001–0024 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
 - SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
 
 ## Verifying against production (no staging)
@@ -158,20 +176,19 @@ Default is the current **financial year** (April–March, India), compared with 
 
 When the user asks to "clear the pending list" (or before a push), work through these, verify each, then delete the item here.
 
-Bugs / UX
-1. Mobile (360px): after tapping a category chip while scrolled down, the first row of cards sits under the sticky filter bar. Cause: the `useLayoutEffect` in `components/store/product-browser.tsx` (~88-98) measures before the AnimatePresence exit animation shrinks the list. Also: `useSearchParams` is read once, so a client-side link to `/products?sort=…` while already on `/products` doesn't update the chips, and the debounced `replaceState` is dropped if the user navigates within 300 ms.
-2. Admin order page: "To collect ₹X" shows next to "Received ₹X" once paid; "Record a return" stays available after everything was already returned.
-3. Console warnings on the product page ("state update on a component that hasn't mounted yet"; Next dev warning about uncached data outside Suspense on `/products/[slug]`).
+Not verified in a browser yet (code is done, `tsc` / `eslint` / `npm run test` are green)
+1. Skeleton changes made without a browser check: the admin hard-reload frame order is now monotonic (the layout's header-only Suspense fallback was removed, `AdminGate` renders nothing next to the page); table skeleton blocks are rounded (`clip-path` on text-only `td`/`th` in `globals.css`, light + dark, 1280 + 360); placeholder counts were aligned by reading code (order detail with a return, dashboard 5 top products / 6 recent, orders 20 rows, products 12, launch 9, product 3 photos). Re-measure landmark deltas (target ≤ 24 px for list-length-dependent lists, 0-8 px elsewhere), check the 360 px orders header for a stray white cell, and the 14 px timeline-dot difference on `/account/orders/<code>`. The dev data has only 7 orders / 12 products, so the 20-row orders skeleton is taller than the real list there.
+2. UI changes only checked by types / lint / tests: `/track` courier + tracking wrap at 360 px, "Part refunded" vs "Refund done" label (`returns-list.tsx`), return form quantity defaults to 1 for a single one-piece line, "Withdraw request" confirm dialog. Also not opened: the WhatsApp message text for a delivered order with a return stage (customer text must have no amounts) and "Reject" with an empty reason.
+3. Console warnings on the product page ("state update on a component that hasn't mounted yet"; Next dev warning about uncached data outside Suspense on `/products/[slug]`) were never reproduced. Needs the stack trace from the `next dev` terminal.
+4. Run `select proname, proconfig from pg_proc join pg_namespace n on n.oid = pronamespace where nspname = 'public' and prosecdef;` in the Supabase SQL editor and confirm every row has `search_path=public, pg_temp`; confirm `orders_created_cover_idx` and the three `*_trgm_idx` indexes exist (PostgREST can't read `pg_proc` / `pg_indexes`, so this was never checked directly).
 
-Not yet browser-tested (do these, then delete the item)
-4. "Shipped" refuses without a courier; dashboard ranges (`?range=month`, `?month=`, custom, an absurd `from/to` falls back) and every tile link matching its count; the login rate-limit message (use a different email for hammering, don't lock the real admin); `/admin/account` password rules (letters-only / digits-only rejected, don't actually change it); admin cancel with "Other"; address book (add two, one default, un-default, delete); keyboard / a11y pass on header and checkout; SSR HTML of `/` and `/products` has no `opacity:0`; filter scroll at 360px (item 1); after the E2E cleanup confirm no leftover rows in `return_requests`, `order_returns`, `order_status_history` (they should cascade with the orders).
+Deploy / environment (the user does these)
+5. Vercel: set `RATE_LIMIT_SALT` for Production (production logs a warning while it is unset) and `NEXT_PUBLIC_SITE_URL` to the real domain (it feeds sitemap, canonical, OG URLs and the admin slug hint), then redeploy. Deploy the code together with migrations 0022+: since 0022 a guest needs the FULL phone number to cancel an order, so older deployed code gets "order not found" on guest cancel.
+6. Not exercised: the PWA install prompt, and the production CSP's `upgrade-insecure-requests` on a real https origin (only checked over http on localhost).
 
-Hardening / cleanup (lower priority)
-5. Vercel: set `RATE_LIMIT_SALT` for Production and redeploy (the user does this).
-6. Confirm the pg_cron job `expire-unpaid-orders` is scheduled and running (`cron.job`, `cron.job_run_details`); the migration swallows errors if `pg_cron` couldn't be enabled. Add a cleanup for `rate_limits` (anon can create rows via the RPC) and `order_lookup_failures`.
-7. Guest order lookup: a known order code can still be locked out for 15 minutes with 10 wrong last-4 guesses (per-order throttle, migration 0009). Consider asking for the full phone number for cancel / change-address.
-8. `refund_order` has no idempotency key (a double-click on a partial refund refunds twice); `admin_reset_data` locks products before orders (rare, admin only) and also restocks delivered orders; `dashboard_stats`: a NULL `p_bucket` passes and ties in top products are unordered; add `pg_temp` to the `search_path` of the older SECURITY DEFINER functions.
-9. The CSP has no `script-src` / `default-src` (needs a nonce-based policy via the proxy); the admin login limiter fails open.
-10. Perf at scale: `dashboard_stats` scans the whole range (add a covering partial index or a rollup when orders reach tens of thousands); the rate-limit RPC is awaited serially before the real work (the pincode lookup could run it in parallel); `ProductGrid` calls `toCardData` inline, which defeats `memo(ProductCard)` if it ever becomes a client component; admin search is `ilike '%q%'` (use `pg_trgm` when it grows).
-11. Tests still missing: server actions, `views.ts`, and SQL (pgTAP or RPC scripts against a local Supabase). `vitest.config.ts` logs an ESM warning and `vite-tsconfig-paths` is now redundant there.
-12. Optional: demo mode (`isSupabaseConfigured` guards, `features/products/demo-data.ts`) could move to one boundary or go; `features/account/*` vs `features/auth/account-*` naming overlap.
+Known limitations / design decisions to revisit
+7. Return stages: there is no "refund initiated" state (the DB has nothing between "goods back" and "money refunded"; it shows as "Return received, no refund recorded yet"). A refund made on the payment card (`refund_order`) is cash only and is not tied to a specific return. `refund_return` / `record_order_return` refund the shipping fee together with the last item. The "Returns refunded" / "Received, refund pending" views use the newest 100 order ids (URL length).
+8. `payment_status` set to `refunded` directly through PostgREST is accepted on any order status (the server action and UI refuse it; no DB guard for unpaid -> refunded).
+9. A signed-in owner of a non-pending order who opens `/track` still sees the "full mobile number" field in the cancel dialog (`track_order` doesn't say who the owner is; the server accepts the owner without a phone). Guests cannot edit delivery on `/track` at all (WhatsApp message instead).
+10. CSP keeps `'unsafe-inline'` in `script-src` (a nonce policy would force every page dynamic and lose the static shell). The admin login limiter fails open on purpose (Supabase Auth has its own limits).
+11. `dashboard_stats` scans the whole date range (add a rollup when orders reach tens of thousands). `getDashboard` tile counts and `orderViewFilter` are not unit-tested (private in `admin-queries.ts`). The admin account page leaves some empty space under the Password card at ≥ 1024 px. Remove the now-unused `vite-tsconfig-paths` dev dependency. Optional: demo mode (`isSupabaseConfigured` guards, `features/products/demo-data.ts`) could move to one boundary or go; `features/account/*` vs `features/auth/account-*` naming overlap.

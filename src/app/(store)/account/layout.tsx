@@ -13,7 +13,7 @@ async function AccountGuard() {
 
 export default function AccountLayout({ children }: LayoutProps<"/account">) {
   return (
-    <div data-ui="layout:/account" className="container-page grid gap-8 pt-10 lg:grid-cols-[240px_1fr]">
+    <div data-ui="layout:/account" className="container-page grid grid-cols-1 gap-8 pt-10 lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside data-ui="layout:/account/aside" className="lg:sticky-store lg:self-start">
         <h1 data-ui="layout:/account/h1-my-account" className="mb-4 sr-only text-2xl font-semibold lg:not-sr-only">My account</h1>
         <AccountNav />

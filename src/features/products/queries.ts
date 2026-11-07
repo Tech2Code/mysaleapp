@@ -98,7 +98,12 @@ export async function getRelatedProducts(product: Product, limit = 4): Promise<P
 export async function getCategoriesWithCounts(): Promise<(Category & { count: number })[]> {
   const [categories, products] = await Promise.all([getCategories(), getActiveProducts()])
   return categories
-    .map((c) => ({ ...c, count: products.filter((p) => p.categoryId === c.id).length }))
+    .map((c) => {
+      const inCategory = products.filter((p) => p.categoryId === c.id)
+      // No category photo? Use the cover of its first product with a photo, so cards are never blank.
+      const cover = c.imageUrl ?? inCategory.find((p) => p.images[0])?.images[0] ?? null
+      return { ...c, imageUrl: cover, count: inCategory.length }
+    })
     .filter((c) => c.count > 0)
 }
 

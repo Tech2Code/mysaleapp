@@ -4,7 +4,8 @@ import { Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { SelectField, TextAreaField } from "@/components/form"
+import { SelectField, TextAreaField, TextField } from "@/components/form"
+import { normalizeIndianPhone } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrder } from "@/features/orders/actions"
@@ -38,6 +39,7 @@ export function CancelOrder({
   const [reason, setReason] = useState<string>(CANCEL_REASONS[0])
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [phone, setPhone] = useState("")
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   useRevealOnChange(status)
@@ -58,11 +60,28 @@ export function CancelOrder({
 
   const paid = paymentStatus === "paid" || paymentStatus === "submitted"
   const needsDetail = otherNeedsDetail(reason, detail)
+  // A guest (the track page passes their last 4 digits) must type the FULL number to cancel; a signed-in owner
+  // (no phoneLast4) is recognised by their account.
+  const isGuest = phoneLast4 !== undefined
+  const phoneDigits = normalizeIndianPhone(phone)
+  const phoneError =
+    isGuest && phone.trim() && !phoneDigits
+      ? "Enter your 10-digit mobile number"
+      : isGuest && phoneDigits && !phoneDigits.endsWith(phoneLast4)
+        ? "Doesn't match the number you looked up"
+        : undefined
+  const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
 
   const submit = () =>
     startTransition(async () => {
       setError(null)
-      const res = await cancelOrder({ code: orderCode, phoneLast4, reason, detail: detail.trim() || undefined })
+      const res = await cancelOrder({
+        code: orderCode,
+        phoneLast4,
+        phone: isGuest ? phoneDigits ?? undefined : undefined,
+        reason,
+        detail: detail.trim() || undefined,
+      })
       if (!res.ok) {
         setError(res.error)
         return
@@ -108,6 +127,18 @@ export function CancelOrder({
             onChange={(e) => setDetail(e.target.value)}
             error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
           />
+          {isGuest && (
+            <TextField
+              label="Your full mobile number"
+              kind="phone"
+              leading="+91"
+              hint="To cancel, confirm the whole number you ordered with."
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              error={phoneError}
+            />
+          )}
           {error && (
             <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {error}
@@ -118,7 +149,7 @@ export function CancelOrder({
           <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
             Keep order
           </Button>
-          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="rounded-full">
+          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail || phoneMissing}className="rounded-full">
             {pending && <Loader2Icon className="animate-spin" />} Yes, cancel order
           </Button>
         </DialogFooter>

@@ -17,12 +17,15 @@ export function OrderSummary({
   order,
   bare = false,
   openLinksInNewTab = false,
+  audience = "customer",
   className,
 }: {
   order: OrderSummaryData
   /** Render without its own card border (when already inside a card). */
   bare?: boolean
   openLinksInNewTab?: boolean
+  /** The "confirmed after payment" hint is for customers only. */
+  audience?: "customer" | "admin"
   className?: string
 }) {
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0)
@@ -88,7 +91,7 @@ export function OrderSummary({
           {display.label}
         </span>
       </div>
-      {isAwaitingPayment(order) && (
+      {audience === "customer" && isAwaitingPayment(order) && (
         <p data-ui="shared/OrderSummary/p-3" className="mt-2 text-xs text-muted-foreground">
           Your order is confirmed after the payment is verified. Cash on delivery isn&apos;t available.
         </p>

@@ -18,28 +18,28 @@ export function ShippingInfo({ shipping, className }: { shipping: ShippingDetail
       )}
     >
       <dl data-ui="shared/ShippingInfo/dl" className="space-y-2.5 text-sm">
-        <div data-ui="shared/ShippingInfo/div-flex" className="flex items-center gap-3">
-          <dt data-ui="shared/ShippingInfo/dt-flex" className="flex w-28 shrink-0 items-center gap-2 text-muted-foreground">
+        <div data-ui="shared/ShippingInfo/div-flex" className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+          <dt data-ui="shared/ShippingInfo/dt-flex" className="flex shrink-0 items-center gap-2 text-muted-foreground sm:w-28">
             <TruckIcon className="size-4" aria-hidden /> Courier
           </dt>
-          <dd data-ui="shared/ShippingInfo/dd" className="min-w-0 font-medium">{shipping.carrier}</dd>
+          <dd data-ui="shared/ShippingInfo/dd" className="min-w-0 font-medium wrap-anywhere">{shipping.carrier}</dd>
         </div>
 
         {shipping.trackingNumber && (
-          <div data-ui="shared/ShippingInfo/div-flex-2" className="flex items-center gap-3">
-            <dt data-ui="shared/ShippingInfo/dt-flex-2" className="flex w-28 shrink-0 items-center gap-2 text-muted-foreground">
+          <div data-ui="shared/ShippingInfo/div-flex-2" className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+            <dt data-ui="shared/ShippingInfo/dt-flex-2" className="flex shrink-0 items-center gap-2 text-muted-foreground sm:w-28">
               <HashIcon className="size-4" aria-hidden /> Tracking no.
             </dt>
             <dd data-ui="shared/ShippingInfo/dd-flex" className="flex min-w-0 items-center gap-1 font-mono font-semibold">
-              <span data-ui="shared/ShippingInfo/span" className="wrap-anywhere">{shipping.trackingNumber}</span>
+              <span data-ui="shared/ShippingInfo/span" className="min-w-0 break-all">{shipping.trackingNumber}</span>
               <CopyButton value={shipping.trackingNumber} label="Tracking number" variant="icon" className="shrink-0" />
             </dd>
           </div>
         )}
 
         {shipping.expectedDelivery && (
-          <div data-ui="shared/ShippingInfo/div-flex-3" className="flex items-center gap-3">
-            <dt data-ui="shared/ShippingInfo/dt-flex-3" className="flex w-28 shrink-0 items-center gap-2 text-muted-foreground">
+          <div data-ui="shared/ShippingInfo/div-flex-3" className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+            <dt data-ui="shared/ShippingInfo/dt-flex-3" className="flex shrink-0 items-center gap-2 text-muted-foreground sm:w-28">
               <CalendarClockIcon className="size-4" aria-hidden /> Expected by
             </dt>
             <dd data-ui="shared/ShippingInfo/dd-2" className="font-medium">{formatDate(`${shipping.expectedDelivery}T00:00:00`)}</dd>

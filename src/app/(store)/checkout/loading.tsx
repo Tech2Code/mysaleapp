@@ -1,5 +1,10 @@
-import { CheckoutSkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { CheckoutPageView } from "@/components/store/page-views"
 
 export default function Loading() {
-  return <CheckoutSkeleton />
+  return (
+    <Skeletonize>
+      <CheckoutPageView products={[]} preview />
+    </Skeletonize>
+  )
 }

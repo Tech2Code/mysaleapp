@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { isOpenRequest, RETURN_REASONS, RETURN_STATUS_META, returnableQuantities } from "@/features/orders/returns"
+import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 
@@ -59,6 +60,9 @@ export function RequestReturn({
     return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
   }, [items, left])
 
+  // One line with exactly one piece left: nothing to choose, so start at 1 (the customer can still clear it).
+  const qtyOf = (id: string) => qty[id] ?? (lines.length === 1 && (left.get(id) ?? 0) === 1 ? "1" : "")
+
   if (status !== "delivered" || win.days <= 0) return null
   if (requests.some(isOpenRequest) || lines.length === 0) return null
 
@@ -75,7 +79,7 @@ export function RequestReturn({
   }
 
   const payload = lines
-    .map((i) => ({ productId: i.productId, quantity: Number(qty[i.productId]) || 0 }))
+    .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
     .filter((i) => i.quantity > 0)
   const needsDetail = otherNeedsDetail(reason, details)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
@@ -126,9 +130,9 @@ export function RequestReturn({
                   inputMode="numeric"
                   maxLength={3}
                   placeholder="0"
-                  value={qty[i.productId] ?? ""}
+                  value={qtyOf(i.productId)}
                   onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
-                  error={Number(qty[i.productId]) > max ? `At most ${max}` : undefined}
+                  error={Number(qtyOf(i.productId)) > max ? `At most ${max}` : undefined}
                 />
               </li>
             )
@@ -170,13 +174,6 @@ export function RequestReturn({
   )
 }
 
-const TONE: Record<"info" | "success" | "danger" | "neutral", string> = {
-  info: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
-  success: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
-  danger: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200",
-  neutral: "bg-muted text-muted-foreground",
-}
-
 /** The customer's return requests and where each one stands. A request can be withdrawn until it is reviewed. */
 export function ReturnRequestsPanel({
   requests,
@@ -191,6 +188,7 @@ export function ReturnRequestsPanel({
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   useBlockWhile(pending)
   if (requests.length === 0) return null
 
@@ -201,6 +199,7 @@ export function ReturnRequestsPanel({
         toast.error(res.error)
         return
       }
+      setConfirmId(null)
       toast.success("Return request withdrawn")
       onChanged?.()
       router.refresh()
@@ -213,11 +212,11 @@ export function ReturnRequestsPanel({
       </h3>
       <ul data-ui="store/ReturnRequestsPanel/ul" className="space-y-3">
         {[...requests].reverse().map((r) => {
-          const meta = RETURN_STATUS_META[r.status]
+          const meta = requestStatusMeta(r.status, "customer")
           return (
             <li data-ui="store/ReturnRequestsPanel/li" key={r.id} className="space-y-2 rounded-xl border p-3.5">
               <div data-ui="store/ReturnRequestsPanel/div-flex" className="flex flex-wrap items-center justify-between gap-2">
-                <span data-ui="store/ReturnRequestsPanel/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONE[meta.tone])}>{meta.label}</span>
+                <span data-ui="store/ReturnRequestsPanel/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
                 <span data-ui="store/ReturnRequestsPanel/span-2" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
               </div>
               <ul data-ui="store/ReturnRequestsPanel/ul-2" className="space-y-0.5 text-sm">
@@ -241,7 +240,7 @@ export function ReturnRequestsPanel({
                 <p data-ui="store/ReturnRequestsPanel/p-3" className="text-xs text-muted-foreground">Send the items back as described above. Once they reach us and are checked, your refund is processed.</p>
               )}
               {r.status === "requested" && (
-                <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request" type="button" variant="outline" size="sm" disabled={pending} onClick={() => withdraw(r.id)} className="rounded-full">
+                <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className="rounded-full">
                   {pending && <Loader2Icon className="animate-spin" />} Withdraw request
                 </Button>
               )}
@@ -249,6 +248,22 @@ export function ReturnRequestsPanel({
           )
         })}
       </ul>
+      <Dialog open={confirmId !== null} onOpenChange={(o) => !o && !pending && setConfirmId(null)}>
+        <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent">
+          <DialogHeader>
+            <DialogTitle>Withdraw this return request?</DialogTitle>
+            <DialogDescription>We will not review it any further. You can send a new request while the return window is open.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button data-ui="store/ReturnRequestsPanel/Button-keep-request" type="button" variant="outline" onClick={() => setConfirmId(null)} disabled={pending} className="rounded-full">
+              Keep request
+            </Button>
+            <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request-2" type="button" variant="destructive" disabled={pending} onClick={() => confirmId && withdraw(confirmId)} className="rounded-full">
+              {pending && <Loader2Icon className="animate-spin" />} Withdraw request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

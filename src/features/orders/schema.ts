@@ -93,6 +93,11 @@ export const cancelOrderSchema = z.object({
   code: trackOrderSchema.shape.code,
   /** Needed for guests; signed-in customers are recognised by their account. */
   phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+  /**
+   * The FULL mobile number. Cancelling is destructive, so a guest must prove the whole number (not just the last 4
+   * digits: 10^4 guesses are too few, migration 0022). Signed-in owners can leave it out.
+   */
+  phone: v.phoneIN().optional(),
   /** The reason picked from the list. */
   reason: z.string().trim().min(2, "Choose a reason").max(80),
   /** Extra words; required when the reason is "Other". */
@@ -127,5 +132,7 @@ export const updateDeliverySchema = z.object({
   code: trackOrderSchema.shape.code,
   /** Needed for guests; signed-in owners are recognised by their session. */
   phoneLast4: z.string().trim().regex(/^\d{4}$/).optional(),
+  /** The order's CURRENT full mobile number; required from guests (migration 0022), not from signed-in owners. */
+  phone: v.phoneIN().optional(),
   customer: checkoutSchema,
 })

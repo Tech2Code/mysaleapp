@@ -10,7 +10,7 @@ const RPC_ERRORS: Record<string, string> = {
   INVALID_QUANTITY: "Each item can be ordered 1–20 at a time.",
   ITEM_UNAVAILABLE: "Some items in your cart are out of stock or no longer available. Please review your cart.",
   INVALID_REFERENCE: "That doesn't look like a UTR / UPI reference. It is usually a 12-digit number.",
-  ORDER_NOT_FOUND: "We couldn't find that order.",
+  ORDER_NOT_FOUND: "We couldn't find that order. Check the order code and the full mobile number.",
   ORDER_CANCELLED: "This order was cancelled.",
   ALREADY_PAID: "This order is already marked as paid.",
   DUPLICATE_REFERENCE: "This reference number was already used for another payment. Please check it and try again.",
@@ -29,6 +29,12 @@ const RPC_ERRORS: Record<string, string> = {
   TOO_MANY_ORDERS: "Too many unpaid orders from this number. Please pay for or cancel an existing order, or message us on WhatsApp.",
   NOT_EDITABLE: "This order is already confirmed, so the delivery details can't be changed. Message us on WhatsApp for help.",
   // Admin-only codes
+  ORDER_CHANGED: "This order was just changed by someone else. Refresh the page and try again.",
+  RETURN_NOT_FOUND: "That return no longer exists. Refresh the page.",
+  ALREADY_REFUNDED: "This return was already refunded.",
+  NOT_PAID: "This order isn't marked as paid, so there is nothing to refund.",
+  PAYMENT_LOCKED: "A paid order can't go back to unpaid, and a refunded one can't change. Record a refund instead.",
+  ORDER_LOCKED: "This order is delivered or cancelled, so its details are locked.",
   REQUEST_NOT_OPEN: "That return request is no longer open.",
 }
 

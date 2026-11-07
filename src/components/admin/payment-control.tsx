@@ -20,6 +20,8 @@ import {
   type PaymentStatus,
 } from "@/features/orders/types"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
+import { paymentDue } from "@/features/orders/payment-due"
+import { allowedPaymentStatuses, isPaymentMoneyLocked, paymentEditNote } from "@/features/orders/payment-rules"
 import { buildPaymentMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
@@ -87,7 +89,8 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
   const run = (values: PaymentValues, after: (confirmed: boolean) => void) =>
     startTransition(async () => {
-      const res = await updateOrderPayment({ orderId: order.id, ...values })
+      // expectedRefunded: what this screen showed, so a double click / stale tab can't refund twice
+      const res = await updateOrderPayment({ orderId: order.id, expectedRefunded: Number(order.refundedAmount ?? 0), ...values })
       if (!res.ok) {
         toast.error(res.error)
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
@@ -133,6 +136,12 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
   const needsVerification = order.paymentStatus === "submitted"
   const canVerify = canVerifyPayment(order)
+  const due = paymentDue(order)
+  // Only offer payment states this order may move to (a paid order can't go back to unpaid; see payment-rules.ts)
+  const allowed = allowedPaymentStatuses(order)
+  const allowedOptions = statusOptions.filter((o) => allowed.includes(o.value))
+  const editNote = paymentEditNote(order)
+  const lockPaidFields = isPaymentMoneyLocked(order) && order.paymentStatus === "paid" && statusNow === "paid"
 
   return (
     <div data-ui="admin/PaymentControl" className="space-y-5">
@@ -142,7 +151,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       </div>
 
       <dl data-ui="admin/PaymentControl/dl-grid" className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Fact label="To collect">{formatPrice(order.total)}</Fact>
+        {due && <Fact label={due.label}>{formatPrice(due.amount)}</Fact>}
         <Fact label="Received">{order.paymentAmount == null ? "—" : formatPrice(order.paymentAmount)}</Fact>
         <Fact label="Method">{order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "—"}</Fact>
         <Fact label="UTR / reference">
@@ -227,11 +236,17 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
           <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
         </summary>
         <form data-ui="admin/PaymentControl/form-grid" onSubmit={onSave} noValidate className="grid gap-x-4 gap-y-1 border-t p-4 sm:grid-cols-2">
-          <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={statusOptions} />
+          {editNote && (
+            <p data-ui="admin/PaymentControl/p-3" role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground sm:col-span-2">
+              {editNote}
+            </p>
+          )}
+          <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={allowedOptions} />
           <FormSelectField control={form.control} name="method" label="Paid how?" fieldSize="md" placeholder="Not set" options={methodOptions} />
           <TextField
             label="UTR / reference"
             fieldSize="md"
+            disabled={lockPaidFields}
             className="font-mono"
             error={errors.reference?.message}
             {...form.register("reference")}
@@ -241,6 +256,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             fieldSize="md"
             inputMode="decimal"
             leading="₹"
+            disabled={lockPaidFields}
             hint={
               statusNow === "refunded"
                 ? "Blank = refund everything still owed. A smaller amount records a partial refund."

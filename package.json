@@ -12,7 +12,8 @@
     "db:link": "supabase link --project-ref nepfgwfunxebhsfrfxeb",
     "db:dry": "supabase db push --remote --dry-run",
     "db:push": "supabase db push --remote",
-    "ui:tag": "node scripts/tag-ui.mjs"
+    "ui:tag": "node scripts/tag-ui.mjs",
+    "test:db": "node scripts/db-integration/run.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

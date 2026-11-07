@@ -15,7 +15,10 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
   const tax = taxed ? gstIncluded(order.total, shop.gstRate) : null
   const sellerName = shop.legalName || shop.shopName
   const sellerAddress = shop.businessAddress || [shop.city, shop.region].filter(Boolean).join(", ")
-  const payment = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod)
+  const payment = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod, {
+    refundedAmount: order.refundedAmount,
+    paidAmount: order.paymentAmount ?? order.total,
+  })
 
   return (
     <article data-ui="shared/InvoiceDocument" data-invoice className="mx-auto w-full max-w-3xl rounded-2xl border bg-card p-5 text-foreground sm:p-8" aria-label={`${title} ${order.orderCode}`}>
@@ -46,7 +49,10 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
         <div data-ui="shared/InvoiceDocument/div-4" className="sm:text-right">
           <h2 data-ui="shared/InvoiceDocument/h2-payment" className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">Payment</h2>
           <p data-ui="shared/InvoiceDocument/p-11" className="mt-1 font-semibold">{payment.label}</p>
-          {order.paymentReference && <p data-ui="shared/InvoiceDocument/p-12" className="font-mono text-xs text-muted-foreground">Ref: {order.paymentReference}</p>}
+          {order.returnStage?.badge && order.returnStage.key !== "rejected" && (
+            <p data-ui="shared/InvoiceDocument/p-12" className="text-xs text-muted-foreground">Return: {order.returnStage.customerLabel}</p>
+          )}
+          {order.paymentReference && <p data-ui="shared/InvoiceDocument/p-13" className="font-mono text-xs text-muted-foreground">Ref: {order.paymentReference}</p>}
         </div>
       </section>
 
@@ -100,10 +106,10 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
             <span data-ui="shared/InvoiceDocument/span-4">GST @ {shop.gstRate}% (included in the total)</span>
             <span data-ui="shared/InvoiceDocument/span-5" className="tabular-nums">{formatMoney(tax.gst)}</span>
           </p>
-          <p data-ui="shared/InvoiceDocument/p-13" className="mt-2 text-xs text-muted-foreground">Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
+          <p data-ui="shared/InvoiceDocument/p-14" className="mt-2 text-xs text-muted-foreground">Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
         </section>
       ) : (
-        <p data-ui="shared/InvoiceDocument/p-14" className="mt-5 text-xs text-muted-foreground">
+        <p data-ui="shared/InvoiceDocument/p-15" className="mt-5 text-xs text-muted-foreground">
           {sellerName} is not registered under GST, so no tax is charged. This is a Bill of Supply, not a Tax Invoice.
         </p>
       )}

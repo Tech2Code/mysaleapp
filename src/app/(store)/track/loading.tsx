@@ -1,5 +1,10 @@
-import { TrackSkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { TrackPageView } from "@/components/store/page-views"
 
 export default function Loading() {
-  return <TrackSkeleton />
+  return (
+    <Skeletonize>
+      <TrackPageView />
+    </Skeletonize>
+  )
 }

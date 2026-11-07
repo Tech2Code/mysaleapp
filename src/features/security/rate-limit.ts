@@ -14,6 +14,10 @@ export const RATE_LIMIT_MESSAGE = "Too many attempts. Please try again in a few 
 
 // Set RATE_LIMIT_SALT in production: with only the built-in default, someone who knows an IP and can call the
 // public RPC could compute (and burn) that IP's bucket key.
+if (process.env.NODE_ENV === "production" && !process.env.RATE_LIMIT_SALT) {
+  console.warn("[rate-limit] RATE_LIMIT_SALT is not set; falling back to the public default salt. Set it in the environment.")
+}
+
 const hash = (value: string) =>
   createHash("sha256")
     .update(`${process.env.RATE_LIMIT_SALT ?? "mysaleapp-rl-v1"}:${value}`)

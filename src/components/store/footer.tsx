@@ -45,16 +45,17 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
         <div data-ui="store/Footer/div" className="space-y-4">
           <Logo />
           <p data-ui="store/Footer/p" className="max-w-xs text-sm/relaxed  text-muted-foreground">{shop.description}</p>
-          <a data-ui="store/Footer/a-chat-on-whatsapp"
-            href={shopWhatsappLink(shop, `Hi ${shop.shopName}!`)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-whatsapp-solid px-4 py-2 text-sm font-semibold text-white shadow-md shadow-whatsapp/25 transition-transform hover:-translate-y-0.5"
-          >
-            <WhatsAppIcon className="size-4" /> Chat on WhatsApp
-          </a>
-          <div data-ui="store/Footer/div-2">
-            <InstallButton />
+          {/* Both buttons: same width and height, stacked. */}
+          <div data-ui="store/Footer/div-flex" className="flex w-full max-w-56 flex-col gap-2.5">
+            <a data-ui="store/Footer/a-chat-on-whatsapp"
+              href={shopWhatsappLink(shop, `Hi ${shop.shopName}!`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-whatsapp-solid px-4 text-sm font-semibold text-white shadow-md shadow-whatsapp/25 transition-transform hover:-translate-y-0.5"
+            >
+              <WhatsAppIcon className="size-4" /> Chat on WhatsApp
+            </a>
+            <InstallButton className="w-full justify-center" />
           </div>
         </div>
         {columns.map((col) => (
@@ -78,8 +79,8 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
           </nav>
         ))}
       </div>
-      <div data-ui="store/Footer/div-3" className="border-t">
-        <div data-ui="store/Footer/div-flex" className="container-page flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted-foreground sm:flex-row">
+      <div data-ui="store/Footer/div-2" className="border-t">
+        <div data-ui="store/Footer/div-flex-2" className="container-page flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted-foreground sm:flex-row">
           <p data-ui="store/Footer/p-2">
             © {shop.shopName}.{shop.city ? ` Handmade in ${shop.city}, India.` : ""}
           </p>

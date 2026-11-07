@@ -10,19 +10,13 @@ import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { decideReturnRequest } from "@/features/orders/admin-actions"
-import { isOpenRequest, RETURN_STATUS_META } from "@/features/orders/returns"
+import { isOpenRequest, requestStatusMeta } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
 import { buildReturnDecisionMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
-
-const TONE = {
-  info: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
-  success: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200",
-  danger: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200",
-  neutral: "bg-muted text-muted-foreground",
-} as const
 
 /** Approve (with instructions) or reject (with a reason) one pending request. */
 function DecideDialog({
@@ -132,11 +126,11 @@ export function AdminReturnRequests({
       </h2>
       <ul data-ui="admin/AdminReturnRequests/ul" className="space-y-3">
         {[...requests].reverse().map((r) => {
-          const meta = RETURN_STATUS_META[r.status]
+          const meta = requestStatusMeta(r.status, "admin")
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
               <div data-ui="admin/AdminReturnRequests/div-flex" className="flex flex-wrap items-center justify-between gap-2">
-                <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONE[meta.tone])}>{meta.label}</span>
+                <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
                 <span data-ui="admin/AdminReturnRequests/span-2" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
               </div>
               <ul data-ui="admin/AdminReturnRequests/ul-2" className="space-y-0.5 text-sm font-medium">

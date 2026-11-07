@@ -1,14 +1,19 @@
 import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
 import { AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
-import { PanelSkeleton } from "@/components/admin/panel-skeleton"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { requireAdmin } from "@/features/auth/guards"
+import { placeholderAdminAccount } from "@/features/auth/placeholders"
 import { getPaymentsToVerifyCount } from "@/features/orders/admin-queries"
 
-/** Server-side gate: every admin page is rendered only for verified admins. */
-async function AdminGate({ children }: { children: ReactNode }) {
+/**
+ * Server-side gate (redirects non-admins). It renders nothing and sits NEXT to the page instead of wrapping it:
+ * wrapping made the layout show its own fallback first and the page's loading.tsx only afterwards (two different
+ * frames). Every admin query and action also calls requireAdmin() itself.
+ */
+async function AdminGate() {
   await requireAdmin()
-  return <>{children}</>
+  return null
 }
 
 /** Avatar + email of the signed-in admin, top right. */
@@ -59,15 +64,22 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
         <AdminTopbar
           ordersBadge={badge}
           account={
-            <Suspense fallback={<span data-ui="layout:/admin/span" className="size-9 animate-pulse rounded-full bg-muted" aria-hidden />}>
+            <Suspense
+              fallback={
+                <Skeletonize>
+                  <AdminAccountMenu account={placeholderAdminAccount()} />
+                </Skeletonize>
+              }
+            >
               <AccountSlot />
             </Suspense>
           }
         />
         <main data-ui="layout:/admin/main" className="p-4 sm:p-6 lg:p-8">
-          <Suspense fallback={<PanelSkeleton />}>
-            <AdminGate>{children}</AdminGate>
+          <Suspense fallback={null}>
+            <AdminGate />
           </Suspense>
+          {children}
         </main>
       </div>
     </div>

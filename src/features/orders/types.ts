@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/format"
+import { returnStage, type ReturnStage } from "./returns"
 
 export const ORDER_STATUSES = [
   "pending",
@@ -196,6 +197,8 @@ export type OrderReturn = {
   items: { productId: string; name: string; quantity: number; restock?: boolean }[]
   reason: string | null
   refunded: boolean
+  /** Item value refunded for THIS return (admin only: guests don't get it). null = no refund recorded. */
+  refundAmount?: number | null
   createdAt: string
 }
 
@@ -231,6 +234,11 @@ export type Order = {
   shipping: ShippingDetails | null
   cancellation: Cancellation | null
   deliveryUpdatedAt: string | null
+  /**
+   * Where the order's return is (requested / approved / received / refunded …), derived from the return rows.
+   * null = no return activity, OR the query didn't embed return rows (list queries must embed them).
+   */
+  returnStage: ReturnStage | null
   createdAt: string
   updatedAt: string
 } & OrderPricing &
@@ -297,7 +305,8 @@ export type OrderRow = {
   created_at: string
   updated_at: string
   history?: { status: OrderStatus; changed_at: string }[]
-  returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; created_at: string }[]
+  /** List queries embed only `refunded, created_at`; the detail queries embed everything. */
+  returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; refund_amount?: number | string | null; created_at: string }[]
   return_requests?: {
     id: string
     items: ReturnRequest["items"]
@@ -379,7 +388,22 @@ function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
   })
 }
 
+/** The return stage of a row that embedded its return rows (null when it didn't, or there is no return activity). */
+function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): ReturnStage | null {
+  if (!row.return_requests && !row.returns) return null
+  return returnStage({
+    requests: (row.return_requests ?? []).map((r) => ({ status: r.status, createdAt: r.created_at, decidedAt: r.decided_at, adminNote: r.admin_note })),
+    returns: (row.returns ?? []).map((r) => ({ refunded: r.refunded, createdAt: r.created_at })),
+    paymentStatus: pricing.paymentStatus,
+    refundedAmount: pricing.refundedAmount,
+    paidAmount: pricing.paymentAmount ?? pricing.total,
+    // lets a long-rejected request drop out of list badges (REJECTED_BADGE_DAYS); lists are always rendered per request
+    now: new Date(),
+  })
+}
+
 export function mapOrder(row: OrderRow): Order {
+  const pricing = mapPricing(row)
   return {
     id: row.id,
     orderCode: row.order_code,
@@ -412,9 +436,10 @@ export function mapOrder(row: OrderRow): Order {
           }
         : null,
     deliveryUpdatedAt: row.delivery_updated_at ?? null,
+    returnStage: stageOfRow(row, pricing),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    ...mapPricing(row),
+    ...pricing,
   }
 }
 
@@ -437,7 +462,14 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
       }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     returns: (row.returns ?? [])
-      .map((r) => ({ id: r.id, items: r.items, reason: r.reason, refunded: r.refunded, createdAt: r.created_at }))
+      .map((r) => ({
+        id: r.id,
+        items: r.items,
+        reason: r.reason,
+        refunded: r.refunded,
+        refundAmount: r.refund_amount == null ? null : Number(r.refund_amount),
+        createdAt: r.created_at,
+      }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   }
 }

@@ -31,8 +31,10 @@ export const SPEC_SUGGESTIONS = ["Material", "Size", "Weight", "Colour", "Made i
 
 /** One highlight per line in the form → array in the database. */
 const highlightLines = z
-  .string()
-  .max(900, "Too long")
+  // The form sends the already-split array (resolver output) back to the server action, so accept
+  // both shapes; otherwise re-parsing fails with "expected string, received array".
+  .preprocess((x) => (Array.isArray(x) ? x.join("\n") : x), z.string())
+  .pipe(z.string().max(900, "Too long"))
   .transform((v) =>
     v
       .split("\n")

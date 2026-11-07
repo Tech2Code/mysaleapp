@@ -20,7 +20,8 @@ export async function signInAdmin(input: unknown): Promise<ActionResult> {
   const parsed = loginSchema.safeParse(input)
   if (!parsed.success) return fail("Enter a valid email and password.")
 
-  if (await limited("login", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
+  // Decision: the limiter fails open on purpose (a limiter outage must not lock the owner out); Supabase Auth has its own brute-force limits.
+  if (await limited("login",parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.auth.signInWithPassword(parsed.data)

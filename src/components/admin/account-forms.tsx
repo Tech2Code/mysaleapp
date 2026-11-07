@@ -17,7 +17,7 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <section data-ui="admin/Card" className="h-full space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
+    <section data-ui="admin/Card" className="mb-6 space-y-4 break-inside-avoid rounded-2xl border bg-card p-4 sm:space-y-5 sm:p-6">
       <div data-ui="admin/Card/div">
         <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
         <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
@@ -56,7 +56,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
     <form
       data-ui="admin/ProfileForm"
       noValidate
-      className="space-y-1"
+      className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         run(
           () => updateAdminProfile(values),
@@ -68,7 +68,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
         )
       )}
     >
-      <div data-ui="admin/ProfileForm/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+      <div data-ui="admin/ProfileForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
         <TextField label="Your name" kind="personName" fieldSize="md" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
         <TextField label="Mobile number (optional)" kind="phone" fieldSize="md" leading="+91" error={errors.phone?.message} {...form.register("phone")} />
       </div>
@@ -100,7 +100,7 @@ function EmailForm({ email }: { email: string }) {
         )
       )}
     >
-      <p data-ui="admin/EmailForm/p" className="text-sm">
+      <p data-ui="admin/EmailForm/p" className="text-sm wrap-anywhere">
         Signed in as <span data-ui="admin/EmailForm/span" className="font-semibold">{email}</span>
       </p>
       <TextField label="New email address" kind="email" fieldSize="md" error={errors.email?.message} {...form.register("email")} />
@@ -132,7 +132,7 @@ function PasswordForm() {
     <form
       data-ui="admin/PasswordForm"
       noValidate
-      className="space-y-1"
+      className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         run(
           () => changeAdminPassword(values),
@@ -152,7 +152,7 @@ function PasswordForm() {
         error={errors.current?.message}
         {...form.register("current")}
       />
-      <div data-ui="admin/PasswordForm/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+      <div data-ui="admin/PasswordForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
         <TextField
           label="New password"
           type="password"
@@ -183,15 +183,13 @@ function PasswordForm() {
 /** Everything about the signed-in admin: details, login email and password. */
 export function AccountSettings({ name, phone, email }: { name: string; phone: string; email: string }) {
   return (
-    <div data-ui="admin/AccountSettings" className="grid gap-6 xl:grid-cols-2 xl:items-stretch">
-      <div data-ui="admin/AccountSettings/div" className="space-y-6">
-        <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
-          <ProfileForm name={name} phone={phone} />
-        </Card>
-        <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
-          <EmailForm email={email} />
-        </Card>
-      </div>
+    <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-6">
+      <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
+        <ProfileForm name={name} phone={phone} />
+      </Card>
+      <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
+        <EmailForm email={email} />
+      </Card>
       <Card title="Password" description="Forgot it instead? Use “Forgot password” on the sign-in page.">
         <PasswordForm />
       </Card>

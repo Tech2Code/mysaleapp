@@ -1,13 +1,21 @@
 "use client"
 
 import { CalendarRangeIcon } from "lucide-react"
-import { usePathname, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useState, useTransition, type ReactNode } from "react"
-import { DashboardBodySkeleton } from "@/components/admin/admin-skeletons"
+import { DashboardBody } from "@/components/admin/dashboard/dashboard-body"
 import { SelectField, TextField } from "@/components/form"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { placeholderDashboard } from "@/features/orders/placeholders"
 import { fyOptions, fyYearOf, monthOptions, monthValue, type RangeKey } from "@/features/orders/dashboard-range"
 
 type Selected = { key: RangeKey; from: string; to: string }
+
+/**
+ * The dashboard always lives here. Not read with usePathname(): this component is also rendered inside
+ * the admin loading.tsx fallback, and a runtime-only hook there breaks prerendering of every admin page.
+ */
+const DASHBOARD_PATH = "/admin"
 
 /**
  * Date-range picker + the dashboard numbers it controls (`children`, rendered on the server).
@@ -24,7 +32,6 @@ export function DashboardRangeShell({
   children: ReactNode
 }) {
   const router = useRouter()
-  const pathname = usePathname()
   const [pending, startTransition] = useTransition()
   // two dropdowns: financial year, then a month of that year (or the whole year, or custom dates)
   const [fyYear, setFyYear] = useState(String(fyYearOf(current.from)))
@@ -37,7 +44,7 @@ export function DashboardRangeShell({
 
   const go = (qs: string) =>
     startTransition(() => {
-      router.push(`${pathname}${qs}`)
+      router.push(`${DASHBOARD_PATH}${qs}`)
     })
 
   const applyCustom = (f: string, t: string) => {
@@ -129,7 +136,7 @@ export function DashboardRangeShell({
         </p>
       </div>
       <div data-ui="admin/DashboardRangeShell/div" aria-busy={pending}>
-        {pending ? <DashboardBodySkeleton /> : children}
+        {pending ? <Skeletonize><DashboardBody d={placeholderDashboard()} bucket="day" /></Skeletonize> : children}
       </div>
     </div>
   )

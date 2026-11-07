@@ -2,7 +2,7 @@ import "server-only"
 import { requireAdmin } from "@/features/auth/guards"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { istDayKey, type DashboardRange } from "./dashboard-range"
-import { isOrderView, type OrderView } from "./views"
+import { isOrderView, RETURN_VIEWS, type OrderView } from "./views"
 import {
   isOrderStatus,
   mapOrder,
@@ -16,12 +16,48 @@ import {
 
 export const ADMIN_ORDERS_PAGE_SIZE = 20
 
+/** Just enough of the return rows for a list row to show its return stage (see returnStage()). */
+const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note)"
+
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
 export const PAYMENT_FILTERS = ["submitted", "pending", "paid"] as const
 const isPaymentFilter = (v: unknown): v is (typeof PAYMENT_FILTERS)[number] => (PAYMENT_FILTERS as readonly unknown[]).includes(v)
 
 type Supabase = Awaited<ReturnType<typeof getServerSupabase>>
+
+/** Filter to the orders that have a return request in `status`. No such orders -> match nothing (an impossible id), not everything. */
+async function ordersWithRequest(supabase: Supabase, status: "requested" | "approved"): Promise<<Q>(query: Q) => Q> {
+  const { data, error } = await supabase.from("return_requests").select("order_id").eq("status", status)
+  if (error) throw new Error(error.message)
+  const ids = (data ?? []).map((r) => r.order_id as string)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (query) => (query as any).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+}
+
+/** How many order ids a return view looks up (they go into one URL; the newest win). Actionable views are far smaller. */
+export const RETURN_VIEW_ID_LIMIT = 100
+
+/**
+ * Orders with a recorded return. `refunded` picks returns whose refund was recorded (true) or not (false);
+ * the "refund pending" view also needs the order's payment to still be 'paid' (not fully refunded yet).
+ */
+async function ordersWithReturns(supabase: Supabase, opts: { refunded: boolean; stillPaid: boolean }): Promise<<Q>(query: Q) => Q> {
+  const { data, error } = await supabase
+    .from("order_returns")
+    .select("order_id")
+    .eq("refunded", opts.refunded)
+    .order("created_at", { ascending: false })
+    .limit(RETURN_VIEW_ID_LIMIT)
+  if (error) throw new Error(error.message)
+  const ids = [...new Set((data ?? []).map((r) => r.order_id as string))]
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  return (query) => {
+    const q = (query as any).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+    return opts.stillPaid ? q.eq("payment_status", "paid") : q
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+}
 
 /**
  * THE definition of every order view. Used by the dashboard tile counts and by listOrders(), so they
@@ -38,14 +74,17 @@ async function orderViewFilter(supabase: Supabase, view: OrderView): Promise<<Q>
       return (query) => (query as any).eq("status", "pending").in("payment_status", ["pending", "failed"])
     case "to-ship":
       return (query) => (query as any).in("status", ["confirmed", "packed"])
-    case "return-requests": {
+    case "return-requests":
       // the requests live in their own table: orders with a request waiting for a decision
-      const { data, error } = await supabase.from("return_requests").select("order_id").eq("status", "requested")
-      if (error) throw new Error(error.message)
-      const ids = (data ?? []).map((r) => r.order_id as string)
-      // no pending requests -> match nothing (an impossible id), not everything
-      return (query) => (query as any).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
-    }
+      return ordersWithRequest(supabase, "requested")
+    case "returns-to-receive":
+      // approved, the goods have not come back yet (the request turns 'received' when the admin records the return)
+      return ordersWithRequest(supabase, "approved")
+    case "return-refund-pending":
+      // goods came back, no refund recorded for that return, and the payment is not fully refunded yet
+      return ordersWithReturns(supabase, { refunded: false, stillPaid: true })
+    case "returns-refunded":
+      return ordersWithReturns(supabase, { refunded: true, stillPaid: false })
     default: {
       const never: never = view
       return never
@@ -60,6 +99,16 @@ async function countOrdersInView(supabase: Supabase, view: OrderView) {
   return filter(supabase.from("orders").select("id", { count: "exact", head: true }))
 }
 
+/** Counts for the return chips of the orders list: the same filter as the lists (see orderViewFilter). */
+export type ReturnViewCounts = Record<(typeof RETURN_VIEWS)[number], number>
+
+export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
+  await requireAdmin()
+  const supabase = await getServerSupabase()
+  const counts = await Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0))
+  return Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, counts[i]])) as ReturnViewCounts
+}
+
 export async function listOrders(filters: OrderFilters): Promise<{ orders: Order[]; total: number; page: number }> {
   await requireAdmin()
   const supabase = await getServerSupabase()
@@ -68,7 +117,7 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
 
   let query = supabase
     .from("orders")
-    .select("*", { count: "exact" })
+    .select(`*, ${RETURN_EMBED}`, { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, from + ADMIN_ORDERS_PAGE_SIZE - 1)
 
@@ -103,7 +152,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at)")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at)")
     .eq("id", id)
     .maybeSingle<OrderRow>()
   if (error) throw new Error(error.message)
@@ -132,7 +181,7 @@ export type DashboardData = {
   averageOrder: { current: number; previous: number }
   /** Orders in the range by status. */
   byStatus: Record<OrderStatus, number>
-  attention: { toVerify: number; awaitingPayment: number; toFulfil: number; returnRequests: number }
+  attention: { toVerify: number; awaitingPayment: number; toFulfil: number; returnRequests: number; returnsToReceive: number; refundsToSend: number }
   topProducts: TopProduct[]
   lowStock: LowStockProduct[]
   recent: Order[]
@@ -159,7 +208,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 
   const now = new Date()
 
-  const [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes] = await Promise.all([
+  const [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes] = await Promise.all([
     supabase.rpc("dashboard_stats", {
       p_start: range.start.toISOString(),
       p_end: range.end.toISOString(),
@@ -167,11 +216,13 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       p_prev_end: range.previous?.end.toISOString() ?? null,
       p_bucket: range.bucket,
     }),
-    supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
+    supabase.from("orders").select(`*, ${RETURN_EMBED}`).order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
     countOrdersInView(supabase, "to-verify"),
     countOrdersInView(supabase, "awaiting-payment"),
     countOrdersInView(supabase, "to-ship"),
     countOrdersInView(supabase, "return-requests"),
+    countOrdersInView(supabase, "returns-to-receive"),
+    countOrdersInView(supabase, "return-refund-pending"),
     supabase
       .from("products")
       .select("id, name, stock, images")
@@ -181,7 +232,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       .limit(6)
       .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
   ])
-  const failed = [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, lowStockRes].find((r) => r.error)
+  const failed = [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes].find((r) => r.error)
   if (failed?.error) throw new Error(failed.error.message)
   const stats = statsRes.data as DashboardStats
 
@@ -232,6 +283,8 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       awaitingPayment: awaitingRes.count ?? 0,
       toFulfil: fulfilRes.count ?? 0,
       returnRequests: returnsRes.count ?? 0,
+      returnsToReceive: pickupsRes.count ?? 0,
+      refundsToSend: refundsRes.count ?? 0,
     },
     topProducts: stats.topProducts.map((p) => ({
       productId: p.productId,

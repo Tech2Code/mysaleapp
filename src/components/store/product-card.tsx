@@ -25,7 +25,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             alt={product.name}
             priority={priority}
             sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 50vw"
-            className="transition-transform duration-700 ease-out group-hover:scale-106"
+            className={`transition-transform duration-700 ease-out group-hover:scale-106 ${soldOut ? "opacity-60 grayscale" : ""}`}
           />
           <span data-ui="store/ProductCard/span-absolute" className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         </Link>
@@ -37,7 +37,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             </span>
           )}
           {soldOut && (
-            <span data-ui="store/ProductCard/span-2" className="rounded-full bg-foreground/80 px-2.5 py-1 text-xs font-semibold text-background">
+            <span data-ui="store/ProductCard/span-2" className="rounded-full bg-destructive-solid px-2.5 py-1 text-xs font-semibold text-white shadow">
               Sold out
             </span>
           )}
@@ -45,7 +45,16 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
 
         <WishlistButton productId={product.id} productName={product.name} className="absolute top-3 right-3" />
 
-        {!soldOut && (
+        {soldOut ? (
+          <button data-ui="store/ProductCard/button-add-disabled"
+            type="button"
+            disabled
+            aria-label={`${product.name} is sold out`}
+            className="absolute right-3 bottom-3 grid size-10 cursor-not-allowed place-items-center rounded-full bg-muted text-muted-foreground shadow"
+          >
+            <PlusIcon className="size-5" />
+          </button>
+        ) : (
           <button data-ui="store/ProductCard/button-grid"
             type="button"
             onClick={() => {

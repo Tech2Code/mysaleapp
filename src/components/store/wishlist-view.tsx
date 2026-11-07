@@ -3,26 +3,24 @@
 import { HeartIcon } from "lucide-react"
 import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { placeholderCards } from "@/features/products/placeholders"
 import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { useWishlist } from "@/store/wishlist"
 import { ProductCard, type ProductCardData } from "./product-card"
 
-export function WishlistView({ products }: { products: ProductCardData[] }) {
+/** `preview`: render placeholder cards as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
+export function WishlistView({ products, preview = false }: { products: ProductCardData[]; preview?: boolean }) {
   const mounted = useMounted()
   const ids = useWishlist((s) => s.ids)
   const user = useAuth((s) => s.user)
 
-  if (!mounted) {
-    return (
-      <div data-ui="store/WishlistView" className="grid grid-cols-2 gap-6 md:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton data-ui="store/WishlistView/Skeleton" key={i} className="aspect-4/5 rounded-2xl" />
-        ))}
-      </div>
-    )
+  if (preview || !mounted) {
+    // The saved list lives in the browser: show placeholder cards in the real grid meanwhile.
+    const grid = <WishlistGrid products={placeholderCards(4)} />
+    return preview ? grid : <Skeletonize>{grid}</Skeletonize>
   }
 
   const byId = new Map(products.map((p) => [p.id, p]))
@@ -52,12 +50,18 @@ export function WishlistView({ products }: { products: ProductCardData[] }) {
           </Link>
         </div>
       ) : (
-        <div data-ui="store/WishlistView/div-grid-2" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
-          {saved.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        <WishlistGrid products={saved} />
       )}
+    </div>
+  )
+}
+
+function WishlistGrid({ products }: { products: ProductCardData[] }) {
+  return (
+    <div data-ui="store/WishlistGrid" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
     </div>
   )
 }

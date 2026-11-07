@@ -1,114 +1,18 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import type { Metadata } from "next"
-import Link from "next/link"
-import { AdminPageHeader } from "@/components/admin/admin-page-header"
-import { OrdersBrowser } from "@/components/admin/order-filters"
-import { PaymentBadge } from "@/components/shared/payment-badge"
-import { StatusBadge } from "@/components/shared/status-badge"
-import { buttonVariants } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ADMIN_ORDERS_PAGE_SIZE, listOrders } from "@/features/orders/admin-queries"
-import { formatDateTime, formatPrice } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import { OrdersView } from "@/components/admin/orders-view"
+import { ADMIN_ORDERS_PAGE_SIZE, getReturnViewCounts, listOrders } from "@/features/orders/admin-queries"
+
+import { firstParam } from "@/lib/validation"
 
 export const metadata: Metadata = { title: "Orders" }
 
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
+const one = firstParam
 
 export default async function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   const sp = await searchParams
   const filters = { status: one(sp.status), payment: one(sp.payment), view: one(sp.view), q: one(sp.q), page: one(sp.page) }
-  const { orders, total, page } = await listOrders(filters)
+  const [{ orders, total, page }, returnCounts] = await Promise.all([listOrders(filters), getReturnViewCounts()])
   const pages = Math.max(1, Math.ceil(total / ADMIN_ORDERS_PAGE_SIZE))
 
-  const pageHref = (p: number) => {
-    const qs = new URLSearchParams()
-    if (filters.view) qs.set("view", filters.view)
-    if (filters.status) qs.set("status", filters.status)
-    if (filters.payment) qs.set("payment", filters.payment)
-    if (filters.q) qs.set("q", filters.q)
-    if (p > 1) qs.set("page", String(p))
-    return `/admin/orders${qs.size ? `?${qs}` : ""}`
-  }
-
-  return (
-    <>
-      <AdminPageHeader title="Orders" description={`${total} order${total === 1 ? "" : "s"} found`} />
-      <OrdersBrowser status={filters.status} payment={filters.payment} view={filters.view} q={filters.q}>
-      <div data-ui="page:/admin/orders/div" className="overflow-hidden rounded-2xl border bg-card">
-        {orders.length === 0 ? (
-          <p data-ui="page:/admin/orders/p" className="p-8 sm:p-12 text-center text-sm text-muted-foreground">No orders match these filters.</p>
-        ) : (
-          <Table data-ui="page:/admin/orders/Table">
-            <TableHeader data-ui="page:/admin/orders/TableHeader">
-              <TableRow data-ui="page:/admin/orders/TableRow">
-                <TableHead data-ui="page:/admin/orders/TableHead-order" className="pl-5">Order</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-customer">Customer</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-items" className="hidden md:table-cell">Items</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-status">Status</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-payment" className="hidden lg:table-cell">Payment</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-total" className="text-right">Total</TableHead>
-                <TableHead data-ui="page:/admin/orders/TableHead-placed" className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody data-ui="page:/admin/orders/TableBody">
-              {orders.map((o) => (
-                <TableRow data-ui="page:/admin/orders/TableRow-2" key={o.id} className="group">
-                  <TableCell data-ui="page:/admin/orders/TableCell" className="pl-5">
-                    <Link data-ui="page:/admin/orders/Link" href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
-                      {o.orderCode}
-                    </Link>
-                  </TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-2">
-                    <div data-ui="page:/admin/orders/div-2" className="font-medium">{o.customerName}</div>
-                    <div data-ui="page:/admin/orders/div-3" className="text-xs text-muted-foreground">
-                      {o.phone} · {o.city}
-                    </div>
-                  </TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-hidden" className="hidden max-w-64 truncate text-sm text-muted-foreground md:table-cell">
-                    {o.items.reduce((n, i) => n + i.quantity, 0)} × {o.items.map((i) => i.name).join(", ")}
-                  </TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-3">
-                    <StatusBadge status={o.status} />
-                  </TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-hidden-2" className="hidden lg:table-cell">
-                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
-                  </TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
-                  <TableCell data-ui="page:/admin/orders/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
-                    {formatDateTime(o.createdAt)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      {pages > 1 && (
-        <nav data-ui="page:/admin/orders/nav-pagination" className="mt-4 flex items-center justify-between" aria-label="Pagination">
-          <Link data-ui="page:/admin/orders/Link-previous"
-            href={pageHref(page - 1)}
-            aria-disabled={page <= 1}
-            tabIndex={page <= 1 ? -1 : undefined}
-            className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page <= 1 && "pointer-events-none opacity-50")}
-          >
-            <ChevronLeftIcon /> Previous
-          </Link>
-          <span data-ui="page:/admin/orders/span" className="text-sm text-muted-foreground">
-            Page {page} of {pages}
-          </span>
-          <Link data-ui="page:/admin/orders/Link-next"
-            href={pageHref(page + 1)}
-            aria-disabled={page >= pages}
-            tabIndex={page >= pages ? -1 : undefined}
-            className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page >= pages && "pointer-events-none opacity-50")}
-          >
-            Next <ChevronRightIcon />
-          </Link>
-        </nav>
-      )}
-      </OrdersBrowser>
-    </>
-  )
+  return <OrdersView orders={orders} total={total} page={page} pages={pages} filters={filters} returnCounts={returnCounts} />
 }

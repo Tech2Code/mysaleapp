@@ -11,7 +11,7 @@ const ICONS: Record<OrderStatus, typeof TruckIcon> = {
   cancelled: XCircleIcon,
 }
 
-const TONES = {
+export const TONES = {
   neutral: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200",
   info: "bg-sky-100 text-sky-900 dark:bg-sky-900/40 dark:text-sky-200",
   progress: "bg-violet-100 text-violet-900 dark:bg-violet-900/40 dark:text-violet-200",

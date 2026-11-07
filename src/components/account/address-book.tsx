@@ -46,8 +46,9 @@ function AddressDialog({
 
   const form = useForm<AddressInput, unknown, AddressValues>({
     resolver: zodResolver(addressSchema),
-    // `values` re-syncs the form each time a different address is opened
-    values: {
+    // The dialog is remounted (see `key` in AddressBook) on every open, so these defaults are always fresh.
+    // (`values` did not reset when the same address was reopened, so a previous toggle leaked into the next open.)
+    defaultValues: {
       label: address?.label ?? "Home",
       fullName: address?.fullName ?? defaults.fullName,
       phone: address?.phone ?? defaults.phone,
@@ -169,12 +170,14 @@ export function AddressBook({
   const router = useRouter()
   const [editing, setEditing] = useState<Address | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [openCount, setOpenCount] = useState(0)
   const [deleting, setDeleting] = useState<Address | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
 
   const openNew = () => {
     setEditing(null)
+    setOpenCount((n) => n + 1)
     setDialogOpen(true)
   }
 
@@ -250,6 +253,7 @@ export function AddressBook({
                   className="rounded-full"
                   onClick={() => {
                     setEditing(a)
+                    setOpenCount((n) => n + 1)
                     setDialogOpen(true)
                   }}
                 >
@@ -276,6 +280,7 @@ export function AddressBook({
       )}
 
       <AddressDialog
+        key={`${editing?.id ?? "new"}-${openCount}`}
         address={editing}
         isFirst={addresses.length === 0}
         open={dialogOpen}

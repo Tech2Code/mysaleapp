@@ -8,6 +8,8 @@ import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { optionalNumber } from "@/lib/zod-helpers"
 import { paymentReferenceSchema, shippingSchema } from "./schema"
+import { lockedMessage } from "./locking"
+import { isPaymentMoneyLocked, paymentUpdateProblem } from "./payment-rules"
 import { mapRpcError } from "./rpc-errors"
 import { OTHER_DETAIL_MESSAGE, cancelReasonText, otherNeedsDetail } from "./reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition } from "./transitions"
@@ -44,6 +46,9 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   if (parsed.data.expectedStatus && parsed.data.expectedStatus !== current.status) {
     return fail("This order was just changed by someone else. Refresh the page and try again.")
   }
+  // Delivered / cancelled orders are frozen (shipping, status). The DB trigger lock_finished_orders enforces the same.
+  const locked = lockedMessage(current.status)
+  if (locked) return fail(locked)
 
   // One rule set for every move (see transitions.ts): allowed next step, payment first, courier before "shipped".
   const problem = checkTransition({
@@ -95,6 +100,8 @@ const updatePaymentSchema = z.object({
   amount: optionalNumber.pipe(z.number().min(0).max(10_000_000).nullable()),
   /** Shown to the customer (e.g. why a payment was rejected). */
   note: z.preprocess(blankToNull, z.string().trim().max(300, "Keep the note under 300 characters").nullable()),
+  /** The refunded_amount the screen was showing; a refund is refused if it has changed (double click / stale tab). */
+  expectedRefunded: z.number().min(0).max(10_000_000).optional(),
 })
 
 /**
@@ -130,6 +137,19 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
     return fail("This order is cancelled. Record a refund instead of a payment.")
   }
 
+  // A paid order never goes back to unpaid, a refunded one is terminal, and after delivery the received amount / UTR are locked
+  // (same rules as the form and the DB trigger guard_payment_status, see payment-rules.ts).
+  const rule = paymentUpdateProblem(
+    {
+      status: order.status,
+      paymentStatus: order.payment_status ?? "pending",
+      paymentAmount: order.payment_amount == null ? null : Number(order.payment_amount),
+      paymentReference: order.payment_reference,
+    },
+    { status: p.status, amount: p.amount, reference: p.reference }
+  )
+  if (rule && !(p.status === "refunded" && order.payment_status === "refunded")) return fail(rule)
+
   // Refunds have one path (refund_order RPC): it keeps payment_status, refunded_at and refunded_amount in step.
   if (p.status === "refunded" && order.payment_status === "paid") {
     const paid = Number(order.payment_amount ?? order.total)
@@ -144,9 +164,11 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
       // the form pre-fills the customer's own payment UTR; that is not a refund reference, so only a different value is kept
       p_reference: p.reference && p.reference !== order.payment_reference ? p.reference : null,
       p_note: p.note,
+      // idempotency: the DB refuses (ORDER_CHANGED) if refunded_amount is no longer what the admin's screen showed
+      p_expected_refunded: p.expectedRefunded ?? null,
     })
     if (refundError) {
-      if (refundError.message.includes("ORDER_CHANGED") || refundError.message.includes("NOT_PAID")) return fail("This order was just changed by someone else. Refresh the page and try again.")
+      if (refundError.message.includes("ORDER_CHANGED") || refundError.message.includes("NOT_PAID")) return fail(mapRpcError("ORDER_CHANGED", "This order was just changed by someone else. Refresh the page and try again."))
       if (refundError.message.includes("BAD_AMOUNT")) return fail("That refund amount is not valid for this order.", { amount: ["Not a valid amount"] })
       return fail("Could not record the refund")
     }
@@ -160,13 +182,20 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   const markPaid = p.status === "paid"
   const confirmNow = markPaid && order.status === "pending"
 
+  // Finished + paid/refunded: only the method and the note may still be edited (the DB refuses anything else)
+  const moneyLocked = isPaymentMoneyLocked({ status: order.status, paymentStatus: order.payment_status ?? "pending" })
+
   const { data: updated, error } = await supabase
     .from("orders")
     .update({
       payment_status: p.status,
       payment_method: p.method ?? (markPaid ? "upi" : null),
-      payment_reference: p.reference,
-      payment_amount: markPaid ? (p.amount ?? Number(order.total)) : p.amount,
+      ...(moneyLocked
+        ? {}
+        : {
+            payment_reference: p.reference,
+            payment_amount: markPaid ? (p.amount ?? Number(order.total)) : p.amount,
+          }),
       payment_note: p.note,
       // keep the original paid time if it was already paid
       ...(markPaid && order.payment_status !== "paid" ? { payment_paid_at: new Date().toISOString() } : {}),
@@ -335,4 +364,33 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
   revalidatePath("/admin", "layout")
   revalidatePath("/account", "layout")
   return { ok: true }
+}
+
+const refundReturnSchema = z.object({
+  returnId: z.uuid(),
+  /** The refunded_amount the screen showed; the DB refuses if it moved on (double click / stale tab). */
+  expectedRefunded: z.number().min(0).max(10_000_000).optional(),
+})
+
+/**
+ * Refund the items of ONE earlier return that was recorded without a refund. Same bookkeeping as ticking
+ * "I have refunded these items" when recording the return (migration 0024, RPC refund_return): it marks the
+ * return refunded, adds its item value to refunded_amount and marks the payment Refunded once every item is.
+ */
+export async function refundReturn(input: unknown): Promise<ActionResult<{ refundedAmount: number; fullyRefunded: boolean }>> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const parsed = refundReturnSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.")
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("refund_return", {
+    p_return_id: parsed.data.returnId,
+    p_expected_refunded: parsed.data.expectedRefunded ?? null,
+  })
+  if (error) return fail(mapRpcError(error.message, "Could not record the refund"))
+  revalidatePath("/admin", "layout")
+  revalidatePath("/account", "layout")
+  const out = (data ?? {}) as { refundedAmount?: number; fullyRefunded?: boolean }
+  return { ok: true, data: { refundedAmount: Number(out.refundedAmount ?? 0), fullyRefunded: Boolean(out.fullyRefunded) } }
 }

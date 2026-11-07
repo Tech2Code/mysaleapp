@@ -11,11 +11,16 @@ import { useForm } from "react-hook-form"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
 import { OrderTimeline } from "@/components/shared/order-timeline"
+import { ReturnStageBadge } from "@/components/shared/return-stage-badge"
+import { ReturnTimeline } from "@/components/shared/return-timeline"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { trackOrder } from "@/features/orders/actions"
+import { placeholderTrackedOrder } from "@/features/orders/placeholders"
+import type { StoreSettings } from "@/features/settings/types"
 import { trackOrderSchema } from "@/features/orders/schema"
+import { canRequestAgain, customerStatusLine, returnStage, stageInputOf } from "@/features/orders/returns"
 import { STATUS_META, type TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { formatDate } from "@/lib/format"
@@ -65,23 +70,138 @@ function EmptyState() {
   )
 }
 
-function ResultSkeleton() {
+const PLACEHOLDER_QUERY = { code: "KK-7F3K9Q", phoneLast4: "3210" }
+
+/** The order card on the right. Also rendered with a placeholder order, inside <Skeletonize>, while a lookup is running. */
+function TrackResult({
+  result,
+  query,
+  shop,
+  refetch,
+}: {
+  result: TrackedOrder
+  query: { code: string; phoneLast4: string } | null
+  shop: StoreSettings
+  refetch: (phoneLast4?: string) => Promise<void>
+}) {
+  const itemCount = result.items.reduce((n, i) => n + i.quantity, 0)
   return (
-    <div data-ui="store/ResultSkeleton" className="h-full space-y-5 rounded-3xl border bg-card p-6 sm:p-8" aria-hidden>
-      <div data-ui="store/ResultSkeleton/div-flex" className="flex justify-between">
-        <Skeleton data-ui="store/ResultSkeleton/Skeleton" className="h-10 w-48 rounded-xl" />
-        <Skeleton data-ui="store/ResultSkeleton/Skeleton-2" className="h-8 w-24 rounded-full" />
-      </div>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div data-ui="store/ResultSkeleton/div-flex-2" key={i} className="flex gap-4">
-          <Skeleton data-ui="store/ResultSkeleton/Skeleton-3" className="size-9 rounded-full" />
-          <div data-ui="store/ResultSkeleton/div" className="flex-1 space-y-2">
-            <Skeleton data-ui="store/ResultSkeleton/Skeleton-4" className="h-4 w-32" />
-            <Skeleton data-ui="store/ResultSkeleton/Skeleton-5" className="h-3 w-24" />
+    <m.section data-ui="store/TrackResult"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="space-y-6 rounded-3xl border bg-card p-6 sm:p-8"
+    >
+      <div data-ui="store/TrackResult/div-flex" className="flex flex-wrap items-start justify-between gap-3">
+        <div data-ui="store/TrackResult/div">
+          <div data-ui="store/TrackResult/div-flex-2" className="flex flex-wrap items-center gap-2">
+            <p data-ui="store/TrackResult/p" className="font-mono text-xl font-semibold">{result.orderCode}</p>
+            <CopyButton value={result.orderCode} label="Order ID" />
           </div>
+          <p data-ui="store/TrackResult/p-2" className="text-sm text-muted-foreground">
+            Placed {formatDate(result.createdAt)} · {result.city}
+          </p>
         </div>
-      ))}
-    </div>
+        <div data-ui="store/TrackResult/div-flex-3" className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={result.status} pulse />
+          <ReturnStageBadge stage={returnStage(stageInputOf(result))} audience="customer" alwaysShow />
+        </div>
+      </div>
+      <p data-ui="store/TrackResult/p-3" className="text-sm text-muted-foreground">
+                {customerStatusLine(STATUS_META[result.status].description, returnStage(stageInputOf(result)), {
+                  canRequestAgain: result.status === "delivered" ? canRequestAgain(result.returnRequests, result.returnWindow.open) : undefined,
+                })}
+              </p>
+      {query && <ReturnRequestsPanel requests={result.returnRequests} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} />}
+      <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />
+      {result.cancellation && (
+        <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
+      )}
+      {/* Guests only get what they can act on (pay / "we're verifying"). The receipt, UTR and the priced item list
+          need no code+4-digits lookup to be readable by anyone, so they stay in the signed-in order page. */}
+      {query && result.paymentStatus !== "paid" && (
+        <PaymentPanel
+          orderCode={result.orderCode}
+          phoneLast4={query.phoneLast4}
+          total={result.total}
+          orderStatus={result.status}
+          payment={result}
+          createdAt={result.createdAt}
+          onSubmitted={() => void refetch()}
+        />
+      )}
+      <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} />
+      <div data-ui="store/TrackResult/div-2" className="empty:hidden"><ReturnTimeline input={stageInputOf(result)} audience="customer" /></div>
+      {query && (
+        <div data-ui="store/TrackResult/div-flex-4" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
+          <RequestReturn
+            orderCode={result.orderCode}
+            phoneLast4={query.phoneLast4}
+            status={result.status}
+            items={result.items}
+            returns={result.returns}
+            requests={result.returnRequests}
+            window={result.returnWindow}
+            whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
+            onDone={() => void refetch()}
+          />
+          <CancelOrder
+            orderCode={result.orderCode}
+            // `delivery` only comes back for the signed-in owner; everyone else is a guest and must type the full number to cancel
+            phoneLast4={result.delivery ? undefined : query.phoneLast4}
+            status={result.status}
+            paymentStatus={result.paymentStatus}
+            whatsappUrl={shopWhatsappLink(shop, `Hi! I want to cancel my order ${result.orderCode}.`)}
+            onCancelled={() => void refetch()}
+          />
+        </div>
+      )}
+      <section data-ui="store/TrackResult/section-items-in-this-order" aria-label="Items in this order" className="border-t pt-5 text-sm">
+        <h3 data-ui="store/TrackResult/h3-item" className="font-sans font-semibold">
+          {itemCount} item{itemCount === 1 ? "" : "s"} in this order
+        </h3>
+        <ul data-ui="store/TrackResult/ul" className="mt-2 space-y-1 text-muted-foreground">
+          {result.items.map((i) => (
+            <li data-ui="store/TrackResult/li-flex" key={i.productId} className="flex gap-2">
+              <span data-ui="store/TrackResult/span" className="min-w-0 flex-1 truncate leading-normal">{i.name}</span>
+              <span data-ui="store/TrackResult/span-2" className="shrink-0">× {i.quantity}</span>
+            </li>
+          ))}
+        </ul>
+        <p data-ui="store/TrackResult/p-4" className="mt-3 text-xs text-muted-foreground">
+          Need the invoice or payment details?{" "}
+          <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+            Sign in and open My orders
+          </Link>
+        </p>
+      </section>
+      {query && result.delivery && (
+        <DeliveryEditor
+          orderCode={result.orderCode}
+          delivery={result.delivery}
+          editable
+          phoneLast4={query.phoneLast4}
+          onChanged={(newLast4) => void refetch(newLast4)}
+        />
+      )}
+      {/* Guests don't get the address back (anyone with the code + 4 digits could read it): only the city,
+          and a way to change it while the order is still pending. */}
+      {!result.delivery && result.status === "pending" && (
+        <p data-ui="store/TrackResult/p-5" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
+          Delivering to <span data-ui="store/TrackResult/span-3" className="font-semibold text-foreground">{result.city}</span>. To change the address,{" "}
+          <a
+            data-ui="store/TrackResult/a-message-us-on-whatsapp"
+            href={shopWhatsappLink(shop, `Hi! I want to change the delivery address of my order ${result.orderCode}.`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-foreground underline underline-offset-4"
+          >
+            message us on WhatsApp
+          </a>{" "}
+          or sign in.
+        </p>
+      )}
+    </m.section>
   )
 }
 
@@ -94,7 +214,6 @@ export function TrackOrder() {
   useBlockWhile(pending)
   const [query, setQuery] = useState<{ code: string; phoneLast4: string } | null>(null)
   const resultRef = useRef<HTMLDivElement>(null)
-  const itemCount = result?.items.reduce((n, i) => n + i.quantity, 0) ?? 0
 
   const form = useForm<TrackInput>({
     resolver: zodResolver(trackOrderSchema),
@@ -183,117 +302,12 @@ export function TrackOrder() {
         <AnimatePresence mode="wait">
           {pending ? (
             <m.div data-ui="store/TrackOrder/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <ResultSkeleton />
+              <Skeletonize>
+                <TrackResult result={placeholderTrackedOrder()} query={PLACEHOLDER_QUERY} shop={shop} refetch={async () => {}} />
+              </Skeletonize>
             </m.div>
           ) : result ? (
-            <m.section data-ui="store/TrackOrder/m.section"
-              key={result.orderCode}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="space-y-6 rounded-3xl border bg-card p-6 sm:p-8"
-            >
-              <div data-ui="store/TrackOrder/div-flex" className="flex flex-wrap items-start justify-between gap-3">
-                <div data-ui="store/TrackOrder/div-4">
-                  <div data-ui="store/TrackOrder/div-flex-2" className="flex flex-wrap items-center gap-2">
-                    <p data-ui="store/TrackOrder/p-4" className="font-mono text-xl font-semibold">{result.orderCode}</p>
-                    <CopyButton value={result.orderCode} label="Order ID" />
-                  </div>
-                  <p data-ui="store/TrackOrder/p-5" className="text-sm text-muted-foreground">
-                    Placed {formatDate(result.createdAt)} · {result.city}
-                  </p>
-                </div>
-                <StatusBadge status={result.status} pulse />
-              </div>
-              <p data-ui="store/TrackOrder/p-6" className="text-sm text-muted-foreground">{STATUS_META[result.status].description}.</p>
-              {query && <ReturnRequestsPanel requests={result.returnRequests} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} />}
-              <ReturnsList returns={result.returns} audience="customer" />
-              {result.cancellation && (
-                <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
-              )}
-              {/* Guests only get what they can act on (pay / "we're verifying"). The receipt, UTR and the priced item list
-                  need no code+4-digits lookup to be readable by anyone, so they stay in the signed-in order page. */}
-              {query && result.paymentStatus !== "paid" && (
-                <PaymentPanel
-                  orderCode={result.orderCode}
-                  phoneLast4={query.phoneLast4}
-                  total={result.total}
-                  orderStatus={result.status}
-                  payment={result}
-                  createdAt={result.createdAt}
-                  onSubmitted={() => void refetch()}
-                />
-              )}
-              <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} />
-              {query && (
-                <div data-ui="store/TrackOrder/div-flex-3" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
-                  <RequestReturn
-                    orderCode={result.orderCode}
-                    phoneLast4={query.phoneLast4}
-                    status={result.status}
-                    items={result.items}
-                    returns={result.returns}
-                    requests={result.returnRequests}
-                    window={result.returnWindow}
-                    whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
-                    onDone={() => void refetch()}
-                  />
-                  <CancelOrder
-                    orderCode={result.orderCode}
-                    phoneLast4={query.phoneLast4}
-                    status={result.status}
-                    paymentStatus={result.paymentStatus}
-                    whatsappUrl={shopWhatsappLink(shop, `Hi! I want to cancel my order ${result.orderCode}.`)}
-                    onCancelled={() => void refetch()}
-                  />
-                </div>
-              )}
-              <section data-ui="store/TrackOrder/section-items-in-this-order" aria-label="Items in this order" className="border-t pt-5 text-sm">
-                <h3 data-ui="store/TrackOrder/h3-item" className="font-sans font-semibold">
-                  {itemCount} item{itemCount === 1 ? "" : "s"} in this order
-                </h3>
-                <ul data-ui="store/TrackOrder/ul" className="mt-2 space-y-1 text-muted-foreground">
-                  {result.items.map((i) => (
-                    <li data-ui="store/TrackOrder/li-flex" key={i.productId} className="flex gap-2">
-                      <span data-ui="store/TrackOrder/span" className="min-w-0 flex-1 truncate leading-normal">{i.name}</span>
-                      <span data-ui="store/TrackOrder/span-2" className="shrink-0">× {i.quantity}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p data-ui="store/TrackOrder/p-7" className="mt-3 text-xs text-muted-foreground">
-                  Need the invoice or payment details?{" "}
-                  <Link data-ui="store/TrackOrder/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
-                    Sign in and open My orders
-                  </Link>
-                </p>
-              </section>
-              {query && result.delivery && (
-                <DeliveryEditor
-                  orderCode={result.orderCode}
-                  delivery={result.delivery}
-                  editable
-                  phoneLast4={query.phoneLast4}
-                  onChanged={(newLast4) => void refetch(newLast4)}
-                />
-              )}
-              {/* Guests don't get the address back (anyone with the code + 4 digits could read it): only the city,
-                  and a way to change it while the order is still pending. */}
-              {!result.delivery && result.status === "pending" && (
-                <p data-ui="store/TrackOrder/p-8" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
-                  Delivering to <span data-ui="store/TrackOrder/span-3" className="font-semibold text-foreground">{result.city}</span>. To change the address,{" "}
-                  <a
-                    data-ui="store/TrackOrder/a-message-us-on-whatsapp"
-                    href={shopWhatsappLink(shop, `Hi! I want to change the delivery address of my order ${result.orderCode}.`)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-foreground underline underline-offset-4"
-                  >
-                    message us on WhatsApp
-                  </a>{" "}
-                  or sign in.
-                </p>
-              )}
-            </m.section>
+            <TrackResult key={result.orderCode} result={result} query={query} shop={shop} refetch={refetch} />
           ) : (
             <m.div data-ui="store/TrackOrder/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
               <EmptyState />

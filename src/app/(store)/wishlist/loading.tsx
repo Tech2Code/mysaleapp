@@ -1,5 +1,10 @@
-import { WishlistSkeleton } from "@/components/store/store-skeletons"
+import { Skeletonize } from "@/components/shared/skeletonize"
+import { WishlistPageView } from "@/components/store/page-views"
 
 export default function Loading() {
-  return <WishlistSkeleton />
+  return (
+    <Skeletonize>
+      <WishlistPageView products={[]} preview />
+    </Skeletonize>
+  )
 }

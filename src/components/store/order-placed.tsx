@@ -7,9 +7,10 @@ import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { buttonVariants } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import type { PlacedOrder } from "@/features/orders/actions"
 import { trackOrder } from "@/features/orders/actions"
+import { placeholderPlacedOrder, placeholderTrackedOrder } from "@/features/orders/placeholders"
 import type { TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { cn } from "@/lib/utils"
@@ -39,22 +40,25 @@ const HEADLINE: Record<string, { title: string; text: string }> = {
  * Shown right after checkout, and again if the page is reloaded. The payment state always
  * comes from the server, so a refresh never shows the "pay now" screen to someone who already paid.
  */
-export function OrderPlaced() {
+/** `preview`: render a placeholder order and read nothing (loading.tsx wraps it in <Skeletonize>). */
+export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   const shop = useStoreSettings()
-  const code = (useSearchParams().get("code") ?? "").toUpperCase()
+  const urlCode = (useSearchParams().get("code") ?? "").toUpperCase()
+  const code = preview ? placeholderPlacedOrder().orderCode : urlCode
   // sessionStorage is read as an external store: null on the server, real value on the client.
   const raw = useSyncExternalStore(noopSubscribe, () => readSession(LAST_ORDER_KEY), () => null)
 
   const order = useMemo<PlacedOrder | null>(() => {
+    if (preview) return placeholderPlacedOrder()
     try {
       const parsed = raw ? (JSON.parse(raw) as PlacedOrder) : null
       return parsed?.orderCode === code ? parsed : null
     } catch {
       return null
     }
-  }, [raw, code])
+  }, [raw, code, preview])
 
-  const [state, setState] = useState<TrackedOrder | null>(null)
+  const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "pending" }) : null)
   const [lookupFailed, setLookupFailed] = useState(false)
 
   const load = useCallback(async () => {
@@ -65,7 +69,7 @@ export function OrderPlaced() {
 
   // Read the real payment state on mount (and whenever the order changes).
   useEffect(() => {
-    if (!order) return
+    if (!order || preview) return
     let cancelled = false
     trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 }).then((res) => {
       if (cancelled) return
@@ -75,7 +79,7 @@ export function OrderPlaced() {
     return () => {
       cancelled = true
     }
-  }, [order])
+  }, [order, preview])
 
   const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.pending) : HEADLINE.pending
 
@@ -137,7 +141,15 @@ export function OrderPlaced() {
             </p>
           ) : (
             // never flash the "pay now" screen before we know the real payment state
-            <Skeleton data-ui="store/OrderPlaced/Skeleton" className="h-72 rounded-2xl" aria-hidden />
+            <Skeletonize>
+              <PaymentPanel
+                orderCode={order.orderCode}
+                phoneLast4={order.phoneLast4}
+                total={order.total}
+                orderStatus="pending"
+                payment={placeholderTrackedOrder({ paymentStatus: "pending" })}
+              />
+            </Skeletonize>
           )}
         </div>
 

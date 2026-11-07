@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -14,11 +14,14 @@ import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/featur
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, statusChoices } from "@/features/orders/transitions"
 import { COURIER_SUGGESTIONS, shippingSchema } from "@/features/orders/schema"
+import { isOrderLocked, lockNote } from "@/features/orders/locking"
+import type { ReturnStage } from "@/features/orders/returns"
 import { STATUS_META, type OrderStatus, type PaymentStatus, type ShippingDetails } from "@/features/orders/types"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { buildStatusUpdateMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { ShippingInfo } from "@/components/shared/shipping-info"
 
 type Values = {
   status: OrderStatus
@@ -39,6 +42,7 @@ export function OrderStatusControl({
   status,
   paymentStatus,
   shipping,
+  returnStage = null,
 }: {
   orderId: string
   orderCode: string
@@ -47,7 +51,13 @@ export function OrderStatusControl({
   status: OrderStatus
   paymentStatus: PaymentStatus
   shipping: ShippingDetails | null
+  /** A delivered order with a return in progress: the WhatsApp update talks about the return. */
+  returnStage?: ReturnStage | null
 }) {
+  // Delivered / cancelled orders are frozen (features/orders/locking.ts; the server action and a DB trigger enforce it too).
+  const locked = isOrderLocked(status)
+  const note = lockNote(status)
+  const announcedStage = status === "delivered" && returnStage?.badge ? returnStage : null
   // Only the current status and the legal next steps are offered (see features/orders/transitions.ts).
   const statusOptions = statusChoices(status).map((s) => ({ value: s, label: STATUS_META[s].label }))
   const router = useRouter()
@@ -84,7 +94,7 @@ export function OrderStatusControl({
     : null
   const notifyUrl = whatsappLink(
     `91${phone}`,
-    buildStatusUpdateMessage(shop, { orderCode, customerName, status: value, shipping: notifyShipping })
+    buildStatusUpdateMessage(shop, { orderCode, customerName, status: value, shipping: notifyShipping, returnStage: announcedStage })
   )
 
   const onSubmit = form.handleSubmit((values) => {
@@ -135,12 +145,29 @@ export function OrderStatusControl({
 
   return (
     <form data-ui="admin/OrderStatusControl" onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} />
+      {locked ? (
+        <div data-ui="admin/OrderStatusControl/div" className="space-y-3">
+          <p data-ui="admin/OrderStatusControl/p-flex" role="note" className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium">
+            <LockIcon className="size-4 shrink-0" aria-hidden /> {note}
+          </p>
+          <h3 data-ui="admin/OrderStatusControl/h3-shipping-details" className="text-sm font-semibold">Shipping details</h3>
+          {shipping ? (
+            <ShippingInfo shipping={shipping} />
+          ) : (
+            <p data-ui="admin/OrderStatusControl/p" className="text-sm text-muted-foreground">No courier details were added to this order.</p>
+          )}
+          <p data-ui="admin/OrderStatusControl/p-2" className="text-xs text-muted-foreground">
+            You can still add a private note, record a return or a refund.
+          </p>
+        </div>
+      ) : (
+        <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} />
+      )}
 
-      {showShipping && (
+      {!locked && showShipping && (
         <fieldset data-ui="admin/OrderStatusControl/fieldset" className="space-y-1 rounded-xl border border-violet-200 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <legend data-ui="admin/OrderStatusControl/legend-shipping-details" className="px-1 text-sm font-semibold">Shipping details</legend>
-          <p data-ui="admin/OrderStatusControl/p" className="-mt-2 text-xs text-muted-foreground">
+          <p data-ui="admin/OrderStatusControl/p-3" className="-mt-2 text-xs text-muted-foreground">
             {value === "shipped" ? "Courier name is required to mark an order as shipped. " : ""}Customers see these on their order page.
           </p>
           <TextField
@@ -178,16 +205,18 @@ export function OrderStatusControl({
         </fieldset>
       )}
 
-      <Button data-ui="admin/OrderStatusControl/Button-update-status" type="submit" disabled={!isDirty || pending} className="w-full rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Update status
-      </Button>
+      {!locked && (
+        <Button data-ui="admin/OrderStatusControl/Button-update-status" type="submit" disabled={!isDirty || pending} className="w-full rounded-full">
+          {pending && <Loader2Icon className="animate-spin" />} Update status
+        </Button>
+      )}
       <a data-ui="admin/OrderStatusControl/a-send"
         href={notifyUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="flex h-9 items-center justify-center gap-2 rounded-full bg-whatsapp-solid text-sm font-semibold text-white transition-opacity hover:opacity-90"
       >
-        <WhatsAppIcon className="size-4" /> Send “{STATUS_META[value].label}” update
+        <WhatsAppIcon className="size-4" /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
       </a>
     </form>
   )

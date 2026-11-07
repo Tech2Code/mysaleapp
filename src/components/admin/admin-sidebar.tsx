@@ -93,16 +93,16 @@ function NavItemsWithPath(props: { onNavigate?: () => void; ordersBadge?: ReactN
 function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ordersBadge?: ReactNode }) {
   return (
     <div data-ui="admin/SidebarBody" className="flex h-full flex-col gap-6 p-4">
-      <div data-ui="admin/SidebarBody/div" className="px-1 pt-1">
-        <Logo href="/admin" />
-        <p data-ui="admin/SidebarBody/p" className="mt-1 pl-12.4 text-xs text-sidebar-foreground/50">Admin panel</p>
+      {/* Same height as the top bar, so the two divider lines meet. */}
+      <div data-ui="admin/SidebarBody/div-flex" className="-mx-4 -mt-4 flex h-(--admin-topbar-h) shrink-0 items-center border-b border-sidebar-border px-5">
+        <Logo href="/admin" className="min-w-0 [&>span:last-child]:truncate" />
       </div>
       <nav data-ui="admin/SidebarBody/nav-admin" aria-label="Admin" className="flex flex-col gap-5">
         <Suspense fallback={<NavItems pathname={null} ordersBadge={null} />}>
           <NavItemsWithPath onNavigate={onNavigate} ordersBadge={ordersBadge} />
         </Suspense>
       </nav>
-      <div data-ui="admin/SidebarBody/div-2" className="mt-auto space-y-1 border-t border-sidebar-border pt-4">
+      <div data-ui="admin/SidebarBody/div" className="mt-auto space-y-1 border-t border-sidebar-border pt-4">
         <Link data-ui="admin/SidebarBody/Link-view-store"
           href="/"
           target="_blank"

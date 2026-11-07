@@ -1,7 +1,5 @@
 import type { Metadata } from "next"
-import { Suspense } from "react"
-import { PageHeader } from "@/components/store/page-header"
-import { TrackOrder } from "@/components/store/track-order"
+import { TrackPageView } from "@/components/store/page-views"
 import { getStoreSettings } from "@/features/settings/queries"
 import { pageMetadata } from "@/lib/seo"
 
@@ -16,18 +14,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function TrackPage() {
-  return (
-    <>
-      <PageHeader
-        title="Track your order"
-        description="Enter the order code from your WhatsApp message and the last 4 digits of your phone number."
-        breadcrumbs={[{ name: "Home", href: "/" }, { name: "Track order" }]}
-      />
-      <div data-ui="page:/track/div" className="container-page pt-4 sm:pt-6">
-        <Suspense>
-          <TrackOrder />
-        </Suspense>
-      </div>
-    </>
-  )
+  return <TrackPageView />
 }
