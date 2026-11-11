@@ -9,6 +9,8 @@ import type { OrderFee, OrderItem, OrderReturn, ReturnRequest } from "./types"
 export type RefundLine = { productId: string; name: string; quantity: number; unitPrice: number; amount: number }
 export type NotRefunded = { label: string; amount: number }
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
 /** The price of a product on the order (the highest line price, like the database does). */
 const unitPriceOf = (items: OrderItem[], productId: string): number =>
   Math.max(0, ...items.filter((o) => o.productId === productId).map((o) => o.price))
@@ -20,7 +22,7 @@ export function refundLines(items: OrderItem[], lines: { productId: string; name
     if (l.quantity < 1) continue
     const unit = unitPriceOf(items, l.productId)
     const quantity = (merged.get(l.productId)?.quantity ?? 0) + l.quantity
-    merged.set(l.productId, { productId: l.productId, name: l.name, quantity, unitPrice: unit, amount: quantity * unit })
+    merged.set(l.productId, { productId: l.productId, name: l.name, quantity, unitPrice: unit, amount: round2(quantity * unit) })
   }
   return [...merged.values()]
 }
@@ -65,14 +67,14 @@ export function refundBreakdown(o: {
   const source = open ? open.items : o.returns.flatMap((r) => r.items)
   if (source.length === 0) return null
   const lines = refundLines(o.items, source)
-  const itemsTotal = lines.reduce((n, l) => n + l.amount, 0)
+  const itemsTotal = round2(lines.reduce((n, l) => n + l.amount, 0))
   const notRefunded = notRefundedCharges(o)
   return {
     basis: open ? "request" : "returned",
     lines,
     itemsTotal,
     notRefunded,
-    notRefundedTotal: notRefunded.reduce((n, c) => n + c.amount, 0),
+    notRefundedTotal: round2(notRefunded.reduce((n, c) => n + c.amount, 0)),
     refundable: itemsTotal,
     paid: o.paymentAmount ?? o.total,
     alreadyRefunded: o.refundedAmount,

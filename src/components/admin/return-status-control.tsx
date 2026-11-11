@@ -13,7 +13,8 @@ type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "ref
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
 function returnValue(r: OrderReturn, items: OrderItem[]): number {
-  return r.items.reduce((n, i) => n + i.quantity * Math.max(0, ...items.filter((o) => o.productId === i.productId).map((o) => o.price)), 0)
+  const sum = r.items.reduce((n, i) => n + i.quantity * Math.max(0, ...items.filter((o) => o.productId === i.productId).map((o) => o.price)), 0)
+  return Math.round(sum * 100) / 100
 }
 
 /**
@@ -57,7 +58,8 @@ export function ReturnStatusControl({
   // Only while something can still come back: not once everything was returned or the payment is fully refunded.
   // A request still waiting for a decision is approved or rejected first (the database refuses to close it otherwise).
   // Every return starts from an approved customer request (no "received" without one; the database refuses it too).
-  const canReceive = open?.status === "approved" && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
+  // Pickup must be completed before items can be marked received at warehouse or refunded.
+  const canReceive = open?.status === "approved" && Boolean(open.pickedUpAt) && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
   if (canReceive) options.push({ value: "received", label: "Return received (record items)" })
   if (unrefunded.length > 0 && paymentStatus === "paid") options.push({ value: "refund", label: "Refund the returned items" })
   // The customer asked outside the app: open the request for them (return window ignored), then approve it as usual.

@@ -102,9 +102,11 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
 
   // Optional message the customer can send to the shop with their order details.
   const products = await getActiveProducts()
-  const lines = items.flatMap((line) => {
-    const p = products.find((x) => x.id === line.productId)
-    return p ? [{ name: p.name, price: p.price, quantity: line.quantity }] : []
+  const mergedQty = new Map<string, number>()
+  for (const line of items) mergedQty.set(line.productId, (mergedQty.get(line.productId) ?? 0) + line.quantity)
+  const lines = Array.from(mergedQty.entries()).flatMap(([productId, quantity]) => {
+    const p = products.find((x) => x.id === productId)
+    return p ? [{ name: p.name, price: p.price, quantity }] : []
   })
   const message = buildOrderMessage(shop, {
     orderCode: data.order_code,
@@ -112,6 +114,10 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
     items: lines,
     pricing,
   })
+
+  revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
+  revalidatePath("/admin", "layout")
 
   return {
     ok: true,
@@ -188,6 +194,9 @@ export async function submitPayment(input: unknown): Promise<ActionResult> {
   }
   const soft = softRpcError(data)
   if (soft) return fail(soft)
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/track")
   return { ok: true }
 }
 
@@ -218,6 +227,9 @@ export async function updateOrderDelivery(input: unknown): Promise<ActionResult<
 
   const soft = softRpcError(data)
   if (soft) return fail(soft)
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/track")
   const result = data as { phoneLast4?: string } | null
   return { ok: true, data: { phoneLast4: result?.phoneLast4 ?? phone.slice(-4) } }
 }
@@ -246,6 +258,8 @@ export async function cancelOrder(input: unknown): Promise<ActionResult<{ refund
   if (soft) return fail(soft)
   updateTag(CACHE_TAGS.products) // cancelling gives the stock back
   revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/track")
   return { ok: true, data: { refundDue: (data as { refundDue?: boolean } | null)?.refundDue === true } }
 }
 
@@ -277,7 +291,7 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
 /** The customer takes back a return request that hasn't been reviewed yet. */
 export async function withdrawReturnRequest(input: unknown): Promise<ActionResult> {
   const parsed = withdrawReturnSchema.safeParse(input)
-  if (!parsed.success) return fail("Something went wrong. Please refresh and try again.")
+  if (!parsed.success) return fail("Please check the mobile number and try again.")
   if (!isSupabaseConfigured) return fail("Unavailable in demo mode.")
   if (await limited("withdraw-return")) return fail(RATE_LIMIT_MESSAGE)
 
@@ -286,11 +300,13 @@ export async function withdrawReturnRequest(input: unknown): Promise<ActionResul
     p_code: parsed.data.code,
     p_phone_last4: parsed.data.phoneLast4 ?? null,
     p_request_id: parsed.data.requestId,
+    p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not withdraw the request. Please try again."))
   const soft = softRpcError(data)
   if (soft) return fail(soft)
   revalidatePath("/account", "layout")
   revalidatePath("/admin", "layout")
+  revalidatePath("/track")
   return { ok: true }
 }

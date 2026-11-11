@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon, PackageOpenIcon, Undo2Icon } from "lucide-react"
+import { CheckIcon, Loader2Icon, PackageOpenIcon, SendIcon, Undo2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -13,7 +13,7 @@ import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities 
 import { ReturnsList } from "@/components/shared/returns-list"
 import { notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest } from "@/features/orders/types"
-import { formatDate, formatDateTime, formatPrice } from "@/lib/format"
+import { formatDate, formatDateTime, formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
@@ -103,16 +103,29 @@ export function RequestReturn({
         setError(res.error)
         return
       }
-      setOpen(false)
-      setQty({})
-      setDetails("")
-      later(() => toast.success("Return request sent. We'll review it and update you here."))
+      later(() => {
+        setOpen(false)
+        setQty({})
+        setDetails("")
+        toast.success("Return request sent. We'll review it and update you here.")
+      })
       onDone?.()
       router.refresh()
     })
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setQty({})
+      setReason(RETURN_REASONS[0])
+      setDetails("")
+      setError(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         data-ui="store/RequestReturn/DialogTrigger-inline-flex"
         className="inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold transition-colors hover:bg-muted"
@@ -184,11 +197,11 @@ export function RequestReturn({
           </p>
         )}
         <DialogFooter>
-          <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
-            Close
+          <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <XIcon className="size-4" /> Close
           </Button>
-          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Send request
+          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send request
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -216,19 +229,44 @@ export function ReturnRequestsPanel({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [phone, setPhone] = useState("")
   const later = useToastAfter(pending)
   useBlockWhile(pending)
   if (requests.length === 0) return <ReturnsList returns={returns} audience="customer" refundedInFull={refundedInFull} />
 
+  // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to withdraw;
+  // signed-in owners on /account/orders/[code] omit phoneLast4 and are recognised by their session.
+  const isGuest = phoneLast4 !== undefined
+  const phoneDigits = normalizeIndianPhone(phone)
+  const phoneError =
+    isGuest && phone.trim() && !phoneDigits
+      ? "Enter your 10-digit mobile number"
+      : isGuest && phoneDigits && !phoneDigits.endsWith(phoneLast4)
+        ? "Doesn't match the number you looked up"
+        : undefined
+  const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
+
+  const closeConfirm = () => {
+    setConfirmId(null)
+    setPhone("")
+  }
+
   const withdraw = (id: string) =>
     startTransition(async () => {
-      const res = await withdrawReturnRequest({ code: orderCode, phoneLast4, requestId: id })
+      const res = await withdrawReturnRequest({
+        code: orderCode,
+        phoneLast4,
+        phone: isGuest ? phoneDigits ?? undefined : undefined,
+        requestId: id,
+      })
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      setConfirmId(null)
-      later(() => toast.success("Return request withdrawn"))
+      later(() => {
+        closeConfirm()
+        toast.success("Return request withdrawn")
+      })
       onChanged?.()
       router.refresh()
     })
@@ -279,18 +317,34 @@ export function ReturnRequestsPanel({
           )
         })}
       </ul>
-      <Dialog open={confirmId !== null} onOpenChange={(o) => !o && !pending && setConfirmId(null)}>
-        <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent">
+      <Dialog open={confirmId !== null} onOpenChange={(o) => !o && !pending && closeConfirm()}>
+        <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Withdraw this return request?</DialogTitle>
-            <DialogDescription>We will not review it any further. You can send a new request while the return window is open.</DialogDescription>
           </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              We will not review it any further. You can send a new request while the return window is open.
+            </DialogDescription>
+            {isGuest && (
+              <TextField
+                label="Your full mobile number"
+                kind="phone"
+                leading="+91"
+                hint="Confirm the whole number you ordered with to withdraw this request."
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={phoneError}
+              />
+            )}
+          </div>
           <DialogFooter>
-            <Button data-ui="store/ReturnRequestsPanel/Button-keep-request" type="button" variant="outline" onClick={() => setConfirmId(null)} disabled={pending} className="rounded-full">
-              Keep request
+            <Button data-ui="store/ReturnRequestsPanel/Button-keep-request" type="button" variant="outline" onClick={closeConfirm} disabled={pending} className="gap-1.5 rounded-full">
+              <CheckIcon className="size-4" /> Keep request
             </Button>
-            <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request-2" type="button" variant="destructive" disabled={pending} onClick={() => confirmId && withdraw(confirmId)} className="rounded-full">
-              {pending && <Loader2Icon className="animate-spin" />} Withdraw request
+            <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request-2" type="button" variant="destructive" disabled={pending || phoneMissing} onClick={() => confirmId && withdraw(confirmId)} className="gap-1.5 rounded-full">
+              {pending ? <Loader2Icon className="animate-spin" /> : <Undo2Icon className="size-4" />} Withdraw request
             </Button>
           </DialogFooter>
         </DialogContent>

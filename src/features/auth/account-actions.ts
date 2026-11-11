@@ -2,10 +2,10 @@
 
 // Admin account: login email, password change and reset. The customer's profile lives in features/account.
 
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
-import { assertAdmin, getCurrentUser } from "@/features/auth/guards"
+import { assertAdmin, getCurrentUser, isAdminUser } from "@/features/auth/guards"
 import { siteConfig } from "@/config/site"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
@@ -69,6 +69,7 @@ export async function changeAdminPassword(input: unknown): Promise<ActionResult>
   const parsed = changePasswordSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
   if (!auth.user.email) return fail("This account has no email to verify with.")
+  if (await limited("login", auth.user.email)) return fail(RATE_LIMIT_MESSAGE)
 
   const supabase = await getServerSupabase()
   const check = await supabase.auth.signInWithPassword({ email: auth.user.email, password: parsed.data.current })
@@ -98,13 +99,19 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
 
 /** Step 2 of "forgot password": the reset link signed the person in; they now choose a new password. */
 export async function resetAdminPassword(input: unknown): Promise<ActionResult> {
+  const cookieStore = await cookies()
+  if (cookieStore.get("kk_pw_reset")?.value !== "1") {
+    return fail("This reset link has expired. Please request a new one.")
+  }
   const user = await getCurrentUser()
   if (!user) return fail("This reset link has expired. Please request a new one.")
+  if (!(await isAdminUser())) return fail("Not authorised")
   const parsed = resetSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.auth.updateUser({ password: parsed.data.next })
   if (error) return fail("Could not set the new password. Please request a new reset link.")
+  cookieStore.delete("kk_pw_reset")
   redirect("/admin")
 }

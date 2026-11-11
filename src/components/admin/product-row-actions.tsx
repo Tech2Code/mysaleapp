@@ -1,20 +1,12 @@
 "use client"
 
-import { Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react"
+import { PencilIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useOptimistic, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Switch } from "@/components/ui/switch"
 import { deleteProduct, toggleProductFlag } from "@/features/products/actions"
 import { cn } from "@/lib/utils"
@@ -72,36 +64,28 @@ export function ProductRowActions({ productId, name }: { productId: string; name
       <Button data-ui="admin/ProductRowActions/Button" variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className="text-destructive hover:bg-destructive/10">
         <Trash2Icon />
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent data-ui="admin/ProductRowActions/DialogContent">
-          <DialogHeader>
-            <DialogTitle>Delete “{name}”?</DialogTitle>
-            <DialogDescription>
-              This permanently removes the product and its photos. Past orders keep their copy of the item.
-              To just hide it from the store, switch off “Active” instead.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button data-ui="admin/ProductRowActions/Button-2" variant="outline" />}>Cancel</DialogClose>
-            <Button data-ui="admin/ProductRowActions/Button-delete"
-              variant="destructive"
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  const res = await deleteProduct(productId)
-                  if (res.ok) {
-                    later(() => toast.success("Product deleted"))
-                    setOpen(false)
-                    router.refresh()
-                  } else toast.error(res.error)
-                })
-              }
-            >
-              {pending && <Loader2Icon className="animate-spin" />} Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        destructive
+        title={`Delete “${name}”?`}
+        description="This permanently removes the product and its photos. Past orders keep their copy of the item. To just hide it from the store, switch off “Active” instead."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        pending={pending}
+        onConfirm={() =>
+          startTransition(async () => {
+            const res = await deleteProduct(productId)
+            if (res.ok) {
+              later(() => {
+                setOpen(false)
+                toast.success("Product deleted")
+              })
+              router.refresh()
+            } else toast.error(res.error)
+          })
+        }
+      />
     </div>
   )
 }

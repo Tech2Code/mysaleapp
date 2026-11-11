@@ -65,7 +65,7 @@ export const FIELD_KINDS: Record<FieldKind, FieldKindSpec> = {
     autoCapitalize: "words",
   },
   city: {
-    sanitize: (v) => v.replace(/[^\p{L}\p{M}\s.'-]/gu, "").replace(/\s{2,}/g, " "),
+    sanitize: (v) => v.replace(/[^\p{L}\p{M}0-9\s.'()&-]/gu, "").replace(/\s{2,}/g, " "),
     maxLength: LIMITS.city.max,
     autoComplete: "address-level2",
     autoCapitalize: "words",

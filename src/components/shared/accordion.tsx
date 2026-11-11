@@ -22,10 +22,17 @@ export function AccordionItem({ title, children, defaultOpen = false, name }: It
 /** One item open at a time: opening one closes the other. */
 export function Accordion({ children }: { children: ReactNode }) {
   const group = useId()
+  const items = Children.toArray(children)
+  const firstElementIndex = items.findIndex((child) => isValidElement<ItemProps>(child))
   return (
     <div data-ui="shared/Accordion" className="rounded-3xl border bg-card px-5 sm:px-6">
-      {Children.map(children, (child) =>
-        isValidElement<ItemProps>(child) ? cloneElement(child as ReactElement<ItemProps>, { name: group }) : child
+      {items.map((child, i) =>
+        isValidElement<ItemProps>(child)
+          ? cloneElement(child as ReactElement<ItemProps>, {
+              name: group,
+              defaultOpen: child.props.defaultOpen ?? i === firstElementIndex,
+            })
+          : child
       )}
     </div>
   )

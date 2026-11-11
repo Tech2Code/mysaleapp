@@ -18,8 +18,8 @@ export function paymentDue(o: {
   if (status === "cancelled") return null
   if (paymentStatus === "paid") {
     if (refundedAmount > 0) return { label: "Refunded so far", amount: refundedAmount }
-    const short = total - (paymentAmount ?? total)
-    return short > 0 ? { label: "Still to collect", amount: short } : null
+    const short = Math.round((total - (paymentAmount ?? total)) * 100) / 100
+    return short > 0.005 ? { label: "Still to collect", amount: short } : null
   }
   return { label: "To collect", amount: total }
 }

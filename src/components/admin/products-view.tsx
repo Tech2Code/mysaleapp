@@ -17,7 +17,7 @@ export function ProductsView({ products }: { products: Product[] }) {
         title="Products"
         description={`${products.length} product${products.length === 1 ? "" : "s"} · ${products.filter((p) => p.isActive).length} visible in store`}
         actions={
-          <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" className={cn(buttonVariants(), "rounded-full px-4")}>
+          <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" prefetch={true} className={cn(buttonVariants(), "rounded-full px-4")}>
             <PlusIcon /> Add product
           </Link>
         }
@@ -48,7 +48,7 @@ export function ProductsView({ products }: { products: Product[] }) {
               {products.map((p) => (
                 <TableRow data-ui="admin/ProductsView/TableRow-2" key={p.id}>
                   <TableCell data-ui="admin/ProductsView/TableCell" className="pl-5">
-                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3">
+                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} prefetch={true} className="flex items-center gap-3">
                       <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>

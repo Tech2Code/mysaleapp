@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { siteConfig } from "@/config/site"
 import type { Category, Product } from "@/features/products/types"
 import type { StoreSettings } from "@/features/settings/types"
+import { safeExternalUrl } from "./safe-redirect"
 
 export const absoluteUrl = (path = "/") => `${siteConfig.url}${path.startsWith("/") ? path : `/${path}`}`
 
@@ -23,7 +24,7 @@ export function pageMetadata(
   return {
     title: input.title,
     description: input.description,
-    alternates: { canonical: url },
+    ...(input.noIndex ? {} : { alternates: { canonical: url } }),
     openGraph: {
       title: input.title,
       description: input.description,
@@ -50,7 +51,7 @@ export function organizationJsonLd(s: StoreSettings) {
     name: s.shopName,
     url: siteConfig.url,
     logo: absoluteUrl("/icons/512"),
-    sameAs: [s.instagramUrl, s.facebookUrl].filter((u): u is string => Boolean(u)),
+    sameAs: [safeExternalUrl(s.instagramUrl), safeExternalUrl(s.facebookUrl)].filter((u): u is string => Boolean(u)),
     ...(s.phone
       ? {
           contactPoint: {

@@ -100,7 +100,12 @@ export function RouteProgressProvider({ children }: { children: ReactNode }) {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
       const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null
       if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return
-      const url = new URL(a.href, window.location.href)
+      let url: URL
+      try {
+        url = new URL(a.href, window.location.href)
+      } catch {
+        return
+      }
       if (url.origin !== window.location.origin) return
       if (url.pathname === window.location.pathname && url.search === window.location.search) return
       if (clickPending.current) return
@@ -110,7 +115,12 @@ export function RouteProgressProvider({ children }: { children: ReactNode }) {
       clickGuard.current = setTimeout(finishClick, 10_000)
     }
     document.addEventListener("click", onClick, true)
-    return () => document.removeEventListener("click", onClick, true)
+    return () => {
+      document.removeEventListener("click", onClick, true)
+      if (trickle.current) clearInterval(trickle.current)
+      if (hide.current) clearTimeout(hide.current)
+      if (clickGuard.current) clearTimeout(clickGuard.current)
+    }
   }, [start, finishClick])
 
   const api = useMemo(() => ({ start, done }), [start, done])

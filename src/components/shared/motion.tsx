@@ -1,6 +1,7 @@
 "use client"
 
-import { m, type HTMLMotionProps } from "motion/react"
+import type { HTMLMotionProps } from "motion/react"
+import * as m from "motion/react-m"
 
 const ease = [0.22, 1, 0.36, 1] as const
 

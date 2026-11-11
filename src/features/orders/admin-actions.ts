@@ -86,7 +86,7 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   }
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }
 }
@@ -176,7 +176,7 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
       if (refundError.message.includes("BAD_AMOUNT")) return fail("That refund amount is not valid for this order.", { amount: ["Not a valid amount"] })
       return fail("Could not record the refund")
     }
-    revalidatePath("/admin", "layout")
+    revalidatePathsForAdmin(p.orderId)
     revalidatePathsForCustomer()
     return { ok: true, data: { confirmed: false } }
   }
@@ -185,16 +185,17 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   }
 
   const markPaid = p.status === "paid"
-  const confirmNow = markPaid && order.status === "pending"
+  const confirmNow = markPaid && order.status === "confirmed" ? false : markPaid && order.status === "pending"
+  const alreadyRefunded = order.payment_status === "refunded"
 
-  // Finished + paid/refunded: only the method and the note may still be edited (the DB refuses anything else)
-  const moneyLocked = isPaymentMoneyLocked({ status: order.status, paymentStatus: order.payment_status ?? "pending" })
+  // Finished + paid, or any refunded order: only the method and the note may still be edited (never amount / reference).
+  const moneyLocked = alreadyRefunded || isPaymentMoneyLocked({ status: order.status, paymentStatus: order.payment_status ?? "pending" })
 
   const { data: updated, error } = await supabase
     .from("orders")
     .update({
       payment_status: p.status,
-      payment_method: p.method ?? (markPaid ? "upi" : null),
+      ...(alreadyRefunded && p.method === null ? {} : { payment_method: p.method ?? (markPaid ? "upi" : null) }),
       ...(moneyLocked
         ? {}
         : {
@@ -216,7 +217,7 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   }
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin(p.orderId)
   revalidatePathsForCustomer()
   return { ok: true, data: { confirmed: confirmNow } }
 }
@@ -287,7 +288,7 @@ export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> 
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
   updateTag(CACHE_TAGS.products) // the DB trigger gave the reserved stock back
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }
 }
@@ -304,7 +305,8 @@ const returnSchema = z.object({
       })
     )
     .min(1, "Enter how many came back")
-    .max(LIMITS.returnLines.max),
+    .max(LIMITS.returnLines.max)
+    .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
   reason: v.note(LIMITS.returnDetail.max).optional(),
   refund: z.boolean(),
   /** The customer's return request this return closes (if it came from one). */
@@ -333,7 +335,7 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
   }
 
   updateTag(CACHE_TAGS.products) // restocked items are sellable again
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   const out = (data ?? {}) as { restocked?: number; refundedAmount?: number; fullyRefunded?: boolean }
   return {
@@ -373,9 +375,15 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
     if (error.message.includes("BAD_PICKUP_DATE")) return fail(mapRpcError("BAD_PICKUP_DATE", "Pick a valid date"), { pickupDate: ["Pick a date from today"] })
     return fail("Could not save your decision")
   }
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
+}
+
+function revalidatePathsForAdmin(orderId?: string) {
+  revalidatePath("/admin/orders")
+  if (orderId) revalidatePath(`/admin/orders/${orderId}`)
+  revalidatePath("/admin", "layout")
 }
 
 /** The customer, `/track` and order list pages show the order status too: refresh them after any admin change that affects it. */
@@ -399,7 +407,7 @@ export async function markReturnPickedUp(input: unknown): Promise<ActionResult> 
     if (error.message.includes("NOT_PENDING")) return fail("This return is not waiting for a pickup any more. Refresh the page.")
     return fail("Could not save the pickup")
   }
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
 }
@@ -414,7 +422,7 @@ export async function undoReturnStep(input: unknown): Promise<ActionResult> {
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("undo_return_step", { p_request_id: parsed.data.requestId })
   if (error) return fail(mapRpcError(error.message, "Could not undo this step"))
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
 }
@@ -442,7 +450,7 @@ export async function refundReturn(input: unknown): Promise<ActionResult<{ refun
     p_expected_refunded: parsed.data.expectedRefunded ?? null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not record the refund"))
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   const out = (data ?? {}) as { refundedAmount?: number; fullyRefunded?: boolean }
   return { ok: true, data: { refundedAmount: Number(out.refundedAmount ?? 0), fullyRefunded: Boolean(out.fullyRefunded) } }
@@ -453,7 +461,8 @@ const createRequestSchema = z.object({
   items: z
     .array(z.object({ productId: z.uuid(), name: z.string().max(LIMITS.productName.max), quantity: v.quantity(LIMITS.returnQuantity.max) }))
     .min(1, "Choose at least one item")
-    .max(LIMITS.returnLines.max),
+    .max(LIMITS.returnLines.max)
+    .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
   reason: v.reason(),
   details: v.note(LIMITS.returnDetail.max).optional(),
 })
@@ -478,7 +487,7 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
     p_details: details ?? null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not create the return request"))
-  revalidatePath("/admin", "layout")
+  revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }
 }

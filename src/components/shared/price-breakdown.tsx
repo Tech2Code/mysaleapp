@@ -1,4 +1,3 @@
-import { InfoIcon } from "lucide-react"
 import type { OrderFee } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -39,19 +38,23 @@ export function PriceBreakdown({
       </dl>
 
       {extraFees.length > 0 && (
-        <section data-ui="shared/PriceBreakdown/section-product-charges" aria-label="Product charges" className="space-y-2.5 rounded-xl bg-muted/60 p-3">
-          <p data-ui="shared/PriceBreakdown/p-flex" className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            <InfoIcon className="size-3.5" aria-hidden /> Product charges · added once per product
-          </p>
-          <ul data-ui="shared/PriceBreakdown/ul" className="space-y-2.5">
+        <section data-ui="shared/PriceBreakdown/section-product-charges" aria-label="Product charges" className="space-y-1.5 rounded-lg bg-muted/40 p-2.5 text-xs">
+          <ul data-ui="shared/PriceBreakdown/ul" className="space-y-1.5">
             {extraFees.map((fee, i) => (
-              <li data-ui="shared/PriceBreakdown/li-flex" key={`${fee.productId ?? fee.productName ?? ""}-${fee.label}-${i}`} className="flex justify-between gap-4">
-                <div data-ui="shared/PriceBreakdown/div" className="min-w-0">
-                  <p data-ui="shared/PriceBreakdown/p" className="font-medium">{fee.label}</p>
-                  {fee.productName && <p data-ui="shared/PriceBreakdown/p-2" className="truncate text-xs text-muted-foreground">for {fee.productName}</p>}
-                  {fee.reason && <p data-ui="shared/PriceBreakdown/p-3" className="mt-0.5 text-xs text-muted-foreground italic">{fee.reason}</p>}
-                </div>
-                <p data-ui="shared/PriceBreakdown/p-4" className="shrink-0 font-medium">{formatPrice(fee.amount)}</p>
+              <li
+                data-ui="shared/PriceBreakdown/li-flex"
+                key={`${fee.productId ?? fee.productName ?? ""}-${fee.label}-${i}`}
+                title={fee.reason ?? undefined}
+                className="flex items-start justify-between gap-2"
+              >
+                <span data-ui="shared/PriceBreakdown/p" className="min-w-0 text-muted-foreground">
+                  <span className="block truncate">
+                    {fee.label}
+                    {fee.productName && <span className="text-[11px] opacity-80"> · {fee.productName}</span>}
+                  </span>
+                  {fee.reason && <span className="block text-[11px] opacity-75">{fee.reason}</span>}
+                </span>
+                <span data-ui="shared/PriceBreakdown/p-4" className="font-medium shrink-0">{formatPrice(fee.amount)}</span>
               </li>
             ))}
           </ul>

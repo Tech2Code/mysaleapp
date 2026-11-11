@@ -3,7 +3,7 @@
 import imageCompression from "browser-image-compression"
 import { ArrowLeftIcon, ArrowRightIcon, ImagePlusIcon, Loader2Icon, XIcon } from "lucide-react"
 import Image from "next/image"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { toast } from "sonner"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -31,6 +31,16 @@ export function ImageUploader({
 }) {
   const inputId = useId()
   const [uploading, setUploading] = useState(0)
+  const mountedRef = useRef(true)
+  const sessionPaths = useRef<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
   useEffect(() => {
     onUploadingChange?.(uploading > 0)
   }, [uploading, onUploadingChange])
@@ -41,11 +51,16 @@ export function ImageUploader({
 
     const room = MAX_IMAGES - value.length
     const all = Array.from(files)
-    if (all.some((f) => f.size > MAX_INPUT_BYTES)) toast.warning("Photos over 25 MB were skipped.")
-    const picked = all.filter((f) => ACCEPTED.includes(f.type) && f.size <= MAX_INPUT_BYTES).slice(0, room)
-    if (picked.length < all.length) toast.warning(`Only JPG, PNG, WebP or AVIF photos, up to ${MAX_IMAGES} per product.`)
+    const withinSize = all.filter((f) => f.size <= MAX_INPUT_BYTES)
+    if (withinSize.length < all.length) toast.warning("Photos over 25 MB were skipped.")
+    const validType = withinSize.filter((f) => ACCEPTED.includes(f.type))
+    const picked = validType.slice(0, Math.max(0, room))
+    if (picked.length < withinSize.length) {
+      toast.warning(`Only JPG, PNG, WebP or AVIF photos, up to ${MAX_IMAGES} per product.`)
+    }
+    if (picked.length === 0) return
 
-    setUploading(picked.length)
+    setUploading((n) => n + picked.length)
     const urls: string[] = []
     for (const file of picked) {
       try {
@@ -61,16 +76,27 @@ export function ImageUploader({
           cacheControl: "31536000",
         })
         if (error) throw error
-        urls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl)
+        const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
+        sessionPaths.current.set(publicUrl, path)
+        urls.push(publicUrl)
       } catch (err) {
         // Show the real reason (e.g. "Bucket not found", RLS denial) so setup problems are obvious.
         const reason = err instanceof Error ? err.message : "unknown error"
         toast.error(`Couldn't upload ${file.name}: ${reason}`)
       } finally {
-        setUploading((n) => n - 1)
+        if (mountedRef.current) setUploading((n) => Math.max(0, n - 1))
       }
     }
-    if (urls.length) onChange((current) => [...current, ...urls].slice(0, MAX_IMAGES))
+    if (mountedRef.current && urls.length) onChange((current) => [...current, ...urls].slice(0, MAX_IMAGES))
+  }
+
+  const removeImage = (url: string) => {
+    onChange((current) => current.filter((u) => u !== url))
+    const sessionPath = sessionPaths.current.get(url)
+    if (sessionPath) {
+      sessionPaths.current.delete(url)
+      void getBrowserSupabase()?.storage.from(BUCKET).remove([sessionPath])
+    }
   }
 
   const move = (from: number, to: number) => {
@@ -106,7 +132,7 @@ export function ImageUploader({
               </button>
               <button data-ui="admin/ImageUploader/button-grid-2"
                 type="button"
-                onClick={() => onChange((current) => current.filter((u) => u !== url))}
+                onClick={() => removeImage(url)}
                 className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
                 aria-label={`Remove photo ${i + 1}`}
               >
@@ -140,6 +166,7 @@ export function ImageUploader({
               type="file"
               accept={ACCEPTED.join(",")}
               multiple
+              disabled={uploading > 0}
               className="sr-only"
               onChange={(e) => {
                 void upload(e.target.files)

@@ -1,5 +1,7 @@
 import "server-only"
+import { z } from "zod"
 import { requireAdmin } from "@/features/auth/guards"
+import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { istDayKey, type DashboardRange } from "./dashboard-range"
@@ -29,9 +31,14 @@ type Supabase = Awaited<ReturnType<typeof getServerSupabase>>
 
 /** Filter to the orders that have a return request in `status`. No such orders -> match nothing (an impossible id), not everything. */
 async function ordersWithRequest(supabase: Supabase, status: "requested" | "approved"): Promise<<Q>(query: Q) => Q> {
-  const { data, error } = await supabase.from("return_requests").select("order_id").eq("status", status)
+  const { data, error } = await supabase
+    .from("return_requests")
+    .select("order_id")
+    .eq("status", status)
+    .order("created_at", { ascending: false })
+    .limit(RETURN_VIEW_ID_LIMIT)
   if (error) throw new Error(error.message)
-  const ids = (data ?? []).map((r) => r.order_id as string)
+  const ids = [...new Set((data ?? []).map((r) => r.order_id as string))]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (query) => (query as any).in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
 }
@@ -135,7 +142,12 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
 
   // Search by order code, phone or customer name. Strip characters that have
   // meaning in PostgREST filter syntax so user input can't alter the filter.
-  const q = (filters.q ?? "").replace(/[^a-zA-Z0-9\s-]/g, "").trim().slice(0, LIMITS.orderSearch.max)
+  const rawQuery = (filters.q ?? "").trim()
+  const normalizedPhone = rawQuery ? normalizeIndianPhone(rawQuery) : null
+  const q = (normalizedPhone ?? rawQuery.replace(/[^\p{L}\p{M}0-9\s-]/gu, "").trim()).slice(0, LIMITS.orderSearch.max)
+  if (rawQuery && !q) {
+    return { orders: [], total: 0, page }
+  }
   if (q) {
     query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
   }
@@ -149,7 +161,7 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
 
 export async function getOrderById(id: string): Promise<OrderWithHistory | null> {
   await requireAdmin()
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null
+  if (!z.uuid().safeParse(id).success) return null
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")
@@ -262,7 +274,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
   const cur = totals(stats.current)
   const prev = totals(stats.previous)
 
-  const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hour12: false, timeZone: IST }).format(now))
+  const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: IST }).format(now))
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
   const lowStock = (lowStockRes.data ?? []).map((p) => ({ id: p.id, name: p.name, stock: p.stock, image: p.images?.[0] ?? null }))
 

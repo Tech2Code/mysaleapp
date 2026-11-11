@@ -1,6 +1,6 @@
 import { siteConfig } from "@/config/site"
 import type { StoreSettings } from "@/features/settings/types"
-import { formatDate, formatPrice } from "@/lib/format"
+import { formatDate, formatPrice, normalizeIndianPhone } from "@/lib/format"
 import type { ReturnStage } from "./returns"
 import { STATUS_META,type OrderItem, type OrderPricing, type OrderStatus, type ShippingDetails } from "./types"
 
@@ -9,7 +9,12 @@ type Shop = Pick<StoreSettings, "shopName" | "whatsappNumber">
 
 /** wa.me deep link that opens WhatsApp (app on mobile, web on desktop). */
 export function whatsappLink(phoneWithCountryCode: string, text?: string): string {
-  const digits = phoneWithCountryCode.replace(/\D/g, "")
+  let digits = phoneWithCountryCode.replace(/\D/g, "")
+  if (/^9191[6-9]\d{9}$/.test(digits)) digits = digits.slice(2)
+  else {
+    const indian = normalizeIndianPhone(digits)
+    if (indian) digits = `91${indian}`
+  }
   return `https://wa.me/${digits}${text ? `?text=${encodeURIComponent(text)}` : ""}`
 }
 
@@ -132,12 +137,13 @@ export function buildStatusUpdateMessage(
 
 /** Message the ADMIN sends about where a return is (customer wording, no amounts: same words as the order page). */
 export function buildReturnStageMessage(shop: Shop, input: { orderCode: string; customerName: string; stage: ReturnStage }): string {
+  const detail = input.stage.customerDetail.replace(/[.!?]+$/, "")
   return [
     `Hi ${input.customerName.split(" ")[0]}, this is ${shop.shopName} 🙏`,
     ``,
     `Update on the return for your order *${input.orderCode}*:`,
     `*${input.stage.customerLabel}*`,
-    input.stage.customerDetail + ".",
+    `${detail}.`,
     ``,
     `Track anytime: ${siteConfig.url}/track?code=${input.orderCode}`,
   ].join("\n")

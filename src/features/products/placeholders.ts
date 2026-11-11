@@ -45,7 +45,8 @@ export function placeholderProduct(i = 0): Product {
     images: [0, 1, 2].map((n) => `${BLANK_IMAGE}#${n}`), // distinct values: they are React keys
     description: "A longer description of the piece, how it is made and what makes it special. It runs over a few lines so the paragraph block has a realistic height on every screen size.",
     categoryId: `ph-cat-${i}`,
-    fees: [],
+    weightGrams: 0,
+    shippingClass: "standard",
     shortDescription: "One or two sentences about the piece, shown right under the price.",
     highlights: ["Handmade by skilled artisans", "Made to order in small batches", "Ships within 3 days"],
     specs: [
@@ -80,7 +81,8 @@ export const placeholderCartLines = (n = 2): LiveCartLine[] =>
     maxQuantity: 10,
     available: true,
     priceChanged: false,
-    fees: [],
+    weightGrams: 0,
+    shippingClass: "standard",
   }))
 
 export const placeholderCategoriesWithProductCount = (n = 5): (Category & { productCount: number })[] => placeholderCategories(n).map((c, i) => ({ ...c, productCount: 3 + i }))

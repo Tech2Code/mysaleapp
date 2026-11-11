@@ -3,14 +3,17 @@ import { ScrollLink } from "@/components/shared/scroll-link"
 import { Logo } from "@/components/shared/logo"
 import type { StoreSettings } from "@/features/settings/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
+import { safeExternalUrl } from "@/lib/safe-redirect"
 import type { NavCategory } from "./header"
 import { InstallButton } from "./install-prompt"
 import { WhatsAppIcon } from "./brand-icons"
 
 export function Footer({ categories, shop }: { categories: NavCategory[]; shop: StoreSettings }) {
+  const igUrl = safeExternalUrl(shop.instagramUrl)
+  const fbUrl = safeExternalUrl(shop.facebookUrl)
   const socials = [
-    ...(shop.instagramUrl ? [{ href: shop.instagramUrl, label: "Instagram", external: true as const }] : []),
-    ...(shop.facebookUrl ? [{ href: shop.facebookUrl, label: "Facebook", external: true as const }] : []),
+    ...(igUrl ? [{ href: igUrl, label: "Instagram", external: true as const }] : []),
+    ...(fbUrl ? [{ href: fbUrl, label: "Facebook", external: true as const }] : []),
   ]
   const columns = [
     {

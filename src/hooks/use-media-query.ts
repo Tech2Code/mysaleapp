@@ -1,6 +1,8 @@
 "use client"
 
-import { useSyncExternalStore } from "react"
+import { useCallback, useSyncExternalStore } from "react"
+
+const getServerSnapshot = () => false
 
 /**
  * true while the viewport matches a CSS media query, e.g. useMediaQuery("(max-width: 639px)").
@@ -8,13 +10,15 @@ import { useSyncExternalStore } from "react"
  * (use Tailwind breakpoints for that). It is meant for choosing behaviour, like a sheet's side.
  */
 export function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       const m = window.matchMedia(query)
       m.addEventListener("change", onChange)
       return () => m.removeEventListener("change", onChange)
     },
-    () => window.matchMedia(query).matches,
-    () => false
+    [query]
   )
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query])
+
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }

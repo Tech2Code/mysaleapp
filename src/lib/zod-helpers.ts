@@ -2,9 +2,14 @@ import { z } from "zod"
 
 /** Form inputs give "" (or NaN) for empty number fields; numeric strings are converted. */
 export const toNumberOrUndefined = (v: unknown) => {
-  if (v === "" || v === null || v === undefined) return undefined
-  const n = typeof v === "string" ? Number(v) : v
-  return typeof n === "number" && Number.isNaN(n) ? undefined : n
+  if (v === null || v === undefined) return undefined
+  if (typeof v === "string") {
+    const trimmed = v.trim()
+    if (!trimmed) return undefined
+    const parsed = Number(trimmed)
+    return Number.isNaN(parsed) ? undefined : parsed
+  }
+  return typeof v === "number" && Number.isNaN(v) ? undefined : v
 }
 
 /** A required number field that accepts "12.5" typed into an <input>. */

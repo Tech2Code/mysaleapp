@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon } from "lucide-react"
+import { BanIcon, CheckIcon, Loader2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -89,21 +89,34 @@ export function CancelOrder({
         setError(res.error)
         return
       }
-      setOpen(false)
-      later(() => toast.success(res.data.refundDue ? "Order cancelled. Your refund is on its way." : "Order cancelled"))
-      onCancelled?.()
+      later(() => {
+        setOpen(false)
+        onCancelled?.()
+        toast.success(res.data.refundDue ? "Order cancelled. Your refund is on its way." : "Order cancelled")
+      })
       router.refresh()
     })
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setReason(CANCEL_REASONS[0])
+      setDetail("")
+      setPhone("")
+      setError(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         data-ui="store/CancelOrder/DialogTrigger-inline-flex"
-        className="inline-flex h-11 items-center justify-center rounded-full border border-destructive/40 px-6 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-destructive/40 px-6 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
       >
-        Cancel order
+        <BanIcon className="size-4" /> Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="store/CancelOrder/DialogContent">
+      <DialogContent data-ui="store/CancelOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -149,11 +162,11 @@ export function CancelOrder({
           )}
         </div>
         <DialogFooter>
-          <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
-            Keep order
+          <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <CheckIcon className="size-4" /> Keep order
           </Button>
-          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail || phoneMissing}className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Yes, cancel order
+          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail || phoneMissing} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Yes, cancel order
           </Button>
         </DialogFooter>
       </DialogContent>

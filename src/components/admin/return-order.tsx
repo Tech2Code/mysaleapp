@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon } from "lucide-react"
+import { CheckIcon, Loader2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -91,22 +91,40 @@ export function AdminReturnOrder({
         setError(res.error)
         return
       }
-      setOpen(false)
-      setRows({})
-      setReason("")
-      setRefund(false)
       const stockNote = res.data.restocked > 0 ? ` ${res.data.restocked} item(s) back in stock.` : ""
       const refundNote = !refund
         ? ""
         : res.data.fullyRefunded
           ? " Payment marked refunded."
           : ` Partly refunded (${formatPrice(res.data.refundedAmount)} so far); the order stays paid until every item is refunded.`
-      later(() => toast.success(`Return recorded.${stockNote}${refundNote}`))
+      later(() => {
+        setOpen(false)
+        setRows({})
+        setReason("")
+        setRefund(false)
+        toast.success(`Return recorded.${stockNote}${refundNote}`)
+      })
       router.refresh()
     })
 
+  const defaultRows = () =>
+    Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (nextOpen) {
+      setRows(defaultRows())
+    } else {
+      setRows({})
+      setReason("")
+      setRefund(false)
+      setError(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         data-ui="admin/AdminReturnOrder/DialogTrigger-inline-flex"
         className="inline-flex h-9 w-full items-center justify-center rounded-full border text-sm font-semibold transition-colors hover:bg-muted"
@@ -162,11 +180,11 @@ export function AdminReturnOrder({
           </p>
         )}
         <DialogFooter>
-          <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
-            Cancel
+          <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId))} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Save return
+          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId))} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save return
           </Button>
         </DialogFooter>
       </DialogContent>

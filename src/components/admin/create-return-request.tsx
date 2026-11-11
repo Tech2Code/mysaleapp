@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, SendIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -54,15 +54,29 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
         setError(res.error)
         return
       }
-      setOpen(false)
-      setQty({})
-      setDetails("")
-      later(() => toast.success("Return request created. Approve it from the status dropdown."))
+      later(() => {
+        setOpen(false)
+        setQty({})
+        setDetails("")
+        toast.success("Return request created. Approve it from the status dropdown.")
+      })
       router.refresh()
     })
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setQty({})
+      setReason(RETURN_REASONS[0])
+      setDetails("")
+      setError(null)
+      setDetailsError(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger data-ui="admin/CreateReturnRequest/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
         Create return request
       </DialogTrigger>
@@ -94,9 +108,11 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
           <p data-ui="admin/CreateReturnRequest/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>
         )}
         <DialogFooter>
-          <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">Cancel</Button>
-          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId))} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Create request
+          <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <XIcon className="size-4" /> Cancel
+          </Button>
+          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId))} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Create request
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -51,11 +51,19 @@ export type StoreSettings = {
   /** Customers can ask for a return within this many days after delivery. 0 = returns are not accepted. */
   returnWindowDays: number
 
-  // ---- Delivery ----
-  /** Flat delivery charge (₹) added to every order. */
+  // ---- Delivery & smart handling ----
+  /** Flat standard delivery charge (₹) added to every order unless waived by freeDeliveryAbove. */
   deliveryFee: number
-  /** Orders at or above this item subtotal (₹) get free delivery. 0 = delivery is never free. */
+  /** Orders at or above this item subtotal (₹) get free standard delivery. 0 = delivery is never free. */
   freeDeliveryAbove: number
+  /** Extra protective packaging fee (₹) applied ONCE per order when the cart contains fragile items. 0 = free. */
+  fragileFee: number
+  /** Special courier handling fee (₹) applied ONCE per order when the cart contains large / bulky items. 0 = free. */
+  oversizedFee: number
+  /** Parcel weight (g) included in standard delivery before heavy-parcel courier slabs kick in (e.g. 1000 = 1 kg). */
+  freeWeightGrams: number
+  /** Heavy-parcel courier rate (₹) per additional started kg (1000 g) above freeWeightGrams. 0 = no weight surcharge. */
+  extraWeightFeePerKg: number
 
   // ---- Payment ----
   /** UPI ID customers pay to (e.g. "shop@okhdfcbank"). null until set. */

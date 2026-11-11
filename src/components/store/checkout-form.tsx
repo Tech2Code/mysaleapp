@@ -1,10 +1,10 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { BanIcon, CheckCircle2Icon, Loader2Icon, MapPinIcon, PlusIcon } from "lucide-react"
+import { CheckCircle2Icon, Loader2Icon, MapPinIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
@@ -14,16 +14,16 @@ import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { getMyProfile } from "@/features/account/actions"
+import type { Profile } from "@/features/account/schema"
 import { listMyAddresses } from "@/features/addresses/actions"
 import type { Address } from "@/features/addresses/types"
 import { placeOrder } from "@/features/orders/actions"
-import { calculateCharges } from "@/features/orders/pricing"
+import { calculateCharges, formatWeightGrams } from "@/features/orders/pricing"
 import { placeholderCartLines } from "@/features/products/placeholders"
 import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
-import { describeHours } from "@/features/orders/deadline"
 import { useCart } from "@/store/cart"
 import { useStoreSettings } from "./store-settings-provider"
 import { FreeShippingBar } from "./cart-drawer"
@@ -35,7 +35,17 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 export const LAST_ORDER_KEY = "kk-last-order"
 
 /** `preview`: render the placeholder form as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
-export function CheckoutForm({ products, preview = false }: { products: LiveProduct[]; preview?: boolean }) {
+export function CheckoutForm({
+  products,
+  initialAddresses = [],
+  initialProfile = null,
+  preview = false,
+}: {
+  products: LiveProduct[]
+  initialAddresses?: Address[]
+  initialProfile?: Profile | null
+  preview?: boolean
+}) {
   const router = useRouter()
   const { ready, available, hasUnavailable, charges } = useLiveCart(products)
   const clearCart = useCart((s) => s.clear)
@@ -44,14 +54,35 @@ export function CheckoutForm({ products, preview = false }: { products: LiveProd
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const initialDefault = initialAddresses[0]
+  const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
+  const addresses = initialAddresses.length > 0 || clientAddresses === null ? initialAddresses : clientAddresses
   /** id of the saved address in use, or "new" when typing a different one */
-  const [selected, setSelected] = useState<string>("new")
+  const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
+  const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
   const [saveAddress, setSaveAddress] = useState(true)
+  const fetchedForUser = useRef<string | null>(null)
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" },
+    defaultValues: initialDefault
+      ? {
+          name: initialDefault.fullName,
+          phone: initialDefault.phone,
+          address: initialDefault.address,
+          ...splitCityState(initialDefault.city),
+          pincode: initialDefault.pincode,
+          note: "",
+        }
+      : {
+          name: initialProfile?.fullName ?? "",
+          phone: initialProfile?.phone ?? "",
+          address: "",
+          city: "",
+          state: NO_STATE,
+          pincode: "",
+          note: "",
+        },
   })
   const { errors } = form.formState
   const area = usePincodeLookup({
@@ -80,35 +111,61 @@ export function CheckoutForm({ products, preview = false }: { products: LiveProd
     form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
   }
 
-  // Signed-in customers: load the address book (default address pre-selected), else their profile name/phone.
+  // Pre-fill form if initialAddresses arrives from server revalidation while form is still blank
+  useEffect(() => {
+    const first = initialAddresses[0]
+    if (first && !form.formState.isDirty && !form.getValues("address")) {
+      form.reset({
+        name: first.fullName,
+        phone: first.phone,
+        address: first.address,
+        ...splitCityState(first.city),
+        pincode: first.pincode,
+        note: form.getValues("note"),
+      })
+    }
+  }, [initialAddresses, form])
+
+  // Signed-in customers: fallback if server did not preload addresses (e.g. client-only session)
   useEffect(() => {
     if (!authReady || !user) return
+    if (initialAddresses.length > 0 || fetchedForUser.current === user.id) return
+    fetchedForUser.current = user.id
     let cancelled = false
-    Promise.all([listMyAddresses(), getMyProfile()]).then(([list, profile]) => {
-      if (cancelled) return
-      setAddresses(list)
-      const first = list[0]
-      if (first) {
-        setSelected(first.id)
-        form.reset({
-          name: first.fullName,
-          phone: first.phone,
-          address: first.address,
-          ...splitCityState(first.city),
-          pincode: first.pincode,
-          note: form.getValues("note"),
-        })
-      } else if (profile) {
-        const current = form.getValues()
-        form.reset({ ...current, name: current.name || profile.fullName, phone: current.phone || profile.phone })
-      }
-    })
+    Promise.all([listMyAddresses(), getMyProfile()])
+      .then(([list, profile]) => {
+        if (cancelled) return
+        setClientAddresses(list)
+        if (form.formState.isDirty) return
+        const first = list[0]
+        if (first) {
+          setSelected(first.id)
+          form.reset({
+            name: first.fullName,
+            phone: first.phone,
+            address: first.address,
+            ...splitCityState(first.city),
+            pincode: first.pincode,
+            note: form.getValues("note"),
+          })
+        } else if (profile) {
+          const current = form.getValues()
+          form.reset({ ...current, name: current.name || profile.fullName, phone: current.phone || profile.phone })
+        }
+      })
+      .catch(() => {
+        fetchedForUser.current = null
+      })
     return () => {
       cancelled = true
     }
-  }, [authReady, user, form])
+  }, [authReady, user, form, initialAddresses.length])
 
   const onSubmit = form.handleSubmit((values) => {
+    if (area.error) {
+      form.setError("pincode", { message: area.error })
+      return
+    }
     setServerError(null)
     startTransition(async () => {
       const res = await placeOrder({
@@ -249,7 +306,7 @@ export function CheckoutForm({ products, preview = false }: { products: LiveProd
             autoComplete="postal-code"
             maxLength={6}
             hint={area.hint}
-            error={errors.pincode?.message}
+            error={errors.pincode?.message || area.error}
             {...form.register("pincode")}
           />
           <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
@@ -295,9 +352,14 @@ export function CheckoutForm({ products, preview = false }: { products: LiveProd
                 <span data-ui="store/CheckoutForm/span-7" className="mt-0.5 block text-xs font-normal text-muted-foreground">
                   {formatPrice(l.price)} × {l.quantity}
                 </span>
-                {l.fees.length > 0 && (
+                {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
                   <span data-ui="store/CheckoutForm/span-8" className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                    + {l.fees.map((f) => f.label.toLowerCase()).join(", ")} (once)
+                    {[
+                      l.shippingClass === "oversized" ? "Large / bulky" : l.shippingClass === "fragile" ? "Fragile" : null,
+                      l.weightGrams > 0 ? formatWeightGrams(l.weightGrams * l.quantity) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 )}
               </span>
@@ -318,26 +380,18 @@ export function CheckoutForm({ products, preview = false }: { products: LiveProd
         <Button data-ui="store/CheckoutForm/Button"
           type="submit"
           size="lg"
-          disabled={pending}
+          disabled={pending || placeholder}
           className="h-13 w-full rounded-full text-base shadow-lg shadow-primary/25"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
           {pending ? "Placing order…" : `Place order & pay · ${formatPrice(shownCharges.total)}`}
         </Button>
-        <div data-ui="store/CheckoutForm/div-3" className="space-y-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          <p data-ui="store/CheckoutForm/p-flex" className="flex items-start gap-2">
-            <BanIcon className="mt-0.5 size-3.5 shrink-0" />
-            <span data-ui="store/CheckoutForm/span-10">
-              <span data-ui="store/CheckoutForm/span-11" className="font-semibold text-foreground">Cash on delivery isn&apos;t available.</span> You&apos;ll pay by UPI
-              right after placing the order.
-            </span>
+        <div data-ui="store/CheckoutForm/div-3" className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
+          <p data-ui="store/CheckoutForm/p-flex" className="flex items-center gap-2">
+            <CheckCircle2Icon className="size-4 text-primary shrink-0" />
+            <span data-ui="store/CheckoutForm/span-10">Instant UPI payment on next step</span>
           </p>
-          <p data-ui="store/CheckoutForm/p-6" className="pl-5.5">Your order is confirmed once we verify the payment.</p>
-          {shop.unpaidOrderExpiryHours > 0 && (
-            <p data-ui="store/CheckoutForm/p-7" className="pl-5.5">
-              Pay within <span data-ui="store/CheckoutForm/span-12" className="font-semibold text-foreground">{describeHours(shop.unpaidOrderExpiryHours)}</span> of ordering. Unpaid orders are cancelled automatically.
-            </p>
-          )}
+          <span className="text-[11px] font-medium text-foreground/80">100% Safe Checkout</span>
         </div>
       </aside>
     </form>

@@ -13,6 +13,7 @@ const RPC_ERRORS: Record<string, string> = {
   ORDER_NOT_FOUND: "We couldn't find that order. Check the order code and the full mobile number.",
   ORDER_CANCELLED: "This order was cancelled.",
   ALREADY_PAID: "This order is already marked as paid.",
+  ALREADY_SUBMITTED: "A payment reference was already submitted for this order. Sign in to your account to update it.",
   DUPLICATE_REFERENCE: "This reference number was already used for another payment. Please check it and try again.",
   NOT_DELIVERED: "Returns can only be requested after the order is delivered.",
   RETURNS_OFF: "This shop isn't accepting returns right now. Please message us on WhatsApp.",

@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { CheckIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
@@ -60,15 +60,17 @@ function CategoryDialog({
         toast.error(res.error)
         return
       }
-      later(() => toast.success(category ? "Category updated" : "Category added"))
-      onOpenChange(false)
+      later(() => {
+        onOpenChange(false)
+        toast.success(category ? "Category updated" : "Category added")
+      })
       router.refresh()
     })
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent data-ui="admin/CategoryDialog/DialogContent">
+    <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
+      <DialogContent data-ui="admin/CategoryDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <form data-ui="admin/CategoryDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
@@ -101,12 +103,12 @@ function CategoryDialog({
             error={errors.sort?.message}
             {...form.register("sort")}
           />
-          <DialogFooter>
-            <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+          <DialogFooter className="pt-2">
+            <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
+              <XIcon className="size-4" /> Cancel
             </Button>
-            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending}>
-              {pending && <Loader2Icon className="animate-spin" />} Save
+            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending} className="gap-1.5 rounded-full">
+              {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save
             </Button>
           </DialogFooter>
         </form>
@@ -128,13 +130,15 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
   const [toDelete, setToDelete] = useState<Row | null>(null)
 
   const remove = (c: Row) => {
-    setToDelete(null)
     setDeletingId(c.id)
     startTransition(async () => {
       const res = await deleteCategory(c.id)
       setDeletingId(null)
       if (res.ok) {
-        later(() => toast.success("Category deleted"))
+        later(() => {
+          setToDelete(null)
+          toast.success("Category deleted")
+        })
         router.refresh()
       } else toast.error(res.error)
     })
@@ -194,14 +198,15 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
 
       <ConfirmDialog
         open={toDelete !== null}
-        onOpenChange={(o) => !o && setToDelete(null)}
+        onOpenChange={(o) => !o && !pending && setToDelete(null)}
         destructive
         title={`Delete “${toDelete?.name ?? ""}”?`}
         description={toDelete?.productCount ? `Its ${toDelete.productCount} product(s) will stay in the store without a category.` : "This can't be undone."}
         confirmLabel="Delete category"
+        pending={pending}
         onConfirm={() => toDelete && remove(toDelete)}
       />
-      <CategoryDialog category={editing} nextSort={nextSort} open={open} onOpenChange={setOpen} />
+      {open && <CategoryDialog category={editing} nextSort={nextSort} open={open} onOpenChange={setOpen} />}
     </>
   )
 }

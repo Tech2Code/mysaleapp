@@ -19,7 +19,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
   return (
     <article data-ui="store/ProductCard" className="group relative flex h-full flex-col">
       <div data-ui="store/ProductCard/div-relative" className="relative aspect-4/5 overflow-hidden rounded-2xl bg-muted @container">
-        <Link data-ui="store/ProductCard/Link-absolute" href={`/products/${product.slug}`} className="absolute inset-0" aria-label={product.name}>
+        <Link data-ui="store/ProductCard/Link-absolute" href={`/products/${product.slug}`} prefetch={true} className="absolute inset-0" aria-label={product.name}>
           <ProductImage
             src={product.images[0]}
             alt={product.name}
@@ -82,7 +82,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
           </span>
         )}
         <h3 data-ui="store/ProductCard/h3" className="font-sans text-[0.95rem] leading-snug font-semibold">
-          <Link data-ui="store/ProductCard/Link" href={`/products/${product.slug}`} className="line-clamp-2 hover:text-primary">
+          <Link data-ui="store/ProductCard/Link" href={`/products/${product.slug}`} prefetch={true} className="line-clamp-2 hover:text-primary">
             {product.name}
           </Link>
         </h3>

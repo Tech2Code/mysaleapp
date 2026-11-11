@@ -59,7 +59,7 @@ export function FieldShell({
             id={descriptionId(id)}
             role="alert"
             title={error}
-            className="absolute inset-x-0 top-full mt-0.5 text-[0.625rem]/3 sm:text-[0.6563rem]/3  font-medium text-destructive"
+            className="absolute inset-x-0 top-full mt-0.5 text-[0.5625rem]/[0.8125rem] sm:text-[0.625rem]/[0.875rem] font-medium text-destructive tracking-tight"
           >
             {error}
           </p>
@@ -69,7 +69,7 @@ export function FieldShell({
         <p data-ui="form/FieldShell/p"
           id={error ? undefined : descriptionId(id)}
           aria-hidden={error ? true : undefined}
-          className={cn("mt-1 text-[0.6875rem]/4  text-muted-foreground", error && "invisible")}
+          className={cn("mt-1 text-[0.6875rem]/4 text-muted-foreground", error && "invisible")}
         >
           {hint}
         </p>
@@ -79,6 +79,6 @@ export function FieldShell({
 }
 
 /** Spacing between stacked fields (each field already reserves its error strip). */
-export const FIELD_STACK = "space-y-1"
+export const FIELD_STACK = "space-y-2"
 /** Grid of fields: normal column gap, small row gap. */
 export const FIELD_GRID = "gap-x-4 gap-y-1"

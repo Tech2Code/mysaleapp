@@ -56,5 +56,6 @@ describe("reason and quantity limits", () => {
     expect(requestReturnSchema.safeParse({ ...ok, items: [item(21)] }).success).toBe(false)
     expect(requestReturnSchema.safeParse({ ...ok, items: [item(0)] }).success).toBe(false)
     expect(requestReturnSchema.safeParse({ ...ok, details: "x".repeat(301), items: [item(1)] }).success).toBe(false)
+    expect(requestReturnSchema.safeParse({ ...ok, items: [item(1), item(1)] }).success).toBe(false)
   })
 })

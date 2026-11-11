@@ -184,9 +184,20 @@ Courier / AWB / tracking link / expected date are entered ONLY in `<CourierDialo
 
 In a `useTransition` flow that ends with `router.refresh()`, show the SUCCESS toast with `later(() => toast.success(...))` from `useToastAfter(pending)` (`hooks/use-toast-after.ts`) so it appears right after the loader ends, not while it still spins. Error toasts stay immediate.
 
-## Confirm before acting
+## Modals, popups and dialogs (unified pattern)
 
-Any click that changes data and is hard to undo opens `<ConfirmDialog>` (`components/shared/confirm-dialog.tsx`) first: cancel, delete, refund, verify/reject payment, status change, pickup, sign out. Not for add-to-cart, wishlist, filters or forms saved with `StickySaveBar`.
+- **Always use the standard Dialog structure**: Every modal must use `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, and `DialogFooter` from `@/components/ui/dialog`.
+  - **Sizing & Scrolling**: `DialogContent` must always carry `className="max-h-[90dvh] overflow-y-auto sm:max-w-md"` (or `sm:max-w-lg` for large multi-item lists). This ensures responsive presentation on mobile and desktop without viewport overflows.
+  - **Header & Close Button**: `DialogHeader` renders the title, description, and an accessible 'X' close button. Close triggers in header/footer must always have `type="button"` so they do not inadvertently trigger form submit inside `<form>`.
+  - **Form Fields inside Modals**: Use standard shared form components from `@/components/form` (`TextField`, `TextAreaField`, `SelectField`, `SwitchField`) inside `FIELD_STACK` (`space-y-1.5`) or `FIELD_GRID` (`gap-x-4 gap-y-1.5`).
+  - **Footer Action Buttons**: Footer buttons must consistently use `rounded-full`, have `gap-1.5`, and pair text with an action icon:
+    - Cancel / Close: `<Button type="button" variant="outline" className="gap-1.5 rounded-full"><XIcon className="size-4" /> Cancel</Button>`
+    - Primary Save / Submit: `<Button type="submit" className="gap-1.5 rounded-full">{pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save</Button>`
+    - Action Send / Submit: `<SendIcon className="size-4" />`
+    - Destructive: `<Button type="button" variant="destructive" className="gap-1.5 rounded-full">{pending ? <Loader2Icon className="animate-spin" /> : <Trash2Icon className="size-4" />} Delete</Button>`
+- **Confirmations**: **Never build custom inline "Are you sure?" confirmation dialogs.** Always reuse `<ConfirmDialog>` (`components/shared/confirm-dialog.tsx`):
+  - Any click that changes data and is hard to undo opens `<ConfirmDialog>` first: cancel, delete, refund, verify/reject payment, status change, pickup, withdraw request, sign out.
+  - Not for add-to-cart, wishlist, filters, or forms saved with `StickySaveBar`.
 
 ## Dashboard range
 

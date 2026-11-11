@@ -20,8 +20,8 @@ export async function getMyOrders(): Promise<Order[]> {
   return data.map(mapOrder)
 }
 
-export async function getMyOrder(code: string): Promise<OrderWithHistory | null> {
-  const user = await requireUser(`/account/orders/${code}`)
+export async function getMyOrder(code: string, nextPath = `/account/orders/${code}`): Promise<OrderWithHistory | null> {
+  const user = await requireUser(nextPath)
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("orders")

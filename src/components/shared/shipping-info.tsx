@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { CalendarClockIcon, ExternalLinkIcon, HashIcon, TruckIcon } from "lucide-react"
 import type { ShippingDetails } from "@/features/orders/types"
 import { formatDate } from "@/lib/format"
+import { safeExternalUrl } from "@/lib/safe-redirect"
 import { cn } from "@/lib/utils"
 import { CopyButton } from "./copy-button"
 
@@ -10,6 +11,7 @@ import { CopyButton } from "./copy-button"
  * Rendered inside the order timeline, under the "Shipped" step.
  */
 export function ShippingInfo({ shipping, className, action }: { shipping: ShippingDetails; className?: string; /** Admin only: e.g. an "Edit" button, shown on the right. */ action?: ReactNode }) {
+  const trackingHref = safeExternalUrl(shipping.trackingUrl, true)
   return (
     <section data-ui="shared/ShippingInfo"
       aria-label="Shipping details"
@@ -49,9 +51,9 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
       </dl>
       {action && <div data-ui="shared/ShippingInfo/div-action" className="absolute top-3 right-3">{action}</div>}
 
-      {shipping.trackingUrl && (
+      {trackingHref && (
         <a data-ui="shared/ShippingInfo/a-track-shipment"
-          href={shipping.trackingUrl}
+          href={trackingHref}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex h-9 items-center gap-2 rounded-full bg-violet-600 px-4 text-sm font-semibold text-white shadow-md shadow-violet-600/20 transition-transform hover:-translate-y-0.5"

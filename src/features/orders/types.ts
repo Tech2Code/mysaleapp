@@ -1,4 +1,4 @@
-import { formatPrice } from "@/lib/format"
+import { formatPhoneDisplay, formatPrice } from "@/lib/format"
 import { returnStage, type ReturnStage } from "./returns"
 
 export const ORDER_STATUSES = [
@@ -222,6 +222,21 @@ export type ReturnRequest = {
   pickedUpAt: string | null
 }
 
+/** Immutable seller & GST details captured when the order was created, so past invoices never drift when settings change. */
+export type OrderTaxSnapshot = {
+  gstRegistered: boolean
+  gstin: string | null
+  gstRate: number
+  legalName: string | null
+  businessAddress: string | null
+  shopName: string
+  city: string | null
+  region: string | null
+  phone: string | null
+  whatsappNumber: string | null
+  email: string | null
+}
+
 export type Order = {
   id: string
   orderCode: string
@@ -238,6 +253,8 @@ export type Order = {
   shipping: ShippingDetails | null
   cancellation: Cancellation | null
   deliveryUpdatedAt: string | null
+  /** Null on older orders placed before migration 0046; InvoiceDocument then falls back to current StoreSettings. */
+  taxSnapshot?: OrderTaxSnapshot | null
   /**
    * Where the order's return is (requested / approved / received / refunded …), derived from the return rows.
    * null = no return activity, OR the query didn't embed return rows (list queries must embed them).
@@ -300,6 +317,19 @@ export type OrderRow = {
   payment_paid_at: string | null
   payment_note: string | null
   delivery_updated_at: string | null
+  tax_snapshot?: {
+    gstRegistered?: boolean | null
+    gstin?: string | null
+    gstRate?: number | string | null
+    legalName?: string | null
+    businessAddress?: string | null
+    shopName?: string | null
+    city?: string | null
+    region?: string | null
+    phone?: string | null
+    whatsappNumber?: string | null
+    email?: string | null
+  } | null
   cancel_reason: string | null
   cancelled_by: "customer" | "admin" | "system" | null
   cancelled_at: string | null
@@ -408,6 +438,25 @@ function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): Return
   })
 }
 
+function mapTaxSnapshot(raw: OrderRow["tax_snapshot"]): OrderTaxSnapshot | null {
+  if (!raw || typeof raw !== "object") return null
+  const whatsappNumber = raw.whatsappNumber ?? null
+  const phone = raw.phone ?? (whatsappNumber ? formatPhoneDisplay(whatsappNumber) : null)
+  return {
+    gstRegistered: Boolean(raw.gstRegistered),
+    gstin: raw.gstin ?? null,
+    gstRate: Number(raw.gstRate ?? 0),
+    legalName: raw.legalName ?? null,
+    businessAddress: raw.businessAddress ?? null,
+    shopName: raw.shopName ?? "",
+    city: raw.city ?? null,
+    region: raw.region ?? null,
+    phone,
+    whatsappNumber,
+    email: raw.email ?? null,
+  }
+}
+
 export function mapOrder(row: OrderRow): Order {
   const pricing = mapPricing(row)
   return {
@@ -442,6 +491,7 @@ export function mapOrder(row: OrderRow): Order {
           }
         : null,
     deliveryUpdatedAt: row.delivery_updated_at ?? null,
+    taxSnapshot: mapTaxSnapshot(row.tax_snapshot),
     returnStage: stageOfRow(row, pricing),
     createdAt: row.created_at,
     updatedAt: row.updated_at,

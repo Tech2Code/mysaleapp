@@ -17,7 +17,8 @@ export function formatMoney(value: number): string {
 
 export function discountPercent(price: number, compareAt: number | null): number | null {
   if (!compareAt || compareAt <= price) return null
-  return Math.round(((compareAt - price) / compareAt) * 100)
+  if (price <= 0) return 100
+  return Math.min(99, Math.max(1, Math.round(((compareAt - price) / compareAt) * 100)))
 }
 
 export function slugify(input: string): string {
@@ -57,8 +58,8 @@ function parseDateInput(input: string | Date | number): Date {
     if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
       return new Date(`${trimmed}T00:00:00+05:30`)
     }
-    // "2026-11-06T00:00:00" without timezone offset -> treat as IST
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    // "2026-11-06T00:00:00" (or with fractional seconds) without timezone offset -> treat as IST
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(trimmed)) {
       return new Date(`${trimmed}+05:30`)
     }
   }

@@ -10,6 +10,10 @@ export const SETTINGS_TAG = "settings"
 type SettingsRow = {
   delivery_fee: number | string
   free_delivery_above: number | string
+  fragile_fee?: number | string | null
+  oversized_fee?: number | string | null
+  free_weight_grams?: number | null
+  extra_weight_fee_per_kg?: number | string | null
   unpaid_order_expiry_hours: number | null
   return_window_days: number | null
   upi_id: string | null
@@ -38,11 +42,6 @@ type SettingsRow = {
   order_code_prefix: string | null
 }
 
-const COLUMNS =
-  "delivery_fee, free_delivery_above, unpaid_order_expiry_hours, return_window_days, upi_id, upi_payee_name, shop_name, tagline, description, seo_keywords, " +
-  "announcement, highlight_line, hero_badge, price_note, gst_registered, gstin, gst_rate, legal_name, business_address, whatsapp_number, contact_email, contact_phone, phone_same_as_whatsapp, contact_city, contact_region, instagram_url, " +
-  "facebook_url, order_code_prefix"
-
 /**
  * All owner-editable settings. Cached; refreshed instantly when the admin saves Settings.
  * Required text falls back to the defaults in ./defaults.ts until set; optional details
@@ -57,9 +56,13 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   const supabase = getPublicSupabase()
   if (!supabase) return d
 
-  const { data, error } = await supabase.from("store_settings").select(COLUMNS).maybeSingle<SettingsRow>()
-  // no row yet / database unreachable → keep the site working with defaults
-  if (error || !data) return d
+  const { data, error } = await supabase.from("store_settings").select("*").maybeSingle<SettingsRow>()
+  if (error) {
+    // Transient DB error: do not poison the hours-long cache with fallback placeholder settings.
+    cacheLife("seconds")
+    return d
+  }
+  if (!data) return d
 
   const keywords = (data.seo_keywords ?? "")
     .split(",")
@@ -96,6 +99,10 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     returnWindowDays: Number(data.return_window_days ?? d.returnWindowDays),
     deliveryFee: Number(data.delivery_fee),
     freeDeliveryAbove: Number(data.free_delivery_above),
+    fragileFee: Number(data.fragile_fee ?? d.fragileFee),
+    oversizedFee: Number(data.oversized_fee ?? d.oversizedFee),
+    freeWeightGrams: Number(data.free_weight_grams ?? d.freeWeightGrams),
+    extraWeightFeePerKg: Number(data.extra_weight_fee_per_kg ?? d.extraWeightFeePerKg),
     upiId: data.upi_id,
     upiPayeeName: data.upi_payee_name,
   }

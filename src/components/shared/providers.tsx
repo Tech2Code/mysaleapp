@@ -22,7 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <RouteProgressProvider>
             <BusyOverlayProvider>{children}</BusyOverlayProvider>
           </RouteProgressProvider>
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster position="top-right" richColors closeButton />
           <AuthListener />
           <ServiceWorkerRegister />
           <UiInspector />

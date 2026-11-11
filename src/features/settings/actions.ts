@@ -49,6 +49,10 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       return_window_days: s.returnWindowDays,
       delivery_fee: s.deliveryFee,
       free_delivery_above: s.freeDeliveryAbove,
+      fragile_fee: s.fragileFee,
+      oversized_fee: s.oversizedFee,
+      free_weight_grams: s.freeWeightGrams,
+      extra_weight_fee_per_kg: s.extraWeightFeePerKg,
       upi_id: s.upiId,
       upi_payee_name: s.upiPayeeName,
     })

@@ -1,16 +1,20 @@
 import type { Metadata } from "next"
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { ResetPasswordForm } from "@/components/admin/password-reset-forms"
 import { LogoMark } from "@/components/shared/logo"
-import { getCurrentUser } from "@/features/auth/guards"
+import { getCurrentUser, isAdminUser } from "@/features/auth/guards"
 
 export const metadata: Metadata = { title: "Set a new password" }
 
 /** Only reachable through the emailed reset link, which signs the admin in first. */
 async function Gate() {
+  const cookieStore = await cookies()
+  if (cookieStore.get("kk_pw_reset")?.value !== "1") redirect("/admin/forgot-password?error=expired")
   const user = await getCurrentUser()
   if (!user) redirect("/admin/forgot-password?error=expired")
+  if (!(await isAdminUser())) redirect("/admin/login?error=not-admin")
   return <ResetPasswordForm />
 }
 

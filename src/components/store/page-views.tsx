@@ -1,4 +1,4 @@
-import { HandHeartIcon, HeartIcon, LeafIcon, MailIcon, MapPinIcon, PackageIcon, PhoneIcon, SparklesIcon } from "lucide-react"
+import { ArrowRightIcon, HandHeartIcon, HeartIcon, LeafIcon, MailIcon, MapPinIcon, PackageIcon, PhoneIcon, SparklesIcon } from "lucide-react"
 import Link from "next/link"
 import { Suspense, type ComponentType, type ReactNode, type SVGProps } from "react"
 import { LogoMark } from "@/components/shared/logo"
@@ -16,8 +16,11 @@ import { WishlistView } from "@/components/store/wishlist-view"
 import type { LiveProduct } from "@/components/store/live-cart"
 import { buttonVariants } from "@/components/ui/button"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
+import type { Profile } from "@/features/account/schema"
+import type { Address } from "@/features/addresses/types"
 import type { Category, ProductCardData, ProductListItem } from "@/features/products/types"
 import type { StoreSettings } from "@/features/settings/types"
+import { safeExternalUrl } from "@/lib/safe-redirect"
 import { cn } from "@/lib/utils"
 
 /**
@@ -42,7 +45,17 @@ export function CartPageView({ products, preview }: { products: LiveProduct[]; p
   )
 }
 
-export function CheckoutPageView({ products, preview }: { products: LiveProduct[]; preview?: boolean }) {
+export function CheckoutPageView({
+  products,
+  initialAddresses,
+  initialProfile,
+  preview,
+}: {
+  products: LiveProduct[]
+  initialAddresses?: Address[]
+  initialProfile?: Profile | null
+  preview?: boolean
+}) {
   return (
     <>
       <PageHeader
@@ -51,7 +64,12 @@ export function CheckoutPageView({ products, preview }: { products: LiveProduct[
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
       />
       <Body>
-        <CheckoutForm products={products} preview={preview} />
+        <CheckoutForm
+          products={products}
+          initialAddresses={initialAddresses}
+          initialProfile={initialProfile}
+          preview={preview}
+        />
       </Body>
     </>
   )
@@ -188,11 +206,11 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
     ...(shop.phone
       ? [{ icon: PhoneIcon, title: "Call us", text: shop.phone, href: `tel:${shop.phone.replace(/[^\d+]/g, "")}`, cta: "Call now" }]
       : []),
-    ...(shop.instagramUrl
-      ? [{ icon: InstagramIcon, title: "Instagram", text: "See new pieces first", href: shop.instagramUrl, cta: "Follow us" }]
+    ...(safeExternalUrl(shop.instagramUrl)
+      ? [{ icon: InstagramIcon, title: "Instagram", text: "See new pieces first", href: safeExternalUrl(shop.instagramUrl)!, cta: "Follow us" }]
       : []),
-    ...(shop.facebookUrl
-      ? [{ icon: FacebookIcon, title: "Facebook", text: "Updates and offers", href: shop.facebookUrl, cta: "Visit page" }]
+    ...(safeExternalUrl(shop.facebookUrl)
+      ? [{ icon: FacebookIcon, title: "Facebook", text: "Updates and offers", href: safeExternalUrl(shop.facebookUrl)!, cta: "Visit page" }]
       : []),
   ]
   const place = [shop.city, shop.region].filter(Boolean).join(", ")
@@ -218,7 +236,9 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
             </span>
             <h2 data-ui="store/ContactView/h2" className="mt-5 font-sans text-xl font-semibold">{c.title}</h2>
             <p data-ui="store/ContactView/p" className="mt-1 text-muted-foreground">{c.text}</p>
-            <span data-ui="store/ContactView/span" className="mt-4 inline-block font-semibold text-primary group-hover:underline">{c.cta} →</span>
+            <span data-ui="store/ContactView/span" className="mt-4 inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
+              {c.cta} <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </a>
         ))}
         {place && (

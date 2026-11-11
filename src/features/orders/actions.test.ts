@@ -158,6 +158,11 @@ describe("guest RPCs that answer {error} instead of raising", () => {
     setup({ data: {} })
     expect(await updateOrderDelivery({ code, phoneLast4: "1234", customer })).toEqual({ ok: true, data: { phoneLast4: "3210" } })
   })
+  it("withdrawReturnRequest normalises and forwards p_phone for guests", async () => {
+    const fake = setup({ data: { ok: true } })
+    expect(await withdrawReturnRequest({ code, phoneLast4: "3210", phone: "+91 98765 43210", requestId: ID })).toEqual({ ok: true })
+    expect(fake.calls[0].args).toMatchObject({ p_code: code, p_phone_last4: "3210", p_phone: "9876543210", p_request_id: ID })
+  })
 })
 
 describe("trackOrder result shaping", () => {

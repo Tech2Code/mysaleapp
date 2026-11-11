@@ -53,20 +53,32 @@ export async function saveAddress(id: string | null, input: unknown): Promise<Ac
   }
 
   const { data: saved, error } = id
-    ? await supabase.from("addresses").update({ ...row, is_default: false }).eq("id", id).eq("user_id", user.id).select("id").maybeSingle<{ id: string }>()
+    ? await supabase
+        .from("addresses")
+        .update({ ...row, ...(a.isDefault ? {} : { is_default: false }) })
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .select("id")
+        .maybeSingle<{ id: string }>()
     : await supabase.from("addresses").insert({ ...row, user_id: user.id, is_default: false }).select("id").single<{ id: string }>()
-
-  if (!error && a.isDefault && saved) {
-    const { error: defaultError } = await supabase.rpc("set_default_address", { p_id: saved.id })
-    if (defaultError) return fail("Saved, but could not make it the default address.")
-  }
 
   if (error) {
     if (error.message.includes("ADDRESS_LIMIT")) return fail("You can save up to 10 addresses. Delete one to add another.")
     return fail("Could not save the address.")
   }
+  if (!saved) return fail("Address not found.")
+
+  if (a.isDefault) {
+    const { error: defaultError } = await supabase.rpc("set_default_address", { p_id: saved.id })
+    if (defaultError) {
+      revalidatePath("/account", "layout")
+      revalidatePath("/checkout")
+      return fail("Saved, but could not make it the default address.")
+    }
+  }
 
   revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
   return { ok: true }
 }
 
@@ -80,6 +92,7 @@ export async function deleteAddress(id: string): Promise<ActionResult> {
   if (error) return fail("Could not delete the address.")
 
   revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
   return { ok: true }
 }
 
@@ -93,5 +106,6 @@ export async function setDefaultAddress(id: string): Promise<ActionResult> {
   if (error) return fail("Could not set the default address.")
 
   revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
   return { ok: true }
 }

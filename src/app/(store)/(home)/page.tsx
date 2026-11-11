@@ -1,8 +1,11 @@
+import type { Metadata } from "next"
 import { JsonLd } from "@/components/shared/json-ld"
 import { HomeView } from "@/components/store/home-view"
 import { getActiveProducts, getCategoriesWithCounts, getFeaturedProducts } from "@/features/products/queries"
 import { getStoreSettings } from "@/features/settings/queries"
-import { websiteJsonLd } from "@/lib/seo"
+import { absoluteUrl, websiteJsonLd } from "@/lib/seo"
+
+export const metadata: Metadata = { alternates: { canonical: absoluteUrl("/") } }
 
 export default async function HomePage() {
   const [featured, all, categories, shop] = await Promise.all([

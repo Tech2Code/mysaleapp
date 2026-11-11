@@ -8,10 +8,15 @@ export type Category = {
 }
 
 /**
- * An extra charge on a product, e.g. "Handling charge" ₹20. It is added ONCE per product in an order
- * (not multiplied by quantity). `reason` is a short explanation shown to the customer.
+ * Physical handling tier of a product. Rates are configured centrally in Store Settings
+ * (Admin → Settings → Delivery & handling charges) and applied intelligently once per order.
  */
-export type ProductFee = { label: string; amount: number; reason?: string | null }
+export const SHIPPING_CLASSES = ["standard", "fragile", "oversized"] as const
+export type ShippingClass = (typeof SHIPPING_CLASSES)[number]
+
+export function isShippingClass(value: unknown): value is ShippingClass {
+  return typeof value === "string" && (SHIPPING_CLASSES as readonly string[]).includes(value)
+}
 
 export type ProductSpec = { label: string; value: string }
 
@@ -26,7 +31,10 @@ export type Product = {
   categoryId: string | null
   category: { name: string; slug: string } | null
   stock: number
-  fees: ProductFee[]
+  /** Unit parcel weight in grams (0 = light/standard item). Used for heavy-parcel courier slabs. */
+  weightGrams: number
+  /** Physical handling class (standard / fragile / oversized). */
+  shippingClass: ShippingClass
   /** One or two sentences shown right under the price. */
   shortDescription: string | null
   /** Key selling points (max 6), shown as a checklist near the price. */
@@ -54,8 +62,9 @@ export type ProductRow = {
   category_id: string | null
   category: { name: string; slug: string } | null
   stock: number
-  /** Added by migration 0003; optional so the app keeps working before it is applied. */
-  fees?: { label: string; amount: number | string; reason?: string | null }[] | null
+  /** Added by migration 0046; optional so the app keeps working before it is applied. */
+  weight_grams?: number | null
+  shipping_class?: string | null
   short_description?: string | null
   highlights?: string[] | null
   specs?: ProductSpec[] | null
@@ -80,6 +89,7 @@ export type CategoryRow = {
 export const PRODUCT_SELECT = "*, category:categories(name, slug)"
 
 export function mapProduct(row: ProductRow): Product {
+  const rawWeight = Number(row.weight_grams ?? 0)
   return {
     id: row.id,
     name: row.name,
@@ -91,7 +101,8 @@ export function mapProduct(row: ProductRow): Product {
     categoryId: row.category_id,
     category: row.category,
     stock: row.stock,
-    fees: (row.fees ?? []).map((f) => ({ label: f.label, amount: Number(f.amount), reason: f.reason ?? null })),
+    weightGrams: Number.isFinite(rawWeight) && rawWeight > 0 ? Math.trunc(rawWeight) : 0,
+    shippingClass: isShippingClass(row.shipping_class) ? row.shipping_class : "standard",
     shortDescription: row.short_description ?? null,
     highlights: row.highlights ?? [],
     specs: row.specs ?? [],
@@ -148,6 +159,6 @@ export function toListItem(p: Product): ProductListItem {
     ...toCardData(p),
     isFeatured: p.isFeatured,
     createdAt: p.createdAt,
-    searchText: [p.name, p.description, p.category?.name ?? ""].join("\n").toLowerCase(),
+    searchText: [p.name, p.shortDescription ?? "", p.description, p.category?.name ?? ""].join("\n").toLowerCase(),
   }
 }

@@ -1,10 +1,10 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, LogInIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { TextField } from "@/components/form"
@@ -31,6 +31,13 @@ export function AdminLoginForm() {
   )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
 
+  useEffect(() => {
+    return () => {
+      form.reset({ email: "", password: "" })
+      setError(null)
+    }
+  }, [form])
+
   const onSubmit = form.handleSubmit((values) =>
     startTransition(async () => {
       setError(null)
@@ -41,13 +48,14 @@ export function AdminLoginForm() {
       }
       showSuccess("Login successful")
       const next = safeNextPath(params.get("next"), "/admin")
-      router.replace(next.startsWith("/admin") ? next : "/admin")
+      const adminTarget = (next === "/admin" || next.startsWith("/admin/")) && !next.startsWith("/admin/reset-password") ? next : "/admin"
+      router.replace(adminTarget)
       router.refresh()
     })
   )
 
   return (
-    <form data-ui="admin/AdminLoginForm" onSubmit={onSubmit} noValidate className="space-y-1">
+    <form data-ui="admin/AdminLoginForm" onSubmit={onSubmit} noValidate className="space-y-2">
       <TextField label="Email" kind="email" type="email" autoComplete="email" error={form.formState.errors.email?.message} {...form.register("email")} />
       <TextField
         label="Password" maxLength={LIMITS.password.max}
@@ -56,18 +64,18 @@ export function AdminLoginForm() {
         error={form.formState.errors.password?.message}
         {...form.register("password")}
       />
-      <p data-ui="admin/AdminLoginForm/p" className="-mt-2 text-right text-sm">
+      <div data-ui="admin/AdminLoginForm/div-forgot" className="flex justify-end pt-0.5 text-sm">
         <Link data-ui="admin/AdminLoginForm/Link-forgot-password" href="/admin/forgot-password" className="font-medium text-primary hover:underline">
           Forgot password?
         </Link>
-      </p>
+      </div>
       {error && (
         <p data-ui="admin/AdminLoginForm/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
-      <Button data-ui="admin/AdminLoginForm/Button-sign-in" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Sign in
+      <Button data-ui="admin/AdminLoginForm/Button-sign-in" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
+        {pending ? <Loader2Icon className="animate-spin" /> : <LogInIcon className="size-4" />} Sign in
       </Button>
     </form>
   )

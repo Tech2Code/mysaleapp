@@ -6,6 +6,7 @@ import { Skeletonize } from "@/components/shared/skeletonize"
 import { requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
 import { getPaymentsToVerifyCount } from "@/features/orders/admin-queries"
+import { safeAvatarUrl } from "@/lib/supabase/config"
 
 /**
  * Server-side gate (redirects non-admins). It renders nothing and sits NEXT to the page instead of wrapping it:
@@ -29,7 +30,7 @@ async function AccountSlot() {
       account={{
         name: meta.full_name ?? meta.name ?? user.email?.split("@")[0] ?? "Admin",
         email: user.email ?? "",
-        avatarUrl: meta.avatar_url ?? null,
+        avatarUrl: safeAvatarUrl(meta.avatar_url),
         lastSignIn,
       }}
     />

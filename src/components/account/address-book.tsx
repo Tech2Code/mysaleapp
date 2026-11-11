@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { HomeIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, StarIcon, Trash2Icon } from "lucide-react"
+import { CheckIcon, HomeIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,10 @@ function AddressDialog({
   })
 
   const onSubmit = form.handleSubmit((values) => {
+    if (area.error) {
+      form.setError("pincode", { message: area.error })
+      return
+    }
     setServerError(null)
     startTransition(async () => {
       const res = await saveAddress(address?.id ?? null, values)
@@ -80,14 +85,16 @@ function AddressDialog({
         }
         return
       }
-      later(() => toast.success(address ? "Address updated" : "Address added"))
-      onOpenChange(false)
+      later(() => {
+        onOpenChange(false)
+        toast.success(address ? "Address updated" : "Address added")
+      })
       router.refresh()
     })
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent data-ui="account/AddressDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <form data-ui="account/AddressDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
           <DialogHeader>
@@ -122,7 +129,7 @@ function AddressDialog({
               maxLength={6}
               autoComplete="postal-code"
               hint={area.hint}
-              error={errors.pincode?.message}
+              error={errors.pincode?.message || area.error}
               {...form.register("pincode")}
             />
             <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
@@ -147,11 +154,11 @@ function AddressDialog({
             </p>
           )}
           <DialogFooter>
-            <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" onClick={() => onOpenChange(false)}>
-              Cancel
+            <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
+              <XIcon className="size-4" /> Cancel
             </Button>
-            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending}>
-              {pending && <Loader2Icon className="animate-spin" />} Save address
+            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending} className="gap-1.5 rounded-full">
+              {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save address
             </Button>
           </DialogFooter>
         </form>
@@ -198,8 +205,10 @@ export function AddressBook({
     startTransition(async () => {
       const res = await deleteAddress(deleting.id)
       if (res.ok) {
-        later(() => toast.success("Address deleted"))
-        setDeleting(null)
+        later(() => {
+          setDeleting(null)
+          toast.success("Address deleted")
+        })
         router.refresh()
       } else toast.error(res.error)
     })
@@ -291,24 +300,17 @@ export function AddressBook({
         defaults={defaults}
       />
 
-      <Dialog open={deleting !== null} onOpenChange={(open) => !open && setDeleting(null)}>
-        <DialogContent data-ui="account/AddressBook/DialogContent">
-          <DialogHeader>
-            <DialogTitle>Delete this address?</DialogTitle>
-            <DialogDescription>
-              {deleting && `${deleting.label}: ${deleting.address}, ${deleting.city}.`} Orders you already placed are not affected.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button data-ui="account/AddressBook/Button-cancel" variant="outline" onClick={() => setDeleting(null)}>
-              Cancel
-            </Button>
-            <Button data-ui="account/AddressBook/Button-delete-2" variant="destructive" disabled={pending} onClick={confirmDelete}>
-              {pending && <Loader2Icon className="animate-spin" />} Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => !open && !pending && setDeleting(null)}
+        destructive
+        title="Delete this address?"
+        description={deleting ? `${deleting.label}: ${deleting.address}, ${deleting.city}. Orders you already placed are not affected.` : undefined}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        pending={pending}
+        onConfirm={confirmDelete}
+      />
     </section>
   )
 }

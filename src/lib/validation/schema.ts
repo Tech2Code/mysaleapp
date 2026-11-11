@@ -31,7 +31,7 @@ export const v = {
       .trim()
       .min(LIMITS.city.min, "Please enter the city")
       .max(LIMITS.city.max, `Keep it under ${LIMITS.city.max} characters`)
-      .regex(PATTERNS.personName, "Use letters only"),
+      .regex(PATTERNS.city, "Enter a valid city name"),
 
   state: () => z.enum(INDIAN_STATES, { error: "Select the state" }),
 
@@ -42,12 +42,13 @@ export const v = {
       .min(LIMITS.address.min, "Please enter the full address")
       .max(LIMITS.address.max, `Keep it under ${LIMITS.address.max} characters`),
 
-  /** Indian mobile number; +91 / 0 prefixes are accepted. */
+  /** Indian mobile number; +91 / 0 prefixes are accepted and normalised to 10 digits. */
   phoneIN: () =>
     z
       .string()
       .trim()
-      .refine((x) => normalizeIndianPhone(x) !== null, "Enter a valid 10-digit mobile number"),
+      .refine((x) => normalizeIndianPhone(x) !== null, "Enter a valid 10-digit mobile number")
+      .transform((x) => normalizeIndianPhone(x)!),
 
   pincode: () => z.string().trim().regex(PATTERNS.pincode, "Enter a valid 6-digit pincode"),
 

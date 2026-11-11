@@ -73,9 +73,14 @@ export function useInstallPrompt(): InstallPromptApi {
   const install = useCallback(async () => {
     const e = state.deferred
     if (!e) return
-    await e.prompt()
-    const { outcome } = await e.userChoice
-    set({ deferred: null, ...(outcome === "accepted" ? { installed: true } : {}) })
+    set({ deferred: null })
+    try {
+      await e.prompt()
+      const { outcome } = await e.userChoice
+      if (outcome === "accepted") set({ installed: true })
+    } catch {
+      /* browser dismissed or prompt already consumed */
+    }
   }, [])
 
   const dismiss = useCallback(() => {

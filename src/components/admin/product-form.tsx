@@ -12,17 +12,17 @@ import { Button } from "@/components/ui/button"
 import { siteConfig } from "@/config/site"
 import { saveProduct } from "@/features/products/actions"
 import {
-  FEE_SUGGESTIONS,
-  MAX_FEES_PER_PRODUCT,
   MAX_HIGHLIGHTS,
   MAX_SPECS,
   productSchema,
+  SHIPPING_CLASS_OPTIONS,
   SPEC_SUGGESTIONS,
   type ProductInput,
   type ProductValues,
 } from "@/features/products/schema"
 import type { Category, Product } from "@/features/products/types"
-import { slugify } from "@/lib/format"
+import { formatWeightGrams } from "@/features/orders/pricing"
+import { formatPrice, slugify } from "@/lib/format"
 import { ImageUploader } from "./image-uploader"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
@@ -52,7 +52,8 @@ export function ProductForm({
   const later = useToastAfter(pending)
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
   const [uploading, setUploading] = useState(false)
-  const { shopName } = useStoreSettings()
+  const storeSettings = useStoreSettings()
+  const { shopName } = storeSettings
 
   const form = useForm<ProductInput, unknown, ProductValues>({
     resolver: zodResolver(productSchema),
@@ -69,7 +70,8 @@ export function ProductForm({
       images: product?.images ?? [],
       categoryId: product?.categoryId ?? "",
       stock: product?.stock ?? 10,
-      fees: (product?.fees ?? []).map((f) => ({ label: f.label, amount: f.amount, reason: f.reason ?? "" })),
+      weightGrams: product?.weightGrams ?? 0,
+      shippingClass: product?.shippingClass ?? "standard",
       isActive: product?.isActive ?? true,
       isFeatured: product?.isFeatured ?? false,
       seoTitle: product?.seoTitle ?? "",
@@ -77,11 +79,10 @@ export function ProductForm({
     },
   })
   const { errors, isDirty } = form.formState
-  const { fields: fees, append: appendFee, remove: removeFee } = useFieldArray({ control: form.control, name: "fees" })
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
-  const [name, slug, description, highlightsText, seoTitle, seoDescription] = useWatch({
+  const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal] = useWatch({
     control: form.control,
-    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription"],
+    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription", "weightGrams", "shippingClass"],
   })
   const highlightCount = String(highlightsText ?? "").split("\n").filter((l) => l.trim()).length
 
@@ -294,57 +295,41 @@ export function ProductForm({
           </Section>
 
           <Section
-            title="Extra charges"
-            description="Optional. Added once per product (not multiplied by quantity) and shown to the customer under this product's name, with your reason."
+            title="Shipping & parcel"
+            description="Declare the item's physical size and weight. Handling & courier slab rates are managed centrally in Settings."
           >
-            {fees.map((field, i) => (
-              <div data-ui="admin/ProductForm/div-6" key={field.id} className="space-y-1 rounded-xl border p-3">
-                <div data-ui="admin/ProductForm/div-grid-4" className="grid grid-cols-[1fr_7rem] gap-x-3 gap-y-1">
-                  <TextField
-                    label="Charge name" maxLength={LIMITS.feeLabel.max}
-                    fieldSize="md"
-                    placeholder="e.g. Handling charge"
-                    suggestions={FEE_SUGGESTIONS}
-                    error={errors.fees?.[i]?.label?.message}
-                    {...form.register(`fees.${i}.label`)}
-                  />
-                  <TextField
-                    label="Amount" kind="money"
-                    fieldSize="md"
-                    inputMode="decimal"
-                    leading="₹"
-                    error={errors.fees?.[i]?.amount?.message}
-                    {...form.register(`fees.${i}.amount`)}
-                  />
-                </div>
-                <div data-ui="admin/ProductForm/div-flex" className="flex items-end gap-2">
-                  <TextField
-                    label="Why is it charged?" maxLength={LIMITS.feeReason.max}
-                    fieldSize="md"
-                    placeholder="e.g. Fragile item: extra care while packing"
-                    hint="Customers see this, so they know why the charge applies."
-                    containerClassName="flex-1"
-                    error={errors.fees?.[i]?.reason?.message}
-                    {...form.register(`fees.${i}.reason`)}
-                  />
-                  <Button data-ui="admin/ProductForm/Button-2" type="button" variant="ghost" size="icon" aria-label={`Remove charge ${i + 1}`} onClick={() => removeFee(i)} className="mb-5">
-                    <Trash2Icon />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {errors.fees?.message && <p data-ui="admin/ProductForm/p-8" className="text-xs font-medium text-destructive">{errors.fees.message}</p>}
-            {fees.length < MAX_FEES_PER_PRODUCT && (
-              <Button data-ui="admin/ProductForm/Button-add-a-charge"
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-                onClick={() => appendFee({ label: "", amount: "", reason: "" })}
-              >
-                <PlusIcon /> Add a charge
-              </Button>
-            )}
+            <FormSelectField
+              control={form.control}
+              name="shippingClass"
+              label="Handling & size class"
+              fieldSize="md"
+              options={SHIPPING_CLASS_OPTIONS}
+            />
+            <TextField
+              label="Parcel weight (grams)"
+              kind="digits"
+              maxLength={String(LIMITS.weightGrams.max).length}
+              fieldSize="md"
+              inputMode="numeric"
+              hint={
+                Number(weightVal) > 0
+                  ? `${formatWeightGrams(Number(weightVal))} per piece. Base delivery includes ${formatWeightGrams(storeSettings.freeWeightGrams)} per order.`
+                  : "e.g. 350 for 350 g, 1500 for 1.5 kg. 0 = standard light item."
+              }
+              error={errors.weightGrams?.message}
+              {...form.register("weightGrams")}
+            />
+            <p data-ui="admin/ProductForm/p-shipping-preview" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+              {shippingClassVal === "oversized"
+                ? storeSettings.oversizedFee > 0
+                  ? `Large / bulky handling (${formatPrice(storeSettings.oversizedFee)}) is added once per order.`
+                  : "Marked as large / bulky (currently ₹0 in Settings)."
+                : shippingClassVal === "fragile"
+                  ? storeSettings.fragileFee > 0
+                    ? `Fragile packaging (${formatPrice(storeSettings.fragileFee)}) is added once per order.`
+                    : "Marked as fragile (currently ₹0 in Settings)."
+                  : "Standard parcel: no special handling charge."}
+            </p>
           </Section>
         </div>
       </div>
@@ -353,6 +338,7 @@ export function ProductForm({
       <StickySaveBar
         dirty={isDirty}
         pending={pending}
+        busy={uploading}
         requireChanges={Boolean(product)}
         saveLabel={product ? "Save changes" : "Create product"}
         onCancel={() => router.back()}

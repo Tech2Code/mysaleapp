@@ -59,6 +59,7 @@ export function MyOrdersView({ orders, shop }: { orders: Order[]; shop: StoreSet
             <li data-ui="account/MyOrdersView/li" key={o.id}>
               <Link data-ui="account/MyOrdersView/Link-flex"
                 href={`/account/orders/${o.orderCode}`}
+                prefetch={true}
                 className="group flex items-center gap-4 rounded-3xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
               >
                 <div data-ui="account/MyOrdersView/div" className="min-w-0 flex-1 space-y-1">
@@ -142,7 +143,7 @@ export function MyOrderView({
         {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
         <div data-ui="account/MyOrderView/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
           <div data-ui="account/MyOrderView/div-3" className="space-y-6">
-            <ReturnRequestsPanel requests={order.returnRequests} returns={order.returns} refundedInFull={order.returnStage?.key === "refunded"} orderCode={order.orderCode} phoneLast4={order.phone.slice(-4)} />
+            <ReturnRequestsPanel requests={order.returnRequests} returns={order.returns} refundedInFull={order.returnStage?.key === "refunded"} orderCode={order.orderCode} />
             <RefundSummary order={order} />
             {order.cancellation && (
               <CancellationNotice cancellation={order.cancellation} paymentStatus={order.paymentStatus} audience="customer" />

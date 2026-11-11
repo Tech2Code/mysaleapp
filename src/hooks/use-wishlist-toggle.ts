@@ -16,6 +16,7 @@ export function useWishlistToggle(productId: string, productName: string) {
   const [pending, startTransition] = useTransition()
 
   const toggle = () => {
+    if (pending) return
     const next = !active
     setOn(productId, next)
     toast.success(next ? `Saved “${productName}” to your wishlist` : "Removed from wishlist")

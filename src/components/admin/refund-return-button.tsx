@@ -29,8 +29,10 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
         toast.error(res.error)
         return
       }
-      setOpen(false)
-      later(() => toast.success(res.data.fullyRefunded ? "Refund recorded. Payment marked refunded." : `Refund recorded (${formatPrice(res.data.refundedAmount)} refunded so far).`))
+      later(() => {
+        setOpen(false)
+        toast.success(res.data.fullyRefunded ? "Refund recorded. Payment marked refunded." : `Refund recorded (${formatPrice(res.data.refundedAmount)} refunded so far).`)
+      })
       router.refresh()
     })
 

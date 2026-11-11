@@ -7,7 +7,7 @@ import Link from "next/link"
 import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeletonize } from "@/components/shared/skeletonize"
-import { calculateCharges } from "@/features/orders/pricing"
+import { calculateCharges, formatWeightGrams } from "@/features/orders/pricing"
 import { placeholderCartLines } from "@/features/products/placeholders"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -97,9 +97,14 @@ function CartLayout({
                         {item.available ? formatPrice(item.price) : "Unavailable"}
                         {item.priceChanged && <span data-ui="store/CartLayout/span" className="ml-2 text-xs text-primary">(price updated)</span>}
                       </p>
-                      {item.available && item.fees.length > 0 && (
+                      {item.available && (item.shippingClass !== "standard" || item.weightGrams > 0) && (
                         <p data-ui="store/CartLayout/p-2" className="mt-1 inline-block rounded-lg bg-secondary/70 px-2 py-1 text-xs text-muted-foreground">
-                          + {item.fees.map((f) => `${formatPrice(f.amount)} ${f.label.toLowerCase()}`).join(", ")} (once for this product)
+                          {[
+                            item.shippingClass === "oversized" ? "Large / bulky" : item.shippingClass === "fragile" ? "Fragile" : null,
+                            item.weightGrams > 0 ? `${formatWeightGrams(item.weightGrams)} each` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </p>
                       )}
                     </div>

@@ -1,5 +1,13 @@
+import { createHash, timingSafeEqual } from "node:crypto"
 import { connection } from "next/server"
 import { getPublicSupabase } from "@/lib/supabase/public"
+
+function hasValidSecret(authHeader: string | null, secret: string | undefined): boolean {
+  if (!secret || !authHeader) return false
+  const a = createHash("sha256").update(authHeader).digest()
+  const b = createHash("sha256").update(`Bearer ${secret}`).digest()
+  return timingSafeEqual(a, b)
+}
 
 /**
  * Supabase pauses free projects after 7 days without activity.
@@ -8,8 +16,7 @@ import { getPublicSupabase } from "@/lib/supabase/public"
 export async function GET(request: Request) {
   await connection() // always run at request time, never prerender
 
-  const secret = process.env.CRON_SECRET
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!hasValidSecret(request.headers.get("authorization"), process.env.CRON_SECRET)) {
     return Response.json({ ok: false }, { status: 401 })
   }
 

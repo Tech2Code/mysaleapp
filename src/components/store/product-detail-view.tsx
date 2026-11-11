@@ -7,6 +7,7 @@ import { ProductActions } from "@/components/store/product-actions"
 import { ProductGallery } from "@/components/store/product-gallery"
 import { ProductGrid } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
+import { describeProductSurcharges } from "@/features/orders/pricing"
 import type { Product, ProductCardData } from "@/features/products/types"
 import { priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
@@ -31,6 +32,7 @@ export function productCrumbs(product: Pick<Product, "name" | "category">): { na
 export function ProductDetailView({ product, related, settings }: { product: Product; related: ProductCardData[]; settings: StoreSettings }) {
   const off = discountPercent(product.price, product.compareAtPrice)
   const taxNote = priceNote(settings)
+  const surcharges = describeProductSurcharges(product, settings)
   const perks = [
     { icon: HandHeartIcon, text: settings.highlightLine },
     {
@@ -84,8 +86,8 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
 
           {product.highlights.length > 0 && (
             <ul data-ui="store/ProductDetailView/ul-highlights" className="mt-4 space-y-2 sm:mt-5 sm:space-y-2.5" aria-label="Highlights">
-              {product.highlights.map((h) => (
-                <li data-ui="store/ProductDetailView/li-flex" key={h} className="flex items-start gap-2.5 text-sm">
+              {product.highlights.map((h, idx) => (
+                <li data-ui="store/ProductDetailView/li-flex" key={`${idx}-${h}`} className="flex items-start gap-2.5 text-sm">
                   <CheckCircle2Icon className="mt-0.5 size-4.5 shrink-0 text-success" aria-hidden />
                   {h}
                 </li>
@@ -93,22 +95,22 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
             </ul>
           )}
 
-          {product.fees.length > 0 && (
+          {surcharges.length > 0 && (
             <div data-ui="store/ProductDetailView/div-2" className="mt-4 rounded-2xl border border-amber-200 sm:mt-5 bg-amber-50/70 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
               <p data-ui="store/ProductDetailView/p-flex" className="flex items-center gap-2 font-semibold">
-                <InfoIcon className="size-4" aria-hidden /> Extra charge on this product
+                <InfoIcon className="size-4" aria-hidden /> Special shipping &amp; handling
               </p>
               <ul data-ui="store/ProductDetailView/ul" className="mt-2 space-y-2">
-                {product.fees.map((f) => (
-                  <li data-ui="store/ProductDetailView/li" key={f.label}>
+                {surcharges.map((f, idx) => (
+                  <li data-ui="store/ProductDetailView/li" key={`${idx}-${f.label}`}>
                     <span data-ui="store/ProductDetailView/span-4" className="font-medium">
                       {f.label}: {formatPrice(f.amount)}
                     </span>
-                    {f.reason && <span data-ui="store/ProductDetailView/span-5" className="block text-muted-foreground">{f.reason}</span>}
+                    <span data-ui="store/ProductDetailView/span-5" className="block text-muted-foreground">{f.reason}</span>
                   </li>
                 ))}
               </ul>
-              <p data-ui="store/ProductDetailView/p-4" className="mt-2 text-xs text-muted-foreground">Added once per order for this product, whatever the quantity. Shown separately at checkout.</p>
+              <p data-ui="store/ProductDetailView/p-4" className="mt-2 text-xs text-muted-foreground">Calculated across your whole order at checkout, never compounded per item.</p>
             </div>
           )}
 
@@ -141,8 +143,8 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
             <section data-ui="store/ProductDetailView/section-2" className="mt-6 sm:mt-8" aria-labelledby="specs-title">
               <h2 data-ui="store/ProductDetailView/h2-details" id="specs-title" className="text-xl font-semibold sm:text-2xl">Details</h2>
               <dl data-ui="store/ProductDetailView/dl" className="mt-3 divide-y rounded-2xl border bg-card px-4 sm:px-5">
-                {product.specs.map((s) => (
-                  <div data-ui="store/ProductDetailView/div-grid-2" key={s.label} className="grid grid-cols-[7rem_1fr] gap-4 py-3 text-sm sm:grid-cols-[9rem_1fr]">
+                {product.specs.map((s, idx) => (
+                  <div data-ui="store/ProductDetailView/div-grid-2" key={`${idx}-${s.label}`} className="grid grid-cols-[7rem_1fr] gap-4 py-3 text-sm sm:grid-cols-[9rem_1fr]">
                     <dt data-ui="store/ProductDetailView/dt" className="text-muted-foreground">{s.label}</dt>
                     <dd data-ui="store/ProductDetailView/dd" className="font-medium">{s.value}</dd>
                   </div>

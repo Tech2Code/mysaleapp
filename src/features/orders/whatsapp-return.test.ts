@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { returnStage } from "./returns"
-import { buildStatusUpdateMessage } from "./whatsapp"
+import { buildUpiUrl } from "./upi"
+import { buildStatusUpdateMessage, whatsappLink } from "./whatsapp"
 import { ORDER_VIEWS } from "./views"
 
 const shop = { shopName: "Test Shop", whatsappNumber: "919999999999" }
@@ -39,5 +40,11 @@ describe("status WhatsApp message with a return stage", () => {
 describe("order views for returns", () => {
   it("has a list for requests waiting for a decision AND for approved ones waiting for the goods", () => {
     expect(Object.keys(ORDER_VIEWS)).toEqual(expect.arrayContaining(["return-requests", "returns-to-receive"]))
+  })
+  it("preserves literal @ in UPI pa and normalises double-91 WhatsApp phones", () => {
+    const upi = buildUpiUrl({ upiId: "shop@okhdfc", payeeName: "My Shop", amount: 250.5, orderCode: "KK-ABC123" })
+    expect(upi).toContain("pa=shop@okhdfc")
+    expect(upi).not.toContain("pa=shop%40okhdfc")
+    expect(whatsappLink("91919876543210", "Hi")).toBe("https://wa.me/919876543210?text=Hi")
   })
 })

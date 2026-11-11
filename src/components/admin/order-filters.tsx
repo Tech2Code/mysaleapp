@@ -2,8 +2,8 @@
 
 import { XIcon } from "lucide-react"
 import { LIMITS } from "@/lib/validation"
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useOptimistic, useState, useTransition, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react"
 import { OrdersTable } from "@/components/admin/orders-table"
 import { SearchField } from "@/components/form"
 import { Skeletonize } from "@/components/shared/skeletonize"
@@ -33,12 +33,21 @@ type Filters = { status?: string; payment?: string; view?: string; q?: string }
  */
 export function OrdersBrowser({ children, returnCounts, ...current }: Filters & { children: ReactNode; returnCounts?: ReturnViewCounts }) {
   const router = useRouter()
-  const pathname = usePathname()
   const [pending, startTransition] = useTransition()
   const [applied, setApplied] = useOptimistic<Filters, Filters>(current, (state, next) => ({ ...state, ...next }))
   const [query, setQuery] = useState(current.q ?? "")
+  const [prevServerQ, setPrevServerQ] = useState(current.q ?? "")
+  if ((current.q ?? "") !== prevServerQ) {
+    setPrevServerQ(current.q ?? "")
+    setQuery(current.q ?? "")
+  }
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const go = (next: Filters) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
     const merged: Filters = { ...applied, ...next }
     // picking a status/payment chip leaves any dashboard "view"; picking a view replaces the chips
     if (next.status !== undefined || next.payment !== undefined) merged.view = undefined
@@ -53,18 +62,28 @@ export function OrdersBrowser({ children, returnCounts, ...current }: Filters & 
     if (merged.q?.trim()) sp.set("q", merged.q.trim())
     startTransition(() => {
       setApplied(merged)
-      router.push(`${pathname}${sp.size ? `?${sp}` : ""}`)
+      router.push(`/admin/orders${sp.size ? `?${sp}` : ""}`)
     })
   }
+  const goRef = useRef(go)
+  useEffect(() => {
+    goRef.current = go
+  })
 
   // Search as you type: wait for a short pause, then update the list.
   useEffect(() => {
     const typed = query.trim()
     if (typed === (applied.q ?? "").trim()) return
-    const timer = setTimeout(() => go({ q: typed }), 350)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `go` is recreated every render; only typing should retrigger
-  }, [query])
+    const timer = setTimeout(() => {
+      timerRef.current = null
+      goRef.current({ q: typed })
+    }, 350)
+    timerRef.current = timer
+    return () => {
+      clearTimeout(timer)
+      timerRef.current = null
+    }
+  }, [query, applied.q])
 
   const view = isOrderView(applied.view) ? applied.view : null
   const status = applied.status ?? "all"

@@ -111,19 +111,21 @@ export function resolveRange(input: { range?: string; month?: string; fy?: strin
 
   if (input.from && input.to && isRealDate(input.from) && isRealDate(input.to)) {
     const [a, b] = input.from <= input.to ? [input.from, input.to] : [input.to, input.from]
-    const start = startOfDay(a)
-    const end = addDays(startOfDay(b), 1)
-    // A huge span (?from=1900-01-01&to=2100-12-31) would pull the whole orders table, so it is ignored.
-    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end.getTime() - start.getTime() <= 1100 * DAY) {
-      const span = end.getTime() - start.getTime()
-      return make("custom", a === b ? fmt(start) : `${fmt(start)} – ${fmt(addDays(end, -1))}`, start, end, {
-        start: new Date(start.getTime() - span),
-        end: start,
-      })
+    if (Number(a.slice(0, 4)) >= 2000) {
+      const start = startOfDay(a)
+      const end = addDays(startOfDay(b), 1)
+      // A huge span (?from=1900-01-01&to=2100-12-31) would pull the whole orders table, so it is ignored.
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end.getTime() - start.getTime() <= 1100 * DAY) {
+        const span = end.getTime() - start.getTime()
+        return make("custom", a === b ? fmt(start) : `${fmt(start)} – ${fmt(addDays(end, -1))}`, start, end, {
+          start: new Date(start.getTime() - span),
+          end: start,
+        })
+      }
     }
   }
 
-  if (input.month && YM.test(input.month)) {
+  if (input.month && YM.test(input.month) && Number(input.month.slice(0, 4)) >= 2000) {
     const start = startOfDay(`${input.month}-01`)
     const nextMonth = monthStart(`${input.month}-01`, 1)
     const end = earlier(nextMonth, tomorrow) // the running month only counts up to today
@@ -136,7 +138,7 @@ export function resolveRange(input: { range?: string; month?: string; fy?: strin
     }
   }
 
-  if (input.fy && /^\d{4}$/.test(input.fy) && Number(input.fy) < fyStartYearOf(today)) {
+  if (input.fy && /^\d{4}$/.test(input.fy) && Number(input.fy) >= 2000 && Number(input.fy) < fyStartYearOf(today)) {
     const fyYear = Number(input.fy)
     const start = startOfDay(`${fyYear}-04-01`)
     const end = startOfDay(`${fyYear + 1}-04-01`)

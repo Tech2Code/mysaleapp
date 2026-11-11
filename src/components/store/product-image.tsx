@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
 function hueFrom(text: string): number {
@@ -30,8 +30,16 @@ export function ProductImage({
 }) {
   // Remember WHICH src failed, so a changed src (gallery thumbnail) starts fresh without an effect.
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
-  if (src && failedSrc !== src) {
+  // Inline `data:` URIs come from skeleton placeholders (`placeholderProduct`); render the lightweight CSS tile instead of mounting/preloading next/image.
+  if (src && !src.startsWith("data:") && failedSrc !== src) {
     return (
       <Image data-ui="store/ProductImage"
         src={src}
@@ -39,7 +47,9 @@ export function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
-        onError={() => setFailedSrc(src)}
+        onError={() => {
+          if (mounted.current) setFailedSrc(src)
+        }}
         className={cn("object-cover text-transparent", className)}
       />
     )

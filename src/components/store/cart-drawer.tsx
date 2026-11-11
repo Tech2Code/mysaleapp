@@ -23,27 +23,38 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
   const unlocked = remaining === 0
 
   return (
-    <div data-ui="store/FreeShippingBar"
+    <div
+      data-ui="store/FreeShippingBar"
       className={cn(
-        "rounded-2xl border p-3.5 text-sm transition-colors",
-        unlocked ? "border-success/30 bg-success/10" : "border-primary/15 bg-linear-to-br from-secondary/80 to-accent/40"
+        "rounded-xl border px-3 py-2 text-xs transition-all",
+        unlocked
+          ? "border-emerald-500/30 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/20 dark:text-emerald-200"
+          : "border-border/60 bg-muted/40"
       )}
     >
-      <p data-ui="store/FreeShippingBar/p-flex" className="flex items-center gap-2 font-medium">
-        <span data-ui="store/FreeShippingBar/span" className={cn("grid size-7 shrink-0 place-items-center rounded-full", unlocked ? "bg-success-solid text-white" : "bg-primary/10 text-primary")}>
-          {unlocked ? <SparklesIcon className="size-3.5" /> : <TruckIcon className="size-3.5" />}
+      <div className="flex items-center justify-between gap-2">
+        <p data-ui="store/FreeShippingBar/p-flex" className="flex items-center gap-1.5 font-medium leading-tight">
+          {unlocked ? (
+            <SparklesIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          ) : (
+            <TruckIcon className="size-3.5 text-primary shrink-0" />
+          )}
+          {unlocked ? (
+            <span>You unlocked <strong>Free Delivery</strong> 🎉</span>
+          ) : (
+            <span>
+              Add <strong className="text-foreground font-semibold">{formatPrice(remaining)}</strong> more for <strong className="text-primary font-semibold">Free Delivery</strong>
+            </span>
+          )}
+        </p>
+        <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+          {Math.round(pct)}%
         </span>
-        {unlocked ? (
-          <>You&apos;ve unlocked free delivery 🎉</>
-        ) : (
-          <>
-            Add <span data-ui="store/FreeShippingBar/span-2" className="font-bold">{formatPrice(remaining)}</span> more for free delivery
-          </>
-        )}
-      </p>
-      <div data-ui="store/FreeShippingBar/div" className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-background/80">
-        <m.div data-ui="store/FreeShippingBar/m.div"
-          className={cn("h-full rounded-full", unlocked ? "bg-success" : "bg-linear-to-r from-primary to-[oklch(0.6_0.16_15)]")}
+      </div>
+      <div data-ui="store/FreeShippingBar/div" className="mt-1.5 h-1 overflow-hidden rounded-full bg-border/40">
+        <m.div
+          data-ui="store/FreeShippingBar/m.div"
+          className={cn("h-full rounded-full transition-all", unlocked ? "bg-emerald-500" : "bg-primary")}
           initial={false}
           animate={{ width: `${pct}%` }}
           transition={{ type: "spring", stiffness: 120, damping: 20 }}

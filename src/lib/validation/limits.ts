@@ -68,6 +68,8 @@ export const LIMITS = {
   money: { max: 1_000_000 },
   feeAmount: { max: 100_000 },
   deliveryFee: { max: 10_000 },
+  /** Parcel weight per unit in grams (up to 50 kg). */
+  weightGrams: { max: 50_000 },
   stock: { max: 100_000 },
   sortOrder: { max: 999 },
   quantityPerItem: { max: 20 },
@@ -106,6 +108,8 @@ export const LIMITS = {
 export const PATTERNS = {
   /** Letters (any language), spaces, and . ' - */
   personName: /^[\p{L}\p{M}][\p{L}\p{M}\s.'-]*$/u,
+  /** Indian cities/districts (e.g. "North 24 Parganas", "Mumbai (Suburban)"): letters/digits, spaces, . ' - ( ) & */
+  city: /^[\p{L}\p{M}0-9][\p{L}\p{M}0-9\s.'()&-]*$/u,
   indianPhone: /^[6-9]\d{9}$/,
   pincode: /^[1-9]\d{5}$/,
   slug: /^[a-z0-9]+(-[a-z0-9]+)*$/,

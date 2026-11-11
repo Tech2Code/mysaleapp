@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
 import { OrderTimeline } from "@/components/shared/order-timeline"
@@ -206,8 +207,13 @@ function TrackResult({
 }
 
 export function TrackOrder() {
-  const shop = useStoreSettings()
   const params = useSearchParams()
+  const urlCode = params.get("code") ?? ""
+  return <TrackOrderBody key={urlCode} urlCode={urlCode} />
+}
+
+function TrackOrderBody({ urlCode }: { urlCode: string }) {
+  const shop = useStoreSettings()
   const [result, setResult] = useState<TrackedOrder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -217,8 +223,18 @@ export function TrackOrder() {
 
   const form = useForm<TrackInput>({
     resolver: zodResolver(trackOrderSchema),
-    defaultValues: { code: params.get("code") ?? "", phoneLast4: "" },
+    defaultValues: { code: urlCode, phoneLast4: "" },
   })
+
+  useEffect(() => {
+    form.reset({ code: urlCode, phoneLast4: "" })
+    return () => {
+      form.reset({ code: "", phoneLast4: "" })
+      setError(null)
+      setResult(null)
+      setQuery(null)
+    }
+  }, [urlCode, form])
 
   // On phones the result sits below the form: bring it into view after the reader's own lookup only
   // (refresh / payment / cancel re-reads must not move the page).
@@ -252,13 +268,15 @@ export function TrackOrder() {
     if (res.ok) {
       setResult(res.data)
       setQuery(next)
+    } else {
+      toast.error(res.error)
     }
   }
 
   return (
     <div data-ui="store/TrackOrder" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
       {/* Left: find your order */}
-      <form data-ui="store/TrackOrder/form" onSubmit={onSubmit} noValidate className={`flex flex-col gap-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
+      <form data-ui="store/TrackOrder/form" onSubmit={onSubmit} noValidate className={`space-y-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
         <div data-ui="store/TrackOrder/div">
           <h2 data-ui="store/TrackOrder/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
           <p data-ui="store/TrackOrder/p" className="mt-1 text-sm text-muted-foreground">Takes 5 seconds. No login needed.</p>

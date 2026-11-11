@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2Icon, LockIcon } from "lucide-react"
+import { BanIcon, CheckIcon, Loader2Icon, LockIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -10,7 +10,7 @@ import { FormSelectField, SelectField, TextAreaField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { CourierDialog, courierValues } from "./courier-dialog"
+import { CourierDialog } from "./courier-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
@@ -148,17 +148,19 @@ export function OrderStatusControl({
   })
 
   const apply = ({ values, shipping: shippingPayload }: NonNullable<typeof toConfirm>) => {
-    setToConfirm(null)
     startTransition(async () => {
       const res = await updateOrderStatus({ orderId, status: values.status, expectedStatus: status, shipping: shippingPayload })
       if (!res.ok) {
         toast.error(res.error)
         return
       }
-      later(() => toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
-        action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl, "_blank", "noopener") },
-      }))
       form.reset(values)
+      later(() => {
+        setToConfirm(null)
+        toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
+          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl, "_blank", "noopener") },
+        })
+      })
       router.refresh()
     })
   }
@@ -181,7 +183,7 @@ export function OrderStatusControl({
           </p>
         </div>
       ) : (
-        <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} />
+        <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} noErrorSpace />
       )}
 
       {!locked && showShipping && (
@@ -216,20 +218,26 @@ export function OrderStatusControl({
       >
         <WhatsAppIcon className="size-4" /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
       </a>
-      <ConfirmDialog
-        open={toConfirm !== null}
-        onOpenChange={(o) => !o && setToConfirm(null)}
-        title={toConfirm && toConfirm.values.status !== status ? `Change status to ${STATUS_META[toConfirm.values.status].label}?` : "Save shipping details?"}
-        description={toConfirm && toConfirm.values.status !== status ? `This order is now “${STATUS_META[status].label}”. The customer sees the new status on their order page.` : "The customer sees the updated courier details."}
-        confirmLabel="Yes, update"
-        onConfirm={() => toConfirm && apply(toConfirm)}
-      />
     </form>
+    <ConfirmDialog
+      open={toConfirm !== null}
+      onOpenChange={(o) => !o && !pending && setToConfirm(null)}
+      title={toConfirm && toConfirm.values.status !== status ? `Change status to ${STATUS_META[toConfirm.values.status].label}?` : "Save shipping details?"}
+      description={toConfirm && toConfirm.values.status !== status ? `This order is now “${STATUS_META[status].label}”. The customer sees the new status on their order page.` : "The customer sees the updated courier details."}
+      confirmLabel="Yes, update"
+      pending={pending}
+      onConfirm={() => toConfirm && apply(toConfirm)}
+    />
     {courierOpen && (
       <CourierDialog
         open={courierOpen}
         onOpenChange={setCourierOpen}
-        initial={courierValues(shipping)}
+        initial={{
+          carrier: carrier || shipping?.carrier || "",
+          trackingNumber: trackingNumber || shipping?.trackingNumber || "",
+          trackingUrl: trackingUrl || shipping?.trackingUrl || "",
+          expectedDelivery: expectedDelivery || shipping?.expectedDelivery || "",
+        }}
         previousExpected={shipping?.expectedDelivery}
         title="Courier details"
         description="Shown to the customer on their order page once the order is shipped."
@@ -270,20 +278,32 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
         setError(res.error)
         return
       }
-      setOpen(false)
-      later(() => toast.success("Order cancelled"))
+      later(() => {
+        setOpen(false)
+        toast.success("Order cancelled")
+      })
       router.refresh()
     })
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setReason(ADMIN_CANCEL_REASONS[0])
+      setDetail("")
+      setError(null)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         data-ui="admin/AdminCancelOrder/DialogTrigger-inline-flex"
         className="inline-flex h-9 w-full items-center justify-center rounded-full border border-destructive/40 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
       >
         Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent">
+      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -315,11 +335,11 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
           )}
         </div>
         <DialogFooter>
-          <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
-            Keep order
+          <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <CheckIcon className="size-4" /> Keep order
           </Button>
-          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Cancel order
+          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Cancel order
           </Button>
         </DialogFooter>
       </DialogContent>

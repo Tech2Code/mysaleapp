@@ -61,10 +61,23 @@ export function createContext(env) {
     stockOf: async (id) => (await admin.from("products").select("stock").eq("id", id).single()).data?.stock,
     getOrder: async (id) => (await admin.from("orders").select("*").eq("id", id).single()).data,
     countMarker: async () => (await admin.from("orders").select("id", { count: "exact", head: true }).eq("customer_name", MARK)).count,
-    async mkProduct(tag, price = 100, stock = 10, fees = [], active = true) {
+    async mkProduct(tag, price = 100, stock = 10, opts = {}, active = true) {
+      const parsed = Array.isArray(opts) ? {} : opts || {}
+      const shippingClass = parsed.shippingClass || "standard"
+      const weightGrams = parsed.weightGrams || 0
       const r = await admin
         .from("products")
-        .insert({ name: `${MARK} ${tag}`, slug: `audit-test-${tag.toLowerCase().replace(/\W+/g, "-")}-${RUN}`, price, stock, fees, is_active: active, description: "audit" })
+        .insert({
+          name: `${MARK} ${tag}`,
+          slug: `audit-test-${tag.toLowerCase().replace(/\W+/g, "-")}-${RUN}`,
+          price,
+          stock,
+          fees: [],
+          shipping_class: shippingClass,
+          weight_grams: weightGrams,
+          is_active: active,
+          description: "audit",
+        })
         .select("*")
         .single()
       if (r.error) throw new Error("product insert: " + r.error.message)

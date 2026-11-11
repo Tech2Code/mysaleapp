@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckIcon, CopyIcon } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -19,13 +19,22 @@ export function CopyButton({
   className?: string
 }) {
   const [copied, setCopied] = useState(false)
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current)
+    },
+    []
+  )
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
       toast.success(`${label} copied`)
-      setTimeout(() => setCopied(false), 1800)
+      if (resetTimer.current) clearTimeout(resetTimer.current)
+      resetTimer.current = setTimeout(() => setCopied(false), 1800)
     } catch {
       toast.error("Couldn't copy. Please select and copy it manually.")
     }

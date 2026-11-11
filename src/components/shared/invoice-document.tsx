@@ -10,11 +10,27 @@ import { formatDate, formatMoney } from "@/lib/format"
  * Colours follow the theme on screen; globals.css prints it black on white.
  */
 export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSettings }) {
-  const title = invoiceTitle(shop)
-  const taxed = gstActive(shop)
-  const tax = taxed ? gstIncluded(order.total, shop.gstRate) : null
-  const sellerName = shop.legalName || shop.shopName
-  const sellerAddress = shop.businessAddress || [shop.city, shop.region].filter(Boolean).join(", ")
+  // Prefer the immutable tax/seller snapshot recorded when the order was created; fall back to live settings for older orders.
+  const snap = order.taxSnapshot
+  const effectiveShop = snap
+    ? {
+        gstRegistered: snap.gstRegistered,
+        gstin: snap.gstin,
+        gstRate: snap.gstRate,
+        legalName: snap.legalName,
+        businessAddress: snap.businessAddress,
+        shopName: snap.shopName || shop.shopName,
+        city: snap.city,
+        region: snap.region,
+        phone: snap.phone,
+        email: snap.email,
+      }
+    : shop
+  const title = invoiceTitle(effectiveShop)
+  const taxed = gstActive(effectiveShop)
+  const tax = taxed ? gstIncluded(order.total, effectiveShop.gstRate) : null
+  const sellerName = effectiveShop.legalName || effectiveShop.shopName
+  const sellerAddress = effectiveShop.businessAddress || [effectiveShop.city, effectiveShop.region].filter(Boolean).join(", ")
   const payment = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod, {
     refundedAmount: order.refundedAmount,
     paidAmount: order.paymentAmount ?? order.total,
@@ -32,9 +48,9 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
         <div data-ui="shared/InvoiceDocument/div-2" className="text-sm sm:text-right">
           <p data-ui="shared/InvoiceDocument/p-2" className="font-semibold">{sellerName}</p>
           {sellerAddress && <p data-ui="shared/InvoiceDocument/p-3" className="max-w-64 text-muted-foreground">{sellerAddress}</p>}
-          {shop.phone && <p data-ui="shared/InvoiceDocument/p-4" className="text-muted-foreground">{shop.phone}</p>}
-          {shop.email && <p data-ui="shared/InvoiceDocument/p-5" className="text-muted-foreground">{shop.email}</p>}
-          {taxed && shop.gstin && <p data-ui="shared/InvoiceDocument/p-6" className="mt-1 font-mono text-xs font-semibold">GSTIN: {shop.gstin}</p>}
+          {effectiveShop.phone && <p data-ui="shared/InvoiceDocument/p-4" className="text-muted-foreground">{effectiveShop.phone}</p>}
+          {effectiveShop.email && <p data-ui="shared/InvoiceDocument/p-5" className="text-muted-foreground">{effectiveShop.email}</p>}
+          {taxed && effectiveShop.gstin && <p data-ui="shared/InvoiceDocument/p-6" className="mt-1 font-mono text-xs font-semibold">GSTIN: {effectiveShop.gstin}</p>}
         </div>
       </header>
 
@@ -103,7 +119,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
         <section data-ui="shared/InvoiceDocument/section-gst-included" className="mt-5 rounded-xl border p-4 text-sm" aria-label="GST included">
           <p data-ui="shared/InvoiceDocument/p-flex" className="flex justify-between gap-4"><span data-ui="shared/InvoiceDocument/span-2">Taxable value</span><span data-ui="shared/InvoiceDocument/span-3" className="tabular-nums">{formatMoney(tax.taxable)}</span></p>
           <p data-ui="shared/InvoiceDocument/p-flex-2" className="mt-1 flex justify-between gap-4">
-            <span data-ui="shared/InvoiceDocument/span-4">GST @ {shop.gstRate}% (included in the total)</span>
+            <span data-ui="shared/InvoiceDocument/span-4">GST @ {effectiveShop.gstRate}% (included in the total)</span>
             <span data-ui="shared/InvoiceDocument/span-5" className="tabular-nums">{formatMoney(tax.gst)}</span>
           </p>
           <p data-ui="shared/InvoiceDocument/p-14" className="mt-2 text-xs text-muted-foreground">Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
@@ -115,7 +131,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
       )}
 
       <footer data-ui="shared/InvoiceDocument/footer" className="mt-6 border-t pt-4 text-center text-xs text-muted-foreground">
-        Thank you for shopping with {shop.shopName}. This is a computer-generated document.
+        Thank you for shopping with {effectiveShop.shopName}. This is a computer-generated document.
       </footer>
     </article>
   )

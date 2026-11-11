@@ -71,17 +71,25 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   useEffect(() => {
     if (!order || preview) return
     let cancelled = false
-    trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 }).then((res) => {
-      if (cancelled) return
-      if (res.ok) setState(res.data)
-      else setLookupFailed(true)
-    })
+    trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 })
+      .then((res) => {
+        if (cancelled) return
+        if (res.ok) setState(res.data)
+        else setLookupFailed(true)
+      })
+      .catch(() => {
+        if (!cancelled) setLookupFailed(true)
+      })
     return () => {
       cancelled = true
     }
   }, [order, preview])
 
   const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.pending) : HEADLINE.pending
+  const whatsappHref =
+    order?.whatsappUrl && order.whatsappUrl.startsWith("https://wa.me/")
+      ? order.whatsappUrl
+      : shopWhatsappLink(shop, `Hi! I placed order ${code}.`)
 
   return (
     <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">
@@ -167,7 +175,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         </div>
 
         <a data-ui="store/OrderPlaced/a-send-order-details-to-"
-          href={order?.whatsappUrl ?? shopWhatsappLink(shop, `Hi! I placed order ${code}.`)}
+          href={whatsappHref}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-whatsapp hover:underline"

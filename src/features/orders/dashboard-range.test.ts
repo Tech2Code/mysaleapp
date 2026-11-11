@@ -85,6 +85,7 @@ describe("custom from/to", () => {
     // 2023-01-01 .. 2026-01-04 inclusive = 1100 days
     expect(resolveRange({ from: "2023-01-01", to: "2026-01-04" }, now).key).toBe("custom")
     expect(resolveRange({ from: "2023-01-01", to: "2026-01-05" }, now).key).toBe("fy")
+    expect(resolveRange({ from: "1999-12-01", to: "1999-12-10" }, now).key).toBe("fy")
   })
   it("flips bucket above 92 days", () => {
     expect(resolveRange({ from: "2026-01-01", to: "2026-04-02" }, now).bucket).toBe("day") // 92 days

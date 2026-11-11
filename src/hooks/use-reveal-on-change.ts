@@ -12,7 +12,8 @@ import { useEffect, useRef } from "react"
  */
 export function revealTop() {
   const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
-  const region = document.querySelector<HTMLElement>("[data-reveal-top]")
+  // Ignore hidden Next.js <Activity mode="hidden"> subtrees from previously visited routes.
+  const region = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal-top]")).find((el) => el.offsetParent !== null)
   if (region) {
     if (region.getBoundingClientRect().top < 0) region.scrollIntoView({ block: "start", behavior })
   } else if (window.scrollY > 0) {

@@ -53,6 +53,9 @@ export function AccountMenu() {
 
   const signOut = async () => {
     setSigningOut(true)
+    try {
+      sessionStorage.removeItem("kk-last-order")
+    } catch {}
     await getBrowserSupabase()?.auth.signOut()
     setAskSignOut(false)
     setSigningOut(false)
@@ -97,7 +100,7 @@ export function AccountMenu() {
             <span data-ui="store/AccountMenu/span-absolute" aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary ring-2 ring-background sm:hidden" />
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent data-ui="store/AccountMenu/DropdownMenuContent" align="end" className="w-56">
+        <DropdownMenuContent data-ui="store/AccountMenu/DropdownMenuContent" align="end" className="w-56 border border-border/80 bg-popover/98 shadow-xl">
           {user ? (
             <>
               <DropdownMenuGroup>

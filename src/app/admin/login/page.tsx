@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { AdminLoginForm } from "@/components/admin/admin-login-form"
@@ -18,8 +19,8 @@ export default async function AdminLoginPage() {
         <Suspense>
           <AdminLoginForm />
         </Suspense>
-        <Link data-ui="page:/admin/login/Link-back-to-store" href="/" className="mt-6 block text-center text-sm text-muted-foreground hover:text-foreground">
-          ← Back to store
+        <Link data-ui="page:/admin/login/Link-back-to-store" href="/" className="mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeftIcon className="size-4" /> Back to store
         </Link>
       </div>
     </main>

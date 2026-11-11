@@ -1,21 +1,34 @@
 import { MARK, NO_ID, eqn, msg } from "../lib.mjs"
 
-export const description = "create_order integrity (tampering, junk lines, merging, fees once, delivery rule); stock reserved and restocked exactly once"
+export const description = "create_order integrity (tampering, junk lines, merging, smart handling & weight slab fees, tax snapshot, delivery rule); stock reserved and restocked exactly once"
 
 function expectedTotal(settings, lines) {
   const sub = lines.reduce((a, l) => a + l.price * l.qty, 0)
-  const fees = lines.reduce((a, l) => a + (l.fee || 0), 0)
+  const hasOversized = lines.some((l) => l.shippingClass === "oversized" && l.qty > 0)
+  const hasFragile = lines.some((l) => l.shippingClass === "fragile" && l.qty > 0)
+  const oversizedAmt = hasOversized ? Number(settings.oversized_fee || 0) : 0
+  const fragileAmt = hasFragile ? Number(settings.fragile_fee || 0) : 0
+  const handlingFee = oversizedAmt > 0 && oversizedAmt >= fragileAmt ? oversizedAmt : fragileAmt > 0 ? fragileAmt : 0
+  const totalWeightGrams = lines.reduce((a, l) => a + Math.max(0, l.weightGrams || 0) * l.qty, 0)
+  const freeWeightGrams = Number(settings.free_weight_grams || 0)
+  const extraWeightPerKg = Number(settings.extra_weight_fee_per_kg || 0)
+  const weightFee =
+    extraWeightPerKg > 0 && totalWeightGrams > freeWeightGrams
+      ? Math.ceil((totalWeightGrams - freeWeightGrams) / 1000) * extraWeightPerKg
+      : 0
+  const fees = handlingFee + weightFee
   const above = Number(settings.free_delivery_above)
   const ship = above > 0 && sub >= above ? 0 : Number(settings.delivery_fee)
-  return { sub, fees, ship, total: sub + fees + ship }
+  return { sub, handlingFee, weightFee, fees, ship, total: sub + fees + ship }
 }
 
 export async function run(ctx) {
   const { anon, admin, rec, newOrder, stockOf, settings, mkProduct } = ctx
   const S = "orders"
-  const P1 = await mkProduct("P1", 100, 25, [{ label: "Handling", amount: 20, reason: "audit" }])
+  const P1 = await mkProduct("P1", 100, 25, { shippingClass: "fragile", weightGrams: 150 })
   const P2 = await mkProduct("P2", 200, 25)
-  const PI = await mkProduct("INACTIVE", 50, 5, [], false)
+  const PH = await mkProduct("HEAVY", 300, 15, { shippingClass: "oversized", weightGrams: 1200 })
+  const PI = await mkProduct("INACTIVE", 50, 5, {}, false)
   const PS = await mkProduct("LOWSTOCK", 10, 3)
   ctx.P1 = P1
   ctx.P2 = P2
@@ -59,20 +72,28 @@ export async function run(ctx) {
   rec(S, "no rows created and stock unchanged after every rejected call", (await ctx.countMarker()) === before.n && (await stockOf(P1.id)) === before.p1 && (await stockOf(PS.id)) === before.ps)
 
   // ---- server computes prices; client extras are ignored ----
-  let x = await newOrder([{ productId: P1.id, quantity: 1, price: 1, total: 1, name: "HACK", fees: [] }])
-  let e = expectedTotal(settings, [{ price: 100, qty: 1, fee: 20 }])
-  rec(S, "client price/total/name/fees keys are ignored", eqn(x.o.subtotal, e.sub) && eqn(x.o.total, e.total) && x.o.items[0].name === `${MARK} P1` && Number(x.o.items[0].price) === 100, { sub: x.o.subtotal, total: x.o.total, exp: e })
+  let x = await newOrder([{ productId: P1.id, quantity: 1, price: 1, total: 1, name: "HACK", fees: [], shippingClass: "standard", weightGrams: 0 }])
+  let e = expectedTotal(settings, [{ price: 100, qty: 1, shippingClass: "fragile", weightGrams: 150 }])
+  rec(S, "client price/total/name/shippingClass/weightGrams keys are ignored", eqn(x.o.subtotal, e.sub) && eqn(x.o.total, e.total) && x.o.items[0].name === `${MARK} P1` && Number(x.o.items[0].price) === 100, { sub: x.o.subtotal, total: x.o.total, exp: e })
   rec(S, "order code uses the settings prefix, not the p_prefix argument", x.code.startsWith((settings.order_code_prefix || "KK") + "-"), x.code)
   rec(S, "returned total equals stored total", eqn(x.row.total, x.o.total))
+  rec(S, "immutable tax_snapshot recorded at order creation", !!x.o.tax_snapshot && typeof x.o.tax_snapshot.gstEnabled === "boolean" && x.o.tax_snapshot.shopName === settings.shop_name, x.o.tax_snapshot)
 
   const s0 = await stockOf(P1.id)
   x = await newOrder([{ productId: P1.id, quantity: 2 }, { productId: P1.id, quantity: 3 }])
-  e = expectedTotal(settings, [{ price: 100, qty: 5, fee: 20 }])
-  rec(S, "same product twice merges (qty 5, product fee once)", x.o.items.length === 1 && x.o.items[0].quantity === 5 && eqn(x.o.total, e.total) && (await stockOf(P1.id)) === s0 - 5, { items: x.o.items.length, total: x.o.total, exp: e.total })
+  e = expectedTotal(settings, [{ price: 100, qty: 5, shippingClass: "fragile", weightGrams: 150 }])
+  rec(S, "same product twice merges (qty 5, fragile handling fee once)", x.o.items.length === 1 && x.o.items[0].quantity === 5 && eqn(x.o.total, e.total) && (await stockOf(P1.id)) === s0 - 5, { items: x.o.items.length, total: x.o.total, exp: e.total })
 
   x = await newOrder([{ productId: P1.id, quantity: 3 }, { productId: P2.id, quantity: 1 }])
-  e = expectedTotal(settings, [{ price: 100, qty: 3, fee: 20 }, { price: 200, qty: 1 }])
-  rec(S, "total = price x qty + product fee once + delivery rule", eqn(x.o.total, e.total) && eqn(x.o.shipping_fee, e.ship), { total: x.o.total, exp: e })
+  e = expectedTotal(settings, [{ price: 100, qty: 3, shippingClass: "fragile", weightGrams: 150 }, { price: 200, qty: 1 }])
+  rec(S, "total = price x qty + fragile handling once + delivery rule", eqn(x.o.total, e.total) && eqn(x.o.shipping_fee, e.ship), { total: x.o.total, exp: e })
+
+  x = await newOrder([{ productId: P1.id, quantity: 1 }, { productId: PH.id, quantity: 2 }])
+  e = expectedTotal(settings, [
+    { price: 100, qty: 1, shippingClass: "fragile", weightGrams: 150 },
+    { price: 300, qty: 2, shippingClass: "oversized", weightGrams: 1200 },
+  ])
+  rec(S, "highest handling tier (oversized beats fragile) once + heavy weight slab across cart", eqn(x.o.total, e.total) && eqn(x.o.shipping_fee, e.ship), { total: x.o.total, extraFees: x.o.extra_fees, exp: e })
 
   const above = Number(settings.free_delivery_above)
   if (above > 0 && above <= 200 * 20) {

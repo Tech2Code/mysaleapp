@@ -1,5 +1,5 @@
 import "server-only"
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import { headers } from "next/headers"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
@@ -12,26 +12,37 @@ export const RATE_LIMIT_MESSAGE = "Too many attempts. Please try again in a few 
  * cancel-order, request-return, withdraw-return, place-order, login, pincode.
  */
 
-// Set RATE_LIMIT_SALT in production: with only the built-in default, someone who knows an IP and can call the
-// public RPC could compute (and burn) that IP's bucket key.
-if (process.env.NODE_ENV === "production" && !process.env.RATE_LIMIT_SALT) {
-  console.warn("[rate-limit] RATE_LIMIT_SALT is not set; falling back to the public default salt. Set it in the environment.")
-}
+// Set RATE_LIMIT_SALT in production: without a shared secret across serverless instances, each cold instance uses
+// an unpredictable random salt rather than a public constant (so callers of the public RPC still can't precompute keys).
+const FALLBACK_SALT =
+  process.env.NODE_ENV === "production" && !process.env.RATE_LIMIT_SALT
+    ? (() => {
+        console.warn("[rate-limit] RATE_LIMIT_SALT is not set; using a per-instance random salt. Set RATE_LIMIT_SALT in the environment.")
+        return randomBytes(32).toString("hex")
+      })()
+    : "mysaleapp-rl-v1"
 
 const hash = (value: string) =>
   createHash("sha256")
-    .update(`${process.env.RATE_LIMIT_SALT ?? "mysaleapp-rl-v1"}:${value}`)
+    .update(`${process.env.RATE_LIMIT_SALT || FALLBACK_SALT}:${value}`)
     .digest("hex")
     .slice(0, 32)
 
 /** The caller's IP from the platform's trusted header first; null when none is present (never a shared "unknown" bucket). */
 async function clientIp(): Promise<string | null> {
   const h = await headers()
-  const ip =
-    h.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    h.get("x-real-ip")?.trim() ||
-    h.get("x-forwarded-for")?.split(",")[0]?.trim()
-  return ip || null
+  const vercelIp = process.env.VERCEL === "1" ? h.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() : undefined
+  if (vercelIp) return vercelIp
+  const realIp = h.get("cf-connecting-ip")?.trim() || h.get("x-real-ip")?.trim()
+  if (realIp) return realIp
+  // Standard reverse proxies append the connecting client IP to X-Forwarded-For; the leftmost entry is client-controlled.
+  const xff = h.get("x-forwarded-for")
+  if (!xff) return null
+  const parts = xff
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+  return parts.at(-1) || null
 }
 
 /**

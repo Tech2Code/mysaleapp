@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import { safeExternalUrl, safeNextPath } from "@/lib/safe-redirect"
+import { toNumberOrUndefined } from "@/lib/zod-helpers"
 import { FIELD_KINDS, PATTERNS, addDays, todayIST, v } from "./index"
 
 const ok = (s: { safeParse: (x: unknown) => { success: boolean } }, x: unknown) => s.safeParse(x).success
@@ -183,5 +185,26 @@ describe("urls, dates, quantities", () => {
     expect(ok(v.displayPhone(), "+91 98765 43210")).toBe(true)
     expect(ok(v.displayPhone(), "12345")).toBe(false)
     expect(ok(v.displayPhone(), "call me maybe 1234567")).toBe(false)
+  })
+  it("v.phoneIN normalises formatted Indian numbers to 10 digits", () => {
+    expect(v.phoneIN().parse("+91 98765 43210")).toBe("9876543210")
+  })
+  it("v.city allows India Post district names with digits and parentheses", () => {
+    expect(ok(v.city(), "North 24 Parganas")).toBe(true)
+    expect(ok(v.city(), "Mumbai (Suburban)")).toBe(true)
+    expect(ok(v.city(), "<b>City</b>")).toBe(false)
+  })
+  it("toNumberOrUndefined treats whitespace-only strings as undefined", () => {
+    expect(toNumberOrUndefined("   ")).toBeUndefined()
+    expect(toNumberOrUndefined("0")).toBe(0)
+  })
+  it("safeNextPath and safeExternalUrl block loops and unsafe schemes", () => {
+    expect(safeNextPath("/login")).toBe("/")
+    expect(safeNextPath("/admin/login?next=/admin")).toBe("/")
+    expect(safeNextPath("//evil.com")).toBe("/")
+    expect(safeNextPath("/account/orders?tab=1")).toBe("/account/orders?tab=1")
+    expect(safeExternalUrl("javascript:alert(1)")).toBeNull()
+    expect(safeExternalUrl("http://example.com", true)).toBeNull()
+    expect(safeExternalUrl("https://instagram.com/shop")).toBe("https://instagram.com/shop")
   })
 })

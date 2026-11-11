@@ -32,16 +32,33 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
-  const needsLogin =
-    (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login") && !pathname.startsWith("/admin/forgot-password")) ||
-    pathname.startsWith("/account")
+  const { pathname, search } = request.nextUrl
+  const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/")
+  const isAdminPublic =
+    pathname === "/admin/login" ||
+    pathname.startsWith("/admin/login/") ||
+    pathname === "/admin/forgot-password" ||
+    pathname.startsWith("/admin/forgot-password/") ||
+    pathname === "/admin/reset-password" ||
+    pathname.startsWith("/admin/reset-password/")
+  const isAccount = pathname === "/account" || pathname.startsWith("/account/")
+  const needsLogin = (isAdmin && !isAdminPublic) || isAccount
 
   if (!user && needsLogin) {
     const url = request.nextUrl.clone()
-    url.pathname = pathname.startsWith("/admin") ? "/admin/login" : "/login"
-    url.search = `?next=${encodeURIComponent(pathname)}`
-    return NextResponse.redirect(url)
+    url.pathname = isAdmin ? "/admin/login" : "/login"
+    const fullTarget = `${pathname}${search}`
+    const isDefaultLanding = (isAdmin && fullTarget === "/admin") || (!isAdmin && fullTarget === "/account")
+    if (!isDefaultLanding) {
+      url.search = `?next=${encodeURIComponent(fullTarget)}`
+    } else {
+      url.search = ""
+    }
+    const redirectResponse = NextResponse.redirect(url)
+    for (const cookie of response.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie)
+    }
+    return redirectResponse
   }
 
   return response

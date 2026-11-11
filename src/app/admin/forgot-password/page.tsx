@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { ForgotPasswordForm } from "@/components/admin/password-reset-forms"
@@ -16,8 +17,8 @@ export default function AdminForgotPasswordPage() {
         <Suspense>
           <ForgotPasswordForm />
         </Suspense>
-        <Link data-ui="page:/admin/forgot-password/Link-back-to-sign-in" href="/admin/login" className="mt-6 block text-center text-sm text-muted-foreground hover:text-foreground">
-          ← Back to sign in
+        <Link data-ui="page:/admin/forgot-password/Link-back-to-sign-in" href="/admin/login" className="mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeftIcon className="size-4" /> Back to sign in
         </Link>
       </div>
     </main>

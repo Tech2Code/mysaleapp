@@ -176,10 +176,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         <div data-ui="store/Header/div-flex-4" className="ml-auto flex items-center gap-1 sm:gap-1.5">
           <button data-ui="store/Header/button-search-products"
             type="button"
-            onClick={() => setSearchOpen(true)}
+            onClick={() => setSearchOpen((v) => !v)}
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full max-sm:size-9")}
             aria-label="Search products"
-            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
           >
             <SearchIcon className="size-4.6" />
           </button>

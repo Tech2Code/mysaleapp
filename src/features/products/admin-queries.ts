@@ -1,4 +1,5 @@
 import "server-only"
+import { z } from "zod"
 import { requireAdmin } from "@/features/auth/guards"
 import { getServerSupabase } from "@/lib/supabase/server"
 import {
@@ -26,7 +27,7 @@ export async function listAllProducts(): Promise<Product[]> {
 
 export async function getProductForEdit(id: string): Promise<Product | null> {
   await requireAdmin()
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null
+  if (!z.uuid().safeParse(id).success) return null
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("products")

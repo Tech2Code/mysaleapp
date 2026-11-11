@@ -1,6 +1,6 @@
 "use client"
 
-import { ExternalLinkIcon, LogOutIcon, SettingsIcon, ShieldCheckIcon, UserRoundCogIcon } from "lucide-react"
+import { LogOutIcon, SettingsIcon, ShieldCheckIcon, UserRoundCogIcon } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useTransition, useState } from "react"
@@ -57,9 +57,6 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
         </DropdownMenuItem>
         <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-2" onClick={() => router.push("/admin/settings")}>
           <SettingsIcon /> Store settings
-        </DropdownMenuItem>
-        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-3" onClick={() => window.open("/", "_blank")}>
-          <ExternalLinkIcon /> View store
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>

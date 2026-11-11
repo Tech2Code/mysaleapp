@@ -89,6 +89,38 @@ describe("mapOrder", () => {
     expect(mapOrder({ ...row, private_note: { note: "b" } }).adminNote).toBe("b")
     expect(mapOrder(row).adminNote).toBeNull()
   })
+  it("maps tax_snapshot when present and leaves it null on older orders", () => {
+    expect(mapOrder(row).taxSnapshot).toBeNull()
+    const snapped = mapOrder({
+      ...row,
+      tax_snapshot: {
+        gstRegistered: true,
+        gstin: "27AAAAA0000A1Z5",
+        gstRate: "12",
+        legalName: "Kalakriti Studio",
+        businessAddress: "Mumbai",
+        shopName: "Kalakriti",
+        city: "Mumbai",
+        region: "Maharashtra",
+        phone: null,
+        whatsappNumber: "919876543210",
+        email: "hi@example.com",
+      },
+    })
+    expect(snapped.taxSnapshot).toEqual({
+      gstRegistered: true,
+      gstin: "27AAAAA0000A1Z5",
+      gstRate: 12,
+      legalName: "Kalakriti Studio",
+      businessAddress: "Mumbai",
+      shopName: "Kalakriti",
+      city: "Mumbai",
+      region: "Maharashtra",
+      phone: "+91 98765 43210",
+      whatsappNumber: "919876543210",
+      email: "hi@example.com",
+    })
+  })
 })
 
 describe("isAwaitingPayment / canVerifyPayment (all status combinations)", () => {

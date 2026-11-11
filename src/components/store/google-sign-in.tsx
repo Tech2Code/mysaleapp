@@ -1,12 +1,13 @@
 "use client"
 
 import { Loader2Icon } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { safeNextPath } from "@/lib/safe-redirect"
+import { useAuth } from "@/store/auth"
 
 function GoogleIcon() {
   return (
@@ -32,10 +33,18 @@ function GoogleIcon() {
 }
 
 export function GoogleSignIn() {
+  const router = useRouter()
+  const { user, ready } = useAuth()
   const params = useSearchParams()
   const [loading, setLoading] = useState(false)
   const next = safeNextPath(params.get("next"), "/account/orders")
   const problem = params.get("error")
+
+  useEffect(() => {
+    if (ready && user) {
+      router.replace(next)
+    }
+  }, [ready, user, router, next])
 
   // Pressing Back from Google's screen restores this page exactly as it was, spinner included. Reset it.
   useEffect(() => {

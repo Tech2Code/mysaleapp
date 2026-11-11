@@ -27,8 +27,8 @@ export function useToastAfter(pending: boolean): (fn: () => void) => void {
   return useCallback(
     (fn: () => void) => {
       waiting.current = fn
-      if (!isPending.current) queueMicrotask(flush)
+      if (!pending && !isPending.current) queueMicrotask(flush)
     },
-    [flush],
+    [flush, pending],
   )
 }

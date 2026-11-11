@@ -1,9 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, MailCheckIcon } from "lucide-react"
+import { KeyRoundIcon, Loader2Icon, MailCheckIcon, SendIcon } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
@@ -24,6 +24,14 @@ export function ForgotPasswordForm() {
   )
   const form = useForm<z.input<typeof emailSchema>>({ resolver: zodResolver(emailSchema), defaultValues: { email: "" } })
 
+  useEffect(() => {
+    return () => {
+      form.reset({ email: "" })
+      setError(null)
+      setSentTo(null)
+    }
+  }, [form])
+
   if (sentTo) {
     return (
       <div data-ui="admin/ForgotPasswordForm" role="status" className="space-y-3 rounded-2xl bg-success/10 p-4 text-sm">
@@ -41,7 +49,7 @@ export function ForgotPasswordForm() {
     <form
       data-ui="admin/ForgotPasswordForm"
       noValidate
-      className="space-y-1"
+      className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           setError(null)
@@ -57,8 +65,8 @@ export function ForgotPasswordForm() {
           {error}
         </p>
       )}
-      <Button data-ui="admin/ForgotPasswordForm/Button-send-reset-link" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Send reset link
+      <Button data-ui="admin/ForgotPasswordForm/Button-send-reset-link" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
+        {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send reset link
       </Button>
     </form>
   )
@@ -72,11 +80,18 @@ export function ResetPasswordForm() {
   const form = useForm<z.input<typeof resetSchema>>({ resolver: zodResolver(resetSchema), defaultValues: { next: "", confirm: "" } })
   const { errors } = form.formState
 
+  useEffect(() => {
+    return () => {
+      form.reset({ next: "", confirm: "" })
+      setError(null)
+    }
+  }, [form])
+
   return (
     <form
       data-ui="admin/ResetPasswordForm"
       noValidate
-      className="space-y-1"
+      className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           setError(null)
@@ -107,8 +122,8 @@ export function ResetPasswordForm() {
           {error}
         </p>
       )}
-      <Button data-ui="admin/ResetPasswordForm/Button-set-new-password" type="submit" size="lg" disabled={pending} className="h-11 w-full rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Set new password
+      <Button data-ui="admin/ResetPasswordForm/Button-set-new-password" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
+        {pending ? <Loader2Icon className="animate-spin" /> : <KeyRoundIcon className="size-4" />} Set new password
       </Button>
     </form>
   )

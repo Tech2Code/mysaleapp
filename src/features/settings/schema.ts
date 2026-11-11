@@ -1,11 +1,13 @@
 import { z } from "zod"
+import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS, PATTERNS, v } from "@/lib/validation"
 import { requiredNumber } from "@/lib/zod-helpers"
 
-/** 10-digit Indian numbers get +91 added; anything else must already include the country code. */
+/** 10-digit Indian numbers (including +91 / 0 prefixes) get 91 added; anything else must already include the country code. */
 export function normalizeWhatsappNumber(input: string): string {
-  const digits = input.replace(/\D/g, "")
-  return /^[6-9]\d{9}$/.test(digits) ? `91${digits}` : digits
+  const indian = normalizeIndianPhone(input)
+  if (indian) return `91${indian}`
+  return input.replace(/\D/g, "")
 }
 
 /** 2-digit state code + PAN + entity number + Z + check character. */
@@ -51,7 +53,7 @@ export const storeSettingsSchema = z.object({
     .string()
     .transform(normalizeWhatsappNumber)
     .refine(
-      (n) => n.length >= LIMITS.intlPhone.min && n.length <= LIMITS.intlPhone.max,
+      (n) => /^[1-9]\d+$/.test(n) && n.length >= LIMITS.intlPhone.min && n.length <= LIMITS.intlPhone.max,
       "Enter a valid 10-digit WhatsApp number"
     ),
   /** true = calling number is the WhatsApp number; `phone` is then ignored. */
@@ -73,9 +75,13 @@ export const storeSettingsSchema = z.object({
   unpaidOrderExpiryHours: v.wholeNumber(LIMITS.unpaidExpiryHours.max, "Enter hours (0 = never cancel)"),
   returnWindowDays: v.wholeNumber(LIMITS.returnWindowDays.max, "Enter days (0 = no returns)"),
 
-  // ---- Delivery ----
+  // ---- Delivery & smart handling ----
   deliveryFee: v.money(LIMITS.deliveryFee.max, "Enter the delivery charge"),
   freeDeliveryAbove: v.money(LIMITS.money.max, "Enter an amount (0 = never free)"),
+  fragileFee: v.money(LIMITS.deliveryFee.max, "Enter the fragile packaging fee (0 = free)"),
+  oversizedFee: v.money(LIMITS.deliveryFee.max, "Enter the bulky handling fee (0 = free)"),
+  freeWeightGrams: v.wholeNumber(LIMITS.weightGrams.max, "Enter base weight in grams"),
+  extraWeightFeePerKg: v.money(LIMITS.deliveryFee.max, "Enter the rate per extra kg (0 = free)"),
 
   // ---- Payment ----
   upiId: z.preprocess(

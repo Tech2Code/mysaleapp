@@ -7,6 +7,7 @@ import { z } from "zod"
 import { getCurrentUser } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
+import { safeAvatarUrl } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { profileSchema, type Profile } from "./schema"
 
@@ -31,7 +32,7 @@ export async function getMyProfile(): Promise<Profile | null> {
   return {
     fullName: data?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? "",
     phone: data?.phone ?? "",
-    avatarUrl: data?.avatar_url ?? null,
+    avatarUrl: safeAvatarUrl(data?.avatar_url),
     email: user.email ?? "",
   }
 }
@@ -55,5 +56,6 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   if (error) return fail("Could not save your profile")
 
   revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
   return { ok: true }
 }

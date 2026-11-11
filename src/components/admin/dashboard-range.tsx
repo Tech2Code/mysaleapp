@@ -4,7 +4,7 @@ import { CalendarRangeIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, type ReactNode } from "react"
 import { DashboardBody } from "@/components/admin/dashboard/dashboard-body"
-import { SelectField, TextField } from "@/components/form"
+import { DateField, SelectField } from "@/components/form"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { placeholderDashboard } from "@/features/orders/placeholders"
 import { fyOptions, fyYearOf, monthOptions, monthValue, type RangeKey } from "@/features/orders/dashboard-range"
@@ -97,16 +97,16 @@ export function DashboardRangeShell({
         {monthSel === "custom" && (
           <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex w-full flex-wrap items-end gap-2 sm:w-auto" role="group" aria-label="Custom date range">
             <CalendarRangeIcon className="mb-2.5 size-4 text-primary" aria-hidden />
-            <TextField
+            <DateField
               label="From"
               hideLabel
-              type="date"
+              placeholder="From date"
               fieldSize="md"
               max={to || today}
               value={from}
-              onChange={(e) => {
-                setFrom(e.target.value)
-                applyCustom(e.target.value, to)
+              onChange={(val) => {
+                setFrom(val)
+                applyCustom(val, to)
               }}
               containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
               noErrorSpace
@@ -114,17 +114,17 @@ export function DashboardRangeShell({
             <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">
               to
             </span>
-            <TextField
+            <DateField
               label="To"
               hideLabel
-              type="date"
+              placeholder="To date"
               fieldSize="md"
               min={from || undefined}
               max={today}
               value={to}
-              onChange={(e) => {
-                setTo(e.target.value)
-                applyCustom(from, e.target.value)
+              onChange={(val) => {
+                setTo(val)
+                applyCustom(from, val)
               }}
               containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
               noErrorSpace

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 export function StickySaveBar({
   dirty,
   pending,
+  busy = false,
   saveLabel = "Save changes",
   onCancel,
   /** Edit forms only enable Save once something changed; create forms are always ready. */
@@ -21,12 +22,13 @@ export function StickySaveBar({
 }: {
   dirty: boolean
   pending: boolean
+  busy?: boolean
   saveLabel?: string
   onCancel?: () => void
   requireChanges?: boolean
   className?: string
 }) {
-  const unsaved = dirty && requireChanges
+  const unsaved = dirty
 
   // Closing / reloading the tab with edits that were never saved: let the browser ask first.
   useEffect(() => {
@@ -49,11 +51,11 @@ export function StickySaveBar({
       </p>
       <div data-ui="admin/StickySaveBar/div-flex" className="ml-auto flex items-center gap-2">
         {onCancel && (
-          <Button data-ui="admin/StickySaveBar/Button-cancel" type="button" variant="outline" onClick={onCancel} className="rounded-full">
+          <Button data-ui="admin/StickySaveBar/Button-cancel" type="button" variant="outline" disabled={pending} onClick={onCancel} className="rounded-full">
             Cancel
           </Button>
         )}
-        <Button data-ui="admin/StickySaveBar/Button" type="submit" disabled={pending || (requireChanges && !dirty)} className="rounded-full px-6">
+        <Button data-ui="admin/StickySaveBar/Button" type="submit" disabled={pending || busy || (requireChanges && !dirty)} className="rounded-full px-6">
           {pending && <Loader2Icon className="animate-spin" />} {saveLabel}
         </Button>
       </div>

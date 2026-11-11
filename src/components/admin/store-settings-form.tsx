@@ -11,6 +11,7 @@ import { saveStoreSettings } from "@/features/settings/actions"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 import { storeSettingsSchema, type StoreSettingsInput, type StoreSettingsValues } from "@/features/settings/schema"
 import type { StoreSettings } from "@/features/settings/types"
+import { formatWeightGrams } from "@/features/orders/pricing"
 import { formatPrice } from "@/lib/format"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
@@ -58,6 +59,10 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     returnWindowDays: s.returnWindowDays,
     deliveryFee: s.deliveryFee,
     freeDeliveryAbove: s.freeDeliveryAbove,
+    fragileFee: s.fragileFee,
+    oversizedFee: s.oversizedFee,
+    freeWeightGrams: s.freeWeightGrams,
+    extraWeightFeePerKg: s.extraWeightFeePerKg,
     upiId: s.upiId ?? "",
     upiPayeeName: s.upiPayeeName ?? "",
   }
@@ -77,18 +82,44 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
     defaultValues: toFormValues(settings),
   })
   const { errors, isDirty } = form.formState
-  const [fee, freeAbove, prefix, description, name, phoneSame, gstOn] = useWatch({
+  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn] = useWatch({
     control: form.control,
-    name: ["deliveryFee", "freeDeliveryAbove", "orderCodePrefix", "description", "shopName", "phoneSameAsWhatsapp", "gstRegistered"],
+    name: [
+      "deliveryFee",
+      "freeDeliveryAbove",
+      "fragileFee",
+      "oversizedFee",
+      "freeWeightGrams",
+      "extraWeightFeePerKg",
+      "orderCodePrefix",
+      "description",
+      "shopName",
+      "phoneSameAsWhatsapp",
+      "gstRegistered",
+    ],
   })
 
   const feeNum = Number(fee)
   const freeNum = Number(freeAbove)
+  const fragileNum = Number(fragileFee)
+  const oversizedNum = Number(oversizedFee)
+  const freeWeightNum = Number(freeWeightGrams)
+  const extraWeightNum = Number(extraWeightFeePerKg)
+  const smartExtras = [
+    Number.isFinite(fragileNum) && fragileNum > 0 ? `${formatPrice(fragileNum)} fragile packaging (once/order)` : null,
+    Number.isFinite(oversizedNum) && oversizedNum > 0 ? `${formatPrice(oversizedNum)} bulky handling (once/order)` : null,
+    Number.isFinite(extraWeightNum) && extraWeightNum > 0
+      ? `${formatPrice(extraWeightNum)}/kg above ${formatWeightGrams(Number.isFinite(freeWeightNum) ? freeWeightNum : 0)}`
+      : null,
+  ].filter(Boolean)
   const deliveryPreview =
     Number.isFinite(feeNum) && Number.isFinite(freeNum) && String(fee) !== "" && String(freeAbove) !== ""
-      ? freeNum > 0
-        ? `Customers pay ${formatPrice(feeNum)} for delivery. Orders of ${formatPrice(freeNum)} or more get free delivery (the fee shows crossed out).`
-        : `Customers pay ${formatPrice(feeNum)} for delivery on every order.`
+      ? [
+          freeNum > 0
+            ? `Standard delivery: ${formatPrice(feeNum)} (free on orders of ${formatPrice(freeNum)}+).`
+            : `Standard delivery: ${formatPrice(feeNum)} on every order.`,
+          smartExtras.length > 0 ? `Smart surcharges: ${smartExtras.join(" · ")}.` : "No extra handling or weight surcharges.",
+        ].join(" ")
       : null
 
   const onSubmit = form.handleSubmit((values) =>
@@ -130,6 +161,10 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         returnWindowDays: values.returnWindowDays,
         deliveryFee: values.deliveryFee,
         freeDeliveryAbove: values.freeDeliveryAbove,
+        fragileFee: values.fragileFee,
+        oversizedFee: values.oversizedFee,
+        freeWeightGrams: values.freeWeightGrams,
+        extraWeightFeePerKg: values.extraWeightFeePerKg,
         upiId: values.upiId ?? "",
         upiPayeeName: values.upiPayeeName ?? "",
       })
@@ -352,10 +387,13 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             </div>
           </Card>
 
-          <Card title="Delivery charges" description="Applied to every order. Per-product charges (like handling) are set on each product.">
+          <Card
+            title="Delivery & handling charges"
+            description="Centralised courier & packaging rules. Products only declare their weight and handling class — rates apply automatically per order."
+          >
             <div data-ui="admin/StoreSettingsForm/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
-                label="Delivery charge" kind="money"
+                label="Standard delivery charge" kind="money"
                 fieldSize="md"
                 inputMode="decimal"
                 leading="₹"
@@ -368,9 +406,49 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 fieldSize="md"
                 inputMode="decimal"
                 leading="₹"
-                hint="Use 0 to never offer free delivery."
+                hint="Waives standard delivery. Use 0 to never offer free delivery."
                 error={errors.freeDeliveryAbove?.message}
                 {...form.register("freeDeliveryAbove")}
+              />
+            </div>
+            <div data-ui="admin/StoreSettingsForm/div-grid-handling" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <TextField
+                label="Fragile packaging fee" kind="money"
+                fieldSize="md"
+                inputMode="decimal"
+                leading="₹"
+                hint="Added once per order when any item is Fragile. 0 = free."
+                error={errors.fragileFee?.message}
+                {...form.register("fragileFee")}
+              />
+              <TextField
+                label="Large / bulky handling fee" kind="money"
+                fieldSize="md"
+                inputMode="decimal"
+                leading="₹"
+                hint="Added once per order for Large / bulky items (replaces fragile fee if higher). 0 = free."
+                error={errors.oversizedFee?.message}
+                {...form.register("oversizedFee")}
+              />
+            </div>
+            <div data-ui="admin/StoreSettingsForm/div-grid-weight" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <TextField
+                label="Included parcel weight (grams)" kind="digits"
+                fieldSize="md"
+                inputMode="numeric"
+                maxLength={String(LIMITS.weightGrams.max).length}
+                hint="Total order weight covered by base delivery (e.g. 1000 = 1 kg)."
+                error={errors.freeWeightGrams?.message}
+                {...form.register("freeWeightGrams")}
+              />
+              <TextField
+                label="Heavy parcel rate (per extra kg)" kind="money"
+                fieldSize="md"
+                inputMode="decimal"
+                leading="₹"
+                hint="Charged per started 1 kg above included weight. 0 = off."
+                error={errors.extraWeightFeePerKg?.message}
+                {...form.register("extraWeightFeePerKg")}
               />
             </div>
             {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}

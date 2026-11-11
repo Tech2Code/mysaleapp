@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, LockIcon, PencilIcon } from "lucide-react"
+import { CheckIcon, Loader2Icon, LockIcon, PencilIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -62,6 +62,21 @@ export function DeliveryEditor({
       note: delivery.note ?? "",
     },
   })
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setServerError(null)
+      form.reset({
+        name: delivery.name,
+        phone: delivery.phone,
+        address: delivery.address,
+        ...splitCityState(delivery.city),
+        pincode: delivery.pincode,
+        note: delivery.note ?? "",
+      })
+    }
+  }
   const { errors } = form.formState
   const area = usePincodeLookup({
     pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
@@ -72,6 +87,10 @@ export function DeliveryEditor({
   })
 
   const onSubmit = form.handleSubmit((values) => {
+    if (area.error) {
+      form.setError("pincode", { message: area.error })
+      return
+    }
     setServerError(null)
     startTransition(async () => {
       const res = await updateOrderDelivery({ code: orderCode, phoneLast4, customer: values })
@@ -82,8 +101,10 @@ export function DeliveryEditor({
         }
         return
       }
-      later(() => toast.success("Delivery details updated"))
-      setOpen(false)
+      later(() => {
+        setOpen(false)
+        toast.success("Delivery details updated")
+      })
       if (onChanged) onChanged(res.data.phoneLast4)
       else router.refresh()
     })
@@ -122,7 +143,7 @@ export function DeliveryEditor({
       </p>
 
       {editable && (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogContent data-ui="store/DeliveryEditor/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
             <form data-ui="store/DeliveryEditor/form" onSubmit={onSubmit} noValidate className="space-y-1">
               <DialogHeader>
@@ -146,7 +167,7 @@ export function DeliveryEditor({
                   inputMode="numeric"
                   maxLength={6}
                   hint={area.hint}
-                  error={errors.pincode?.message}
+                  error={errors.pincode?.message || area.error}
                   {...form.register("pincode")}
                 />
                 <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
@@ -159,11 +180,11 @@ export function DeliveryEditor({
                 </p>
               )}
               <DialogFooter>
-                <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" onClick={() => setOpen(false)}>
-                  Cancel
+                <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+                  <XIcon className="size-4" /> Cancel
                 </Button>
-                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending}>
-                  {pending && <Loader2Icon className="animate-spin" />} Save changes
+                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending} className="gap-1.5 rounded-full">
+                  {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save changes
                 </Button>
               </DialogFooter>
             </form>

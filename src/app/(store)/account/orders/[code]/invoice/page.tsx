@@ -8,8 +8,8 @@ export const metadata: Metadata = { title: "Invoice", robots: { index: false, fo
 
 export default async function MyInvoicePage({ params }: PageProps<"/account/orders/[code]/invoice">) {
   const { code } = await params
-  const [order, shop] = await Promise.all([getMyOrder(code), getStoreSettings()])
-  if (!order) notFound()
+  const [order, shop] = await Promise.all([getMyOrder(code, `/account/orders/${code}/invoice`), getStoreSettings()])
+  if (!order || order.status === "cancelled") notFound()
 
   return <InvoicePageView order={order} shop={shop} backHref={`/account/orders/${order.orderCode}`} />
 }

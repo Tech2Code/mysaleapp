@@ -1,28 +1,34 @@
 import { z } from "zod"
 import { supabaseConfig } from "@/lib/supabase/config"
 import { LIMITS, v } from "@/lib/validation"
-import { hasMaxTwoDecimals, requiredNumber } from "@/lib/zod-helpers"
+import { SHIPPING_CLASSES, type ShippingClass } from "./types"
 
 const slug = v.slug()
 
-/** Product images must live in our own Supabase Storage bucket. */
+/** Product images must live in our own Supabase Storage bucket, with no traversal or query/hash parts. */
 const imageUrl = z
   .url()
-  .refine(
-    (u) => u.startsWith(`${supabaseConfig.url}/storage/v1/object/public/product-images/`),
-    "Image must be uploaded through the admin panel"
-  )
+  .refine((u) => {
+    try {
+      const base = new URL(supabaseConfig.url)
+      const parsed = new URL(u)
+      if (parsed.origin !== base.origin || parsed.search || parsed.hash) return false
+      const prefix = "/storage/v1/object/public/product-images/"
+      if (!parsed.pathname.startsWith(prefix)) return false
+      const key = decodeURIComponent(parsed.pathname.slice(prefix.length))
+      return Boolean(key) && !key.split("/").some((seg) => seg === "." || seg === ".." || seg === "")
+    } catch {
+      return false
+    }
+  }, "Image must be uploaded through the admin panel")
 
-/** Suggested names for per-item extra charges in the product form. */
-export const FEE_SUGGESTIONS = [
-  "Handling charge",
-  "Packaging charge",
-  "Fragile item handling",
-  "Gift wrap",
-  "Insurance",
+/** Choices for a product's physical handling & size class (rates live centrally in Store Settings). */
+export const SHIPPING_CLASS_OPTIONS: { value: ShippingClass; label: string }[] = [
+  { value: "standard", label: "Standard parcel" },
+  { value: "fragile", label: "Fragile item (protective packaging)" },
+  { value: "oversized", label: "Large / bulky item (special handling)" },
 ]
 
-export const MAX_FEES_PER_PRODUCT = 5
 export const MAX_HIGHLIGHTS = 6
 export const MAX_SPECS = 10
 
@@ -52,17 +58,6 @@ const specSchema = z.object({
   value: z.string().trim().min(1, "Enter the value").max(LIMITS.specValue.max, "Too long"),
 })
 
-/** An extra charge added per item ordered (handling, packaging…). */
-const feeSchema = z.object({
-  label: z.string().trim().min(LIMITS.feeLabel.min, "Name this charge").max(LIMITS.feeLabel.max, `Keep it under ${LIMITS.feeLabel.max} characters`),
-  /** Short explanation the customer sees next to the charge. */
-  reason: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
-    z.string().trim().max(LIMITS.feeReason.max, `Keep it under ${LIMITS.feeReason.max} characters`).nullable()
-  ),
-  amount: requiredNumber("Enter an amount").pipe(z.number().gt(0, "Must be more than 0").max(LIMITS.feeAmount.max, "That's too large").refine(hasMaxTwoDecimals, "Use at most 2 decimal places")),
-})
-
 export const productSchema = z
   .object({
     name: z.string().trim().min(LIMITS.productName.min, "Name is too short").max(LIMITS.productName.max, `Keep it under ${LIMITS.productName.max} characters`),
@@ -73,7 +68,11 @@ export const productSchema = z
     images: z.array(imageUrl).max(8, "Up to 8 images"),
     categoryId: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.uuid().nullable()),
     stock: v.wholeNumber(LIMITS.stock.max, "Stock is required"),
-    fees: z.array(feeSchema).max(MAX_FEES_PER_PRODUCT, `Up to ${MAX_FEES_PER_PRODUCT} extra charges`).default([]),
+    weightGrams: z.preprocess(
+      (x) => (x === "" || x === null || x === undefined ? 0 : x),
+      v.wholeNumber(LIMITS.weightGrams.max, "Enter weight in grams (0 = standard)")
+    ),
+    shippingClass: z.enum(SHIPPING_CLASSES).default("standard"),
     shortDescription: z.preprocess(
       (v) => (typeof v === "string" && v.trim() === "" ? null : v),
       z.string().trim().max(LIMITS.shortDescription.max, `Keep it under ${LIMITS.shortDescription.max} characters`).nullable()
@@ -92,10 +91,6 @@ export const productSchema = z
   .refine((p) => p.compareAtPrice == null || p.compareAtPrice > p.price, {
     message: "MRP must be higher than the selling price",
     path: ["compareAtPrice"],
-  })
-  .refine((p) => new Set(p.fees.map((f) => f.label.toLowerCase())).size === p.fees.length, {
-    message: "Each extra charge needs a different name",
-    path: ["fees"],
   })
 
 export type ProductInput = z.input<typeof productSchema>

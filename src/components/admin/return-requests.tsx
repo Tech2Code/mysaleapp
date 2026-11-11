@@ -1,10 +1,10 @@
 "use client"
 
-import { Loader2Icon, PackageOpenIcon } from "lucide-react"
+import { BanIcon, CheckIcon, Loader2Icon, PackageOpenIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { TextAreaField, TextField } from "@/components/form"
+import { DateField, TextAreaField } from "@/components/form"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -41,36 +41,60 @@ export function DecideDialog({
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState("")
   const [pickupDate, setPickupDate] = useState("")
+  const [bounds, setBounds] = useState<{ min?: string; max?: string }>({})
   const [pickupError, setPickupError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
 
-  const submit = () =>
-    startTransition(async () => {
-      setError(null)
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (nextOpen) {
+      const today = todayIST()
+      setBounds({ min: today, max: addDays(today, LIMITS.pickupDays.max) })
+    } else {
+      setNote("")
+      setPickupDate("")
       setPickupError(null)
-      if (approve && !pickupDate) {
-        setPickupError("Pick the pickup date")
-        return
-      }
+      setError(null)
+    }
+  }
+
+  const submit = () => {
+    setError(null)
+    setPickupError(null)
+    if (approve && !pickupDate) {
+      setPickupError("Pick the pickup date")
+      return
+    }
+    if (!approve && !note.trim()) {
+      setError("Enter the reason for rejecting")
+      return
+    }
+    startTransition(async () => {
       const res = await decideReturnRequest({ requestId: request.id, approve, note: note.trim() || undefined, pickupDate: approve ? pickupDate : undefined })
       if (!res.ok) {
         setPickupError(res.fieldErrors?.pickupDate?.[0] ?? null)
         setError(res.fieldErrors?.note?.[0] ?? (res.fieldErrors?.pickupDate ? null : res.error))
         return
       }
-      setOpen(false)
       const url = whatsappLink(`91${phone}`, buildReturnDecisionMessage(shop, { orderCode, customerName, approved: approve, note: note.trim() || null, pickupDate: approve ? pickupDate : null }))
-      later(() => toast.success(approve ? "Return approved" : "Return rejected", {
-        action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
-      }))
+      later(() => {
+        setOpen(false)
+        setNote("")
+        setPickupDate("")
+        toast.success(approve ? "Return approved" : "Return rejected", {
+          action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
+        })
+      })
       router.refresh()
     })
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger data-ui="admin/DecideDialog/DialogTrigger"
         className={cn(
           "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition-colors",
@@ -79,7 +103,7 @@ export function DecideDialog({
       >
         {approve ? "Approve" : "Reject"}
       </DialogTrigger>
-      <DialogContent data-ui="admin/DecideDialog/DialogContent">
+      <DialogContent data-ui="admin/DecideDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{approve ? "Approve this return?" : "Reject this return?"}</DialogTitle>
           <DialogDescription>
@@ -89,19 +113,19 @@ export function DecideDialog({
           </DialogDescription>
         </DialogHeader>
         {approve && (
-          <TextField
+          <DateField
             label="Pickup date"
-            type="date"
             fieldSize="md"
-            min={todayIST()}
-            max={addDays(todayIST(), LIMITS.pickupDays.max)}
+            min={bounds.min}
+            max={bounds.max}
             value={pickupDate}
-            onChange={(e) => setPickupDate(e.target.value)}
+            onChange={setPickupDate}
             error={pickupError ?? undefined}
           />
         )}
         <TextAreaField
           label={approve ? "Note for the customer (optional)" : "Reason (required)"}
+          required={!approve}
           rows={3}
           maxLength={LIMITS.returnDetail.max}
           value={note}
@@ -109,11 +133,11 @@ export function DecideDialog({
           error={error ?? undefined}
         />
         <DialogFooter>
-          <Button data-ui="admin/DecideDialog/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">
-            Cancel
+          <Button data-ui="admin/DecideDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+            <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/DecideDialog/Button" type="button" variant={approve ? "default" : "destructive"} onClick={submit} disabled={pending} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} {approve ? "Approve return" : "Reject return"}
+          <Button data-ui="admin/DecideDialog/Button" type="button" variant={approve ? "default" : "destructive"} onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />} {approve ? "Approve return" : "Reject return"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -138,30 +162,38 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
         setError(res.error)
         return
       }
-      setOpen(false)
-      later(() => toast.success("Pickup marked successful"))
+      later(() => {
+        setOpen(false)
+        toast.success("Pickup marked successful")
+      })
       router.refresh()
     })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger data-ui="admin/PickedUpButton/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
+    <>
+      <Button
+        data-ui="admin/PickedUpButton/Button-pickup-successful"
+        type="button"
+        variant="outline"
+        onClick={() => setOpen(true)}
+        className="rounded-full border-primary/40 text-primary hover:bg-primary/10"
+      >
         Pickup successful
-      </DialogTrigger>
-      <DialogContent data-ui="admin/PickedUpButton/DialogContent">
-        <DialogHeader>
-          <DialogTitle>Mark the pickup as successful?</DialogTitle>
-          <DialogDescription>The customer will see that their items were collected. Do this only after the courier has the parcel.</DialogDescription>
-        </DialogHeader>
-        {error && <p data-ui="admin/PickedUpButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
-        <DialogFooter>
-          <Button data-ui="admin/PickedUpButton/Button-cancel" type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-full">Cancel</Button>
-          <Button data-ui="admin/PickedUpButton/Button-yes-picked-up" type="button" onClick={confirm} disabled={pending} className="rounded-full">
-            {pending && <Loader2Icon className="animate-spin" />} Yes, picked up
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Button>
+      {error && !open && <p data-ui="admin/PickedUpButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
+      <ConfirmDialog
+        open={open}
+        onOpenChange={(o) => {
+          setOpen(o)
+          if (!o) setError(null)
+        }}
+        title="Mark the pickup as successful?"
+        description={error ? `The customer will see that their items were collected. Do this only after the courier has the parcel. (${error})` : "The customer will see that their items were collected. Do this only after the courier has the parcel."}
+        confirmLabel="Yes, picked up"
+        pending={pending}
+        onConfirm={confirm}
+      />
+    </>
   )
 }
 
@@ -182,8 +214,10 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
         setError(res.error)
         return
       }
-      setOpen(false)
-      later(() => toast.success("Step undone"))
+      later(() => {
+        setOpen(false)
+        toast.success("Step undone")
+      })
       router.refresh()
     })
 

@@ -24,7 +24,9 @@ function toRowWithStock(p: ProductValues) {
     images: p.images,
     category_id: p.categoryId ?? null,
     stock: p.stock,
-    fees: p.fees,
+    weight_grams: p.weightGrams,
+    shipping_class: p.shippingClass,
+    fees: [],
     short_description: p.shortDescription,
     highlights: p.highlights,
     specs: p.specs,
@@ -41,6 +43,20 @@ function friendlyDbError(message: string, code?: string): string {
     return "That URL slug is already used by another item. Please change it."
   }
   return "Could not save. Please try again."
+}
+
+function extractStoragePaths(urls: readonly string[]): string[] {
+  const prefix = "/storage/v1/object/public/product-images/"
+  const out: string[] = []
+  for (const raw of urls) {
+    try {
+      const pathname = new URL(raw).pathname
+      if (!pathname.startsWith(prefix)) continue
+      const key = decodeURIComponent(pathname.slice(prefix.length))
+      if (key && !key.split("/").some((seg) => seg === "." || seg === ".." || seg === "")) out.push(key)
+    } catch {}
+  }
+  return out
 }
 
 /** Storefront pages are cached; refresh them instantly after any catalogue change. */
@@ -81,6 +97,12 @@ export async function saveProduct(
     return { ok: true, data: { id: data.id, stock: data.stock } }
   }
 
+  const { data: before } = await supabase
+    .from("products")
+    .select("images")
+    .eq("id", id)
+    .maybeSingle<{ images: string[] }>()
+
   const { data, error } = await supabase
     .from("products")
     .update(toRow(parsed.data))
@@ -89,12 +111,19 @@ export async function saveProduct(
     .single<{ id: string; stock: number }>()
   if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
 
+  const kept = new Set(parsed.data.images)
+  const removedPaths = extractStoragePaths((before?.images ?? []).filter((u) => !kept.has(u)))
+  if (removedPaths.length) {
+    await supabase.storage.from("product-images").remove(removedPaths)
+  }
+
   let stock = data.stock
   const expected = Number.isInteger(expectedStock) ? (expectedStock as number) : null
   const delta = expected === null ? 0 : parsed.data.stock - expected
   if (delta !== 0) {
     const { data: after, error: stockError } = await supabase.rpc("adjust_product_stock", { p_id: id, p_delta: delta })
     if (stockError) {
+      refreshCatalogue()
       return fail("Saved, but the stock could not be updated. Please try again.")
     }
     stock = Number(after)
@@ -120,14 +149,14 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   if (error) return fail("Could not delete product")
 
   // Best-effort cleanup of the product's photos in Storage.
-  const paths = (product?.images ?? [])
-    .map((url) => url.split("/storage/v1/object/public/product-images/")[1])
-    .filter((p): p is string => Boolean(p))
+  const paths = extractStoragePaths(product?.images ?? [])
   if (paths.length) await supabase.storage.from("product-images").remove(paths)
 
   refreshCatalogue()
   return { ok: true }
 }
+
+const flagSchema = z.enum(["isActive", "isFeatured"])
 
 export async function toggleProductFlag(
   id: string,
@@ -136,13 +165,17 @@ export async function toggleProductFlag(
 ): Promise<ActionResult> {
   const auth = await assertAdmin()
   if (!auth.ok) return fail(auth.error)
-  if (!z.uuid().safeParse(id).success) return fail("Invalid product")
+  const parsedFlag = flagSchema.safeParse(flag)
+  const parsedValue = z.boolean().safeParse(value)
+  if (!z.uuid().safeParse(id).success || !parsedFlag.success || !parsedValue.success) {
+    return fail("Invalid product")
+  }
 
   const supabase = await getServerSupabase()
-  const column = flag === "isActive" ? "is_active" : "is_featured"
+  const column = parsedFlag.data === "isActive" ? "is_active" : "is_featured"
   const { error } = await supabase
     .from("products")
-    .update({ [column]: Boolean(value) })
+    .update({ [column]: parsedValue.data })
     .eq("id", id)
   if (error) return fail("Could not update product")
 

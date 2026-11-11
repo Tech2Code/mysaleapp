@@ -98,21 +98,26 @@ export const cancelOrderSchema = z.object({
   detail: v.note(LIMITS.cancelDetail.max).optional(),
 }).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
-export const requestReturnSchema = z.object({
-  code: trackOrderSchema.shape.code,
-  /** Needed for guests; signed-in customers are recognised by their account. */
-  phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
-  items: z
-    .array(z.object({ productId: z.uuid(), quantity: v.quantity(LIMITS.returnQuantity.max) }))
-    .min(1, "Choose at least one item to return")
-    .max(LIMITS.returnLines.max),
-  reason: v.reason(),
-  details: v.note(LIMITS.returnDetail.max).optional(),
-}).refine((v) => !otherNeedsDetail(v.reason, v.details), { path: ["details"], error: OTHER_DETAIL_MESSAGE })
+export const requestReturnSchema = z
+  .object({
+    code: trackOrderSchema.shape.code,
+    /** Needed for guests; signed-in customers are recognised by their account. */
+    phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+    items: z
+      .array(z.object({ productId: z.uuid(), quantity: v.quantity(LIMITS.returnQuantity.max) }))
+      .min(1, "Choose at least one item to return")
+      .max(LIMITS.returnLines.max)
+      .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
+    reason: v.reason(),
+    details: v.note(LIMITS.returnDetail.max).optional(),
+  })
+  .refine((v) => !otherNeedsDetail(v.reason, v.details), { path: ["details"], error: OTHER_DETAIL_MESSAGE })
 
 export const withdrawReturnSchema = z.object({
   code: trackOrderSchema.shape.code,
   phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+  /** Full mobile number required for guests (migration 0046); signed-in owners are recognised by their session. */
+  phone: v.phoneIN().optional(),
   requestId: z.uuid(),
 })
 

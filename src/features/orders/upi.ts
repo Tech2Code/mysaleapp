@@ -5,12 +5,12 @@
  */
 export function buildUpiUrl(input: { upiId: string; payeeName?: string | null; amount: number; orderCode: string }): string {
   const params = new URLSearchParams({
-    pa: input.upiId,
+    pa: input.upiId.trim(),
     pn: input.payeeName?.trim() || "Shop",
-    am: input.amount.toFixed(2),
+    am: Math.max(0, input.amount).toFixed(2),
     cu: "INR",
     tn: `Order ${input.orderCode}`,
   })
-  // URLSearchParams encodes spaces as "+", but UPI apps expect %20.
-  return `upi://pay?${params.toString().replace(/\+/g, "%20")}`
+  // URLSearchParams encodes spaces as "+" and "@" as "%40"; UPI apps expect "%20" and literal "@" in VPA.
+  return `upi://pay?${params.toString().replace(/\+/g, "%20").replace(/%40/gi, "@")}`
 }

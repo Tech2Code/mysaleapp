@@ -53,16 +53,20 @@ export function usePincodeLookup({ pincode, ...fields }: { pincode: string } & F
     const cached = found.get(pincode)
     if (cached) queueMicrotask(() => apply(cached))
     else
-      void lookupPincode(pincode).then((info) => {
-        if (info.ok) found.set(pincode, info)
-        apply(info)
-      })
+      void lookupPincode(pincode)
+        .then((info) => {
+          if (info.ok) found.set(pincode, info)
+          apply(info)
+        })
+        .catch(() => apply({ ok: false, reason: "unavailable" }))
     return () => {
       stale = true
     }
   }, [pincode])
 
+  const isInvalid = valid && result?.pin === pincode && !result.info.ok && result.info.reason === "invalid"
+  const error = isInvalid ? "Enter a valid 6-digit Indian pincode" : undefined
   const loading = valid && result?.pin !== pincode
-  const hint = loading ? "Finding your area…" : "City and state are filled in from the pincode"
-  return { loading, hint }
+  const hint = loading ? "Finding your area…" : error ? undefined : "City and state are filled in from the pincode"
+  return { loading, hint, error }
 }

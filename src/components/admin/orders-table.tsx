@@ -28,7 +28,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
             {orders.map((o) => (
               <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className="group">
                 <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
-                  <Link data-ui="admin/OrdersTable/Link" href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
+                  <Link data-ui="admin/OrdersTable/Link" href={`/admin/orders/${o.id}`} prefetch={true} className="font-mono font-semibold text-primary group-hover:underline">
                     {o.orderCode}
                   </Link>
                 </TableCell>

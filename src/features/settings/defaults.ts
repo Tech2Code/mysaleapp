@@ -44,6 +44,10 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   returnWindowDays: 7,
   deliveryFee: 60,
   freeDeliveryAbove: 999,
+  fragileFee: 30,
+  oversizedFee: 80,
+  freeWeightGrams: 1000,
+  extraWeightFeePerKg: 40,
 
   upiId: null,
   upiPayeeName: null,

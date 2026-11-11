@@ -1,16 +1,15 @@
 import type { Metadata, Viewport } from "next"
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google"
+import { Outfit, Plus_Jakarta_Sans } from "next/font/google"
 import { Providers } from "@/components/shared/providers"
 import { StoreSettingsProvider } from "@/components/store/store-settings-provider"
 import { siteConfig } from "@/config/site"
 import { getStoreSettings } from "@/features/settings/queries"
 import "./globals.css"
 
-const display = Fraunces({
+const display = Outfit({
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
-  axes: ["SOFT", "opsz"],
 })
 
 const body = Plus_Jakarta_Sans({
@@ -65,7 +64,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getStoreSettings()
 
   return (
-    <html data-ui="layout:/" lang="en-IN" suppressHydrationWarning data-scroll-behavior="smooth" className={`${display.variable} ${body.variable} h-full antialiased`}>
+    <html data-ui="layout:/" lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <StoreSettingsProvider value={settings}>
           <Providers>{children}</Providers>
