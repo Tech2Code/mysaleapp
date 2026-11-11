@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { CheckIcon, Loader2Icon, Trash2Icon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 /**
  * THE "are you sure?" step. Every click that changes data and is hard to undo (cancel, delete, refund,
@@ -34,14 +34,16 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="shared/ConfirmDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent data-ui="shared/ConfirmDialog/DialogContent" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {description && (
-          <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-            {description}
-          </DialogDescription>
+          <DialogBody>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {description}
+            </DialogDescription>
+          </DialogBody>
         )}
         <DialogFooter>
           <DialogClose render={<Button data-ui="shared/ConfirmDialog/Button" type="button" variant="outline" className="gap-1.5 rounded-full" disabled={pending} />}>

@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SwitchField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
 import { returnableQuantities } from "@/features/orders/returns"
@@ -131,54 +131,56 @@ export function AdminReturnOrder({
       >
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return for {orderCode}</DialogTitle>
           <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
         </DialogHeader>
 
-        <ul data-ui="admin/AdminReturnOrder/ul" className="space-y-4">
-          {lines.map((i) => {
-            const max = maxOf(i.productId)
-            const row = rowOf(i.productId)
-            const over = Number(row.qty) > max
-            return (
-              <li data-ui="admin/AdminReturnOrder/li" key={i.productId} className="space-y-2 rounded-xl border p-3">
-                <p data-ui="admin/AdminReturnOrder/p" className="text-sm font-medium">{i.name}</p>
-                <div data-ui="admin/AdminReturnOrder/div-grid" className="grid items-start gap-x-4 gap-y-1 sm:grid-cols-[8rem_1fr]">
-                  <TextField
-                    label={`Returned (max ${max})`}
-                    kind="digits"
-                    fieldSize="md"
-                    inputMode="numeric"
-                    maxLength={String(LIMITS.returnQuantity.max).length}
-                    value={row.qty}
-                    onChange={(e) => setRow(i.productId, { qty: e.target.value })}
-                    error={over ? `At most ${max}` : undefined}
-                  />
-                  <div data-ui="admin/AdminReturnOrder/div" className="sm:pt-6">
-                    <SwitchField
-                      label="Back into stock"
-                      description="Resellable condition"
-                      checked={row.restock}
-                      onCheckedChange={(v) => setRow(i.productId, { restock: v })}
+        <DialogBody className="space-y-4">
+          <ul data-ui="admin/AdminReturnOrder/ul" className="space-y-4">
+            {lines.map((i) => {
+              const max = maxOf(i.productId)
+              const row = rowOf(i.productId)
+              const over = Number(row.qty) > max
+              return (
+                <li data-ui="admin/AdminReturnOrder/li" key={i.productId} className="space-y-2 rounded-xl border p-3">
+                  <p data-ui="admin/AdminReturnOrder/p" className="text-sm font-medium">{i.name}</p>
+                  <div data-ui="admin/AdminReturnOrder/div-grid" className="grid items-start gap-x-4 gap-y-1 sm:grid-cols-[8rem_1fr]">
+                    <TextField
+                      label={`Returned (max ${max})`}
+                      kind="digits"
+                      fieldSize="md"
+                      inputMode="numeric"
+                      maxLength={String(LIMITS.returnQuantity.max).length}
+                      value={row.qty}
+                      onChange={(e) => setRow(i.productId, { qty: e.target.value })}
+                      error={over ? `At most ${max}` : undefined}
                     />
+                    <div data-ui="admin/AdminReturnOrder/div" className="sm:pt-6">
+                      <SwitchField
+                        label="Back into stock"
+                        description="Resellable condition"
+                        checked={row.restock}
+                        onCheckedChange={(v) => setRow(i.productId, { restock: v })}
+                      />
+                    </div>
                   </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                </li>
+              )
+            })}
+          </ul>
 
-        <TextAreaField label="Reason (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={reason} onChange={(e) => setReason(e.target.value)} />
-        {paymentStatus === "paid" && (
-          <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
-        )}
-        {error && (
-          <p data-ui="admin/AdminReturnOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-            {error}
-          </p>
-        )}
+          <TextAreaField label="Reason (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={reason} onChange={(e) => setReason(e.target.value)} />
+          {paymentStatus === "paid" && (
+            <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
+          )}
+          {error && (
+            <p data-ui="admin/AdminReturnOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+              {error}
+            </p>
+          )}
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel

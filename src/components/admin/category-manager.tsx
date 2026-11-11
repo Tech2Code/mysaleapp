@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -70,40 +71,42 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="admin/CategoryDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
-        <form data-ui="admin/CategoryDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
+      <DialogContent data-ui="admin/CategoryDialog/DialogContent" className="sm:max-w-md">
+        <form data-ui="admin/CategoryDialog/form" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
           </DialogHeader>
-          <TextField
-            label="Name" maxLength={LIMITS.categoryName.max}
-            fieldSize="md"
-            error={errors.name?.message}
-            {...form.register("name", {
-              onChange: (e) => {
-                if (!category) form.setValue("slug", slugify(e.target.value))
-              },
-            })}
-          />
-          <TextField label="URL slug" kind="slug" fieldSize="md" className="font-mono text-sm" error={errors.slug?.message} {...form.register("slug")} />
-          <TextAreaField
-            label="Description" maxLength={LIMITS.categoryDescription.max}
-            rows={3}
-            hint="Shown on the category page and to Google"
-            error={errors.description?.message}
-            {...form.register("description")}
-          />
-          <TextField
-            label="Sort order" kind="digits" maxLength={3}
-            fieldSize="md"
-            inputMode="numeric"
-            hint="Lower numbers show first"
-            containerClassName="w-40"
-            error={errors.sort?.message}
-            {...form.register("sort")}
-          />
-          <DialogFooter className="pt-2">
+          <DialogBody className="space-y-2">
+            <TextField
+              label="Name" maxLength={LIMITS.categoryName.max}
+              fieldSize="md"
+              error={errors.name?.message}
+              {...form.register("name", {
+                onChange: (e) => {
+                  if (!category) form.setValue("slug", slugify(e.target.value))
+                },
+              })}
+            />
+            <TextField label="URL slug" kind="slug" fieldSize="md" className="font-mono text-sm" error={errors.slug?.message} {...form.register("slug")} />
+            <TextAreaField
+              label="Description" maxLength={LIMITS.categoryDescription.max}
+              rows={3}
+              hint="Shown on the category page and to Google"
+              error={errors.description?.message}
+              {...form.register("description")}
+            />
+            <TextField
+              label="Sort order" kind="digits" maxLength={3}
+              fieldSize="md"
+              inputMode="numeric"
+              hint="Lower numbers show first"
+              containerClassName="w-40"
+              error={errors.sort?.message}
+              {...form.register("sort")}
+            />
+          </DialogBody>
+          <DialogFooter>
             <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>

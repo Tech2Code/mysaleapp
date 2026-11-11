@@ -10,7 +10,7 @@ import { DateField, TextField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { updateOrderStatus } from "@/features/orders/admin-actions"
 import { COURIER_SUGGESTIONS, expectedDeliveryProblem, shippingSchema } from "@/features/orders/schema"
 import type { ShippingDetails } from "@/features/orders/types"
@@ -82,58 +82,60 @@ export function CourierDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="admin/CourierDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent data-ui="admin/CourierDialog/DialogContent" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form data-ui="admin/CourierDialog/form" onSubmit={submit} noValidate className="space-y-1">
-          <TextField
-            label="Courier"
-            maxLength={LIMITS.carrier.max}
-            fieldSize="md"
-            placeholder="e.g. Delhivery"
-            suggestions={COURIER_SUGGESTIONS}
-            error={errors.carrier?.message}
-            {...form.register("carrier")}
-          />
-          <TextField
-            label="Tracking / AWB number"
-            kind="trackingNumber"
-            fieldSize="md"
-            hint={`Optional. ${LIMITS.trackingNumber.min}-${LIMITS.trackingNumber.max} letters, numbers, - / _ (no spaces).`}
-            className="font-mono"
-            error={errors.trackingNumber?.message}
-            {...form.register("trackingNumber")}
-          />
-          <TextField
-            label="Tracking link"
-            kind="url"
-            fieldSize="md"
-            type="url"
-            inputMode="url"
-            placeholder="https://…"
-            hint="Optional. Customers get a “Track shipment” button."
-            error={errors.trackingUrl?.message}
-            {...form.register("trackingUrl")}
-          />
-          <Controller
-            control={form.control}
-            name="expectedDelivery"
-            render={({ field }) => (
-              <DateField
-                label="Expected delivery date"
-                fieldSize="md"
-                hint={`Within the next ${LIMITS.expectedDeliveryDays.max} days.`}
-                error={errors.expectedDelivery?.message}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                disabled={pending}
-              />
-            )}
-          />
-          <DialogFooter className="pt-2">
+        <form data-ui="admin/CourierDialog/form" onSubmit={submit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <DialogBody className="space-y-2">
+            <TextField
+              label="Courier"
+              maxLength={LIMITS.carrier.max}
+              fieldSize="md"
+              placeholder="e.g. Delhivery"
+              suggestions={COURIER_SUGGESTIONS}
+              error={errors.carrier?.message}
+              {...form.register("carrier")}
+            />
+            <TextField
+              label="Tracking / AWB number"
+              kind="trackingNumber"
+              fieldSize="md"
+              hint={`Optional. ${LIMITS.trackingNumber.min}-${LIMITS.trackingNumber.max} letters, numbers, - / _ (no spaces).`}
+              className="font-mono"
+              error={errors.trackingNumber?.message}
+              {...form.register("trackingNumber")}
+            />
+            <TextField
+              label="Tracking link"
+              kind="url"
+              fieldSize="md"
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              hint="Optional. Customers get a “Track shipment” button."
+              error={errors.trackingUrl?.message}
+              {...form.register("trackingUrl")}
+            />
+            <Controller
+              control={form.control}
+              name="expectedDelivery"
+              render={({ field }) => (
+                <DateField
+                  label="Expected delivery date"
+                  fieldSize="md"
+                  hint={`Within the next ${LIMITS.expectedDeliveryDays.max} days.`}
+                  error={errors.expectedDelivery?.message}
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={pending}
+                />
+              )}
+            />
+          </DialogBody>
+          <DialogFooter>
             <Button data-ui="admin/CourierDialog/Button-cancel" type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>

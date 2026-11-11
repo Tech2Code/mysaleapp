@@ -14,38 +14,50 @@ import {
 
 /** Admin reads are uncached and include inactive products (RLS allows admins). */
 export async function listAllProducts(): Promise<Product[]> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .order("created_at", { ascending: false })
-    .returns<ProductRow[]>()
+  const [, { data, error }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .order("created_at", { ascending: false })
+      .returns<ProductRow[]>(),
+  ])
   if (error) throw new Error(error.message)
   return data.map(mapProduct)
 }
 
 export async function getProductForEdit(id: string): Promise<Product | null> {
-  await requireAdmin()
-  if (!z.uuid().safeParse(id).success) return null
+  const adminCheck = requireAdmin()
+  if (!z.uuid().safeParse(id).success) {
+    await adminCheck
+    return null
+  }
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("id", id)
-    .maybeSingle<ProductRow>()
+  const [, { data, error }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("id", id)
+      .maybeSingle<ProductRow>(),
+  ])
   if (error) throw new Error(error.message)
   return data ? mapProduct(data) : null
 }
 
 export async function listAllCategories(): Promise<(Category & { productCount: number })[]> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*, products(count)")
-    .order("sort")
-    .returns<(CategoryRow & { products: { count: number }[] })[]>()
+  const [, { data, error }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("categories")
+      .select("*, products(count)")
+      .order("sort")
+      .returns<(CategoryRow & { products: { count: number }[] })[]>(),
+  ])
   if (error) throw new Error(error.message)
   return data.map((row) => ({ ...mapCategory(row), productCount: row.products[0]?.count ?? 0 }))
 }

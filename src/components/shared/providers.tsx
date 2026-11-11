@@ -3,8 +3,9 @@
 import { UiInspector } from "./ui-inspector"
 import { LazyMotion, MotionConfig } from "motion/react"
 import { ThemeProvider } from "next-themes"
-import type { ReactNode } from "react"
+import { Suspense, type ReactNode } from "react"
 import { Toaster } from "@/components/ui/sonner"
+import { ScrollReset } from "./scroll-reset"
 import { AuthListener } from "./auth-listener"
 import { BusyOverlayProvider } from "./busy-overlay"
 import { RouteProgressProvider } from "./route-progress"
@@ -23,6 +24,9 @@ export function Providers({ children }: { children: ReactNode }) {
             <BusyOverlayProvider>{children}</BusyOverlayProvider>
           </RouteProgressProvider>
           <Toaster position="top-right" richColors closeButton />
+          <Suspense fallback={null}>
+            <ScrollReset />
+          </Suspense>
           <AuthListener />
           <ServiceWorkerRegister />
           <UiInspector />

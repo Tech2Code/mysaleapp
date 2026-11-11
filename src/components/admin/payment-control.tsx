@@ -10,7 +10,7 @@ import { CopyableReference } from "@/components/shared/copyable-reference"
 import { PaymentBadge } from "@/components/shared/payment-badge"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { updateOrderPayment } from "@/features/orders/admin-actions"
 import {
   PAYMENT_METHOD_LABEL,
@@ -268,8 +268,8 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             {refundOnly ? <RotateCcwIcon className="size-4" /> : <PencilIcon className="size-4" />} {refundOnly ? "Refund this payment" : "Edit payment record manually"}
           </Button>
           <Dialog open={refundOpen} onOpenChange={(o) => !pending && setRefundOpen(o)}>
-            <DialogContent data-ui="admin/PaymentControl/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
-              <form data-ui="admin/PaymentControl/form-grid" onSubmit={onSave} noValidate className="space-y-1">
+            <DialogContent data-ui="admin/PaymentControl/DialogContent" className="sm:max-w-md">
+              <form data-ui="admin/PaymentControl/form-grid" onSubmit={onSave} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>{refundOnly ? "Refund this payment" : "Edit payment record"}</DialogTitle>
                   <DialogDescription>
@@ -278,48 +278,50 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                       : "Fix the payment details by hand. Use this only when the verify button doesn't fit."}
                   </DialogDescription>
                 </DialogHeader>
-                {editNote && !refundOnly && (
-                  <p data-ui="admin/PaymentControl/p-3" role="note" className="mb-2 rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
-                    {editNote}
-                  </p>
-                )}
-                {!refundOnly && <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={allowedOptions} />}
-                {!refundOnly && <FormSelectField control={form.control} name="method" label="Paid how?" fieldSize="md" placeholder="Not set" options={methodOptions} />}
-                <TextField
-                  label={refundOnly ? "Refund reference (optional)" : "UTR / reference"}
-                  fieldSize="md"
-                  kind="paymentRef"
-                  disabled={lockPaidFields && !refundOnly}
-                  className="font-mono"
-                  error={errors.reference?.message}
-                  {...form.register("reference")}
-                />
-                <TextField
-                  label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
-                  maxLength={String(LIMITS.paymentAmount.max).length + 3}
-                  fieldSize="md"
-                  inputMode="decimal"
-                  leading="₹"
-                  disabled={lockPaidFields && !refundOnly}
-                  hint={
-                    statusNow === "refunded"
-                      ? "Blank = refund everything still owed. A smaller amount records a partial refund."
-                      : "Leave blank to use the order total when marking as paid."
-                  }
-                  error={errors.amount?.message}
-                  {...form.register("amount")}
-                />
-                <TextAreaField
-                  label="Note (visible to the customer)" maxLength={LIMITS.paymentNote.max}
-                  rows={2}
-                  error={errors.note?.message}
-                  {...form.register("note")}
-                />
-                <DialogFooter className="pt-2">
-                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="outline" onClick={() => setRefundOpen(false)} disabled={pending} className="rounded-full">
+                <DialogBody className="space-y-2">
+                  {editNote && !refundOnly && (
+                    <p data-ui="admin/PaymentControl/p-3" role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                      {editNote}
+                    </p>
+                  )}
+                  {!refundOnly && <FormSelectField control={form.control} name="status" label="Payment status" fieldSize="md" options={allowedOptions} />}
+                  {!refundOnly && <FormSelectField control={form.control} name="method" label="Paid how?" fieldSize="md" placeholder="Not set" options={methodOptions} />}
+                  <TextField
+                    label={refundOnly ? "Refund reference (optional)" : "UTR / reference"}
+                    fieldSize="md"
+                    kind="paymentRef"
+                    disabled={lockPaidFields && !refundOnly}
+                    className="font-mono"
+                    error={errors.reference?.message}
+                    {...form.register("reference")}
+                  />
+                  <TextField
+                    label={statusNow === "refunded" ? "Amount to refund" : "Amount received"} kind="money"
+                    maxLength={String(LIMITS.paymentAmount.max).length + 3}
+                    fieldSize="md"
+                    inputMode="decimal"
+                    leading="₹"
+                    disabled={lockPaidFields && !refundOnly}
+                    hint={
+                      statusNow === "refunded"
+                        ? "Blank = refund everything still owed. A smaller amount records a partial refund."
+                        : "Leave blank to use the order total when marking as paid."
+                    }
+                    error={errors.amount?.message}
+                    {...form.register("amount")}
+                  />
+                  <TextAreaField
+                    label="Note (visible to the customer)" maxLength={LIMITS.paymentNote.max}
+                    rows={2}
+                    error={errors.note?.message}
+                    {...form.register("note")}
+                  />
+                </DialogBody>
+                <DialogFooter>
+                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="outline" onClick={() => setRefundOpen(false)} disabled={pending} className="gap-1.5 rounded-full">
                     <XIcon className="size-4" /> Cancel
                   </Button>
-                  <Button data-ui="admin/PaymentControl/Button-2" type="submit" disabled={(!isDirty && !refundOnly) || pending} className="rounded-full">
+                  <Button data-ui="admin/PaymentControl/Button-2" type="submit" disabled={(!isDirty && !refundOnly) || pending} className="gap-1.5 rounded-full">
                     {pending ? <Loader2Icon className="animate-spin" /> : refundOnly ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />} {refundOnly ? "Refund payment" : "Save payment record"}
                   </Button>
                 </DialogFooter>

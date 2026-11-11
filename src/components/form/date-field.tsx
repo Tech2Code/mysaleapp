@@ -188,7 +188,7 @@ export function DateField({
             aria-describedby={describedBy(id, error, hint)}
             onBlur={onBlur}
             className={cn(
-              "flex w-full items-center justify-between rounded-xl border border-input bg-background px-3 text-left text-sm shadow-xs transition-colors outline-none",
+              "flex w-full min-w-0 max-w-full items-center justify-between rounded-xl border border-input bg-background px-3 text-left text-sm shadow-xs transition-colors outline-none",
               FIELD_HEIGHT[fieldSize],
               clearable && value && !disabled && "pr-14",
               "hover:border-foreground/20 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20",
@@ -197,7 +197,11 @@ export function DateField({
               className
             )}
           >
-            <span data-ui="form/DateField/span-value" className={cn("truncate", !value && "text-muted-foreground")}>
+            <span
+              data-ui="form/DateField/span-value"
+              title={value ? formatDisplayDate(value) : placeholder}
+              className={cn("block min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}
+            >
               {value ? formatDisplayDate(value) : placeholder}
             </span>
             <CalendarIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />

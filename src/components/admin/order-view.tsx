@@ -80,7 +80,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
               (a sticky box only moves while the right side is taller; capped to the screen so it scrolls inside itself if it is taller). */}
           <Card title="Fulfilment">
             <div data-ui="admin/AdminOrderView/div-grid-2" className="grid gap-8 md:grid-cols-2 md:items-start">
-              <div data-ui="admin/AdminOrderView/div-3" className="space-y-6 md:sticky-admin">
+              <div data-ui="admin/AdminOrderView/div-3" className="min-w-0 space-y-6 md:sticky-admin">
                 {paymentFirst && paymentSection}
                 <OrderStatusControl
                   key={`status-${version}`}
@@ -120,7 +120,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
                 </div>
                 )}
               </div>
-              <div data-ui="admin/AdminOrderView/div-5">
+              <div data-ui="admin/AdminOrderView/div-5" className="min-w-0">
                 <div data-ui="admin/AdminOrderView/div-6">
                   <h3 data-ui="admin/AdminOrderView/h3-progress" className="mb-4 text-sm font-medium">Progress</h3>
                   <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} shippingAction={order.status === "shipped" && order.shipping ? <CourierEditButton orderId={order.id} shipping={order.shipping} /> : undefined} returnInput={stageInputOf(order)} audience="admin" />

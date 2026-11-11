@@ -188,6 +188,7 @@
   html {
     /* anchor links (#main …) land below the sticky header, not under it */
     scroll-padding-top: calc(var(--store-header-h) + 1rem);
+    scrollbar-gutter: stable;
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
     /* The skeleton -> real page swap changes content above the viewport; scroll anchoring would then move
@@ -458,19 +459,39 @@
   [data-skeleton] * { animation: none !important; }
 }
 
+/* Background scroll lock when modal / popup is active (lock on html only so scrollbar-gutter: stable keeps the scrollbar width) */
+html:has([data-slot="dialog-overlay"][data-open]),
+html:has([data-slot="sheet-overlay"][data-open]) {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+/* Ensure forms inside dialogs stretch properly to keep header pinned at top and footer at bottom */
+[data-slot="dialog-content"] > form,
+[data-slot="dialog-content"] form:only-child {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 0%;
+  overflow: hidden;
+}
+
 /* Popups (dialogs, sheets, dropdown lists): a slim scrollbar so it does not eat the width of a small popup. */
 [data-slot="dialog-content"],
+[data-slot="dialog-body"],
 [data-slot="sheet-content"],
 [data-slot="select-content"] {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent) transparent;
 }
 [data-slot="dialog-content"]::-webkit-scrollbar,
+[data-slot="dialog-body"]::-webkit-scrollbar,
 [data-slot="sheet-content"]::-webkit-scrollbar,
 [data-slot="select-content"]::-webkit-scrollbar {
   width: 6px;
 }
 [data-slot="dialog-content"]::-webkit-scrollbar-thumb,
+[data-slot="dialog-body"]::-webkit-scrollbar-thumb,
 [data-slot="sheet-content"]::-webkit-scrollbar-thumb,
 [data-slot="select-content"]::-webkit-scrollbar-thumb {
   border-radius: 9999px;

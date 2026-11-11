@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -95,64 +96,66 @@ function AddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="account/AddressDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <form data-ui="account/AddressDialog/form" onSubmit={onSubmit} noValidate className="space-y-1">
+      <DialogContent data-ui="account/AddressDialog/DialogContent" className="sm:max-w-lg">
+        <form data-ui="account/AddressDialog/form" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{address ? "Edit address" : "Add a new address"}</DialogTitle>
             <DialogDescription>Saved addresses can be picked in one tap at checkout.</DialogDescription>
           </DialogHeader>
 
-          <div data-ui="account/AddressDialog/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
-            <FormSelectField control={form.control} name="label" label="Save as" options={labelOptions} />
-            <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
-          </div>
-          <TextField
-            label="Mobile number" kind="phone"
-            type="tel"
-            inputMode="tel"
-            leading="+91"
-            autoComplete="tel"
-            error={errors.phone?.message}
-            {...form.register("phone")}
-          />
-          <TextAreaField
-            label="Full address" maxLength={LIMITS.address.max}
-            rows={3}
-            placeholder="House no., street, landmark"
-            error={errors.address?.message}
-            {...form.register("address")}
-          />
-          <div data-ui="account/AddressDialog/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+          <DialogBody className="space-y-2">
+            <div data-ui="account/AddressDialog/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <FormSelectField control={form.control} name="label" label="Save as" options={labelOptions} />
+              <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
+            </div>
             <TextField
-              label="Pincode" kind="pincode"
-              inputMode="numeric"
-              maxLength={6}
-              autoComplete="postal-code"
-              hint={area.hint}
-              error={errors.pincode?.message || area.error}
-              {...form.register("pincode")}
+              label="Mobile number" kind="phone"
+              type="tel"
+              inputMode="tel"
+              leading="+91"
+              autoComplete="tel"
+              error={errors.phone?.message}
+              {...form.register("phone")}
             />
-            <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
-            <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
-          </div>
-          <Controller
-            control={form.control}
-            name="isDefault"
-            render={({ field }) => (
-              <SwitchField
-                label="Make this my default address"
-                description="Used automatically at checkout"
-                checked={Boolean(field.value)}
-                onCheckedChange={field.onChange}
+            <TextAreaField
+              label="Full address" maxLength={LIMITS.address.max}
+              rows={3}
+              placeholder="House no., street, landmark"
+              error={errors.address?.message}
+              {...form.register("address")}
+            />
+            <div data-ui="account/AddressDialog/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <TextField
+                label="Pincode" kind="pincode"
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="postal-code"
+                hint={area.hint}
+                error={errors.pincode?.message || area.error}
+                {...form.register("pincode")}
               />
-            )}
-          />
+              <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
+            </div>
+            <Controller
+              control={form.control}
+              name="isDefault"
+              render={({ field }) => (
+                <SwitchField
+                  label="Make this my default address"
+                  description="Used automatically at checkout"
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
 
-          {serverError && (
-            <p data-ui="account/AddressDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {serverError}
-            </p>
-          )}
+            {serverError && (
+              <p data-ui="account/AddressDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                {serverError}
+              </p>
+            )}
+          </DialogBody>
           <DialogFooter>
             <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel

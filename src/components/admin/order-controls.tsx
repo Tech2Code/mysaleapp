@@ -11,7 +11,7 @@ import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { CourierDialog } from "./courier-dialog"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, statusChoices } from "@/features/orders/transitions"
@@ -169,9 +169,9 @@ export function OrderStatusControl({
     <div data-ui="admin/OrderStatusControl" className="space-y-4">
     {/* Delivered: the status dropdown manages the return steps (outside the form: it has its own dialogs). */}
     {status === "delivered" && returnControl}
-    <form data-ui="admin/OrderStatusControl/form" onSubmit={onSubmit} noValidate className="space-y-4">
+    <form data-ui="admin/OrderStatusControl/form" onSubmit={onSubmit} noValidate className="min-w-0 max-w-full space-y-4">
       {locked ? (
-        <div data-ui="admin/OrderStatusControl/div" className="space-y-3">
+        <div data-ui="admin/OrderStatusControl/div" className="min-w-0 max-w-full space-y-3">
           {!(status === "delivered" && returnControl) && (
             <p data-ui="admin/OrderStatusControl/p-flex" role="note" className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium">
               <LockIcon className="size-4 shrink-0" aria-hidden /> {note}
@@ -303,7 +303,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
       >
         Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -311,7 +311,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             {paidOrSent ? "A payment was received, so remember to refund it and mark the payment as Refunded." : "No payment was received."}
           </DialogDescription>
         </DialogHeader>
-        <div data-ui="admin/AdminCancelOrder/div" className="space-y-1">
+        <DialogBody className="space-y-2">
           <SelectField
             label="Reason"
             fieldSize="md"
@@ -333,7 +333,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
               {error}
             </p>
           )}
-        </div>
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <CheckIcon className="size-4" /> Keep order

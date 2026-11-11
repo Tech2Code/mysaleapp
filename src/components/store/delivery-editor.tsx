@@ -12,6 +12,7 @@ import { splitCityState, STATE_OPTIONS, type IndianState } from "@/features/loca
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -144,41 +145,43 @@ export function DeliveryEditor({
 
       {editable && (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogContent data-ui="store/DeliveryEditor/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-            <form data-ui="store/DeliveryEditor/form" onSubmit={onSubmit} noValidate className="space-y-1">
+          <DialogContent data-ui="store/DeliveryEditor/DialogContent" className="sm:max-w-lg">
+            <form data-ui="store/DeliveryEditor/form" onSubmit={onSubmit} noValidate>
               <DialogHeader>
                 <DialogTitle>Edit delivery details</DialogTitle>
                 <DialogDescription>Order {orderCode}. You can change this until we confirm the order.</DialogDescription>
               </DialogHeader>
-              <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
-              <TextField
-                label="Mobile number" kind="phone"
-                type="tel"
-                inputMode="tel"
-                leading="+91"
-                autoComplete="tel"
-                error={errors.phone?.message}
-                {...form.register("phone")}
-              />
-              <TextAreaField label="Full address" maxLength={LIMITS.address.max} rows={3} error={errors.address?.message} {...form.register("address")} />
-              <div data-ui="store/DeliveryEditor/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <DialogBody>
+                <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
                 <TextField
-                  label="Pincode" kind="pincode"
-                  inputMode="numeric"
-                  maxLength={6}
-                  hint={area.hint}
-                  error={errors.pincode?.message || area.error}
-                  {...form.register("pincode")}
+                  label="Mobile number" kind="phone"
+                  type="tel"
+                  inputMode="tel"
+                  leading="+91"
+                  autoComplete="tel"
+                  error={errors.phone?.message}
+                  {...form.register("phone")}
                 />
-                <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
-                <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
-              </div>
-              <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
-              {serverError && (
-                <p data-ui="store/DeliveryEditor/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                  {serverError}
-                </p>
-              )}
+                <TextAreaField label="Full address" maxLength={LIMITS.address.max} rows={3} error={errors.address?.message} {...form.register("address")} />
+                <div data-ui="store/DeliveryEditor/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                  <TextField
+                    label="Pincode" kind="pincode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    hint={area.hint}
+                    error={errors.pincode?.message || area.error}
+                    {...form.register("pincode")}
+                  />
+                  <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
+                  <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
+                </div>
+                <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
+                {serverError && (
+                  <p data-ui="store/DeliveryEditor/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                    {serverError}
+                  </p>
+                )}
+              </DialogBody>
               <DialogFooter>
                 <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
                   <XIcon className="size-4" /> Cancel

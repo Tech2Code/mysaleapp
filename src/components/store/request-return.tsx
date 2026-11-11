@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
@@ -132,7 +132,7 @@ export function RequestReturn({
       >
         <Undo2Icon className="size-4" aria-hidden /> Request a return
       </DialogTrigger>
-      <DialogContent data-ui="store/RequestReturn/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent data-ui="store/RequestReturn/DialogContent" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return items from {orderCode}</DialogTitle>
           <DialogDescription>
@@ -141,61 +141,63 @@ export function RequestReturn({
           </DialogDescription>
         </DialogHeader>
 
-        <ul data-ui="store/RequestReturn/ul" className="space-y-3">
-          {lines.map((i) => {
-            const max = left.get(i.productId) ?? 0
-            return (
-              <li data-ui="store/RequestReturn/li-grid" key={i.productId} className="grid items-start gap-x-4 gap-y-1 rounded-xl border p-3 sm:grid-cols-[1fr_7rem]">
-                <p data-ui="store/RequestReturn/p" className="text-sm font-medium sm:pt-1">{i.name}</p>
-                <TextField
-                  label={`Qty (max ${max})`}
-                  kind="digits"
-                  fieldSize="md"
-                  inputMode="numeric"
-                  maxLength={String(LIMITS.returnQuantity.max).length}
-                  placeholder="0"
-                  value={qtyOf(i.productId)}
-                  onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
-                  error={Number(qtyOf(i.productId)) > max ? `At most ${max}` : undefined}
-                />
-              </li>
-            )
-          })}
-        </ul>
+        <DialogBody>
+          <ul data-ui="store/RequestReturn/ul" className="space-y-3">
+            {lines.map((i) => {
+              const max = left.get(i.productId) ?? 0
+              return (
+                <li data-ui="store/RequestReturn/li-grid" key={i.productId} className="grid items-start gap-x-4 gap-y-1 rounded-xl border p-3 sm:grid-cols-[1fr_7rem]">
+                  <p data-ui="store/RequestReturn/p" className="text-sm font-medium sm:pt-1">{i.name}</p>
+                  <TextField
+                    label={`Qty (max ${max})`}
+                    kind="digits"
+                    fieldSize="md"
+                    inputMode="numeric"
+                    maxLength={String(LIMITS.returnQuantity.max).length}
+                    placeholder="0"
+                    value={qtyOf(i.productId)}
+                    onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
+                    error={Number(qtyOf(i.productId)) > max ? `At most ${max}` : undefined}
+                  />
+                </li>
+              )
+            })}
+          </ul>
 
-        {estimate.length > 0 && (
-          <div data-ui="store/RequestReturn/div" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
-            <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
-              <span data-ui="store/RequestReturn/span">You will get back</span>
-              <span data-ui="store/RequestReturn/span-2">{formatPrice(estimateTotal)}</span>
+          {estimate.length > 0 && (
+            <div data-ui="store/RequestReturn/div" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
+              <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
+                <span data-ui="store/RequestReturn/span">You will get back</span>
+                <span data-ui="store/RequestReturn/span-2">{formatPrice(estimateTotal)}</span>
+              </p>
+              <p data-ui="store/RequestReturn/p-2" className="text-xs text-muted-foreground">
+                Price of the items you return.{kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}
+              </p>
+            </div>
+          )}
+          <SelectField
+            label="Why are you returning it?"
+            fieldSize="md"
+            value={reason}
+            onValueChange={setReason}
+            options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
+          />
+          <TextAreaField
+            label={reason === OTHER_REASON ? "Please tell us the reason" : "Tell us more (optional)"}
+            required={reason === OTHER_REASON}
+            rows={2}
+            maxLength={LIMITS.returnDetail.max}
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            hint="For damaged items, describe what happened."
+            error={needsDetail && details.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+          />
+          {error && (
+            <p data-ui="store/RequestReturn/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+              {error}
             </p>
-            <p data-ui="store/RequestReturn/p-2" className="text-xs text-muted-foreground">
-              Price of the items you return.{kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}
-            </p>
-          </div>
-        )}
-        <SelectField
-          label="Why are you returning it?"
-          fieldSize="md"
-          value={reason}
-          onValueChange={setReason}
-          options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
-        />
-        <TextAreaField
-          label={reason === OTHER_REASON ? "Please tell us the reason" : "Tell us more (optional)"}
-          required={reason === OTHER_REASON}
-          rows={2}
-          maxLength={LIMITS.returnDetail.max}
-          value={details}
-          onChange={(e) => setDetails(e.target.value)}
-          hint="For damaged items, describe what happened."
-          error={needsDetail && details.trim() ? OTHER_DETAIL_MESSAGE : undefined}
-        />
-        {error && (
-          <p data-ui="store/RequestReturn/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-            {error}
-          </p>
-        )}
+          )}
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Close
@@ -318,11 +320,11 @@ export function ReturnRequestsPanel({
         })}
       </ul>
       <Dialog open={confirmId !== null} onOpenChange={(o) => !o && !pending && closeConfirm()}>
-        <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+        <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent" className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Withdraw this return request?</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <DialogBody>
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               We will not review it any further. You can send a new request while the return window is open.
             </DialogDescription>
@@ -338,7 +340,7 @@ export function ReturnRequestsPanel({
                 error={phoneError}
               />
             )}
-          </div>
+          </DialogBody>
           <DialogFooter>
             <Button data-ui="store/ReturnRequestsPanel/Button-keep-request" type="button" variant="outline" onClick={closeConfirm} disabled={pending} className="gap-1.5 rounded-full">
               <CheckIcon className="size-4" /> Keep request

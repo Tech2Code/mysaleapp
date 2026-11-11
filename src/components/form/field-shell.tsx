@@ -47,12 +47,12 @@ export function FieldShell({
   children: ReactNode
 }) {
   return (
-    <div data-ui="form/FieldShell" className={cn("relative", !hint && !noErrorSpace && "pb-3", className)}>
+    <div data-ui="form/FieldShell" className={cn("relative w-full min-w-0 max-w-full", !hint && !noErrorSpace && "pb-3", className)}>
       <Label data-ui="form/FieldShell/Label" htmlFor={id} className={cn("text-sm leading-none font-medium", hideLabel && "sr-only")}>
         {label}
       </Label>
       {/* The error is positioned against THIS box, so it always sits right under the input itself. */}
-      <div data-ui="form/FieldShell/div" className={cn("relative", !hideLabel && "mt-2")}>
+      <div data-ui="form/FieldShell/div" className={cn("relative w-full min-w-0 max-w-full", !hideLabel && "mt-2")}>
         {children}
         {error && (
           <p data-ui="form/FieldShell/p-absolute"

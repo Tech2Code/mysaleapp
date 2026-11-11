@@ -8,7 +8,7 @@ import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "@/features/orders/reasons"
 import { RETURN_REASONS, returnableQuantities } from "@/features/orders/returns"
@@ -80,33 +80,35 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       <DialogTrigger data-ui="admin/CreateReturnRequest/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
         Create return request
       </DialogTrigger>
-      <DialogContent data-ui="admin/CreateReturnRequest/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent data-ui="admin/CreateReturnRequest/DialogContent" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return request for {orderCode}</DialogTitle>
           <DialogDescription>For a customer who asked outside the app. The return window is ignored. You approve it next, with a pickup date.</DialogDescription>
         </DialogHeader>
-        <ul data-ui="admin/CreateReturnRequest/ul" className="space-y-3">
-          {lines.map((i) => (
-            <li data-ui="admin/CreateReturnRequest/li" key={i.productId} className="space-y-1 rounded-xl border p-3">
-              <p data-ui="admin/CreateReturnRequest/p" className="text-sm font-medium">{i.name}</p>
-              <TextField
-                label={`How many (max ${left.get(i.productId) ?? 0})`}
-                kind="digits"
-                fieldSize="md"
-                inputMode="numeric"
-                maxLength={String(LIMITS.returnQuantity.max).length}
-                value={qty[i.productId] ?? ""}
-                onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
-                error={over(i.productId) ? `At most ${left.get(i.productId) ?? 0}` : undefined}
-              />
-            </li>
-          ))}
-        </ul>
-        <SelectField label="Reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
-        <TextAreaField label="Details (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={details} onChange={(e) => setDetails(e.target.value)} error={detailsError ?? undefined} />
-        {error && !detailsError && (
-          <p data-ui="admin/CreateReturnRequest/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>
-        )}
+        <DialogBody className="space-y-3">
+          <ul data-ui="admin/CreateReturnRequest/ul" className="space-y-3">
+            {lines.map((i) => (
+              <li data-ui="admin/CreateReturnRequest/li" key={i.productId} className="space-y-1 rounded-xl border p-3">
+                <p data-ui="admin/CreateReturnRequest/p" className="text-sm font-medium">{i.name}</p>
+                <TextField
+                  label={`How many (max ${left.get(i.productId) ?? 0})`}
+                  kind="digits"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  maxLength={String(LIMITS.returnQuantity.max).length}
+                  value={qty[i.productId] ?? ""}
+                  onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
+                  error={over(i.productId) ? `At most ${left.get(i.productId) ?? 0}` : undefined}
+                />
+              </li>
+            ))}
+          </ul>
+          <SelectField label="Reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
+          <TextAreaField label="Details (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={details} onChange={(e) => setDetails(e.target.value)} error={detailsError ?? undefined} />
+          {error && !detailsError && (
+            <p data-ui="admin/CreateReturnRequest/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>
+          )}
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel

@@ -12,11 +12,12 @@ export type ChecklistItem = { label: string; done: boolean; href: string; hint: 
 
 /** How much data exists now, plus a "ready to launch?" checklist. */
 export async function getLaunchOverview(): Promise<{ counts: LaunchCounts; checklist: ChecklistItem[] }> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
   const count = (table: string) => supabase.from(table).select("*", { count: "exact", head: true })
 
-  const [orders, products, categories, addresses, wishlists, settings] = await Promise.all([
+  const [, orders, products, categories, addresses, wishlists, settings] = await Promise.all([
+    adminCheck,
     count("orders"),
     count("products"),
     count("categories"),

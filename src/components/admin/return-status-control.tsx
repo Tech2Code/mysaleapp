@@ -81,7 +81,7 @@ export function ReturnStatusControl({
   const picked: Choice = options.some((o) => o.value === choice) ? choice : "current"
 
   return (
-    <div data-ui="admin/ReturnStatusControl" className="space-y-3">
+    <div data-ui="admin/ReturnStatusControl" className="min-w-0 max-w-full space-y-3">
       <SelectField label="Order status" fieldSize="md" options={options} value={picked} onValueChange={(v) => setChoice(v as Choice)} />
       {stage && picked === "current" && <p data-ui="admin/ReturnStatusControl/p" className="text-sm text-muted-foreground">{stage.detail}</p>}
       {picked === "approve" && open && <DecideDialog request={open} approve orderCode={orderCode} customerName={customerName} phone={phone} />}

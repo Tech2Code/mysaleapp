@@ -27,9 +27,9 @@ export const CACHE_TAGS = {
  */
 export async function getActiveProducts(): Promise<Product[]> {
   "use cache"
-  // Stock changes from orders, cancellations, returns and the pg_cron expiry job, and the last one
-  // can't call updateTag — so keep this short instead of "days".
-  cacheLife("minutes")
+  // Instant updates come from updateTag(CACHE_TAGS.products) on orders, cancellations, returns and admin saves.
+  // A 5-minute background revalidate also picks up pg_cron unpaid-order expiries without expiring the cache synchronously.
+  cacheLife({ stale: 300, revalidate: 300, expire: 86400 })
   cacheTag(CACHE_TAGS.products)
 
   const supabase = getPublicSupabase()
@@ -96,6 +96,10 @@ export async function getRelatedProducts(product: Product, limit = 4): Promise<P
 
 /** Only categories that actually contain active products, for navigation. */
 export async function getCategoriesWithCounts(): Promise<(Category & { count: number })[]> {
+  "use cache"
+  cacheLife({ stale: 300, revalidate: 300, expire: 86400 })
+  cacheTag(CACHE_TAGS.products, CACHE_TAGS.categories)
+
   const [categories, products] = await Promise.all([getCategories(), getActiveProducts()])
   return categories
     .map((c) => {
@@ -109,6 +113,10 @@ export async function getCategoriesWithCounts(): Promise<(Category & { count: nu
 
 /** Slim projection for the client shop browser (no descriptions/SEO/fees in the page payload). */
 export async function getProductListItems(): Promise<ProductListItem[]> {
+  "use cache"
+  cacheLife({ stale: 300, revalidate: 300, expire: 86400 })
+  cacheTag(CACHE_TAGS.products)
+
   const products = await getActiveProducts()
   return products.map(toListItem)
 }

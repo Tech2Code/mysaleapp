@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { DateField, TextAreaField } from "@/components/form"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { decideReturnRequest, markReturnPickedUp, undoReturnStep } from "@/features/orders/admin-actions"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { requestStatusMeta, type ReturnStage } from "@/features/orders/returns"
@@ -103,7 +103,7 @@ export function DecideDialog({
       >
         {approve ? "Approve" : "Reject"}
       </DialogTrigger>
-      <DialogContent data-ui="admin/DecideDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent data-ui="admin/DecideDialog/DialogContent" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{approve ? "Approve this return?" : "Reject this return?"}</DialogTitle>
           <DialogDescription>
@@ -112,26 +112,28 @@ export function DecideDialog({
               : "The customer will see your reason on their order page. Be specific and polite."}
           </DialogDescription>
         </DialogHeader>
-        {approve && (
-          <DateField
-            label="Pickup date"
-            fieldSize="md"
-            min={bounds.min}
-            max={bounds.max}
-            value={pickupDate}
-            onChange={setPickupDate}
-            error={pickupError ?? undefined}
+        <DialogBody>
+          {approve && (
+            <DateField
+              label="Pickup date"
+              fieldSize="md"
+              min={bounds.min}
+              max={bounds.max}
+              value={pickupDate}
+              onChange={setPickupDate}
+              error={pickupError ?? undefined}
+            />
+          )}
+          <TextAreaField
+            label={approve ? "Note for the customer (optional)" : "Reason (required)"}
+            required={!approve}
+            rows={3}
+            maxLength={LIMITS.returnDetail.max}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            error={error ?? undefined}
           />
-        )}
-        <TextAreaField
-          label={approve ? "Note for the customer (optional)" : "Reason (required)"}
-          required={!approve}
-          rows={3}
-          maxLength={LIMITS.returnDetail.max}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          error={error ?? undefined}
-        />
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/DecideDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel

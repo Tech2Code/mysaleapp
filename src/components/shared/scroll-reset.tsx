@@ -4,39 +4,103 @@ import { usePathname } from "next/navigation"
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { SCROLL_HOLD, holdFinished, shouldResetScroll } from "@/lib/scroll-reset"
 
+const scrollPositions = new Map<string, number>()
+
+function getStorageKey(url: string) {
+  return `agy:scroll:${url}`
+}
+
+function saveScrollPosition(url: string, y: number) {
+  scrollPositions.set(url, y)
+  try {
+    sessionStorage.setItem(getStorageKey(url), String(y))
+  } catch {
+    // quota exceeded or private mode
+  }
+}
+
+function getSavedScrollPosition(url: string): number | null {
+  if (scrollPositions.has(url)) return scrollPositions.get(url)!
+  try {
+    const raw = sessionStorage.getItem(getStorageKey(url))
+    if (raw !== null) {
+      const num = Number(raw)
+      if (Number.isFinite(num)) return num
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+function currentUrlKey() {
+  if (typeof window === "undefined") return ""
+  return window.location.pathname + window.location.search
+}
+
 /**
  * Opens every new page at the top, and keeps it there until the page has finished loading.
- *
- * Why this exists: Next.js scrolls to the top only ONCE, on the first commit of a navigation, which is the
- * `loading.tsx` skeleton. The real page then streams in and the document changes height (a tall skeleton or
- * a short one, images, the footer moving), so the browser clamps or anchors the scroll position and the
- * page ends up "somewhere": halfway, at the bottom, a bit above the top. That was worst on phones.
- *
- * Mount it ONCE per layout, inside <Suspense fallback={null}> (usePathname needs a boundary).
- * Back / forward and `#hash` links are left to the browser. See CLAUDE.md "Scroll position on navigation".
+ * On browser back / forward navigation, restores the saved scroll position as content streams in.
  */
 export function ScrollReset() {
   const pathname = usePathname()
   const previous = useRef(pathname)
+  const previousKey = useRef(currentUrlKey())
   const viaHistory = useRef(false)
 
+  // Continuously record scroll position for the current URL so back button knows where to return
   useEffect(() => {
+    let ticking = false
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          saveScrollPosition(currentUrlKey(), window.scrollY)
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
     const onPop = () => {
       viaHistory.current = true
     }
+
+    window.addEventListener("scroll", onScroll, { passive: true })
     window.addEventListener("popstate", onPop)
-    return () => window.removeEventListener("popstate", onPop)
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("popstate", onPop)
+    }
   }, [])
 
   useLayoutEffect(() => {
+    const targetKey = currentUrlKey()
+    const wasHistory = viaHistory.current
     const decision = {
       previousPath: previous.current,
       nextPath: pathname,
-      viaHistory: viaHistory.current,
+      viaHistory: wasHistory,
       hash: window.location.hash,
     }
+
+    // Save scroll of leaving page before switching
+    if (previousKey.current && previousKey.current !== targetKey) {
+      saveScrollPosition(previousKey.current, window.scrollY)
+    }
+
     previous.current = pathname
+    previousKey.current = targetKey
     viaHistory.current = false
+
+    if (wasHistory) {
+      // Restore previous scroll position on back/forward
+      const savedY = getSavedScrollPosition(targetKey)
+      if (savedY != null && savedY > 0) {
+        return holdAtPosition(savedY)
+      }
+      return
+    }
+
     if (!shouldResetScroll(decision)) return
     return holdAtTop()
   }, [pathname])
@@ -44,12 +108,12 @@ export function ScrollReset() {
   return null
 }
 
-/** Scroll to the top now and again whenever something moves it, until the page settles or the reader scrolls. */
-function holdAtTop(): () => void {
-  const toTop = () => {
-    if (window.scrollY !== 0) window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+/** Keep scroll at target position while content streams in and settles. */
+function holdAtPosition(targetY: number): () => void {
+  const toPos = () => {
+    window.scrollTo({ top: targetY, left: 0, behavior: "instant" })
   }
-  toTop()
+  toPos()
 
   const startedAt = performance.now()
   let lastHeightChangeAt = startedAt
@@ -62,7 +126,7 @@ function holdAtTop(): () => void {
       height = next
       lastHeightChangeAt = now
     }
-    toTop()
+    toPos()
     if (holdFinished({ now, startedAt, lastHeightChangeAt })) stop()
   }
 
@@ -75,4 +139,9 @@ function holdAtTop(): () => void {
   }
   for (const e of events) window.addEventListener(e, stop, { passive: true })
   return stop
+}
+
+/** Scroll to the top now and again whenever something moves it, until the page settles or the reader scrolls. */
+function holdAtTop(): () => void {
+  return holdAtPosition(0)
 }

@@ -33,15 +33,15 @@ export const isAdminUser = cache(async (): Promise<boolean> => {
 })
 
 export async function requireAdmin(): Promise<User> {
-  const user = await getCurrentUser()
+  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
   if (!user) redirect("/admin/login")
-  if (!(await isAdminUser())) redirect("/admin/login?error=not-admin")
+  if (!admin) redirect("/admin/login?error=not-admin")
   return user
 }
 
 /** For Server Actions: returns an error result instead of redirecting. */
 export async function assertAdmin(): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
-  const user = await getCurrentUser()
-  if (!user || !(await isAdminUser())) return { ok: false, error: "Not authorised" }
+  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
+  if (!user || !admin) return { ok: false, error: "Not authorised" }
   return { ok: true, user }
 }

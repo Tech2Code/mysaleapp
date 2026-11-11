@@ -1,4 +1,5 @@
 import "server-only"
+import { cache } from "react"
 import { z } from "zod"
 import { requireAdmin } from "@/features/auth/guards"
 import { normalizeIndianPhone } from "@/lib/format"
@@ -111,14 +112,17 @@ async function countOrdersInView(supabase: Supabase, view: OrderView) {
 export type ReturnViewCounts = Record<(typeof RETURN_VIEWS)[number], number>
 
 export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
-  const counts = await Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0))
+  const [, counts] = await Promise.all([
+    adminCheck,
+    Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
+  ])
   return Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, counts[i]])) as ReturnViewCounts
 }
 
 export async function listOrders(filters: OrderFilters): Promise<{ orders: Order[]; total: number; page: number }> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1)
   const from = (page - 1) * ADMIN_ORDERS_PAGE_SIZE
@@ -146,13 +150,14 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   const normalizedPhone = rawQuery ? normalizeIndianPhone(rawQuery) : null
   const q = (normalizedPhone ?? rawQuery.replace(/[^\p{L}\p{M}0-9\s-]/gu, "").trim()).slice(0, LIMITS.orderSearch.max)
   if (rawQuery && !q) {
+    await adminCheck
     return { orders: [], total: 0, page }
   }
   if (q) {
     query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
   }
 
-  const { data, error, count } = await query.returns<OrderRow[]>()
+  const [, { data, error, count }] = await Promise.all([adminCheck, query.returns<OrderRow[]>()])
   // PGRST103: ?page= is past the last page (e.g. a filter shrank the list) -> show the first page instead of crashing
   if (error?.code === "PGRST103" && page > 1) return listOrders({ ...filters, page: "1" })
   if (error) throw new Error(error.message)
@@ -160,14 +165,20 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
 }
 
 export async function getOrderById(id: string): Promise<OrderWithHistory | null> {
-  await requireAdmin()
-  if (!z.uuid().safeParse(id).success) return null
+  const adminCheck = requireAdmin()
+  if (!z.uuid().safeParse(id).success) {
+    await adminCheck
+    return null
+  }
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at)")
-    .eq("id", id)
-    .maybeSingle<OrderRow>()
+  const [, { data, error }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("orders")
+      .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at)")
+      .eq("id", id)
+      .maybeSingle<OrderRow>(),
+  ])
   if (error) throw new Error(error.message)
   return data ? mapOrderWithHistory(data) : null
 }
@@ -216,36 +227,39 @@ type DashboardStats = {
 
 /** Everything the admin dashboard shows. The numbers come from one SQL function (migration 0018); only labels and zero-filling happen here. */
 export async function getDashboard(range: DashboardRange): Promise<DashboardData> {
-  await requireAdmin()
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
 
   const now = new Date()
 
-  const [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes] = await Promise.all([
-    supabase.rpc("dashboard_stats", {
-      p_start: range.start.toISOString(),
-      p_end: range.end.toISOString(),
-      p_prev_start: range.previous?.start.toISOString() ?? null,
-      p_prev_end: range.previous?.end.toISOString() ?? null,
-      p_bucket: range.bucket,
-    }),
-    supabase.from("orders").select(`*, ${RETURN_EMBED}`).order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
-    countOrdersInView(supabase, "to-verify"),
-    countOrdersInView(supabase, "awaiting-payment"),
-    countOrdersInView(supabase, "to-ship"),
-    countOrdersInView(supabase, "return-requests"),
-    countOrdersInView(supabase, "returns-to-receive"),
-    countOrdersInView(supabase, "return-refund-pending"),
-    supabase
-      .from("products")
-      .select("id, name, stock, images")
-      .eq("is_active", true)
-      .lte("stock", 5)
-      .order("stock", { ascending: true })
-      .limit(6)
-      .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
+  const [, toVerifyCount, [statsRes, recentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes]] = await Promise.all([
+    adminCheck,
+    getPaymentsToVerifyCount(),
+    Promise.all([
+      supabase.rpc("dashboard_stats", {
+        p_start: range.start.toISOString(),
+        p_end: range.end.toISOString(),
+        p_prev_start: range.previous?.start.toISOString() ?? null,
+        p_prev_end: range.previous?.end.toISOString() ?? null,
+        p_bucket: range.bucket,
+      }),
+      supabase.from("orders").select(`*, ${RETURN_EMBED}`).order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>(),
+      countOrdersInView(supabase, "awaiting-payment"),
+      countOrdersInView(supabase, "to-ship"),
+      countOrdersInView(supabase, "return-requests"),
+      countOrdersInView(supabase, "returns-to-receive"),
+      countOrdersInView(supabase, "return-refund-pending"),
+      supabase
+        .from("products")
+        .select("id, name, stock, images")
+        .eq("is_active", true)
+        .lte("stock", 5)
+        .order("stock", { ascending: true })
+        .limit(6)
+        .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
+    ]),
   ])
-  const failed = [statsRes, recentRes, verifyRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes].find((r) => r.error)
+  const failed = [statsRes, recentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes].find((r) => r.error)
   if (failed?.error) throw new Error(failed.error.message)
   const stats = statsRes.data as DashboardStats
 
@@ -292,7 +306,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
     },
     byStatus,
     attention: {
-      toVerify: verifyRes.count ?? 0,
+      toVerify: toVerifyCount,
       awaitingPayment: awaitingRes.count ?? 0,
       toFulfil: fulfilRes.count ?? 0,
       returnRequests: returnsRes.count ?? 0,
@@ -312,13 +326,16 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 }
 
 /** For the sidebar badge: payments waiting to be verified. */
-export async function getPaymentsToVerifyCount(): Promise<number> {
-  await requireAdmin()
+export const getPaymentsToVerifyCount = cache(async (): Promise<number> => {
+  const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
-  const { count } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true })
-    .eq("payment_status", "submitted")
-    .neq("status", "cancelled")
+  const [, { count }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("payment_status", "submitted")
+      .neq("status", "cancelled"),
+  ])
   return count ?? 0
-}
+})

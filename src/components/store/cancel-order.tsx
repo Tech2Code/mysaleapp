@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { normalizeIndianPhone } from "@/lib/format"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrder } from "@/features/orders/actions"
 import { CANCELLABLE_BY_CUSTOMER, CANCEL_REASONS } from "@/features/orders/transitions"
 import type { OrderStatus, PaymentStatus } from "@/features/orders/types"
@@ -116,7 +116,7 @@ export function CancelOrder({
       >
         <BanIcon className="size-4" /> Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="store/CancelOrder/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent data-ui="store/CancelOrder/DialogContent" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -126,41 +126,43 @@ export function CancelOrder({
             This can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>
-        <div data-ui="store/CancelOrder/div" className="space-y-1">
-          <SelectField
-            label="Why are you cancelling?"
-            fieldSize="md"
-            value={reason}
-            onValueChange={setReason}
-            options={CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
-          />
-          <TextAreaField
-            label={reason === OTHER_REASON ? "Please tell us the reason" : "Anything else? (optional)"}
-            required={reason === OTHER_REASON}
-            rows={2}
-            maxLength={LIMITS.cancelDetail.max}
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
-          />
-          {isGuest && (
-            <TextField
-              label="Your full mobile number"
-              kind="phone"
-              leading="+91"
-              hint="To cancel, confirm the whole number you ordered with."
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              error={phoneError}
+        <DialogBody>
+          <div data-ui="store/CancelOrder/div" className="space-y-1">
+            <SelectField
+              label="Why are you cancelling?"
+              fieldSize="md"
+              value={reason}
+              onValueChange={setReason}
+              options={CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
             />
-          )}
-          {error && (
-            <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {error}
-            </p>
-          )}
-        </div>
+            <TextAreaField
+              label={reason === OTHER_REASON ? "Please tell us the reason" : "Anything else? (optional)"}
+              required={reason === OTHER_REASON}
+              rows={2}
+              maxLength={LIMITS.cancelDetail.max}
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+            />
+            {isGuest && (
+              <TextField
+                label="Your full mobile number"
+                kind="phone"
+                leading="+91"
+                hint="To cancel, confirm the whole number you ordered with."
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                error={phoneError}
+              />
+            )}
+            {error && (
+              <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                {error}
+              </p>
+            )}
+          </div>
+        </DialogBody>
         <DialogFooter>
           <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <CheckIcon className="size-4" /> Keep order

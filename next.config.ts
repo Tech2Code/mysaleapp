@@ -49,7 +49,8 @@ const nextConfig: NextConfig = {
   compiler: process.env.NODE_ENV === "production" ? { reactRemoveProperties: { properties: ["^data-ui$"] } } : {},
   partialPrefetching: true,
   images: {
-    formats: ["image/avif", "image/webp"],
+    formats: ["image/webp"],
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       // Product photos uploaded from the admin panel (Supabase Storage)
       ...(supabaseHost

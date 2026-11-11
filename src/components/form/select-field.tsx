@@ -68,6 +68,7 @@ export function SelectField({
   return (
     <FieldShell id={id} label={label} hideLabel={hideLabel} error={error} hint={hint} className={containerClassName} noErrorSpace={noErrorSpace || pill}>
       <SelectPrimitive.Root
+        modal={false}
         name={name}
         disabled={disabled}
         value={current}
@@ -81,7 +82,7 @@ export function SelectField({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, error, hint)}
           className={cn(
-            "group flex w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-left text-sm outline-none transition-all",
+            "group flex w-full min-w-0 max-w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-input bg-background px-3 text-left text-sm outline-none transition-all",
             "hover:border-ring/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
             "data-popup-open:border-ring data-popup-open:ring-3 data-popup-open:ring-ring/30",
             "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
@@ -90,18 +91,24 @@ export function SelectField({
             className
           )}
         >
-          <span data-ui="form/SelectField/span" className={cn("truncate", !selectedLabel && "text-muted-foreground/60")}>{selectedLabel ?? placeholder ?? "Select…"}</span>
+          <span
+            data-ui="form/SelectField/span"
+            title={selectedLabel ?? placeholder ?? undefined}
+            className={cn("block min-w-0 flex-1 truncate text-left", !selectedLabel && "text-muted-foreground/60")}
+          >
+            {selectedLabel ?? placeholder ?? "Select…"}
+          </span>
           <SelectPrimitive.Icon className="shrink-0 text-muted-foreground transition-transform duration-200 group-data-popup-open:rotate-180">
             <ChevronDownIcon className="size-4" aria-hidden />
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
 
         <SelectPrimitive.Portal>
-          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className="z-70 outline-none">
+          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className="z-70 max-w-[calc(100dvw-2rem)] outline-none">
             <SelectPrimitive.Popup
               data-slot="select-content"
               className={cn(
-                "max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-xl border bg-popover p-1.5 text-popover-foreground shadow-xl outline-none",
+                "max-h-(--available-height) min-w-(--anchor-width) max-w-[calc(100dvw-2rem)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border bg-popover p-1.5 text-popover-foreground shadow-xl outline-none",
                 "transition-[opacity,transform] duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0"
               )}
             >
@@ -110,14 +117,15 @@ export function SelectField({
                   <SelectPrimitive.Item
                     key={item.value}
                     value={item.value}
+                    title={item.label}
                     className={cn(
-                      "relative flex cursor-pointer items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm outline-none select-none",
+                      "relative flex min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm outline-none select-none",
                       "data-highlighted:bg-primary/10 data-highlighted:text-foreground",
                       "data-selected:font-semibold data-selected:text-primary",
                       item.value === NONE && "text-muted-foreground"
                     )}
                   >
-                    <SelectPrimitive.ItemText className="truncate">{item.label}</SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">{item.label}</SelectPrimitive.ItemText>
                     <SelectPrimitive.ItemIndicator className="absolute right-3 grid place-items-center text-primary">
                       <CheckIcon className="size-4" aria-hidden />
                     </SelectPrimitive.ItemIndicator>
