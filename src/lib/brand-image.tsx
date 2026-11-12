@@ -1,8 +1,12 @@
 import { BrandGlyph } from "@/components/shared/brand-glyph"
 
-/** Shared JSX for generated icons (rendered by next/og ImageResponse). */
+/** Shared JSX for generated icons (rendered by next/og ImageResponse for favicon, Apple icon, and PWA icons). */
 export function BrandMark({ size, padding = 0 }: { size: number; padding?: number }) {
   const inner = size - padding * 2
+  const radius = Math.round(padding ? inner * 0.46 : inner * 0.25)
+  const border = Math.max(1, Math.round(inner * 0.025))
+  const glyphSize = Math.round(inner * 0.74)
+
   return (
     <div
       style={{
@@ -18,14 +22,25 @@ export function BrandMark({ size, padding = 0 }: { size: number; padding?: numbe
         style={{
           width: inner,
           height: inner,
-          borderRadius: padding ? inner * 0.5 : inner * 0.22,
+          borderRadius: radius,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #c0643c 0%, #b34a4f 100%)",
+          background: "linear-gradient(140deg, #dc6d38 0%, #c04e3f 48%, #8c2836 100%)",
+          border: `${border}px solid rgba(255, 238, 214, 0.32)`,
+          boxShadow: "inset 0 2px 6px rgba(255, 255, 255, 0.22)",
         }}
       >
-        <div style={{ display: "flex", color: "#fff8f0" }}><BrandGlyph size={Math.round(inner * 0.66)} /></div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fffaf4",
+          }}
+        >
+          <BrandGlyph size={glyphSize} ribbon="#fbd07c" accent="#9a2f38" />
+        </div>
       </div>
     </div>
   )

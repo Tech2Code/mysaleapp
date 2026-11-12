@@ -43,9 +43,13 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
   ]
 
   return (
-    <footer data-ui="store/Footer" className="mt-10 sm:mt-14 border-t bg-linear-to-b from-secondary/40 to-secondary/80">
-      <div data-ui="store/Footer/div-grid" className="container-page grid gap-8 sm:gap-12 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div data-ui="store/Footer/div" className="space-y-4">
+    <footer
+      data-ui="store/Footer"
+      data-slot="store-footer"
+      className="mt-10 border-t bg-linear-to-b from-secondary/40 to-secondary/80 sm:mt-14"
+    >
+      <div data-ui="store/Footer/div-grid" className="container-page grid grid-cols-2 gap-6 py-8 sm:gap-12 sm:py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+        <div data-ui="store/Footer/div" className="col-span-2 space-y-3 sm:space-y-4 md:col-span-1">
           <Logo />
           <p data-ui="store/Footer/p" className="max-w-xs text-sm/relaxed  text-muted-foreground">{shop.description}</p>
           {/* Both buttons: same width and height, stacked. */}

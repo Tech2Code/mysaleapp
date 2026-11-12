@@ -21,7 +21,7 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
       )}
     >
       <dl data-ui="shared/ShippingInfo/dl" className="space-y-2.5 text-sm">
-        <div data-ui="shared/ShippingInfo/div-flex-2" className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5", action && "pr-14")}>
+        <div data-ui="shared/ShippingInfo/div" className={cn("flex flex-wrap items-center gap-x-3 gap-y-0.5", action && "pr-14")}>
           <dt data-ui="shared/ShippingInfo/dt-flex" className="flex min-w-24 shrink-0 items-center gap-2 whitespace-nowrap text-muted-foreground">
             <TruckIcon className="size-4" aria-hidden /> Courier
           </dt>
@@ -29,7 +29,7 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
         </div>
 
         {shipping.trackingNumber && (
-          <div data-ui="shared/ShippingInfo/div-flex-3" className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <div data-ui="shared/ShippingInfo/div-flex" className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <dt data-ui="shared/ShippingInfo/dt-flex-2" className="flex min-w-24 shrink-0 items-center gap-2 whitespace-nowrap text-muted-foreground">
               <HashIcon className="size-4" aria-hidden /> Tracking no.
             </dt>
@@ -41,7 +41,7 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
         )}
 
         {shipping.expectedDelivery && (
-          <div data-ui="shared/ShippingInfo/div-flex-4" className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          <div data-ui="shared/ShippingInfo/div-flex-2" className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
             <dt data-ui="shared/ShippingInfo/dt-flex-3" className="flex min-w-24 shrink-0 items-center gap-2 whitespace-nowrap text-muted-foreground">
               <CalendarClockIcon className="size-4" aria-hidden /> Expected by
             </dt>
@@ -49,7 +49,7 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
           </div>
         )}
       </dl>
-      {action && <div data-ui="shared/ShippingInfo/div-action" className="absolute top-3 right-3">{action}</div>}
+      {action && <div data-ui="shared/ShippingInfo/div-absolute" className="absolute top-3 right-3">{action}</div>}
 
       {trackingHref && (
         <a data-ui="shared/ShippingInfo/a-track-shipment"

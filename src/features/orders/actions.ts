@@ -59,7 +59,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
   }
   if (await limited("place-order")) return fail(RATE_LIMIT_MESSAGE)
 
-  const { items, saveAddress } = parsed.data
+  const { items, paymentReference, saveAddress } = parsed.data
   const customer = storedCustomer(parsed.data.customer)
   const phone = normalizeIndianPhone(customer.phone)!
   const supabase = await getServerSupabase()
@@ -74,6 +74,27 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
     .single<CreateOrderRow>()
 
   if (error || !data) return fail(mapRpcError(error?.message ?? "", "Could not place your order. Please try again."))
+
+  // Record the UPI payment reference & timestamp immediately upon order creation
+  const { data: payData, error: payError } = await supabase.rpc("submit_payment", {
+    p_code: data.order_code,
+    p_phone_last4: phone.slice(-4),
+    p_reference: paymentReference,
+  })
+  const paySoft = softRpcError(payData)
+  if (payError || paySoft) {
+    // Roll back the newly created order so no unpaid orphan order or stock lock remains
+    await supabase.rpc("cancel_order", {
+      p_code: data.order_code,
+      p_phone_last4: phone.slice(-4),
+      p_reason: "Payment reference verification failed during checkout",
+      p_phone: phone,
+    })
+    return fail(
+      paySoft ?? mapRpcError(payError?.message ?? "", "Could not record your payment reference. Please check your UTR and try again."),
+      { paymentReference: [paySoft ?? mapRpcError(payError?.message ?? "", "Invalid or duplicate UTR reference number.")] }
+    )
+  }
 
   // The order reserved stock, so the cached catalogue (stock / "sold out") is stale now.
   updateTag(CACHE_TAGS.products)

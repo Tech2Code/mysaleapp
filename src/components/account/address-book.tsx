@@ -19,10 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
+import { joinCityState, NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { deleteAddress, saveAddress, setDefaultAddress } from "@/features/addresses/actions"
 import { addressSchema, type AddressInput, type AddressValues } from "@/features/addresses/schema"
 import { ADDRESS_LABELS, MAX_ADDRESSES, type Address } from "@/features/addresses/types"
+import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
@@ -48,6 +49,7 @@ function AddressDialog({
   const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const initialSplit = address ? splitCityState(address.city) : { city: "", state: NO_STATE }
   const form = useForm<AddressInput, unknown, AddressValues>({
     resolver: zodResolver(addressSchema),
     // The dialog is remounted (see `key` in AddressBook) on every open, so these defaults are always fresh.
@@ -57,14 +59,29 @@ function AddressDialog({
       fullName: address?.fullName ?? defaults.fullName,
       phone: address?.phone ?? defaults.phone,
       address: address?.address ?? "",
-      ...(address ? splitCityState(address.city) : { city: "", state: NO_STATE }),
+      ...initialSplit,
       pincode: address?.pincode ?? "",
       isDefault: address?.isDefault ?? isFirst,
     },
   })
   const { errors } = form.formState
+  const [labelVal, fullNameVal, phoneVal, addressVal, cityVal, stateVal, pincodeVal, isDefaultVal] = useWatch({
+    control: form.control,
+    name: ["label", "fullName", "phone", "address", "city", "state", "pincode", "isDefault"],
+  })
+
+  const hasChanges = !address
+    ? true
+    : labelVal !== address.label ||
+      (fullNameVal ?? "").trim() !== address.fullName.trim() ||
+      (normalizeIndianPhone(phoneVal ?? "") ?? (phoneVal ?? "").trim()) !== (normalizeIndianPhone(address.phone) ?? address.phone.trim()) ||
+      (addressVal ?? "").trim() !== address.address.trim() ||
+      joinCityState((cityVal ?? "").trim(), (stateVal as IndianState) ?? initialSplit.state) !== address.city.trim() ||
+      (pincodeVal ?? "").trim() !== address.pincode.trim() ||
+      Boolean(isDefaultVal) !== Boolean(address.isDefault)
+
   const area = usePincodeLookup({
-    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    pincode: pincodeVal ?? "",
     getCity: () => form.getValues("city"),
     setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
     getState: () => form.getValues("state") as string,
@@ -72,6 +89,7 @@ function AddressDialog({
   })
 
   const onSubmit = form.handleSubmit((values) => {
+    if (address && !hasChanges) return
     if (area.error) {
       form.setError("pincode", { message: area.error })
       return
@@ -97,7 +115,7 @@ function AddressDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent data-ui="account/AddressDialog/DialogContent" className="sm:max-w-lg">
-        <form data-ui="account/AddressDialog/form" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+        <form data-ui="account/AddressDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{address ? "Edit address" : "Add a new address"}</DialogTitle>
             <DialogDescription>Saved addresses can be picked in one tap at checkout.</DialogDescription>
@@ -160,7 +178,7 @@ function AddressDialog({
             <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>
-            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending} className="gap-1.5 rounded-full">
+            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending || (Boolean(address) && !hasChanges)} className="gap-1.5 rounded-full">
               {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save address
             </Button>
           </DialogFooter>

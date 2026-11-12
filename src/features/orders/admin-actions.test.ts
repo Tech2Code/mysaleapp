@@ -105,15 +105,21 @@ describe("updateOrderStatus compare-and-set", () => {
 })
 
 describe("updateOrderPayment refunds", () => {
-  const paid = { status: "delivered", total: "1000", payment_status: "paid", payment_amount: "1000", refunded_amount: "300", payment_reference: "123456789012" }
-  const refund = (extra: Record<string, unknown> = {}) => updateOrderPayment({ orderId: ID, ...BLANK, status: "refunded", ...extra })
+  const paid = { status: "cancelled", total: "1000", payment_status: "paid", payment_amount: "1000", refunded_amount: "300", payment_reference: "123456789012" }
+  const refund = (extra: Record<string, unknown> = {}) =>
+    updateOrderPayment({ orderId: ID, ...BLANK, status: "refunded", reference: "999999999999", amount: 700, note: "Cancelled order refund", ...extra })
   const arg = (calls: Call[], key: string) => (rpcCall(calls, "refund_order")!.args as Record<string, unknown>)[key]
 
-  it("blank amount = full refund (p_amount null) with the status that was read", async () => {
+  it("full remaining amount is sent as p_amount null with the status that was read", async () => {
     const { calls } = setup(paid)
     expect(await refund()).toEqual({ ok: true, data: { confirmed: false } })
-    expect(rpcCall(calls, "refund_order")!.args).toMatchObject({ p_order_id: ID, p_amount: null, p_expected_status: "delivered", p_note: null })
-    expect(arg(calls, "p_reference")).toBeNull()
+    expect(rpcCall(calls, "refund_order")!.args).toMatchObject({
+      p_order_id: ID,
+      p_amount: null,
+      p_expected_status: "cancelled",
+      p_reference: "999999999999",
+      p_note: "Cancelled order refund",
+    })
   })
 
   it("an amount equal to what is left is sent as a full refund", async () => {
@@ -140,10 +146,13 @@ describe("updateOrderPayment refunds", () => {
     expect(rpcCall(calls, "refund_order")).toBeUndefined()
   })
 
-  it("the pre-filled customer UTR is not a refund reference; a different one is kept", async () => {
+  it("the customer's incoming payment UTR is refused as a refund reference; a different one is kept", async () => {
     let s = setup(paid)
-    await refund({ reference: "123456789012" })
-    expect(arg(s.calls, "p_reference")).toBeNull()
+    expect(await refund({ reference: "123456789012" })).toMatchObject({
+      ok: false,
+      error: "Enter your refund UTR, not the customer's incoming payment UTR.",
+    })
+    expect(rpcCall(s.calls, "refund_order")).toBeUndefined()
     s = setup(paid)
     await refund({ reference: "999999999999" })
     expect(arg(s.calls, "p_reference")).toBe("999999999999")
@@ -168,7 +177,7 @@ describe("updateOrderPayment refunds", () => {
 
   it("only a paid order can be refunded", async () => {
     const { calls } = setup({ ...paid, payment_status: "pending" })
-    expect(await refund()).toMatchObject({ ok: false, error: "Only a paid order can be refunded." })
+    expect(await refund()).toMatchObject({ ok: false, error: "Only a paid, cancelled order can be refunded." })
     expect(rpcCall(calls, "refund_order")).toBeUndefined()
   })
 })
@@ -247,29 +256,30 @@ describe("cancelOrderAsAdmin", () => {
 
 describe("recordOrderReturn / decideReturnRequest", () => {
   const items = [{ productId: ID, name: "Lamp", quantity: 1, restock: true }]
+  const reason = "Damaged in transit"
 
   it("passes args to the RPC, sends p_request_id only when given, and normalises the result", async () => {
     let s = setup(null, { rpc: { data: { restocked: "2", refundedAmount: "150.5", fullyRefunded: true } } })
-    expect(await recordOrderReturn({ orderId: ID, items, refund: true })).toEqual({
+    expect(await recordOrderReturn({ orderId: ID, items, reason, refund: true })).toEqual({
       ok: true,
       data: { restocked: 2, refundedAmount: 150.5, fullyRefunded: true },
     })
-    expect(rpcCall(s.calls, "record_order_return")!.args).toEqual({ p_order_id: ID, p_items: items, p_reason: null, p_refund: true })
+    expect(rpcCall(s.calls, "record_order_return")!.args).toEqual({ p_order_id: ID, p_items: items, p_reason: reason, p_refund: true })
     s = setup(null)
-    await recordOrderReturn({ orderId: ID, items, refund: false, requestId: ID })
+    await recordOrderReturn({ orderId: ID, items, reason, refund: false, requestId: ID })
     expect(rpcCall(s.calls, "record_order_return")!.args).toMatchObject({ p_request_id: ID })
   })
 
   it("empty items -> field errors, no RPC", async () => {
     const { calls } = setup(null)
-    const r = await recordOrderReturn({ orderId: ID, items: [], refund: false })
+    const r = await recordOrderReturn({ orderId: ID, items: [], reason, refund: false })
     expect(!r.ok && r.fieldErrors?.items).toBeTruthy()
     expect(calls).toHaveLength(0)
   })
 
   it("maps RPC error codes", async () => {
     setup(null, { rpc: { error: { message: "TOO_MANY_RETURNED" } } })
-    expect(await recordOrderReturn({ orderId: ID, items, refund: false })).toMatchObject({ error: "You can't return more than you ordered." })
+    expect(await recordOrderReturn({ orderId: ID, items, reason, refund: false })).toMatchObject({ error: "You can't return more than you ordered." })
   })
 
   it("rejecting needs a reason; NOT_PENDING is friendly", async () => {

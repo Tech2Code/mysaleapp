@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
@@ -53,8 +53,20 @@ function CategoryDialog({
     },
   })
   const { errors } = form.formState
+  const [nameVal, slugVal, descVal, sortVal] = useWatch({
+    control: form.control,
+    name: ["name", "slug", "description", "sort"],
+  })
 
-  const onSubmit = form.handleSubmit((values) =>
+  const hasChanges = !category
+    ? Boolean((nameVal ?? "").trim() && (slugVal ?? "").trim())
+    : (nameVal ?? "").trim() !== category.name.trim() ||
+      (slugVal ?? "").trim() !== category.slug.trim() ||
+      (descVal ?? "").trim() !== (category.description ?? "").trim() ||
+      Number(sortVal) !== Number(category.sort)
+
+  const onSubmit = form.handleSubmit((values) => {
+    if (category && !hasChanges) return
     startTransition(async () => {
       const res = await saveCategory(category?.id ?? null, values)
       if (!res.ok) {
@@ -67,12 +79,12 @@ function CategoryDialog({
       })
       router.refresh()
     })
-  )
+  })
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent data-ui="admin/CategoryDialog/DialogContent" className="sm:max-w-md">
-        <form data-ui="admin/CategoryDialog/form" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+        <form data-ui="admin/CategoryDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
@@ -110,7 +122,7 @@ function CategoryDialog({
             <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>
-            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending} className="gap-1.5 rounded-full">
+            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending || !hasChanges} className="gap-1.5 rounded-full">
               {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save
             </Button>
           </DialogFooter>

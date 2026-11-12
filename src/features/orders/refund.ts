@@ -64,7 +64,8 @@ export function refundBreakdown(o: {
   refundedAmount: number
 }): RefundBreakdown | null {
   const open = o.returnRequests.find(isOpenRequest)
-  const source = open ? open.items : o.returns.flatMap((r) => r.items)
+  const returnedItems = o.returns.flatMap((r) => r.items)
+  const source = open ? [...returnedItems, ...open.items] : returnedItems
   if (source.length === 0) return null
   const lines = refundLines(o.items, source)
   const itemsTotal = round2(lines.reduce((n, l) => n + l.amount, 0))

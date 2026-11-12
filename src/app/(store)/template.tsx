@@ -1,12 +1,12 @@
 import type { ReactNode } from "react"
 
 /**
- * Re-mounts on every navigation → gentle page-enter slide. CSS only (no client JS), translate-only so the
- * server-rendered first paint is never transparent (keeps LCP fast), and off for "reduce motion".
+ * Store route wrapper. Avoids vertical translate animations on the outer page container so back-button
+ * scroll restoration and inner section animations never conflict or jitter.
  */
 export default function StoreTemplate({ children }: { children: ReactNode }) {
   return (
-    <div data-ui="page:/(store)/template/div" className="animate-in duration-300 ease-out slide-in-from-bottom-2 motion-reduce:animate-none">
+    <div data-ui="page:/(store)/template/div">
       {children}
     </div>
   )

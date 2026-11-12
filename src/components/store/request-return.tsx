@@ -8,7 +8,7 @@ import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
-import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
+import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { notRefundedCharges, refundLines } from "@/features/orders/refund"
@@ -54,7 +54,7 @@ export function RequestReturn({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [qty, setQty] = useState<Record<string, string>>({})
-  const [reason, setReason] = useState<string>(RETURN_REASONS[0])
+  const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -92,13 +92,21 @@ export function RequestReturn({
   const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
   const estimateTotal = estimate.reduce((n, l) => n + l.amount, 0)
   const kept = charges ? notRefundedCharges(charges) : []
-  const needsDetail = otherNeedsDetail(reason, details)
+  const needsDetail = !reason || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
   const submit = () =>
     startTransition(async () => {
       setError(null)
-      const res = await requestReturn({ code: orderCode, phoneLast4, items: payload, reason, details: details.trim() || undefined })
+      if (!reason) {
+        setError("Please select why you are returning the item(s).")
+        return
+      }
+      if (details.trim().length < OTHER_DETAIL_MIN) {
+        setError(OTHER_DETAIL_MESSAGE)
+        return
+      }
+      const res = await requestReturn({ code: orderCode, phoneLast4, items: payload, reason, details: details.trim() })
       if (!res.ok) {
         setError(res.error)
         return
@@ -106,6 +114,7 @@ export function RequestReturn({
       later(() => {
         setOpen(false)
         setQty({})
+        setReason("")
         setDetails("")
         toast.success("Return request sent. We'll review it and update you here.")
       })
@@ -118,7 +127,7 @@ export function RequestReturn({
     setOpen(nextOpen)
     if (!nextOpen) {
       setQty({})
-      setReason(RETURN_REASONS[0])
+      setReason("")
       setDetails("")
       setError(null)
     }
@@ -176,21 +185,22 @@ export function RequestReturn({
             </div>
           )}
           <SelectField
-            label="Why are you returning it?"
+            label="Why are you returning it? *"
+            placeholder="Select a reason"
             fieldSize="md"
             value={reason}
             onValueChange={setReason}
             options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
           />
           <TextAreaField
-            label={reason === OTHER_REASON ? "Please tell us the reason" : "Tell us more (optional)"}
-            required={reason === OTHER_REASON}
+            label={reason === OTHER_REASON ? "Please tell us the reason" : "Please describe the issue"}
+            required
             rows={2}
             maxLength={LIMITS.returnDetail.max}
             value={details}
             onChange={(e) => setDetails(e.target.value)}
-            hint="For damaged items, describe what happened."
-            error={needsDetail && details.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+            hint="Describe what happened so we can resolve your return quickly."
+            error={details.trim().length > 0 && details.trim().length < OTHER_DETAIL_MIN ? OTHER_DETAIL_MESSAGE : undefined}
           />
           {error && (
             <p data-ui="store/RequestReturn/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">

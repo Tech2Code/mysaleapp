@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ORDER_STATUSES, PAYMENT_STATUSES, paymentDisplay } from "./types"
+import { canVerifyPayment, ORDER_STATUSES, PAYMENT_STATUSES, paymentDisplay } from "./types"
 
 describe("paymentDisplay", () => {
   it("a cancelled order never says awaiting/pending payment", () => {
@@ -17,5 +17,14 @@ describe("paymentDisplay", () => {
   })
   it("keeps the payment tone for live orders", () => {
     for (const o of ORDER_STATUSES.filter((o) => o !== "cancelled")) expect(paymentDisplay(o, "pending", null).tone).toBe("pending")
+  })
+})
+
+describe("canVerifyPayment", () => {
+  it("allows verifying a submitted UTR even when the order was cancelled", () => {
+    expect(canVerifyPayment({ status: "cancelled", paymentStatus: "submitted" })).toBe(true)
+    expect(canVerifyPayment({ status: "cancelled", paymentStatus: "pending" })).toBe(false)
+    expect(canVerifyPayment({ status: "cancelled", paymentStatus: "failed" })).toBe(false)
+    expect(canVerifyPayment({ status: "pending", paymentStatus: "submitted" })).toBe(true)
   })
 })

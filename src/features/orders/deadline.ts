@@ -3,10 +3,13 @@
  * Shown wherever a customer might still pay, so the cancellation never comes as a surprise.
  */
 
-/** null when auto-cancel is off (hours = 0). */
-export function paymentDeadline(createdAt: string, hours: number): Date | null {
+/** null when auto-cancel is off (hours = 0). Uses the later of `createdAt` and `updatedAt` (e.g. when a rejected UTR resets the timer). */
+export function paymentDeadline(createdAt: string, hours: number, updatedAt?: string | null): Date | null {
   if (!hours || hours <= 0) return null
-  return new Date(new Date(createdAt).getTime() + hours * 3_600_000)
+  const createdMs = new Date(createdAt).getTime()
+  const updatedMs = updatedAt ? new Date(updatedAt).getTime() : Number.NEGATIVE_INFINITY
+  const baseMs = Number.isFinite(updatedMs) && updatedMs > createdMs ? updatedMs : createdMs
+  return new Date(baseMs + hours * 3_600_000)
 }
 
 /** e.g. "6 Nov, 4:41 pm" (India time). */

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, MailCheckIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, type ReactNode } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { changeAdminPassword, requestAdminEmailChange, updateAdminProfile } from "@/features/auth/account-actions"
 import { changePasswordSchema, emailSchema, profileSchema } from "@/features/auth/account-schema"
 import type { ActionResult } from "@/lib/action-result"
+import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
@@ -47,34 +48,45 @@ type ProfileValues = z.input<typeof profileSchema>
 
 function ProfileForm({ name, phone }: { name: string; phone: string }) {
   const router = useRouter()
+  const [saved, setSaved] = useState({ name, phone })
   const form = useForm<ProfileValues, unknown, z.output<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: { name, phone },
   })
-  const { errors, isDirty } = form.formState
+  const { errors } = form.formState
+  const nameVal = useWatch({ control: form.control, name: "name" })
+  const phoneVal = useWatch({ control: form.control, name: "phone" })
+  const phoneStr = typeof phoneVal === "string" ? phoneVal : ""
   const { pending, run, later } = useSubmit<{ name: string; phone: string }>((n, m) => form.setError(n, { message: m }))
+
+  const hasChanges =
+    (nameVal ?? "").trim() !== saved.name.trim() ||
+    (normalizeIndianPhone(phoneStr) ?? phoneStr.trim()) !== (normalizeIndianPhone(saved.phone) ?? saved.phone.trim())
 
   return (
     <form
       data-ui="admin/ProfileForm"
       noValidate
       className="space-y-2"
-      onSubmit={form.handleSubmit((values) =>
+      onSubmit={form.handleSubmit((values) => {
+        if (!hasChanges) return
         run(
           () => updateAdminProfile(values),
           () => {
+            const nextSaved = { name: values.name, phone: values.phone ?? "" }
+            setSaved(nextSaved)
             later(() => toast.success("Details saved"))
-            form.reset(form.getValues())
+            form.reset(nextSaved)
             router.refresh()
           }
         )
-      )}
+      })}
     >
       <div data-ui="admin/ProfileForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
         <TextField label="Your name" kind="personName" fieldSize="md" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
         <TextField label="Mobile number (optional)" kind="phone" fieldSize="md" leading="+91" error={errors.phone?.message} {...form.register("phone")} />
       </div>
-      <Button data-ui="admin/ProfileForm/Button-save-details" type="submit" disabled={!isDirty || pending} className="rounded-full">
+      <Button data-ui="admin/ProfileForm/Button-save-details" type="submit" disabled={!hasChanges || pending} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Save details
       </Button>
     </form>
@@ -85,14 +97,18 @@ function EmailForm({ email }: { email: string }) {
   const [sentTo, setSentTo] = useState<string | null>(null)
   const form = useForm<z.input<typeof emailSchema>>({ resolver: zodResolver(emailSchema), defaultValues: { email: "" } })
   const { errors } = form.formState
+  const emailVal = useWatch({ control: form.control, name: "email" })
   const { pending, run } = useSubmit<{ email: string }>((n, m) => form.setError(n, { message: m }))
+  const cleanEmail = (emailVal ?? "").trim().toLowerCase()
+  const emailUnchanged = !cleanEmail || cleanEmail === email.trim().toLowerCase()
 
   return (
     <form
       data-ui="admin/EmailForm"
       noValidate
       className="space-y-4"
-      onSubmit={form.handleSubmit((values) =>
+      onSubmit={form.handleSubmit((values) => {
+        if (emailUnchanged) return
         run(
           () => requestAdminEmailChange(values),
           () => {
@@ -100,7 +116,7 @@ function EmailForm({ email }: { email: string }) {
             form.reset()
           }
         )
-      )}
+      })}
     >
       <p data-ui="admin/EmailForm/p" className="text-sm wrap-anywhere">
         Signed in as <span data-ui="admin/EmailForm/span" className="font-semibold">{email}</span>
@@ -115,7 +131,7 @@ function EmailForm({ email }: { email: string }) {
           </span>
         </p>
       )}
-      <Button data-ui="admin/EmailForm/Button-change-email" type="submit" variant="outline" disabled={pending} className="rounded-full">
+      <Button data-ui="admin/EmailForm/Button-change-email" type="submit" variant="outline" disabled={pending || emailUnchanged} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Change email
       </Button>
     </form>
@@ -128,7 +144,9 @@ function PasswordForm() {
     defaultValues: { current: "", next: "", confirm: "" },
   })
   const { errors } = form.formState
+  const [currentVal, nextVal, confirmVal] = useWatch({ control: form.control, name: ["current", "next", "confirm"] })
   const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
+  const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
 
   return (
     <form
@@ -175,7 +193,7 @@ function PasswordForm() {
           {...form.register("confirm")}
         />
       </div>
-      <Button data-ui="admin/PasswordForm/Button-change-password" type="submit" variant="outline" disabled={pending} className="rounded-full">
+      <Button data-ui="admin/PasswordForm/Button-change-password" type="submit" variant="outline" disabled={pending || !canSubmitPassword} className="rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} Change password
       </Button>
     </form>

@@ -25,7 +25,7 @@ const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_reques
 
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
-export const PAYMENT_FILTERS = ["submitted", "pending", "paid"] as const
+export const PAYMENT_FILTERS = ["submitted", "pending", "paid", "refund-due", "refunded"] as const
 const isPaymentFilter = (v: unknown): v is (typeof PAYMENT_FILTERS)[number] => (PAYMENT_FILTERS as readonly unknown[]).includes(v)
 
 type Supabase = Awaited<ReturnType<typeof getServerSupabase>>
@@ -138,9 +138,13 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   } else {
     if (isOrderStatus(filters.status)) query = query.eq("status", filters.status)
     if (isPaymentFilter(filters.payment)) {
-      query = query.eq("payment_status", filters.payment)
-      // a cancelled order is not "waiting" for anything
-      if (filters.payment !== "paid") query = query.neq("status", "cancelled")
+      if (filters.payment === "refund-due") {
+        query = query.eq("status", "cancelled").in("payment_status", ["paid", "submitted"])
+      } else {
+        query = query.eq("payment_status", filters.payment)
+        // a cancelled order is not "waiting" for an unpaid payment
+        if (filters.payment === "pending") query = query.neq("status", "cancelled")
+      }
     }
   }
 

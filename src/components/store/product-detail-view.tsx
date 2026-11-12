@@ -56,11 +56,11 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
 
   return (
     <>
-      <div data-ui="store/ProductDetailView/div" className="container-page pt-6 pb-4">
+      <div data-ui="store/ProductDetailView/div" className="container-page pt-3 pb-2 sm:pt-6 sm:pb-4">
         <Breadcrumbs items={crumbs} />
       </div>
 
-      <div data-ui="store/ProductDetailView/div-grid" className="container-page grid gap-6 sm:gap-8 lg:grid-cols-2 lg:items-start lg:gap-16">
+      <div data-ui="store/ProductDetailView/div-grid" className="container-page grid gap-4 sm:gap-8 lg:grid-cols-2 lg:items-start lg:gap-16">
         <FadeIn y={16} className="min-w-0 lg:sticky-store">
           <ProductGallery images={product.images} name={product.name} />
         </FadeIn>
@@ -158,7 +158,7 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
               {product.careInstructions && <AccordionItem title="Care instructions">{product.careInstructions}</AccordionItem>}
               <AccordionItem title="Delivery">{freeDelivery} We pack every order by hand and share the courier and tracking details with you once it ships.</AccordionItem>
               <AccordionItem title="Payment">
-                Pay securely by UPI right after you place the order, then enter the UTR / reference number. We confirm your order once the
+                Pay securely by UPI at checkout and enter your 12-digit UTR / reference number to place the order. We confirm your order once the
                 payment is verified. Cash on delivery isn&apos;t available.
               </AccordionItem>
               <AccordionItem title="Handmade, so no two are identical">

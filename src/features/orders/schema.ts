@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { joinCityState } from "@/features/location/states"
 import { LIMITS, addDays, todayIST, v } from "@/lib/validation"
-import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "./reasons"
+import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, otherNeedsDetail } from "./reasons"
 
 /** Shared by the checkout form (client) and the placeOrder action (server). Rules live in lib/validation. */
 export const checkoutSchema = z.object({
@@ -25,9 +25,14 @@ export const cartLineSchema = z.object({
   quantity: v.quantity(),
 })
 
+/** The UPI reference (UTR) a customer enters after paying. Normally 12 digits. */
+export const paymentReferenceSchema = v.utr()
+
 export const placeOrderSchema = z.object({
   customer: checkoutSchema,
   items: z.array(cartLineSchema).min(1, "Your cart is empty").max(LIMITS.orderLines.max),
+  /** UPI UTR / reference number entered by the customer during checkout payment step. */
+  paymentReference: paymentReferenceSchema,
   /** Signed-in customers: also save this delivery address to their address book. */
   saveAddress: z.boolean().optional(),
 })
@@ -80,9 +85,6 @@ export const trackOrderSchema = z.object({
   phoneLast4: v.orderLast4(),
 })
 
-/** The UPI reference (UTR) a customer enters after paying. Normally 12 digits. */
-export const paymentReferenceSchema = v.utr()
-
 export const cancelOrderSchema = z.object({
   code: trackOrderSchema.shape.code,
   /** Needed for guests; signed-in customers are recognised by their account. */
@@ -111,7 +113,10 @@ export const requestReturnSchema = z
     reason: v.reason(),
     details: v.note(LIMITS.returnDetail.max).optional(),
   })
-  .refine((v) => !otherNeedsDetail(v.reason, v.details), { path: ["details"], error: OTHER_DETAIL_MESSAGE })
+  .refine((v) => Boolean(v.details && v.details.trim().length >= OTHER_DETAIL_MIN) && !otherNeedsDetail(v.reason, v.details), {
+    path: ["details"],
+    error: OTHER_DETAIL_MESSAGE,
+  })
 
 export const withdrawReturnSchema = z.object({
   code: trackOrderSchema.shape.code,

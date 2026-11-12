@@ -10,8 +10,8 @@ import { PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "./types"
  *   refunded -> refunded             (terminal)
  *   unpaid   -> anything, except that a cancelled order can't become paid / submitted (a submitted payment may be confirmed as paid so it can be refunded)
  */
-/** Order statuses in which a paid payment may be marked refunded (before dispatch: cancel the order first). */
-export const REFUNDABLE_STATUSES: OrderStatus[] = ["shipped", "delivered", "cancelled"]
+/** Order statuses in which a paid payment may be marked refunded from the payment form (only once cancelled; delivered orders are refunded via the return flow). */
+export const REFUNDABLE_STATUSES: OrderStatus[] = ["cancelled"]
 
 export function allowedPaymentStatuses(o: { status: OrderStatus; paymentStatus: PaymentStatus }): PaymentStatus[] {
   if (o.paymentStatus === "refunded") return ["refunded"]
@@ -31,11 +31,13 @@ export const isPaymentMoneyLocked = (o: { status: OrderStatus; paymentStatus: Pa
 export function paymentEditNote(o: { status: OrderStatus; paymentStatus: PaymentStatus }): string | null {
   if (o.paymentStatus === "refunded") return "Refunded — the payment record can't be changed any more."
   if (o.paymentStatus === "paid") {
-    return isOrderLocked(o.status)
-      ? "Paid and the order is closed — the amount and reference are locked. The payment can only be refunded."
-      : REFUNDABLE_STATUSES.includes(o.status)
-        ? "Paid — it can only be refunded, not set back to unpaid."
-        : "Paid — it can only be refunded once the order ships or is cancelled. To refund earlier, cancel the order first."
+    if (o.status === "cancelled") {
+      return "Paid and cancelled — the amount and reference are locked. The payment can only be refunded."
+    }
+    if (o.status === "delivered") {
+      return "Paid and delivered — the amount and reference are locked. Delivered orders are refunded through the return flow."
+    }
+    return "Paid — payment status is locked. It can only be refunded once the order is cancelled."
   }
   if (o.status === "cancelled") {
     return o.paymentStatus === "submitted"
@@ -54,9 +56,13 @@ export function paymentUpdateProblem(
 ): string | null {
   if (!allowedPaymentStatuses(current).includes(next.status)) {
     if (current.paymentStatus === "refunded") return "This payment is refunded and can't be changed any more."
-    if (next.status === "refunded" && current.paymentStatus === "paid") return "To refund before the order ships, cancel the order first. The refund is recorded after the cancellation."
-    if (next.status === "refunded") return "Only a paid order can be refunded."
-    if (current.paymentStatus === "paid") return "A paid order can't go back to unpaid. If you sent the money back, record a refund instead."
+    if (next.status === "refunded" && current.paymentStatus === "paid") {
+      return current.status === "delivered"
+        ? "Delivered orders are refunded through the return flow, not from the payment form."
+        : "To refund this payment, cancel the order first. The refund is recorded after the cancellation."
+    }
+    if (next.status === "refunded") return "Only a paid, cancelled order can be refunded."
+    if (current.paymentStatus === "paid") return "A paid order can't go back to unpaid. If you sent the money back, cancel the order and record a refund instead."
     return "This order is cancelled. Record a refund instead of a payment."
   }
   if (isPaymentMoneyLocked(current) && current.paymentStatus === "paid" && next.status === "paid") {

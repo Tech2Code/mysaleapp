@@ -4,6 +4,7 @@ import { CartDrawer } from "@/components/store/cart-drawer"
 import { Footer } from "@/components/store/footer"
 import { Header } from "@/components/store/header"
 import { InstallPrompt } from "@/components/store/install-prompt"
+import { MobileBottomNav } from "@/components/store/mobile-bottom-nav"
 import { WhatsAppFab } from "@/components/store/whatsapp-fab"
 import { getCategoriesWithCounts } from "@/features/products/queries"
 import { getStoreSettings } from "@/features/settings/queries"
@@ -27,6 +28,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
         {children}
       </main>
       <Footer categories={nav} shop={settings} />
+      <MobileBottomNav />
       <CartDrawer />
       <WhatsAppFab />
       <InstallPrompt />

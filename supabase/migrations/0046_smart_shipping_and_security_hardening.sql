@@ -16,6 +16,10 @@
 --      owned by a signed-in account.
 --    * guard_payment_status locks payment_amount / payment_paid_at / payment_reference on ANY refunded order
 --      (including shipped orders), not just delivered/cancelled ones.
+--    * revert_order_status allows 1-step admin fulfilment revert (delivered -> shipped -> packed -> confirmed -> pending)
+--      and cleans ahead entries from order_status_history.
+--    * expire_unpaid_orders measures the expiry window from greatest(created_at, updated_at) so orders with a
+--      rejected UTR get a full fresh window to resubmit before auto-cancellation.
 -- =====================================================================
 
 -- 1. Product physical & handling attributes ---------------------------
@@ -493,3 +497,152 @@ begin
 
   return new;
 end $$;
+
+-- 10. revert_order_status: 1-step fulfilment revert & clean timeline history --
+create or replace function public.lock_finished_orders()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+declare
+  v_mutable constant text[] := array[
+    'payment_status', 'payment_method', 'payment_reference', 'payment_amount',
+    'payment_submitted_at', 'payment_paid_at', 'payment_note',
+    'refunded_amount', 'refunded_at', 'refund_reference',
+    'stock_reserved', 'stock_restored_at',
+    'updated_at',
+    'user_id'
+  ];
+begin
+  if old.status::text not in ('delivered', 'cancelled') then
+    return new;
+  end if;
+
+  -- Allow controlled 1-step admin revert from delivered -> shipped via revert_order_status()
+  if old.status::text = 'delivered'
+     and new.status::text = 'shipped'
+     and current_setting('app.allow_delivered_revert', true) = 'on' then
+    if (to_jsonb(new) - v_mutable - 'status') is distinct from (to_jsonb(old) - v_mutable - 'status') then
+      raise exception 'ORDER_LOCKED' using errcode = 'P0001';
+    end if;
+    return new;
+  end if;
+
+  if new.user_id is not null and new.user_id is distinct from old.user_id then
+    raise exception 'ORDER_LOCKED' using errcode = 'P0001';
+  end if;
+
+  if (to_jsonb(new) - v_mutable) is distinct from (to_jsonb(old) - v_mutable) then
+    raise exception 'ORDER_LOCKED' using errcode = 'P0001';
+  end if;
+
+  return new;
+end $$;
+
+create or replace function public.revert_order_status(
+  p_order_id uuid,
+  p_expected_status public.order_status,
+  p_to_status public.order_status,
+  p_clear_shipping boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_order public.orders;
+  v_Clear text[];
+begin
+  if not public.is_admin() then raise exception 'NOT_ADMIN'; end if;
+
+  if not (
+    (p_expected_status = 'delivered' and p_to_status = 'shipped') or
+    (p_expected_status = 'shipped'   and p_to_status = 'packed') or
+    (p_expected_status = 'packed'    and p_to_status = 'confirmed') or
+    (p_expected_status = 'confirmed' and p_to_status = 'pending')
+  ) then
+    raise exception 'CANNOT_UNDO';
+  end if;
+
+  select * into v_order from public.orders where id = p_order_id for update;
+  if not found then raise exception 'ORDER_NOT_FOUND'; end if;
+  if v_order.status <> p_expected_status then raise exception 'ORDER_CHANGED'; end if;
+
+  if p_expected_status = 'delivered' then
+    if v_order.payment_status = 'refunded' or coalesce(v_order.refunded_amount, 0) > 0 then
+      raise exception 'CANNOT_UNDO';
+    end if;
+    if exists (select 1 from public.return_requests where order_id = p_order_id)
+       or exists (select 1 from public.order_returns where order_id = p_order_id) then
+      raise exception 'CANNOT_UNDO';
+    end if;
+    perform set_config('app.allow_delivered_revert', 'on', true);
+  end if;
+
+  update public.orders
+  set status = p_to_status,
+      shipping_carrier  = case when p_expected_status = 'shipped' and p_clear_shipping then null else shipping_carrier end,
+      tracking_number   = case when p_expected_status = 'shipped' and p_clear_shipping then null else tracking_number end,
+      tracking_url      = case when p_expected_status = 'shipped' and p_clear_shipping then null else tracking_url end,
+      expected_delivery = case when p_expected_status = 'shipped' and p_clear_shipping then null else expected_delivery end
+  where id = p_order_id;
+
+  -- Remove history entries for steps ahead of p_to_status so customer timeline stays clean
+  v_Clear := case p_to_status
+    when 'shipped'   then array['delivered']
+    when 'packed'    then array['shipped', 'delivered']
+    when 'confirmed' then array['packed', 'shipped', 'delivered']
+    when 'pending'   then array['confirmed', 'packed', 'shipped', 'delivered']
+    else array[]::text[]
+  end;
+
+  delete from public.order_status_history
+  where order_id = p_order_id and status::text = any(v_Clear);
+
+  return jsonb_build_object('ok', true, 'status', p_to_status);
+end $$;
+
+revoke all on function public.revert_order_status(uuid, public.order_status, public.order_status, boolean) from public, anon;
+grant execute on function public.revert_order_status(uuid, public.order_status, public.order_status, boolean) to authenticated;
+
+-- 11. expire_unpaid_orders: measure deadline from greatest(created_at, updated_at) so rejected payments get a fresh window --
+create or replace function public.expire_unpaid_orders()
+returns int
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+declare
+  v_hours int;
+  v_ids   uuid[];
+  v_count int;
+begin
+  select unpaid_order_expiry_hours into v_hours from public.store_settings limit 1;
+  if coalesce(v_hours, 0) <= 0 then return 0; end if;
+
+  select coalesce(array_agg(x.id), '{}') into v_ids from (
+    select o.id from public.orders o
+    where o.status = 'pending' and o.payment_status in ('pending', 'failed')
+      and greatest(o.created_at, coalesce(o.updated_at, o.created_at)) < now() - make_interval(hours => v_hours)
+    order by o.id
+    for update skip locked
+  ) x;
+  if cardinality(v_ids) = 0 then return 0; end if;
+
+  perform p.id from public.products p
+  where p.id in (
+    select (e ->> 'productId')::uuid from public.orders o, jsonb_array_elements(o.items) e where o.id = any (v_ids)
+  )
+  order by p.id for update;
+
+  update public.orders
+  set status = 'cancelled',
+      cancel_reason = 'Payment not received in time',
+      cancelled_by = 'system',
+      cancelled_at = now()
+  where id = any (v_ids)
+    and status = 'pending' and payment_status in ('pending', 'failed');
+  get diagnostics v_count = row_count;
+  return v_count;
+end $$;
+
+revoke all on function public.expire_unpaid_orders() from public, anon, authenticated;

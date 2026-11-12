@@ -16,7 +16,7 @@ export const STATUS_META: Record<
   OrderStatus,
   { label: string; description: string; tone: "neutral" | "info" | "progress" | "success" | "danger" }
 > = {
-  pending: { label: "Pending", description: "Order placed. Complete the payment so we can confirm it", tone: "neutral" },
+  pending: { label: "Pending", description: "Order placed. We're verifying your UPI payment to confirm it", tone: "neutral" },
   confirmed: { label: "Confirmed", description: "Order confirmed and being prepared", tone: "info" },
   packed: { label: "Packed", description: "Packed with care and ready to ship", tone: "progress" },
   shipped: { label: "Shipped", description: "On its way to you", tone: "progress" },
@@ -107,9 +107,10 @@ export function isAwaitingPayment(order: { status: OrderStatus; paymentStatus: P
   return order.status === "pending" && (order.paymentStatus === "pending" || order.paymentStatus === "failed")
 }
 
-/** Can the admin still verify / reject / record a payment? Not for cancelled, already-paid or refunded orders. */
+/** Can the admin still verify / reject / record a payment? On a cancelled order, a submitted payment can still be verified or rejected. */
 export function canVerifyPayment(order: { status: OrderStatus; paymentStatus: PaymentStatus }): boolean {
-  return order.status !== "cancelled" && order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
+  if (order.status === "cancelled") return order.paymentStatus === "submitted"
+  return order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
 }
 
 // ---------------------------------------------------------------------------

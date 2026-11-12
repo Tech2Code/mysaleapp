@@ -59,7 +59,7 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
           <SettingsIcon /> Store settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
+        <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-3" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
           <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
       </DropdownMenuContent>

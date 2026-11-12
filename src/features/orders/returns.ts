@@ -18,11 +18,13 @@ export const RETURN_REASONS = [
 /** A request that still needs attention (counts against "one open request per order"). */
 export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === "requested" || r.status === "approved"
 
-/** When the order was delivered: the latest "delivered" entry in its history. */
+/** When the order was delivered: the latest "delivered" entry in its history, provided no later entry moved it back. */
 export function deliveredAt(history: StatusHistoryEntry[]): string | null {
-  const times = history.filter((h) => h.status === "delivered").map((h) => h.changedAt)
-  // Compare as instants, not strings: "…Z" and "…+00:00" (or different fraction digits) don't sort as text.
-  return times.length ? times.reduce((a, b) => (Date.parse(a) > Date.parse(b) ? a : b)) : null
+  if (history.length === 0) return null
+  const sorted = [...history].sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt))
+  const latest = sorted.at(-1)
+  if (latest?.status !== "delivered") return null
+  return latest.changedAt
 }
 
 /**
@@ -81,7 +83,7 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
   },
   received: {
     step: 3, tone: "success", label: "Return received", customerLabel: "Return received",
-    detail: "Goods back, no refund recorded yet. Use “I have refunded” on the return below, or Refund on the payment card",
+    detail: "Goods back, no refund recorded yet. Use “I have refunded” on the return below, or “Refund the returned items” in the status dropdown",
     customerDetail: "We have your items. Your refund will follow",
   },
   partly_refunded: {

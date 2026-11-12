@@ -17,7 +17,7 @@ import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { whatsappLink } from "@/features/orders/whatsapp"
 import { formatDeadline } from "@/features/orders/deadline"
 import { CANCELLABLE_BY_ADMIN } from "@/features/orders/transitions"
-import type { OrderWithHistory } from "@/features/orders/types"
+import { canVerifyPayment, type OrderWithHistory } from "@/features/orders/types"
 import { formatDateTime } from "@/lib/format"
 
 function Card({ title, children }: { title?: string; children: ReactNode }) {
@@ -37,8 +37,8 @@ function Card({ title, children }: { title?: string; children: ReactNode }) {
 export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistory; autoCancelAt: Date | null }) {
   // Changes whenever the order changes (e.g. payment verified → status becomes "confirmed"),
   // so the forms below always start from the saved values instead of stale ones.
-  // An unpaid order needs its payment checked before the status can move, so Payment leads then.
-  const paymentFirst = order.status !== "cancelled" && order.paymentStatus !== "paid" && order.paymentStatus !== "refunded"
+  // An unpaid order (or a cancelled order with a submitted/paid payment to resolve) puts the Payment card first.
+  const paymentFirst = canVerifyPayment(order) || (order.status === "cancelled" && order.paymentStatus === "paid")
   const paymentSection = (
     <div data-ui="admin/AdminOrderView/div" className="rounded-xl border p-4">
       <PaymentControl key={`pay-${order.paymentStatus}-${order.updatedAt}`} order={order} />
@@ -128,7 +128,12 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
               </div>
             </div>
           </Card>
-          <AdminReturnRequests requests={order.returnRequests} returns={order.returns} returnStage={order.returnStage} />
+          <AdminReturnRequests
+            requests={order.returnRequests}
+            returns={order.returns}
+            returnStage={order.returnStage}
+            admin={{ items: order.items, paymentStatus: order.paymentStatus, refundedAmount: order.refundedAmount }}
+          />
           <RefundSummary order={order} />
           <OrderSummary order={order} openLinksInNewTab audience="admin" />
         </div>
@@ -171,7 +176,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
           </Card>
 
           <Card>
-            <AdminNoteForm orderId={order.id} note={order.adminNote} />
+            <AdminNoteForm key={`note-${order.adminNote ?? ""}`} orderId={order.id} note={order.adminNote} />
           </Card>
         </aside>
       </div>

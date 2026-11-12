@@ -180,7 +180,8 @@ function TrackResult({
         <DeliveryEditor
           orderCode={result.orderCode}
           delivery={result.delivery}
-          editable
+          editable={result.status === "pending"}
+          status={result.status}
           phoneLast4={query.phoneLast4}
           onChanged={(newLast4) => void refetch(newLast4)}
         />
@@ -274,12 +275,12 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   }
 
   return (
-    <div data-ui="store/TrackOrder" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
+    <div data-ui="store/TrackOrderBody" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
       {/* Left: find your order */}
-      <form data-ui="store/TrackOrder/form" onSubmit={onSubmit} noValidate className={`space-y-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
-        <div data-ui="store/TrackOrder/div">
-          <h2 data-ui="store/TrackOrder/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
-          <p data-ui="store/TrackOrder/p" className="mt-1 text-sm text-muted-foreground">Takes 5 seconds. No login needed.</p>
+      <form data-ui="store/TrackOrderBody/form" onSubmit={onSubmit} noValidate className={`space-y-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
+        <div data-ui="store/TrackOrderBody/div">
+          <h2 data-ui="store/TrackOrderBody/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
+          <p data-ui="store/TrackOrderBody/p" className="mt-1 text-sm text-muted-foreground">Takes 5 seconds. No login needed.</p>
         </div>
         <TextField
           label="Order code" kind="orderCode"
@@ -297,17 +298,17 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
           error={form.formState.errors.phoneLast4?.message}
           {...form.register("phoneLast4")}
         />
-        <Button data-ui="store/TrackOrder/Button-track-order" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
+        <Button data-ui="store/TrackOrderBody/Button-track-order" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
           {pending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />} Track order
         </Button>
         {error && (
-          <p data-ui="store/TrackOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
+          <p data-ui="store/TrackOrderBody/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
             {error}
           </p>
         )}
-        <div data-ui="store/TrackOrder/div-2" className="mt-auto border-t pt-4 text-sm">
-          <p data-ui="store/TrackOrder/p-3" className="text-muted-foreground">Can&apos;t find your order code?</p>
-          <a data-ui="store/TrackOrder/a-ask-us-on-whatsapp"
+        <div data-ui="store/TrackOrderBody/div-2" className="mt-auto border-t pt-4 text-sm">
+          <p data-ui="store/TrackOrderBody/p-3" className="text-muted-foreground">Can&apos;t find your order code?</p>
+          <a data-ui="store/TrackOrderBody/a-ask-us-on-whatsapp"
             href={shopWhatsappLink(shop, "Hi! I need help finding my order.")}
             target="_blank"
             rel="noopener noreferrer"
@@ -319,10 +320,10 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
       </form>
 
       {/* Right: order details */}
-      <div data-ui="store/TrackOrder/div-3" ref={resultRef} aria-live="polite" data-reveal-top className="scroll-mt-24 *:h-full">
+      <div data-ui="store/TrackOrderBody/div-3" ref={resultRef} aria-live="polite" data-reveal-top className="scroll-mt-24 *:h-full">
         <AnimatePresence mode="wait">
           {pending ? (
-            <m.div data-ui="store/TrackOrder/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <m.div data-ui="store/TrackOrderBody/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Skeletonize>
                 <TrackResult result={placeholderTrackedOrder()} query={PLACEHOLDER_QUERY} shop={shop} refetch={async () => {}} />
               </Skeletonize>
@@ -330,7 +331,7 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
           ) : result ? (
             <TrackResult key={result.orderCode} result={result} query={query} shop={shop} refetch={refetch} />
           ) : (
-            <m.div data-ui="store/TrackOrder/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+            <m.div data-ui="store/TrackOrderBody/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
               <EmptyState />
             </m.div>
           )}

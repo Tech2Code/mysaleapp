@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRightIcon, Loader2Icon, SearchXIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, Loader2Icon, SearchXIcon, XIcon } from "lucide-react"
 import { LIMITS } from "@/lib/validation"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -13,7 +13,7 @@ import { ProductImage } from "./product-image"
 type Category = { name: string; slug: string }
 
 /**
- * The store-wide search dropdown: opens from the header on every page.
+ * The store-wide search dialog: full-screen search view on mobile, floating dropdown card on tablet/desktop.
  * Results appear as you type (name matches first); Enter or "See all results" opens the full /products list.
  */
 export function SearchDialog({ open, onOpenChange, categories }: { open: boolean; onOpenChange: (open: boolean) => void; categories: Category[] }) {
@@ -52,7 +52,8 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         const searchBtn = document.querySelector('[data-ui="store/Header/button-search-products"]')
-        if (searchBtn && searchBtn.contains(e.target as Node)) return
+        const mobileBtn = document.querySelector('[data-ui="store/Header/button-search-pill-mobile"]')
+        if ((searchBtn && searchBtn.contains(e.target as Node)) || (mobileBtn && mobileBtn.contains(e.target as Node))) return
         onOpenChange(false)
       }
     }
@@ -96,20 +97,30 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity"
+      <div data-ui="store/SearchDialog/div-fixed"
+        data-slot="dialog-overlay"
+        data-open=""
+        className="fixed inset-0 z-50 hidden bg-black/25 transition-opacity sm:block supports-backdrop-filter:backdrop-blur-[2px]"
         onClick={close}
         aria-hidden="true"
       />
       <div
         ref={dropdownRef}
-        data-ui="store/SearchDialog/DialogContent"
+        data-ui="store/SearchDialog/div-search-products"
         role="dialog"
         aria-modal="true"
         aria-label="Search products"
-        className="absolute top-[calc(100%+8px)] inset-x-0 mx-auto w-[calc(100%-1.5rem)] max-w-lg max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-2xl border bg-card p-4 shadow-2xl z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+        className="fixed inset-0 z-60 flex h-dvh w-screen flex-col overflow-hidden bg-background p-4 sm:inset-x-0 sm:top-[calc(var(--store-header-h)+8px)] sm:bottom-auto sm:mx-auto sm:h-auto sm:max-h-[calc(100dvh-5.5rem)] sm:w-[calc(100%-1.5rem)] sm:max-w-lg sm:rounded-2xl sm:border sm:bg-card sm:shadow-2xl animate-in fade-in-0 duration-150"
       >
-        <div className="flex items-center gap-2 mb-3">
+        <div data-ui="store/SearchDialog/div-flex" className="flex shrink-0 items-center gap-2 border-b pb-3 mb-3 sm:border-b-0 sm:pb-0">
+          <button data-ui="store/SearchDialog/button-back"
+            type="button"
+            onClick={close}
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:hidden"
+            aria-label="Back"
+          >
+            <ArrowLeftIcon className="size-5" />
+          </button>
           <form
             data-ui="store/SearchDialog/form"
             role="search"
@@ -131,29 +142,29 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               onClear={() => setQuery("")}
             />
           </form>
-          <button
+          <button data-ui="store/SearchDialog/button-close-search"
             type="button"
             onClick={close}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="hidden size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:flex"
             aria-label="Close search"
           >
             <XIcon className="size-4.5" />
           </button>
         </div>
 
-        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16">
+        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16 flex-1 overflow-y-auto">
           {!trimmed && categories.length > 0 && (
-            <div data-ui="store/SearchDialog/div-2" className="space-y-2">
-              <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse</p>
+            <div data-ui="store/SearchDialog/div-2" className="space-y-2.5">
+              <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse categories</p>
               <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-2">
                 <li data-ui="store/SearchDialog/li">
-                  <Link data-ui="store/SearchDialog/Link-all-products" href="/products" onClick={close} className="inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium hover:bg-muted transition-colors">
+                  <Link data-ui="store/SearchDialog/Link-all-products" href="/products" onClick={close} className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors">
                     All products
                   </Link>
                 </li>
                 {categories.map((c) => (
                   <li data-ui="store/SearchDialog/li-2" key={c.slug}>
-                    <Link data-ui="store/SearchDialog/Link-inline-flex" href={`/category/${c.slug}`} onClick={close} className="inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium hover:bg-muted transition-colors">
+                    <Link data-ui="store/SearchDialog/Link-inline-flex" href={`/category/${c.slug}`} onClick={close} className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors">
                       {c.name}
                     </Link>
                   </li>
@@ -169,7 +180,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
           )}
 
           {shown && shown.hits.length === 0 && (
-            <div data-ui="store/SearchDialog/div-flex" className="flex flex-col items-center gap-2 py-6 text-center">
+            <div data-ui="store/SearchDialog/div-flex-2" className="flex flex-col items-center gap-2 py-10 sm:py-6 text-center">
               <SearchXIcon className="size-8 text-muted-foreground" aria-hidden />
               <p data-ui="store/SearchDialog/p-2" className="text-sm font-medium">No products match “{trimmed}”</p>
               <p data-ui="store/SearchDialog/p-3" className="text-xs text-muted-foreground">Try a shorter word, or browse a category.</p>
@@ -181,7 +192,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               <ul data-ui="store/SearchDialog/ul" className="divide-y divide-border/60">
                 {shown.hits.map((h) => (
                   <li data-ui="store/SearchDialog/li-3" key={h.id}>
-                    <Link data-ui="store/SearchDialog/Link-flex" href={`/products/${h.slug}`} onClick={close} className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors">
+                    <Link data-ui="store/SearchDialog/Link-flex" href={`/products/${h.slug}`} onClick={close} className="flex items-center gap-3 py-2.5 sm:py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors">
                       <span data-ui="store/SearchDialog/span-relative" className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={h.image} alt={h.name} sizes="48px" />
                       </span>
@@ -206,7 +217,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                 data-ui="store/SearchDialog/button-see-all"
                 type="button"
                 onClick={seeAll}
-                className="mt-3 flex h-9.5 w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="mt-3 flex h-10 sm:h-9.5 w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className="size-3.5" aria-hidden />
               </button>

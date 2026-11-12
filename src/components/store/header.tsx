@@ -133,16 +133,17 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const closeMobile = () => setMobileOpen(false)
 
   return (
-    <header data-ui="store/Header"
+    <>
+    <header data-ui="store/Header/header"
       className={cn(
-        "sticky top-0 z-40 transition-all duration-300",
+        "sticky top-0 z-40 transition-[background-color,border-color,box-shadow] duration-200",
         scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
       )}
     >
-      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) items-center gap-1.5 sm:gap-3">
+      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) items-center gap-2 sm:gap-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger data-ui="store/Header/SheetTrigger-open-menu"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full lg:hidden")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex lg:hidden")}
             aria-label="Open menu"
           >
             <MenuIcon className="size-5" />
@@ -177,13 +178,13 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           <button data-ui="store/Header/button-search-products"
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full max-sm:size-9")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}
             aria-label="Search products"
             aria-expanded={searchOpen}
           >
             <SearchIcon className="size-4.6" />
           </button>
-          <div data-ui="store/Header/div-hidden" className="hidden sm:block">
+          <div data-ui="store/Header/div" className="block">
             <ThemeToggle />
           </div>
           <Link data-ui="store/Header/Link"
@@ -203,10 +204,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             <ShoppingBagIcon className="size-4.6" />
             {mounted && <CountBadge count={itemCount} />}
           </button>
-          <span data-ui="store/Header/span" className="max-sm:ml-1.5"><AccountMenu /></span>
+          <span data-ui="store/Header/span-hidden" className="hidden sm:inline-flex"><AccountMenu /></span>
         </div>
       </div>
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
     </header>
+    <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
+    </>
   )
 }

@@ -83,9 +83,15 @@ export function AdminReturnOrder({
     .map((i) => ({ productId: i.productId, name: i.name, quantity: Number(rowOf(i.productId).qty) || 0, restock: rowOf(i.productId).restock }))
     .filter((i) => i.quantity > 0)
 
+  const reasonMissing = !prefill && reason.trim().length < 3
+
   const submit = () =>
     startTransition(async () => {
       setError(null)
+      if (reasonMissing) {
+        setError("Enter the reason for the return (at least 3 characters).")
+        return
+      }
       const res = await recordOrderReturn({ orderId, items: payload, reason: reason.trim() || undefined, refund, requestId: prefill?.requestId })
       if (!res.ok) {
         setError(res.error)
@@ -171,7 +177,15 @@ export function AdminReturnOrder({
             })}
           </ul>
 
-          <TextAreaField label="Reason (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={reason} onChange={(e) => setReason(e.target.value)} />
+          <TextAreaField
+            label={prefill ? "Reason / note (optional)" : "Reason (required)"}
+            required={!prefill}
+            rows={2}
+            maxLength={LIMITS.returnDetail.max}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={prefill ? "Optional note about the returned items" : "Why did these items come back?"}
+          />
           {paymentStatus === "paid" && (
             <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
           )}
@@ -185,7 +199,7 @@ export function AdminReturnOrder({
           <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId))} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId)) || reasonMissing} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save return
           </Button>
         </DialogFooter>

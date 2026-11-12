@@ -12,12 +12,12 @@ export function HowItWorks() {
   return (
     <section data-ui="store/HowItWorks" className="container-page" aria-labelledby="how-title">
       <FadeIn className="mx-auto max-w-2xl text-center">
-        <p data-ui="store/HowItWorks/p" className="text-sm font-semibold tracking-widest text-primary uppercase">Simple ordering</p>
-        <h2 data-ui="store/HowItWorks/h2-from-our-hands-to-your" id="how-title" className="mt-3 text-3xl font-semibold sm:text-4xl">
+        <p data-ui="store/HowItWorks/p" className="text-xs font-semibold tracking-widest text-primary uppercase sm:text-sm">Simple ordering</p>
+        <h2 data-ui="store/HowItWorks/h2-from-our-hands-to-your" id="how-title" className="mt-1.5 text-2xl font-semibold sm:mt-3 sm:text-4xl">
           From our hands to yours in 4 easy steps
         </h2>
       </FadeIn>
-      <ol data-ui="store/HowItWorks/ol-grid" className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <ol data-ui="store/HowItWorks/ol-grid" className="mt-5 grid gap-3.5 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {steps.map((s, i) => (
           <li data-ui="store/HowItWorks/li" key={s.title}>
             <FadeIn delay={i * 0.08} className="relative h-full rounded-3xl border bg-card p-6 transition-shadow hover:shadow-lg">

@@ -3,7 +3,7 @@
 import { Loader2Icon, PencilIcon, TruckIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { DateField, TextField } from "@/components/form"
@@ -39,6 +39,7 @@ export function CourierDialog({
   title,
   description,
   saveLabel,
+  requireChanges = false,
   pending = false,
   onSave,
 }: {
@@ -50,12 +51,26 @@ export function CourierDialog({
   title: string
   description: string
   saveLabel: string
+  requireChanges?: boolean
   pending?: boolean
   onSave: (payload: CourierPayload, values: Values) => void
 }) {
   const form = useForm<Values>({ defaultValues: initial })
   const { errors } = form.formState
   const wasOpen = useRef(open)
+  const [carrierNow, trackingNumberNow, trackingUrlNow, expectedDeliveryNow] = useWatch({
+    control: form.control,
+    name: ["carrier", "trackingNumber", "trackingUrl", "expectedDelivery"],
+  })
+
+  const hasChanges =
+    (carrierNow ?? "").trim() !== initial.carrier.trim() ||
+    (trackingNumberNow ?? "").trim() !== initial.trackingNumber.trim() ||
+    (trackingUrlNow ?? "").trim() !== initial.trackingUrl.trim() ||
+    (expectedDeliveryNow ?? "").trim() !== initial.expectedDelivery.trim()
+
+  const carrierValid = (carrierNow ?? "").trim().length >= LIMITS.carrier.min
+  const canSubmit = carrierValid && (!requireChanges || hasChanges)
 
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -65,6 +80,7 @@ export function CourierDialog({
   }, [open, initial, form])
 
   const submit = form.handleSubmit((values) => {
+    if (requireChanges && !hasChanges) return
     const dateProblem = expectedDeliveryProblem(values.expectedDelivery, previousExpected)
     if (dateProblem) {
       form.setError("expectedDelivery", { message: dateProblem })
@@ -87,10 +103,11 @@ export function CourierDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form data-ui="admin/CourierDialog/form" onSubmit={submit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+        <form data-ui="admin/CourierDialog/form-flex" onSubmit={submit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogBody className="space-y-2">
             <TextField
               label="Courier"
+              required
               maxLength={LIMITS.carrier.max}
               fieldSize="md"
               placeholder="e.g. Delhivery"
@@ -139,7 +156,7 @@ export function CourierDialog({
             <Button data-ui="admin/CourierDialog/Button-cancel" type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending} className="gap-1.5 rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>
-            <Button data-ui="admin/CourierDialog/Button" type="submit" disabled={pending} className="gap-1.5 rounded-full">
+            <Button data-ui="admin/CourierDialog/Button" type="submit" disabled={pending || !canSubmit} className="gap-1.5 rounded-full">
               {pending ? <Loader2Icon className="animate-spin" /> : <TruckIcon className="size-4" />} {saveLabel}
             </Button>
           </DialogFooter>
@@ -185,6 +202,7 @@ export function CourierEditButton({ orderId, shipping }: { orderId: string; ship
           title="Edit courier details"
           description="The customer sees the updated details on their order page."
           saveLabel="Save details"
+          requireChanges
           pending={pending}
           onSave={save}
         />

@@ -13,12 +13,12 @@ describe("allowedPaymentStatuses", () => {
       expect(allowedPaymentStatuses({ status, paymentStatus: "refunded" })).toEqual(["refunded"])
     }
   })
-  it("before dispatch a paid order can't be marked refunded: cancel it first", () => {
-    for (const status of ["pending", "confirmed", "packed"] as const) {
+  it("active orders can't be marked refunded from the payment form: cancel first (delivered uses return flow)", () => {
+    for (const status of ["pending", "confirmed", "packed", "shipped"] as const) {
       expect(paymentUpdateProblem(cur({ status }), { status: "refunded", amount: null, reference: null })).toMatch(/cancel the order first/i)
     }
+    expect(paymentUpdateProblem(cur({ status: "delivered" }), { status: "refunded", amount: null, reference: null })).toMatch(/return flow/i)
     expect(paymentUpdateProblem(cur({ status: "cancelled" }), { status: "refunded", amount: null, reference: null })).toBeNull()
-    expect(paymentUpdateProblem(cur({ status: "shipped" }), { status: "refunded", amount: null, reference: null })).toBeNull()
   })
   it("unpaid orders can move freely, but never to refunded", () => {
     for (const p of ["pending", "submitted", "failed"] as const) {
@@ -43,8 +43,8 @@ describe("paymentUpdateProblem", () => {
       expect(paymentUpdateProblem(cur({ status, paymentStatus: "refunded" }), { status: "paid", amount: null, reference: null })).toMatch(/refunded/i)
     }
   })
-  it("allows paid -> refunded", () => {
-    expect(paymentUpdateProblem(cur(), { status: "refunded", amount: 100, reference: "R1" })).toBeNull()
+  it("allows paid -> refunded on a cancelled order", () => {
+    expect(paymentUpdateProblem(cur({ status: "cancelled" }), { status: "refunded", amount: 100, reference: "R1" })).toBeNull()
   })
   it("locks amount and reference of a paid, finished order but not its note-only re-save", () => {
     expect(paymentUpdateProblem(cur(), { status: "paid", amount: 400, reference: "UTR1" })).toMatch(/amount/i)

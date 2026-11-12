@@ -1,20 +1,20 @@
 "use client"
 
-import { BanIcon, CheckIcon, Loader2Icon, LockIcon } from "lucide-react"
+import { ArrowRightIcon, BanIcon, CheckIcon, Loader2Icon, LockIcon, RotateCcwIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
-import { FormSelectField, SelectField, TextAreaField } from "@/components/form"
+import { FormSelectField, SelectField, SwitchField, TextAreaField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { CourierDialog } from "./courier-dialog"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { cancelOrderAsAdmin, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
-import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, statusChoices } from "@/features/orders/transitions"
+import { cancelOrderAsAdmin, revertOrderStatus, updateAdminNote, updateOrderStatus } from "@/features/orders/admin-actions"
+import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
+import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, NEXT_STATUSES, checkTransition, isRevertTransition, statusChoices } from "@/features/orders/transitions"
 import { expectedDeliveryProblem, shippingSchema } from "@/features/orders/schema"
 import { isOrderLocked, lockNote } from "@/features/orders/locking"
 import type { ReturnStage } from "@/features/orders/returns"
@@ -63,8 +63,26 @@ export function OrderStatusControl({
   const locked = isOrderLocked(status)
   const note = lockNote(status)
   const announcedStage = status === "delivered" && returnStage?.badge ? returnStage : null
-  // Only the current status and the legal next steps are offered (see features/orders/transitions.ts).
-  const statusOptions = statusChoices(status).map((s) => ({ value: s, label: STATUS_META[s].label }))
+  // Only the current status, legal next steps, and 1-step revert are offered (see features/orders/transitions.ts).
+  const nextSteps = NEXT_STATUSES[status]
+  const primaryNextStep = nextSteps[0] ?? null
+  const statusOptions = statusChoices(status).map((s) => {
+    const revert = isRevertTransition(status, s)
+    const isNext = nextSteps.includes(s)
+    const isDirectShip = status === "confirmed" && s === "shipped"
+    return {
+      value: s,
+      label: revert ? `Revert to ${STATUS_META[s].label} (undo ${STATUS_META[status].label})` : STATUS_META[s].label,
+      tone: revert
+        ? ("revert" as const)
+        : isNext
+          ? ("next" as const)
+          : s === status
+            ? ("current" as const)
+            : ("default" as const),
+      badge: revert ? "Undo" : isDirectShip ? "Skip to ship" : isNext ? "Next step" : s === status ? "Current" : undefined,
+    }
+  })
   const router = useRouter()
   const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
@@ -72,6 +90,7 @@ export function OrderStatusControl({
   const later = useToastAfter(pending)
   // The validated change waits here for "are you sure?" (a status change notifies the customer's order page).
   const [toConfirm, setToConfirm] = useState<{ values: Values; shipping: z.output<typeof shippingSchema> | undefined } | null>(null)
+  const [revertTarget, setRevertTarget] = useState<OrderStatus | null>(null)
 
   const form = useForm<Values>({
     defaultValues: {
@@ -82,7 +101,6 @@ export function OrderStatusControl({
       expectedDelivery: shipping?.expectedDelivery ?? "",
     },
   })
-  const { isDirty } = form.formState
   const [value, carrier, trackingNumber, trackingUrl, expectedDelivery] = useWatch({
     control: form.control,
     name: ["status", ...SHIPPING_FIELDS],
@@ -93,6 +111,12 @@ export function OrderStatusControl({
   const showShipping = value === "shipped" && status !== "shipped"
   const [courierOpen, setCourierOpen] = useState(false)
   const hasAnyShipping = [carrier, trackingNumber, trackingUrl, expectedDelivery].some((v) => v?.trim())
+  const shippingChanged =
+    (carrier ?? "").trim() !== (shipping?.carrier ?? "").trim() ||
+    (trackingNumber ?? "").trim() !== (shipping?.trackingNumber ?? "").trim() ||
+    (trackingUrl ?? "").trim() !== (shipping?.trackingUrl ?? "").trim() ||
+    (expectedDelivery ?? "").trim() !== (shipping?.expectedDelivery ?? "").trim()
+  const hasStatusChanges = value !== status || (showShipping && shippingChanged)
 
   const notifyShipping: ShippingDetails | null = carrier?.trim()
     ? {
@@ -108,6 +132,10 @@ export function OrderStatusControl({
   )
 
   const onSubmit = form.handleSubmit((values) => {
+    if (isRevertTransition(status, values.status)) {
+      setRevertTarget(values.status)
+      return
+    }
     // Same rule the server enforces: e.g. "Shipped" needs a courier. Show it next to the field.
     const problem = checkTransition({
       from: status,
@@ -183,17 +211,35 @@ export function OrderStatusControl({
           </p>
         </div>
       ) : (
-        <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} noErrorSpace />
+        <div data-ui="admin/OrderStatusControl/div-2" className="space-y-2">
+          <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} noErrorSpace />
+          {value === status && primaryNextStep && (
+            <div data-ui="admin/OrderStatusControl/div-flex" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <span data-ui="admin/OrderStatusControl/span-flex" className="flex items-center gap-1.5 text-emerald-950 dark:text-emerald-200">
+                <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                <span data-ui="admin/OrderStatusControl/span">Next step:</span>
+                <strong data-ui="admin/OrderStatusControl/strong" className="font-semibold">{STATUS_META[primaryNextStep].label}</strong>
+              </span>
+              <button data-ui="admin/OrderStatusControl/button-select"
+                type="button"
+                onClick={() => form.setValue("status", primaryNextStep, { shouldDirty: true })}
+                className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Select {STATUS_META[primaryNextStep].label} →
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {!locked && showShipping && (
-        <div data-ui="admin/OrderStatusControl/div-flex" className="flex items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 text-sm dark:border-violet-900/50 dark:bg-violet-950/20">
+        <div data-ui="admin/OrderStatusControl/div-flex-2" className="flex items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 text-sm dark:border-violet-900/50 dark:bg-violet-950/20">
           <p data-ui="admin/OrderStatusControl/p-2" className="min-w-0 wrap-anywhere">
             {carrier?.trim() ? (
               <>
-                <span data-ui="admin/OrderStatusControl/span" className="text-muted-foreground">Courier: </span>
-                <span data-ui="admin/OrderStatusControl/span-2" className="font-medium">{carrier.trim()}</span>
-                {trackingNumber?.trim() ? <span data-ui="admin/OrderStatusControl/span-3" className="font-mono"> · {trackingNumber.trim()}</span> : null}
+                <span data-ui="admin/OrderStatusControl/span-2" className="text-muted-foreground">Courier: </span>
+                <span data-ui="admin/OrderStatusControl/span-3" className="font-medium">{carrier.trim()}</span>
+                {trackingNumber?.trim() ? <span data-ui="admin/OrderStatusControl/span-4" className="font-mono"> · {trackingNumber.trim()}</span> : null}
               </>
             ) : (
               "Courier details are needed to mark this order as shipped."
@@ -205,9 +251,27 @@ export function OrderStatusControl({
         </div>
       )}
 
+      {!locked && isRevertTransition(status, value) && (
+        <p data-ui="admin/OrderStatusControl/p-flex-2" className="flex items-center gap-2 rounded-xl border border-amber-300/80 bg-amber-50/70 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
+          <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+          <span data-ui="admin/OrderStatusControl/span-5">Moves this order one step back ({STATUS_META[status].label} → {STATUS_META[value].label}). Requires a reason in the next popup.</span>
+        </p>
+      )}
+
       {!locked && (
-        <Button data-ui="admin/OrderStatusControl/Button-update-status" type="submit" disabled={!isDirty || pending} className="w-full rounded-full">
-          {pending && <Loader2Icon className="animate-spin" />} Update status
+        <Button
+          data-ui="admin/OrderStatusControl/Button-2"
+          type="submit"
+          variant={isRevertTransition(status, value) ? "outline" : "default"}
+          disabled={!hasStatusChanges || pending}
+          className={
+            isRevertTransition(status, value)
+              ? "w-full gap-1.5 rounded-full border-amber-400 bg-amber-500/15 font-semibold text-amber-950 hover:bg-amber-500/25 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-900/50"
+              : "w-full rounded-full"
+          }
+        >
+          {pending ? <Loader2Icon className="animate-spin" /> : isRevertTransition(status, value) ? <RotateCcwIcon className="size-4" /> : null}
+          {isRevertTransition(status, value) ? `Revert to ${STATUS_META[value].label}` : "Update status"}
         </Button>
       )}
       <a data-ui="admin/OrderStatusControl/a-send"
@@ -228,6 +292,17 @@ export function OrderStatusControl({
       pending={pending}
       onConfirm={() => toConfirm && apply(toConfirm)}
     />
+    {revertTarget && (
+      <RevertOrderStatusDialog
+        open={revertTarget !== null}
+        onOpenChange={(o) => !o && setRevertTarget(null)}
+        orderId={orderId}
+        orderCode={orderCode}
+        from={status}
+        to={revertTarget}
+        hasShipping={Boolean(shipping?.carrier || shipping?.trackingNumber || shipping?.trackingUrl || shipping?.expectedDelivery)}
+      />
+    )}
     {courierOpen && (
       <CourierDialog
         open={courierOpen}
@@ -255,11 +330,133 @@ export function OrderStatusControl({
   )
 }
 
+/**
+ * Confirmation dialog for reverting an order status by one step (Delivered -> Shipped -> Packed -> Confirmed -> Pending).
+ * Requires a mandatory admin reason (saved to the private admin note) and offers an optional checkbox to clear courier details when reverting from Shipped.
+ */
+export function RevertOrderStatusDialog({
+  orderId,
+  orderCode,
+  from,
+  to,
+  hasShipping = false,
+  open,
+  onOpenChange,
+}: {
+  orderId: string
+  orderCode: string
+  from: OrderStatus
+  to: OrderStatus
+  hasShipping?: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const router = useRouter()
+  const [reason, setReason] = useState("")
+  const [clearShipping, setClearShipping] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  const later = useToastAfter(pending)
+  useBlockWhile(pending)
+
+  const trimmedReason = reason.trim()
+  const reasonInvalid = trimmedReason.length < OTHER_DETAIL_MIN
+
+  const handleClose = (nextOpen: boolean) => {
+    if (pending) return
+    onOpenChange(nextOpen)
+    if (!nextOpen) {
+      setReason("")
+      setClearShipping(false)
+      setError(null)
+    }
+  }
+
+  const submit = () =>
+    startTransition(async () => {
+      setError(null)
+      if (reasonInvalid) {
+        setError(OTHER_DETAIL_MESSAGE)
+        return
+      }
+      const res = await revertOrderStatus({
+        orderId,
+        expectedStatus: from,
+        toStatus: to,
+        reason: trimmedReason,
+        clearShipping: from === "shipped" ? clearShipping : false,
+      })
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      later(() => {
+        handleClose(false)
+        toast.success(`Order reverted to ${STATUS_META[to].label}`)
+      })
+      router.refresh()
+    })
+
+  const descriptionText =
+    from === "confirmed" && to === "pending"
+      ? "Moves the order back to Pending while keeping the payment marked as Paid. The customer can edit their delivery address again while the order is Pending."
+      : from === "shipped" && to === "packed"
+        ? "Moves the order back to Packed. Courier details are hidden from the customer while Packed and stay saved for when you mark it Shipped again (unless you clear them below)."
+        : `Moves the order back from ${STATUS_META[from].label} to ${STATUS_META[to].label}. Your reason is recorded in the private admin note (hidden from the customer).`
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent data-ui="admin/RevertOrderStatusDialog/DialogContent" className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Revert order {orderCode} to {STATUS_META[to].label}?</DialogTitle>
+          <DialogDescription>{descriptionText}</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="space-y-3">
+          <TextAreaField
+            label="Reason for reverting (private admin note)"
+            required
+            rows={2}
+            maxLength={LIMITS.cancelDetail.max}
+            placeholder="e.g. Marked by mistake, customer requested address change…"
+            value={reason}
+            onChange={(e) => {
+              setReason(e.target.value)
+              if (error) setError(null)
+            }}
+            error={trimmedReason.length > 0 && reasonInvalid ? OTHER_DETAIL_MESSAGE : undefined}
+          />
+          {from === "shipped" && hasShipping && (
+            <SwitchField
+              label="Clear courier & tracking details"
+              description="Leave off to keep courier details saved for when you mark it Shipped again"
+              checked={clearShipping}
+              onCheckedChange={setClearShipping}
+            />
+          )}
+          {error && (
+            <p data-ui="admin/RevertOrderStatusDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+              {error}
+            </p>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button data-ui="admin/RevertOrderStatusDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleClose(false)} className="gap-1.5 rounded-full">
+            <XIcon className="size-4" /> Cancel
+          </Button>
+          <Button data-ui="admin/RevertOrderStatusDialog/Button-revert-to" type="button" onClick={submit} disabled={pending || reasonInvalid} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <RotateCcwIcon className="size-4" />} Revert to {STATUS_META[to].label}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 /** Cancel an order (until it is packed): pick a reason, the customer sees it, a paid order is flagged for refund. */
 export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { orderId: string; orderCode: string; status: OrderStatus; paidOrSent: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState<string>(ADMIN_CANCEL_REASONS[0])
+  const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -268,11 +465,15 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 
   if (!CANCELLABLE_BY_ADMIN.includes(status)) return null
 
-  const needsDetail = otherNeedsDetail(reason, detail)
+  const needsDetail = !reason || otherNeedsDetail(reason, detail)
 
   const submit = () =>
     startTransition(async () => {
       setError(null)
+      if (!reason) {
+        setError("Please choose a reason.")
+        return
+      }
       const res = await cancelOrderAsAdmin({ orderId, reason, detail: detail.trim() || undefined })
       if (!res.ok) {
         setError(res.error)
@@ -289,7 +490,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
     if (pending) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setReason(ADMIN_CANCEL_REASONS[0])
+      setReason("")
       setDetail("")
       setError(null)
     }
@@ -313,7 +514,8 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
         </DialogHeader>
         <DialogBody className="space-y-2">
           <SelectField
-            label="Reason"
+            label="Reason *"
+            placeholder="Select a reason"
             fieldSize="md"
             value={reason}
             onValueChange={setReason}
@@ -326,7 +528,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             maxLength={LIMITS.cancelDetail.max}
             value={detail}
             onChange={(e) => setDetail(e.target.value)}
-            error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+            error={Boolean(reason) && needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
           />
           {error && (
             <p data-ui="admin/AdminCancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
@@ -347,38 +549,103 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   )
 }
 
+const REVERT_AUDIT_LINE_RE = /^\[([^\]]+)\] Reverted (.+ → .+): (.+)$/
+
+function parseAdminNoteParts(raw: string | null): {
+  editableNote: string
+  auditEntries: { raw: string; timestamp: string; transition: string; reason: string }[]
+} {
+  if (!raw) return { editableNote: "", auditEntries: [] }
+  const lines = raw.split(/\r?\n/)
+  const editableLines: string[] = []
+  const auditEntries: { raw: string; timestamp: string; transition: string; reason: string }[] = []
+
+  for (const line of lines) {
+    const match = REVERT_AUDIT_LINE_RE.exec(line.trim())
+    if (match) {
+      auditEntries.push({
+        raw: line.trim(),
+        timestamp: match[1] ?? "",
+        transition: match[2] ?? "",
+        reason: match[3] ?? "",
+      })
+    } else {
+      editableLines.push(line)
+    }
+  }
+
+  return {
+    editableNote: editableLines.join("\n").trim(),
+    auditEntries,
+  }
+}
+
 export function AdminNoteForm({ orderId, note }: { orderId: string; note: string | null }) {
   const router = useRouter()
-  const [value, setValue] = useState(note ?? "")
+  const { editableNote, auditEntries } = parseAdminNoteParts(note)
+  const [value, setValue] = useState(editableNote)
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
   useBlockWhile(pending)
+  const unchanged = value.trim() === editableNote
 
   return (
-    <form data-ui="admin/AdminNoteForm"
-      className="space-y-2"
-      onSubmit={(e) => {
-        e.preventDefault()
-        startTransition(async () => {
-          const res = await updateAdminNote({ orderId, note: value })
-          if (res.ok) {
-            later(() => toast.success("Note saved"))
-            router.refresh()
-          }
-          else toast.error(res.error)
-        })
-      }}
-    >
-      <TextAreaField
-        label="Private note" maxLength={LIMITS.adminNote.max}
-        rows={3}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="Payment received via UPI, packing notes…"
-      />
-      <Button data-ui="admin/AdminNoteForm/Button-save-note" type="submit" variant="outline" size="sm" disabled={pending || value === (note ?? "")} className="rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Save note
-      </Button>
-    </form>
+    <div data-ui="admin/AdminNoteForm" className="space-y-4">
+      <form
+        data-ui="admin/AdminNoteForm/form"
+        className="space-y-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (unchanged) return
+          startTransition(async () => {
+            const res = await updateAdminNote({ orderId, note: value })
+            if (res.ok) {
+              later(() => toast.success("Note saved"))
+              router.refresh()
+            } else toast.error(res.error)
+          })
+        }}
+      >
+        <TextAreaField
+          label="Private note"
+          maxLength={LIMITS.adminNote.max}
+          rows={3}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Payment received via UPI, packing notes…"
+        />
+        <Button data-ui="admin/AdminNoteForm/Button-save-note" type="submit" variant="outline" size="sm" disabled={pending || unchanged} className="rounded-full">
+          {pending && <Loader2Icon className="animate-spin" />} Save note
+        </Button>
+      </form>
+
+      {auditEntries.length > 0 && (
+        <div data-ui="admin/AdminNoteForm/div" className="space-y-2 border-t pt-3">
+          <div data-ui="admin/AdminNoteForm/div-flex" className="flex items-center justify-between gap-2 text-xs font-semibold text-muted-foreground">
+            <span data-ui="admin/AdminNoteForm/span-flex" className="flex items-center gap-1.5">
+              <RotateCcwIcon className="size-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
+              Status revert log
+            </span>
+            <span data-ui="admin/AdminNoteForm/span-inline-flex" className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
+              <LockIcon className="size-2.5" aria-hidden /> Locked
+            </span>
+          </div>
+          <ul data-ui="admin/AdminNoteForm/ul" className="space-y-2">
+            {auditEntries.map((entry, idx) => (
+              <li data-ui="admin/AdminNoteForm/li"
+                key={`${entry.timestamp}-${idx}`}
+                className="rounded-xl border border-amber-300/60 bg-amber-50/50 p-2.5 text-xs dark:border-amber-800/50 dark:bg-amber-950/20"
+              >
+                <div data-ui="admin/AdminNoteForm/div-flex-2" className="flex flex-wrap items-center justify-between gap-1 font-semibold text-amber-950 dark:text-amber-200">
+                  <span data-ui="admin/AdminNoteForm/span">{entry.transition}</span>
+                  <span data-ui="admin/AdminNoteForm/span-2" className="font-normal text-[11px] text-muted-foreground">{entry.timestamp}</span>
+                </div>
+                <p data-ui="admin/AdminNoteForm/p" className="mt-1 text-foreground/90">{entry.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }

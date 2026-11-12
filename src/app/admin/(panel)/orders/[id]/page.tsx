@@ -12,7 +12,7 @@ export default async function AdminOrderPage({ params }: PageProps<"/admin/order
   const { id } = await params
   const [order, shop] = await Promise.all([getOrderById(id), getStoreSettings()])
   if (!order) notFound()
-  const autoCancelAt = isAwaitingPayment(order) ? paymentDeadline(order.createdAt, shop.unpaidOrderExpiryHours) : null
+  const autoCancelAt = isAwaitingPayment(order) ? paymentDeadline(order.createdAt, shop.unpaidOrderExpiryHours, order.updatedAt) : null
 
   return <AdminOrderView order={order} autoCancelAt={autoCancelAt} />
 }

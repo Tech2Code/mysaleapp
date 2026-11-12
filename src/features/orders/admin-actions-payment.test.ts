@@ -73,9 +73,11 @@ describe("updateOrderPayment never moves a paid / refunded payment back", () => 
     expect(updatePayload(calls).payment_amount).toBe(450)
   })
 
-  it("paid -> refunded still goes through refund_order", async () => {
-    const { calls } = setup(paid("delivered"), { data: { ok: true } })
-    expect(await updateOrderPayment({ orderId: ID, ...BLANK, status: "refunded" })).toMatchObject({ ok: true })
+  it("paid -> refunded still goes through refund_order for cancelled orders", async () => {
+    const { calls } = setup(paid("cancelled"), { data: { ok: true } })
+    expect(
+      await updateOrderPayment({ orderId: ID, ...BLANK, status: "refunded", reference: "999999999999", amount: "500", note: "Refunded cancelled order" })
+    ).toMatchObject({ ok: true })
     expect(calls.some((c) => c.kind === "rpc" && c.name === "refund_order")).toBe(true)
   })
 })

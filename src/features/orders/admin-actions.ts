@@ -5,15 +5,16 @@ import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
 import { CACHE_TAGS } from "@/features/products/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
+import { formatDateTime } from "@/lib/format"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { LIMITS, v } from "@/lib/validation"
 import { expectedDeliveryProblem, paymentReferenceSchema, shippingSchema } from "./schema"
 import { lockedMessage } from "./locking"
 import { isPaymentMoneyLocked, paymentUpdateProblem } from "./payment-rules"
 import { mapRpcError } from "./rpc-errors"
-import { OTHER_DETAIL_MESSAGE, cancelReasonText, otherNeedsDetail } from "./reasons"
-import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition } from "./transitions"
-import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "./types"
+import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, cancelReasonText, otherNeedsDetail } from "./reasons"
+import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, isRevertTransition } from "./transitions"
+import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, STATUS_META, type OrderStatus, type PaymentStatus } from "./types"
 
 const updateStatusSchema = z.object({
   orderId: z.uuid(),
@@ -91,6 +92,115 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   return { ok: true }
 }
 
+const revertStatusSchema = z.object({
+  orderId: z.uuid(),
+  expectedStatus: z.enum(ORDER_STATUSES),
+  toStatus: z.enum(ORDER_STATUSES),
+  reason: z.string().trim().min(OTHER_DETAIL_MIN, OTHER_DETAIL_MESSAGE).max(LIMITS.cancelDetail.max, "Reason is too long"),
+  clearShipping: z.boolean().optional(),
+})
+
+/**
+ * Reverts an order's fulfilment status by one step (Delivered -> Shipped -> Packed -> Confirmed -> Pending).
+ * Logs the mandatory admin reason into the private `order_admin_notes` table and cleans up reverted timeline history.
+ */
+export async function revertOrderStatus(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = revertStatusSchema.safeParse(input)
+  if (!parsed.success) {
+    const { fieldErrors } = z.flattenError(parsed.error)
+    return fail(fieldErrors.reason?.[0] ?? "Please enter a valid reason for reverting the status.", fieldErrors)
+  }
+
+  const { orderId, expectedStatus, toStatus, reason, clearShipping } = parsed.data
+  if (!isRevertTransition(expectedStatus, toStatus)) {
+    return fail(`An order cannot be reverted from ${STATUS_META[expectedStatus].label} to ${STATUS_META[toStatus].label}.`)
+  }
+
+  const supabase = await getServerSupabase()
+  const { data: current } = await supabase
+    .from("orders")
+    .select("status, payment_status, refunded_amount")
+    .eq("id", orderId)
+    .maybeSingle<{ status: OrderStatus; payment_status: PaymentStatus | null; refunded_amount: number | string | null }>()
+
+  if (!current) return fail("Order not found")
+  if (current.status !== expectedStatus) {
+    return fail("This order was just changed by someone else. Refresh the page and try again.")
+  }
+
+  if (current.status === "delivered") {
+    if (current.payment_status === "refunded" || Number(current.refunded_amount ?? 0) > 0) {
+      return fail("This order already has a refund recorded, so its Delivered status cannot be reverted.")
+    }
+    const [{ count: reqCount }, { count: retCount }] = await Promise.all([
+      supabase.from("return_requests").select("id", { count: "exact", head: true }).eq("order_id", orderId),
+      supabase.from("order_returns").select("id", { count: "exact", head: true }).eq("order_id", orderId),
+    ])
+    if ((reqCount ?? 0) > 0 || (retCount ?? 0) > 0) {
+      return fail("This order already has a return request or return in progress, so its Delivered status cannot be reverted.")
+    }
+  }
+
+  const shouldClearShipping = expectedStatus === "shipped" && Boolean(clearShipping)
+
+  const { error: rpcError } = await supabase.rpc("revert_order_status", {
+    p_order_id: orderId,
+    p_expected_status: expectedStatus,
+    p_to_status: toStatus,
+    p_clear_shipping: shouldClearShipping,
+  })
+
+  if (rpcError) {
+    const fnMissing = rpcError.code === "PGRST202" || rpcError.message.includes("revert_order_status")
+    if (fnMissing && expectedStatus !== "delivered") {
+      // Fallback for non-delivered steps if the SQL migration hasn't been applied yet
+      const { data: updated, error: updateErr } = await supabase
+        .from("orders")
+        .update({
+          status: toStatus,
+          ...(shouldClearShipping
+            ? {
+                shipping_carrier: null,
+                tracking_number: null,
+                tracking_url: null,
+                expected_delivery: null,
+              }
+            : {}),
+        })
+        .eq("id", orderId)
+        .eq("status", expectedStatus)
+        .select("id")
+
+      if (updateErr || !updated?.length) {
+        return fail(mapRpcError(updateErr?.message ?? "", "Could not revert the order status."))
+      }
+    } else {
+      return fail(mapRpcError(rpcError.message, "Could not revert the order status."))
+    }
+  }
+
+  // Append the revert audit entry to the private admin note so the customer never sees internal revert notes
+  const { data: existingNote } = await supabase
+    .from("order_admin_notes")
+    .select("note")
+    .eq("order_id", orderId)
+    .maybeSingle<{ note: string }>()
+
+  const auditLine = `[${formatDateTime(new Date().toISOString())}] Reverted ${STATUS_META[expectedStatus].label} → ${STATUS_META[toStatus].label}: ${reason}`
+  const combinedNote = existingNote?.note?.trim()
+    ? `${existingNote.note.trim()}\n${auditLine}`.slice(0, LIMITS.adminNote.max)
+    : auditLine.slice(0, LIMITS.adminNote.max)
+
+  await supabase.from("order_admin_notes").upsert({ order_id: orderId, note: combinedNote }, { onConflict: "order_id" })
+
+  revalidatePathsForAdmin(orderId)
+  revalidatePathsForCustomer()
+  return { ok: true }
+}
+
 const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v)
 
 const updatePaymentSchema = z.object({
@@ -158,15 +268,21 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   if (p.status === "refunded" && order.payment_status === "paid") {
     const paid = Number(order.payment_amount ?? order.total)
     const left = Math.max(0, paid - Number(order.refunded_amount ?? 0))
-    if (p.amount !== null && p.amount > left + 0.005) return fail(`You can refund at most ₹${left.toFixed(2)}.`, { amount: [`At most ₹${left.toFixed(2)}`] })
-    if (p.amount === 0) return fail("Enter an amount above 0, or leave it blank to refund everything.", { amount: ["Enter an amount above 0"] })
+    if (!p.reference) return fail("Enter the refund UTR / reference number.", { reference: ["Enter the refund reference number"] })
+    if (p.reference === order.payment_reference) {
+      return fail("Enter your refund UTR, not the customer's incoming payment UTR.", { reference: ["Must be the refund UTR"] })
+    }
+    if (p.amount === null || p.amount <= 0) return fail("Enter the refund amount.", { amount: ["Enter an amount above 0"] })
+    if (p.amount > left + 0.005) return fail(`You can refund at most ₹${left.toFixed(2)}.`, { amount: [`At most ₹${left.toFixed(2)}`] })
+    if (!p.note || p.note.trim().length < 3) {
+      return fail("Enter a refund reason / note for the customer.", { note: ["Enter a refund note (at least 3 characters)"] })
+    }
     const { error: refundError } = await supabase.rpc("refund_order", {
       p_order_id: p.orderId,
       // blank or the whole remaining amount = full refund
-      p_amount: p.amount === null || p.amount >= left - 0.005 ? null : p.amount,
+      p_amount: p.amount >= left - 0.005 ? null : p.amount,
       p_expected_status: order.status,
-      // the form pre-fills the customer's own payment UTR; that is not a refund reference, so only a different value is kept
-      p_reference: p.reference && p.reference !== order.payment_reference ? p.reference : null,
+      p_reference: p.reference,
       p_note: p.note,
       // idempotency: the DB refuses (ORDER_CHANGED) if refunded_amount is no longer what the admin's screen showed
       p_expected_refunded: p.expectedRefunded ?? null,
@@ -182,6 +298,9 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   }
   if (p.status === "refunded" && order.payment_status !== "refunded") {
     return fail("Only a paid order can be refunded.")
+  }
+  if (p.status === "failed" && (!p.note || p.note.trim().length < 5)) {
+    return fail("Enter the reason for rejecting the payment.", { note: ["Enter a reason (at least 5 characters)"] })
   }
 
   const markPaid = p.status === "paid"
@@ -222,6 +341,26 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   return { ok: true, data: { confirmed: confirmNow } }
 }
 
+const REVERT_AUDIT_LINE_RE = /^\[[^\]]+\] Reverted .+ → .+: .+$/
+
+function splitAdminNote(raw: string | null | undefined): { editableNote: string; auditLines: string[] } {
+  if (!raw) return { editableNote: "", auditLines: [] }
+  const lines = raw.split(/\r?\n/)
+  const auditLines: string[] = []
+  const editableLines: string[] = []
+  for (const line of lines) {
+    if (REVERT_AUDIT_LINE_RE.test(line.trim())) {
+      auditLines.push(line.trim())
+    } else {
+      editableLines.push(line)
+    }
+  }
+  return {
+    editableNote: editableLines.join("\n").trim(),
+    auditLines,
+  }
+}
+
 const noteSchema = z.object({ orderId: z.uuid(), note: v.note(LIMITS.adminNote.max) })
 
 export async function updateAdminNote(input: unknown): Promise<ActionResult> {
@@ -232,11 +371,23 @@ export async function updateAdminNote(input: unknown): Promise<ActionResult> {
   if (!parsed.success) return fail("Note is too long")
 
   const supabase = await getServerSupabase()
+  // Read existing note first so immutable status-revert audit lines can never be edited or cleared
+  const { data: existing } = await supabase
+    .from("order_admin_notes")
+    .select("note")
+    .eq("order_id", parsed.data.orderId)
+    .maybeSingle<{ note: string }>()
+
+  const { auditLines } = splitAdminNote(existing?.note)
+  const { editableNote: cleanUserNote } = splitAdminNote(parsed.data.note)
+
+  const finalNote = [cleanUserNote, ...auditLines].filter(Boolean).join("\n").slice(0, LIMITS.adminNote.max)
+
   // The note lives in its own admin-only table, so customers can never read it (even via their own orders).
-  const { error } = parsed.data.note
+  const { error } = finalNote
     ? await supabase
         .from("order_admin_notes")
-        .upsert({ order_id: parsed.data.orderId, note: parsed.data.note }, { onConflict: "order_id" })
+        .upsert({ order_id: parsed.data.orderId, note: finalNote }, { onConflict: "order_id" })
     : await supabase.from("order_admin_notes").delete().eq("order_id", parsed.data.orderId)
   if (error) return fail("Could not save note")
 
@@ -321,6 +472,9 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
   const parsed = returnSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the return details.", z.flattenError(parsed.error).fieldErrors)
   const { orderId, items, reason, refund, requestId } = parsed.data
+  if (!requestId && (!reason || reason.trim().length < 3)) {
+    return fail("Enter the reason for the return.", { reason: ["Enter a reason (at least 3 characters)"] })
+  }
 
   const supabase = await getServerSupabase()
   const { data, error } = await supabase.rpc("record_order_return", {
@@ -477,7 +631,9 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
   const parsed = createRequestSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
   const { orderId, items, reason, details } = parsed.data
-  if (otherNeedsDetail(reason, details)) return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
+  if (!details || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)) {
+    return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
+  }
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("admin_create_return_request", {

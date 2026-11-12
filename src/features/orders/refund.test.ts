@@ -41,4 +41,14 @@ describe("refund = items only", () => {
     expect(returned).toMatchObject({ basis: "returned", refundable: 300, alreadyRefunded: 300 })
     expect(refundBreakdown({ ...base, returnRequests: [] })).toBeNull()
   })
+
+  it("combines earlier completed returns with a new open return request so totals match alreadyRefunded", () => {
+    const combined = refundBreakdown({
+      ...base,
+      returnRequests: [request("approved", [{ productId: "b", name: "Basket", quantity: 1 }])],
+      returns: [{ id: "x", items: [{ productId: "a", name: "Candle", quantity: 1 }], reason: null, refunded: true, createdAt: "2026-01-02T00:00:00Z" }],
+      refundedAmount: 500,
+    })
+    expect(combined).toMatchObject({ basis: "request", itemsTotal: 800, refundable: 800, alreadyRefunded: 500 })
+  })
 })

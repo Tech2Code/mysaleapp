@@ -2,13 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
-import { useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useTransition } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { updateProfile } from "@/features/account/actions"
 import { profileSchema, type Profile, type ProfileInput } from "@/features/account/schema"
+import { normalizeIndianPhone } from "@/lib/format"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
@@ -16,21 +17,31 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+  const [saved, setSaved] = useState({ fullName: profile.fullName, phone: profile.phone })
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: profile.fullName, phone: profile.phone },
   })
-  const { errors, isDirty } = form.formState
+  const { errors } = form.formState
+  const [fullNameVal, phoneVal] = useWatch({ control: form.control, name: ["fullName", "phone"] })
 
-  const onSubmit = form.handleSubmit((values) =>
+  const hasChanges =
+    (fullNameVal ?? "").trim() !== saved.fullName.trim() ||
+    (normalizeIndianPhone(phoneVal ?? "") ?? (phoneVal ?? "").trim()) !== (normalizeIndianPhone(saved.phone) ?? saved.phone.trim())
+
+  const onSubmit = form.handleSubmit((values) => {
+    if (!hasChanges) return
     startTransition(async () => {
       const res = await updateProfile(values)
       if (res.ok) {
+        const rawPhone = values.phone ?? ""
+        const nextSaved = { fullName: values.fullName.trim(), phone: normalizeIndianPhone(rawPhone) ?? rawPhone.trim() }
+        setSaved(nextSaved)
         later(() => toast.success("Profile saved"))
-        form.reset(values)
+        form.reset(nextSaved)
       } else toast.error(res.error)
     })
-  )
+  })
 
   return (
     <form data-ui="account/ProfileForm" onSubmit={onSubmit} noValidate className="space-y-1 rounded-3xl border bg-card p-6 sm:p-8">
@@ -47,7 +58,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
           {...form.register("phone")}
         />
       </div>
-      <Button data-ui="account/ProfileForm/Button-save-changes" type="submit" size="lg" disabled={pending || !isDirty} className="h-11 rounded-full px-5 sm:px-8">
+      <Button data-ui="account/ProfileForm/Button-save-changes" type="submit" size="lg" disabled={pending || !hasChanges} className="h-11 rounded-full px-5 sm:px-8">
         {pending && <Loader2Icon className="animate-spin" />} Save changes
       </Button>
     </form>

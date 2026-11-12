@@ -129,7 +129,7 @@ describe("isAwaitingPayment / canVerifyPayment (all status combinations)", () =>
       const o = { status, paymentStatus }
       it(`${status} + ${paymentStatus}`, () => {
         expect(isAwaitingPayment(o)).toBe(status === "pending" && (paymentStatus === "pending" || paymentStatus === "failed"))
-        expect(canVerifyPayment(o)).toBe(status !== "cancelled" && paymentStatus !== "paid" && paymentStatus !== "refunded")
+        expect(canVerifyPayment(o)).toBe(status === "cancelled" ? paymentStatus === "submitted" : paymentStatus !== "paid" && paymentStatus !== "refunded")
       })
     }
   }

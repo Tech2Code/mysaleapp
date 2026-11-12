@@ -8,7 +8,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { FormSelectField, TextAreaField, TextField } from "@/components/form"
-import { splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
+import { joinCityState, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,10 +21,30 @@ import {
 } from "@/components/ui/dialog"
 import { updateOrderDelivery } from "@/features/orders/actions"
 import { checkoutSchema, type CheckoutInput } from "@/features/orders/schema"
-import type { DeliveryDetails } from "@/features/orders/types"
+import type { DeliveryDetails, OrderStatus } from "@/features/orders/types"
+import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+
+function deliveryStatusFootnote(editable: boolean, status?: OrderStatus): { text: string; locked: boolean } | null {
+  if (editable || status === "pending") {
+    return { text: "You can change these details until your order is confirmed.", locked: false }
+  }
+  switch (status) {
+    case "cancelled":
+      return null
+    case "delivered":
+      return { text: "This order was delivered to this address.", locked: false }
+    case "shipped":
+      return { text: "Your order is on its way to this address, so delivery details can no longer be changed.", locked: true }
+    case "packed":
+      return { text: "Your order is packed for dispatch, so the address is locked. Message us on WhatsApp urgently if something is wrong.", locked: true }
+    case "confirmed":
+    default:
+      return { text: "Your order is confirmed, so the address is locked. Message us on WhatsApp if something is wrong.", locked: true }
+  }
+}
 
 /**
  * Delivery address of an order. While the order is still pending (not confirmed)
@@ -34,12 +54,14 @@ export function DeliveryEditor({
   orderCode,
   delivery,
   editable,
+  status,
   phoneLast4,
   onChanged,
 }: {
   orderCode: string
   delivery: DeliveryDetails
   editable: boolean
+  status?: OrderStatus
   /** Needed for guests (from the track page). Signed-in owners don't need it. */
   phoneLast4?: string
   /** Called after saving, with the (possibly new) last 4 digits of the phone. Defaults to refreshing the page. */
@@ -52,13 +74,14 @@ export function DeliveryEditor({
   const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
 
+  const initialSplit = splitCityState(delivery.city)
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
     values: {
       name: delivery.name,
       phone: delivery.phone,
       address: delivery.address,
-      ...splitCityState(delivery.city),
+      ...initialSplit,
       pincode: delivery.pincode,
       note: delivery.note ?? "",
     },
@@ -79,8 +102,23 @@ export function DeliveryEditor({
     }
   }
   const { errors } = form.formState
+  const [nameVal, phoneVal, addressVal, cityVal, stateVal, pincodeVal, noteVal] = useWatch({
+    control: form.control,
+    name: ["name", "phone", "address", "city", "state", "pincode", "note"],
+  })
+
+  const normalizedPhone = normalizeIndianPhone(phoneVal ?? "") ?? (phoneVal ?? "").trim()
+  const initialPhone = normalizeIndianPhone(delivery.phone) ?? delivery.phone.trim()
+  const hasChanges =
+    (nameVal ?? "").trim() !== delivery.name.trim() ||
+    normalizedPhone !== initialPhone ||
+    (addressVal ?? "").trim() !== delivery.address.trim() ||
+    joinCityState((cityVal ?? "").trim(), stateVal ?? initialSplit.state) !== delivery.city.trim() ||
+    (pincodeVal ?? "").trim() !== delivery.pincode.trim() ||
+    (noteVal ?? "").trim() !== (delivery.note ?? "").trim()
+
   const area = usePincodeLookup({
-    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    pincode: pincodeVal ?? "",
     getCity: () => form.getValues("city"),
     setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
     getState: () => form.getValues("state"),
@@ -88,6 +126,7 @@ export function DeliveryEditor({
   })
 
   const onSubmit = form.handleSubmit((values) => {
+    if (!hasChanges) return
     if (area.error) {
       form.setError("pincode", { message: area.error })
       return
@@ -111,6 +150,8 @@ export function DeliveryEditor({
     })
   })
 
+  const footnote = deliveryStatusFootnote(editable, status)
+
   return (
     <section data-ui="store/DeliveryEditor" aria-labelledby="delivery-title" className="rounded-3xl border bg-card p-5 text-sm sm:p-6">
       <div data-ui="store/DeliveryEditor/div-flex" className="mb-2 flex items-center justify-between gap-3">
@@ -132,16 +173,12 @@ export function DeliveryEditor({
       </p>
       {delivery.note && <p data-ui="store/DeliveryEditor/p-3" className="mt-2 text-muted-foreground">Note: {delivery.note}</p>}
 
-      <p data-ui="store/DeliveryEditor/p-flex" className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-        {editable ? (
-          "You can change these details until your order is confirmed."
-        ) : (
-          <>
-            <LockIcon className="mt-0.5 size-3.5 shrink-0" />
-            Your order is confirmed, so the address is locked. Message us on WhatsApp if something is wrong.
-          </>
-        )}
-      </p>
+      {footnote && (
+        <p data-ui="store/DeliveryEditor/p-flex" className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+          {footnote.locked && <LockIcon className="mt-0.5 size-3.5 shrink-0" />}
+          <span data-ui="store/DeliveryEditor/span">{footnote.text}</span>
+        </p>
+      )}
 
       {editable && (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -186,7 +223,7 @@ export function DeliveryEditor({
                 <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
                   <XIcon className="size-4" /> Cancel
                 </Button>
-                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending} className="gap-1.5 rounded-full">
+                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending || !hasChanges} className="gap-1.5 rounded-full">
                   {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save changes
                 </Button>
               </DialogFooter>

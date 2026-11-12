@@ -1,6 +1,6 @@
 "use client"
 
-import { HeartIcon, PackageIcon, UserIcon } from "lucide-react"
+import { PackageIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Suspense } from "react"
@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 
 const links = [
   { href: "/account/orders", label: "My orders", icon: PackageIcon },
-  { href: "/wishlist", label: "Wishlist", icon: HeartIcon },
   { href: "/account/profile", label: "Profile & address", icon: UserIcon },
 ]
 

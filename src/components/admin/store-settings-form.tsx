@@ -302,7 +302,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
 
           <Card
             title="Payment (UPI)"
-            description="Customers pay this UPI ID after placing an order, then enter the UTR. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
+            description="Customers pay this UPI ID at checkout and enter the UTR to place their order. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
           >
             <div data-ui="admin/StoreSettingsForm/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
@@ -411,7 +411,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 {...form.register("freeDeliveryAbove")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsForm/div-grid-handling" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-9" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Fragile packaging fee" kind="money"
                 fieldSize="md"
@@ -431,7 +431,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
                 {...form.register("oversizedFee")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsForm/div-grid-weight" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsForm/div-grid-10" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Included parcel weight (grams)" kind="digits"
                 fieldSize="md"

@@ -47,14 +47,14 @@ export function PriceBreakdown({
                 title={fee.reason ?? undefined}
                 className="flex items-start justify-between gap-2"
               >
-                <span data-ui="shared/PriceBreakdown/p" className="min-w-0 text-muted-foreground">
-                  <span className="block truncate">
+                <span data-ui="shared/PriceBreakdown/span" className="min-w-0 text-muted-foreground">
+                  <span data-ui="shared/PriceBreakdown/span-2" className="block truncate">
                     {fee.label}
-                    {fee.productName && <span className="text-[11px] opacity-80"> · {fee.productName}</span>}
+                    {fee.productName && <span data-ui="shared/PriceBreakdown/span-3" className="text-[11px] opacity-80"> · {fee.productName}</span>}
                   </span>
-                  {fee.reason && <span className="block text-[11px] opacity-75">{fee.reason}</span>}
+                  {fee.reason && <span data-ui="shared/PriceBreakdown/span-4" className="block text-[11px] opacity-75">{fee.reason}</span>}
                 </span>
-                <span data-ui="shared/PriceBreakdown/p-4" className="font-medium shrink-0">{formatPrice(fee.amount)}</span>
+                <span data-ui="shared/PriceBreakdown/span-5" className="font-medium shrink-0">{formatPrice(fee.amount)}</span>
               </li>
             ))}
           </ul>
@@ -68,7 +68,7 @@ export function PriceBreakdown({
             {deliveryFree ? (
               <>
                 {saved > 0 && <s data-ui="shared/PriceBreakdown/s" className="text-muted-foreground">{formatPrice(saved)}</s>}
-                <span data-ui="shared/PriceBreakdown/span" className="font-semibold text-success">FREE</span>
+                <span data-ui="shared/PriceBreakdown/span-6" className="font-semibold text-success">FREE</span>
               </>
             ) : (
               formatPrice(shippingFee)
@@ -76,7 +76,7 @@ export function PriceBreakdown({
           </dd>
         </div>
 
-        {saved > 0 && <p data-ui="shared/PriceBreakdown/p-5" className="text-xs font-medium text-success">You saved {formatPrice(saved)} on delivery 🎉</p>}
+        {saved > 0 && <p data-ui="shared/PriceBreakdown/p" className="text-xs font-medium text-success">You saved {formatPrice(saved)} on delivery 🎉</p>}
 
         <div data-ui="shared/PriceBreakdown/div-flex-3" className="flex items-baseline justify-between gap-4 border-t pt-3">
           <dt data-ui="shared/PriceBreakdown/dt-3" className="font-semibold">{totalLabel}</dt>

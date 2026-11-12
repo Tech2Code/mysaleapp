@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og"
 import { getStoreSettings } from "@/features/settings/queries"
+import { BrandMark } from "@/lib/brand-image"
 
 export const alt = "Shop preview"
 export const size = { width: 1200, height: 630 }
@@ -22,22 +23,7 @@ export default async function OpengraphImage() {
           color: "#3b2a22",
         }}
       >
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: 24,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "linear-gradient(135deg, #c0643c, #b34a4f)",
-            color: "#fff8f0",
-            fontSize: 60,
-            fontWeight: 700,
-          }}
-        >
-          {shop.shopName.charAt(0).toUpperCase()}
-        </div>
+        <BrandMark size={96} />
         <div style={{ fontSize: 84, fontWeight: 700, marginTop: 40, letterSpacing: -2 }}>{shop.shopName}</div>
         <div style={{ fontSize: 40, marginTop: 12, color: "#8a4b33" }}>{shop.tagline}</div>
         <div style={{ fontSize: 28, marginTop: 40, color: "#6b5348" }}>Pay securely by UPI · Delivery across India</div>

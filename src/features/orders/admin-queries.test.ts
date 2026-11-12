@@ -89,4 +89,18 @@ describe("order views (dashboard tile and list share one filter)", () => {
     const or = ordersCall(calls).ops.find(([m]) => m === "or")![1][0] as string
     expect(or).toBe("order_code.ilike.%aborxeq1%,phone.ilike.%aborxeq1%,customer_name.ilike.%aborxeq1%")
   })
+
+  it("payment filter: refund-due finds cancelled orders with paid/submitted payment, and paid/submitted do not hide cancelled orders", async () => {
+    let s = setup()
+    await listOrders({ payment: "refund-due" })
+    let c = ordersCall(s.calls)
+    expect(has(c, "eq", "status", "cancelled")).toBe(true)
+    expect(has(c, "in", "payment_status", ["paid", "submitted"])).toBe(true)
+
+    s = setup()
+    await listOrders({ payment: "paid" })
+    c = ordersCall(s.calls)
+    expect(has(c, "eq", "payment_status", "paid")).toBe(true)
+    expect(has(c, "neq", "status", "cancelled")).toBe(false)
+  })
 })

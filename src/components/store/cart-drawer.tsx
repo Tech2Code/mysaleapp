@@ -32,7 +32,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
           : "border-border/60 bg-muted/40"
       )}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div data-ui="store/FreeShippingBar/div-flex" className="flex items-center justify-between gap-2">
         <p data-ui="store/FreeShippingBar/p-flex" className="flex items-center gap-1.5 font-medium leading-tight">
           {unlocked ? (
             <SparklesIcon className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -40,14 +40,14 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
             <TruckIcon className="size-3.5 text-primary shrink-0" />
           )}
           {unlocked ? (
-            <span>You unlocked <strong>Free Delivery</strong> 🎉</span>
+            <span data-ui="store/FreeShippingBar/span">You unlocked <strong data-ui="store/FreeShippingBar/strong">Free Delivery</strong> 🎉</span>
           ) : (
-            <span>
-              Add <strong className="text-foreground font-semibold">{formatPrice(remaining)}</strong> more for <strong className="text-primary font-semibold">Free Delivery</strong>
+            <span data-ui="store/FreeShippingBar/span-2">
+              Add <strong data-ui="store/FreeShippingBar/strong-2" className="text-foreground font-semibold">{formatPrice(remaining)}</strong> more for <strong data-ui="store/FreeShippingBar/strong-3" className="text-primary font-semibold">Free Delivery</strong>
             </span>
           )}
         </p>
-        <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+        <span data-ui="store/FreeShippingBar/span-3" className="text-[10px] font-semibold text-muted-foreground tabular-nums">
           {Math.round(pct)}%
         </span>
       </div>

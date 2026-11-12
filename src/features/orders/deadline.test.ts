@@ -9,6 +9,9 @@ describe("paymentDeadline", () => {
   it("adds hours to creation", () => {
     expect(paymentDeadline("2026-01-01T00:00:00Z", 24)?.toISOString()).toBe("2026-01-02T00:00:00.000Z")
   })
+  it("uses updatedAt when later than createdAt (e.g. after a rejected UTR)", () => {
+    expect(paymentDeadline("2026-01-01T00:00:00Z", 24, "2026-01-02T06:00:00Z")?.toISOString()).toBe("2026-01-03T06:00:00.000Z")
+  })
 })
 
 describe("describeHours", () => {

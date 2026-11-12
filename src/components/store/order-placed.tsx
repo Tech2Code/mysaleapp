@@ -32,7 +32,7 @@ function readSession(key: string): string | null {
 const HEADLINE: Record<string, { title: string; text: string }> = {
   pending: { title: "Order placed!", text: "Complete the payment below and we'll confirm your order." },
   failed: { title: "Payment needs attention", text: "We couldn't verify your payment. Please check the details and submit it again." },
-  submitted: { title: "Payment submitted", text: "Thank you! We're verifying your payment and will confirm your order shortly." },
+  submitted: { title: "Order placed & payment submitted!", text: "Thank you! We're verifying your UPI payment and will confirm your order shortly." },
   paid: { title: "Payment received", text: "Your order is confirmed. We'll start getting it ready." },
 }
 
@@ -58,7 +58,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     }
   }, [raw, code, preview])
 
-  const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "pending" }) : null)
+  const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "submitted" }) : null)
   const [lookupFailed, setLookupFailed] = useState(false)
 
   const load = useCallback(async () => {
@@ -85,7 +85,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     }
   }, [order, preview])
 
-  const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.pending) : HEADLINE.pending
+  const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.submitted) : HEADLINE.submitted
   const whatsappHref =
     order?.whatsappUrl && order.whatsappUrl.startsWith("https://wa.me/")
       ? order.whatsappUrl
@@ -103,8 +103,8 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
       </m.div>
 
       <m.div data-ui="store/OrderPlaced/m.div" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <h1 data-ui="store/OrderPlaced/h1" className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed!"}</h1>
-        <p data-ui="store/OrderPlaced/p" className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.pending.text}</p>
+        <h1 data-ui="store/OrderPlaced/h1" className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed & payment submitted!"}</h1>
+        <p data-ui="store/OrderPlaced/p" className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.submitted.text}</p>
 
         {code && (
           <button data-ui="store/OrderPlaced/button-flex"
@@ -127,7 +127,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         <div data-ui="store/OrderPlaced/div" className="mt-8 text-left">
           {!order ? (
             <p data-ui="store/OrderPlaced/p-2" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
-              To pay for this order, open{" "}
+              To check your order status and payment verification, open{" "}
               <Link data-ui="store/OrderPlaced/Link-track-order" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Track order
               </Link>{" "}
@@ -145,21 +145,21 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
             />
           ) : lookupFailed ? (
             <p data-ui="store/OrderPlaced/p-3" role="alert" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
-              We couldn&apos;t load your payment details just now. Open{" "}
+              We couldn&apos;t load your order details just now. Open{" "}
               <Link data-ui="store/OrderPlaced/Link-track-order-2" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Track order
               </Link>{" "}
-              and enter your order code with the last 4 digits of your phone to pay.
+              and enter your order code with the last 4 digits of your phone to check your order status.
             </p>
           ) : (
-            // never flash the "pay now" screen before we know the real payment state
+            // Show the compact "verifying payment" skeleton matching the newly placed order state
             <Skeletonize>
               <PaymentPanel
                 orderCode={order.orderCode}
                 phoneLast4={order.phoneLast4}
                 total={order.total}
                 orderStatus="pending"
-                payment={placeholderTrackedOrder({ paymentStatus: "pending" })}
+                payment={placeholderTrackedOrder({ paymentStatus: "submitted" })}
               />
             </Skeletonize>
           )}

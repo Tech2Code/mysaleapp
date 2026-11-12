@@ -14,6 +14,22 @@ export const NEXT_STATUSES: Record<OrderStatus, readonly OrderStatus[]> = {
   cancelled: [],
 }
 
+/** One-step-back fulfilment revert allowed for admins (delivered -> shipped -> packed -> confirmed -> pending). */
+export const PREVIOUS_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  confirmed: "pending",
+  packed: "confirmed",
+  shipped: "packed",
+  delivered: "shipped",
+}
+
+export function previousStatusOf(from: OrderStatus): OrderStatus | null {
+  return PREVIOUS_STATUS[from] ?? null
+}
+
+export function isRevertTransition(from: OrderStatus, to: OrderStatus): boolean {
+  return PREVIOUS_STATUS[from] === to
+}
+
 /** Until the parcel is packed, an order can still be cancelled by the customer; the admin can until it ships. */
 export const CANCELLABLE_BY_CUSTOMER: readonly OrderStatus[] = ["pending", "confirmed"]
 export const CANCELLABLE_BY_ADMIN: readonly OrderStatus[] = ["pending", "confirmed", "packed"]
@@ -60,7 +76,8 @@ export function checkTransition({ from, to, payment, hasCourier }: TransitionChe
   return null
 }
 
-/** The statuses to offer in the dropdown for an order that is currently `from`. */
+/** The statuses to offer in the dropdown for an order that is currently `from` (including 1-step revert for active orders). */
 export function statusChoices(from: OrderStatus): OrderStatus[] {
-  return [from, ...NEXT_STATUSES[from]]
+  const prev = previousStatusOf(from)
+  return [from, ...NEXT_STATUSES[from], ...(prev && from !== "delivered" ? [prev] : [])]
 }

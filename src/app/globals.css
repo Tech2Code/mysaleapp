@@ -70,17 +70,17 @@
   --animate-float: float 6s ease-in-out infinite;
 
   @keyframes blob {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(30px, -40px) scale(1.08); }
-    66% { transform: translate(-25px, 20px) scale(0.95); }
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33% { transform: translate3d(30px, -40px, 0) scale(1.08); }
+    66% { transform: translate3d(-25px, 20px, 0) scale(0.95); }
   }
   @keyframes shimmer {
     from { background-position: 200% 0; }
     to { background-position: -200% 0; }
   }
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -10px, 0); }
   }
 }
 
@@ -236,13 +236,13 @@
     cursor: not-allowed;
   }
 
-  /* Smooth UI interactions across interactive elements */
+  /* Smooth UI interactions across interactive elements (avoid global transform/opacity transitions that fight Motion & popups) */
   button,
   [role="button"],
   input,
   select,
   textarea {
-    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-property: color, background-color, border-color, box-shadow;
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -383,7 +383,7 @@
   --skeleton-pulse: 1.35;
 }
 @keyframes skeleton-pulse {
-  50% { filter: brightness(var(--skeleton-pulse)); }
+  50% { opacity: 0.55; }
 }
 [data-skeleton] {
   pointer-events: none;
@@ -502,3 +502,10 @@ html:has([data-slot="sheet-overlay"][data-open]) {
 [data-slot="dialog-content"]:has(> [data-slot="dialog-header"] + [data-slot="dialog-footer"]),
 [data-slot="dialog-content"]:has(> form > [data-slot="dialog-header"] + [data-slot="dialog-footer"]) { gap: 0; }
 [data-slot="dialog-header"]:has(+ [data-slot="dialog-footer"]) { margin-bottom: 0; border-bottom: 0; }
+
+/* Mobile bottom bar spacing: reserve footer bottom padding on phones ONLY when a visible fixed bottom bar exists on the page */
+@media (max-width: 639.98px) {
+  [data-ui="store/Footer"],
+  [data-slot="store-footer"] { padding-bottom: 0 !important; }
+  body:has([data-mobile-bottom-bar]:not([data-skeleton] *), [data-ui="store/MobileBottomNav"], [data-ui="store/ProductActions/div-mobile-sticky-bar"]:not([data-skeleton] *)) :is([data-ui="store/Footer"], [data-slot="store-footer"]) { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom)) !important; }
+}

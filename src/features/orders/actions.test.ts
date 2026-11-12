@@ -28,7 +28,7 @@ import { cancelOrder, placeOrder, requestReturn, submitPayment, trackOrder, upda
 
 const ID = "11111111-1111-4111-8111-111111111111"
 const customer = { name: "AUDIT TEST", phone: "9876543210", address: "12 Test Street, Some Area", city: "Mumbai", state: "Maharashtra", pincode: "400001" }
-const order = { customer, items: [{ productId: ID, quantity: 2 }] }
+const order = { customer, items: [{ productId: ID, quantity: 2 }], paymentReference: "123456789012" }
 const code = "KK-ABC123"
 
 function setup(rpc: Result = { data: null }) {
@@ -69,7 +69,7 @@ describe("the rate limiter runs before the RPC", () => {
     ["submitPayment", "submit-payment", () => submitPayment({ code, phoneLast4: "1234", reference: "123456789012" })],
     ["updateOrderDelivery", "update-delivery", () => updateOrderDelivery({ code, phoneLast4: "1234", customer })],
     ["cancelOrder", "cancel-order", () => cancelOrder({ code, phoneLast4: "1234", reason: "Changed my mind" })],
-    ["requestReturn", "request-return", () => requestReturn({ code, phoneLast4: "1234", items: [{ productId: ID, quantity: 1 }], reason: "Damaged" })],
+    ["requestReturn", "request-return", () => requestReturn({ code, phoneLast4: "1234", items: [{ productId: ID, quantity: 1 }], reason: "Damaged", details: "Arrived cracked" })],
     ["withdrawReturnRequest", "withdraw-return", () => withdrawReturnRequest({ code, phoneLast4: "1234", requestId: ID })],
   ]
   it.each(cases)("%s uses scope %s and stops when limited", async (_n, scope, run) => {

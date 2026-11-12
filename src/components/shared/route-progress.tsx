@@ -131,13 +131,13 @@ export function RouteProgressProvider({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <RouteChangeWatcher onChange={finishClick} />
       </Suspense>
-      <div data-ui="shared/RouteProgressProvider/div-fixed" aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-100 h-0.75">
+      <div data-ui="shared/RouteProgressProvider/div-fixed" aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-100 h-0.75 overflow-hidden">
         <div data-ui="shared/RouteProgressProvider/div"
           className={cn(
-            "h-full rounded-r-full bg-primary shadow-[0_0_10px_var(--color-primary)] transition-[width,opacity] ease-out",
+            "h-full w-full origin-left rounded-r-full bg-primary transition-[transform,opacity] ease-out will-change-transform",
             visible ? "opacity-100 duration-200" : "opacity-0 duration-300"
           )}
-          style={{ width: `${width}%` }}
+          style={{ transform: `scaleX(${width / 100})` }}
         />
       </div>
     </ProgressContext>

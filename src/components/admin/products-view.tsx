@@ -56,9 +56,9 @@ export function ProductsView({ products }: { products: Product[] }) {
         title="Products"
         description={`${products.length} product${products.length === 1 ? "" : "s"} · ${products.filter((p) => p.isActive).length} visible in store`}
         actions={
-          <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
-              <button
+          <div data-ui="admin/ProductsView/div-flex" className="flex items-center gap-2">
+            <div data-ui="admin/ProductsView/div-view-format" className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
+              <button data-ui="admin/ProductsView/button-list-view"
                 type="button"
                 onClick={() => changeView("table")}
                 className={cn(
@@ -69,9 +69,9 @@ export function ProductsView({ products }: { products: Product[] }) {
                 aria-label="List view"
               >
                 <ListIcon className="size-3.5" />
-                <span>List</span>
+                <span data-ui="admin/ProductsView/span">List</span>
               </button>
-              <button
+              <button data-ui="admin/ProductsView/button-tile-view"
                 type="button"
                 onClick={() => changeView("tiles")}
                 className={cn(
@@ -82,7 +82,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                 aria-label="Tile view"
               >
                 <LayoutGridIcon className="size-3.5" />
-                <span>Tiles</span>
+                <span data-ui="admin/ProductsView/span-2">Tiles</span>
               </button>
             </div>
             <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" prefetch={true} className={cn(buttonVariants(), "rounded-full px-4")}>
@@ -98,18 +98,18 @@ export function ProductsView({ products }: { products: Product[] }) {
           <p data-ui="admin/ProductsView/p-2" className="mt-1 text-sm text-muted-foreground">Add your first product to start selling.</p>
         </div>
       ) : viewMode === "tiles" ? (
-        <div data-ui="admin/ProductsView/tiles" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        <div data-ui="admin/ProductsView/div-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {products.map((p) => (
             <div
               key={p.id}
-              data-ui="admin/ProductsView/tile-card"
+              data-ui="admin/ProductsView/div-flex-2"
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md"
             >
-              <div className="space-y-3">
-                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
+              <div data-ui="admin/ProductsView/div-2" className="space-y-3">
+                <div data-ui="admin/ProductsView/div-relative" className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
                   <ProductImage src={p.images[0]} alt={p.name} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
-                  <div className="absolute top-2 right-2 flex items-center gap-1">
-                    <span
+                  <div data-ui="admin/ProductsView/div-flex-3" className="absolute top-2 right-2 flex items-center gap-1">
+                    <span data-ui="admin/ProductsView/span-3"
                       className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-xs backdrop-blur-xs",
                         p.stock === 0 ? "bg-destructive text-destructive-foreground" : p.stock <= 5 ? "bg-amber-500 text-white" : "bg-background/90 text-foreground"
@@ -120,12 +120,12 @@ export function ProductsView({ products }: { products: Product[] }) {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-medium text-muted-foreground">{p.category?.name ?? "Uncategorized"}</span>
-                    <span className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
+                <div data-ui="admin/ProductsView/div-3" className="space-y-1">
+                  <div data-ui="admin/ProductsView/div-flex-4" className="flex items-center justify-between gap-2">
+                    <span data-ui="admin/ProductsView/span-4" className="truncate text-xs font-medium text-muted-foreground">{p.category?.name ?? "Uncategorized"}</span>
+                    <span data-ui="admin/ProductsView/span-5" className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
                   </div>
-                  <Link
+                  <Link data-ui="admin/ProductsView/Link"
                     href={`/admin/products/${p.id}`}
                     prefetch={true}
                     className="block text-sm font-medium leading-snug text-foreground transition-colors line-clamp-2 hover:text-primary"
@@ -135,15 +135,15 @@ export function ProductsView({ products }: { products: Product[] }) {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5" title="Store visibility">
+              <div data-ui="admin/ProductsView/div-flex-5" className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
+                <div data-ui="admin/ProductsView/div-flex-6" className="flex items-center gap-3">
+                  <div data-ui="admin/ProductsView/div-flex-7" className="flex items-center gap-1.5" title="Store visibility">
                     <ProductFlagSwitch productId={p.id} flag="isActive" value={p.isActive} label={`Show ${p.name} in store`} />
-                    <span className="text-[11px] font-medium text-muted-foreground">Active</span>
+                    <span data-ui="admin/ProductsView/span-6" className="text-[11px] font-medium text-muted-foreground">Active</span>
                   </div>
-                  <div className="flex items-center gap-1.5" title="Home page feature">
+                  <div data-ui="admin/ProductsView/div-flex-8" className="flex items-center gap-1.5" title="Home page feature">
                     <ProductFlagSwitch productId={p.id} flag="isFeatured" value={p.isFeatured} label={`Feature ${p.name} on home page`} />
-                    <span className="text-[11px] font-medium text-muted-foreground">Featured</span>
+                    <span data-ui="admin/ProductsView/span-7" className="text-[11px] font-medium text-muted-foreground">Featured</span>
                   </div>
                 </div>
                 <ProductRowActions productId={p.id} name={p.name} />
@@ -152,7 +152,7 @@ export function ProductsView({ products }: { products: Product[] }) {
           ))}
         </div>
       ) : (
-        <div data-ui="admin/ProductsView/div" className="overflow-hidden rounded-2xl border bg-card">
+        <div data-ui="admin/ProductsView/div-4" className="overflow-hidden rounded-2xl border bg-card">
           <Table data-ui="admin/ProductsView/Table">
             <TableHeader data-ui="admin/ProductsView/TableHeader">
               <TableRow data-ui="admin/ProductsView/TableRow">
@@ -163,7 +163,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                 <TableHead data-ui="admin/ProductsView/TableHead-active" className="text-center">Active</TableHead>
                 <TableHead data-ui="admin/ProductsView/TableHead-featured" className="hidden text-center sm:table-cell">Featured</TableHead>
                 <TableHead data-ui="admin/ProductsView/TableHead" className="pr-5 text-right">
-                  <span data-ui="admin/ProductsView/span" className="sr-only">Actions</span>
+                  <span data-ui="admin/ProductsView/span-8" className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -175,7 +175,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                       <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>
-                      <span data-ui="admin/ProductsView/span-2" className="max-w-56 truncate font-medium hover:text-primary">{p.name}</span>
+                      <span data-ui="admin/ProductsView/span-9" className="max-w-56 truncate font-medium hover:text-primary">{p.name}</span>
                     </Link>
                   </TableCell>
                   <TableCell data-ui="admin/ProductsView/TableCell-hidden" className="hidden text-sm text-muted-foreground md:table-cell">{p.category?.name ?? "—"}</TableCell>

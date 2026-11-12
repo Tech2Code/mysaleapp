@@ -59,12 +59,12 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
   return (
     <div data-ui="admin/OrdersTable" className="space-y-3">
       {/* View Switcher Bar */}
-      <div className="flex items-center justify-between gap-3 px-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div data-ui="admin/OrdersTable/div-flex" className="flex items-center justify-between gap-3 px-1">
+        <span data-ui="admin/OrdersTable/span" className="text-xs font-medium text-muted-foreground">
           Showing {orders.length} order{orders.length === 1 ? "" : "s"}
         </span>
-        <div className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
-          <button
+        <div data-ui="admin/OrdersTable/div-view-format" className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
+          <button data-ui="admin/OrdersTable/button-list-view"
             type="button"
             onClick={() => changeView("table")}
             className={cn(
@@ -75,9 +75,9 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
             aria-label="List view"
           >
             <ListIcon className="size-3.5" />
-            <span>List</span>
+            <span data-ui="admin/OrdersTable/span-2">List</span>
           </button>
-          <button
+          <button data-ui="admin/OrdersTable/button-tile-view"
             type="button"
             onClick={() => changeView("tiles")}
             className={cn(
@@ -88,74 +88,74 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
             aria-label="Tile view"
           >
             <LayoutGridIcon className="size-3.5" />
-            <span>Tiles</span>
+            <span data-ui="admin/OrdersTable/span-3">Tiles</span>
           </button>
         </div>
       </div>
 
       {viewMode === "tiles" ? (
-        <div data-ui="admin/OrdersTable/tiles" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div data-ui="admin/OrdersTable/div-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((o) => (
             <div
               key={o.id}
-              data-ui="admin/OrdersTable/tile-card"
+              data-ui="admin/OrdersTable/div-flex-2"
               className="group flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md"
             >
-              <div className="space-y-3">
+              <div data-ui="admin/OrdersTable/div" className="space-y-3">
                 {/* Header: Code, Placed date */}
-                <div className="flex items-start justify-between gap-2 border-b pb-3">
-                  <div>
-                    <Link
+                <div data-ui="admin/OrdersTable/div-flex-3" className="flex items-start justify-between gap-2 border-b pb-3">
+                  <div data-ui="admin/OrdersTable/div-2">
+                    <Link data-ui="admin/OrdersTable/Link"
                       href={`/admin/orders/${o.id}`}
                       prefetch={true}
                       className="font-mono text-base font-bold text-primary hover:underline"
                     >
                       {o.orderCode}
                     </Link>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
+                    <div data-ui="admin/OrdersTable/div-3" className="mt-0.5 text-xs text-muted-foreground">
                       Placed {formatDateTime(o.createdAt)}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs text-muted-foreground">Total</span>
-                    <div className="text-base font-bold text-foreground">{formatPrice(o.total)}</div>
+                  <div data-ui="admin/OrdersTable/div-4" className="text-right">
+                    <span data-ui="admin/OrdersTable/span-4" className="text-xs text-muted-foreground">Total</span>
+                    <div data-ui="admin/OrdersTable/div-5" className="text-base font-bold text-foreground">{formatPrice(o.total)}</div>
                   </div>
                 </div>
 
                 {/* Status & Payment badges + Last updated status date */}
-                <div className="space-y-2 rounded-xl bg-muted/30 p-2.5">
-                  <div className="flex flex-wrap items-center gap-1.5">
+                <div data-ui="admin/OrdersTable/div-6" className="space-y-2 rounded-xl bg-muted/30 p-2.5">
+                  <div data-ui="admin/OrdersTable/div-flex-4" className="flex flex-wrap items-center gap-1.5">
                     <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
                     <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <div data-ui="admin/OrdersTable/div-flex-5" className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <ClockIcon className="size-3 shrink-0" />
-                    <span>Status updated:</span>
-                    <span className="font-medium text-foreground">{formatDateTime(o.updatedAt)}</span>
+                    <span data-ui="admin/OrdersTable/span-5">Status updated:</span>
+                    <span data-ui="admin/OrdersTable/span-6" className="font-medium text-foreground">{formatDateTime(o.updatedAt)}</span>
                   </div>
                 </div>
 
                 {/* Customer info */}
-                <div className="text-xs space-y-0.5">
-                  <div className="font-semibold text-foreground text-sm">{o.customerName}</div>
-                  <div className="text-muted-foreground">{o.phone} · {o.city}</div>
+                <div data-ui="admin/OrdersTable/div-7" className="text-xs space-y-0.5">
+                  <div data-ui="admin/OrdersTable/div-8" className="font-semibold text-foreground text-sm">{o.customerName}</div>
+                  <div data-ui="admin/OrdersTable/div-9" className="text-muted-foreground">{o.phone} · {o.city}</div>
                 </div>
 
                 {/* Products in this order */}
-                <div className="rounded-xl border bg-muted/20 p-3 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
+                <div data-ui="admin/OrdersTable/div-10" className="rounded-xl border bg-muted/20 p-3 space-y-1.5">
+                  <div data-ui="admin/OrdersTable/div-flex-6" className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                    <span data-ui="admin/OrdersTable/span-flex" className="flex items-center gap-1.5">
                       <PackageIcon className="size-3.5 text-primary" />
-                      <span>Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
+                      <span data-ui="admin/OrdersTable/span-7">Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
                     </span>
                   </div>
-                  <ul className="space-y-1 divide-y divide-border/30">
+                  <ul data-ui="admin/OrdersTable/ul" className="space-y-1 divide-y divide-border/30">
                     {o.items.map((item, idx) => (
-                      <li key={idx} className="flex items-center justify-between gap-2 pt-1 first:pt-0">
-                        <span className="truncate text-xs font-medium text-foreground" title={item.name}>
+                      <li data-ui="admin/OrdersTable/li-flex" key={idx} className="flex items-center justify-between gap-2 pt-1 first:pt-0">
+                        <span data-ui="admin/OrdersTable/span-8" className="truncate text-xs font-medium text-foreground" title={item.name}>
                           {item.name}
                         </span>
-                        <span className="shrink-0 font-mono text-xs font-semibold text-muted-foreground">
+                        <span data-ui="admin/OrdersTable/span-9" className="shrink-0 font-mono text-xs font-semibold text-muted-foreground">
                           ×{item.quantity}
                         </span>
                       </li>
@@ -165,8 +165,8 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               </div>
 
               {/* Card Footer: View order link */}
-              <div className="mt-4 pt-3 border-t flex items-center justify-end">
-                <Link
+              <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
+                <Link data-ui="admin/OrdersTable/Link-manage-order"
                   href={`/admin/orders/${o.id}`}
                   prefetch={true}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -178,14 +178,14 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
           ))}
         </div>
       ) : (
-        <div data-ui="admin/OrdersTable/table-container" className="overflow-hidden rounded-2xl border bg-card">
+        <div data-ui="admin/OrdersTable/div-11" className="overflow-hidden rounded-2xl border bg-card">
           <Table data-ui="admin/OrdersTable/Table">
             <TableHeader data-ui="admin/OrdersTable/TableHeader">
               <TableRow data-ui="admin/OrdersTable/TableRow">
                 <TableHead data-ui="admin/OrdersTable/TableHead-order" className="pl-5">Order</TableHead>
                 <TableHead data-ui="admin/OrdersTable/TableHead-customer">Customer</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-items" className="hidden md:table-cell">Products</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-status">Status & Updated</TableHead>
+                <TableHead data-ui="admin/OrdersTable/TableHead-products" className="hidden md:table-cell">Products</TableHead>
+                <TableHead data-ui="admin/OrdersTable/TableHead-status-updated">Status & Updated</TableHead>
                 <TableHead data-ui="admin/OrdersTable/TableHead-payment" className="hidden lg:table-cell">Payment</TableHead>
                 <TableHead data-ui="admin/OrdersTable/TableHead-total" className="text-right">Total</TableHead>
                 <TableHead data-ui="admin/OrdersTable/TableHead-placed" className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
@@ -195,29 +195,29 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               {orders.map((o) => (
                 <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className="group">
                   <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
-                    <Link data-ui="admin/OrdersTable/Link" href={`/admin/orders/${o.id}`} prefetch={true} className="font-mono font-semibold text-primary group-hover:underline">
+                    <Link data-ui="admin/OrdersTable/Link-2" href={`/admin/orders/${o.id}`} prefetch={true} className="font-mono font-semibold text-primary group-hover:underline">
                       {o.orderCode}
                     </Link>
                   </TableCell>
                   <TableCell data-ui="admin/OrdersTable/TableCell-2">
-                    <div data-ui="admin/OrdersTable/div" className="font-medium">{o.customerName}</div>
-                    <div data-ui="admin/OrdersTable/div-2" className="text-xs text-muted-foreground">
+                    <div data-ui="admin/OrdersTable/div-12" className="font-medium">{o.customerName}</div>
+                    <div data-ui="admin/OrdersTable/div-13" className="text-xs text-muted-foreground">
                       {o.phone} · {o.city}
                     </div>
                   </TableCell>
                   <TableCell data-ui="admin/OrdersTable/TableCell-hidden" className="hidden max-w-72 text-sm md:table-cell">
-                    <div className="flex flex-col gap-0.5">
+                    <div data-ui="admin/OrdersTable/div-flex-8" className="flex flex-col gap-0.5">
                       {o.items.map((i, idx) => (
-                        <div key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
-                          <span className="text-foreground">{i.name}</span> <span className="font-mono font-semibold">×{i.quantity}</span>
+                        <div data-ui="admin/OrdersTable/div-14" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
+                          <span data-ui="admin/OrdersTable/span-10" className="text-foreground">{i.name}</span> <span data-ui="admin/OrdersTable/span-11" className="font-mono font-semibold">×{i.quantity}</span>
                         </div>
                       ))}
                     </div>
                   </TableCell>
                   <TableCell data-ui="admin/OrdersTable/TableCell-3">
-                    <div data-ui="admin/OrdersTable/div-flex" className="flex flex-col items-start gap-1">
+                    <div data-ui="admin/OrdersTable/div-flex-9" className="flex flex-col items-start gap-1">
                       <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
-                      <span className="text-[11px] text-muted-foreground">Updated {formatDateTime(o.updatedAt)}</span>
+                      <span data-ui="admin/OrdersTable/span-12" className="text-[11px] text-muted-foreground">Updated {formatDateTime(o.updatedAt)}</span>
                     </div>
                   </TableCell>
                   <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">

@@ -1,7 +1,6 @@
 "use client"
 
 import { SearchXIcon } from "lucide-react"
-import { AnimatePresence } from "motion/react"
 import * as m from "motion/react-m"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
@@ -138,9 +137,6 @@ export function ProductBrowser({
   // bottom (footer). Put the start of the results back right under the sticky bar instead.
   const barRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  // Run only when the filters REALLY changed. A "first run" flag is not enough: React Strict Mode and Next's
-  // hidden-page cache (Cache Components keeps old pages mounted and re-runs their effects when they are shown
-  // again) run this effect again with nothing changed, which scrolled the page to a random spot on arrival.
   const lastFilters = useRef(`${deferredQuery}|${category}|${sort}`)
   useLayoutEffect(() => {
     const filters = `${deferredQuery}|${category}|${sort}`
@@ -150,45 +146,11 @@ export function ProductBrowser({
     const list = listRef.current
     if (!bar || !list) return
 
-    // Where the list may start: under the sticky bar (phones) or under the sticky store header (bar is static).
-    const align = () => {
-      const sticky = getComputedStyle(bar).position === "sticky"
-      // Where the bar sits when stuck (not where it is now: at the page bottom it has scrolled away with its parent).
-      const top = parseFloat(getComputedStyle(bar).top) || 0
-      const limit = sticky ? top + bar.offsetHeight : top
-      const gap = list.getBoundingClientRect().top - limit - 12
-      if (gap < 0) window.scrollBy({ top: gap, behavior: "instant" })
-    }
-    align()
-
-    // The page keeps changing height after this commit: leaving cards stay in the flow until their exit
-    // animation ends, then the page shrinks and the browser clamps the scroll position. Re-align on every
-    // height change for a short while, and stop as soon as the reader scrolls themselves.
-    let last = performance.now()
-    const bump = () => {
-      last = performance.now()
-      align()
-    }
-    const ro = new ResizeObserver(bump)
-    ro.observe(document.body) // not <html>: it is h-full, so its size never follows the content height
-    ro.observe(list)
-    // Stop once the height has been stable for 300 ms (hard cap 2.5 s) or as soon as the reader scrolls.
-    const started = last
-    const poll = setInterval(() => {
-      const now = performance.now()
-      if (now - last > 300 || now - started > 2500) stop()
-    }, 100)
-    const stop = () => {
-      ro.disconnect()
-      clearInterval(poll)
-      window.removeEventListener("wheel", stop)
-      window.removeEventListener("touchmove", stop)
-      window.removeEventListener("keydown", stop)
-    }
-    window.addEventListener("wheel", stop, { passive: true })
-    window.addEventListener("touchmove", stop, { passive: true })
-    window.addEventListener("keydown", stop)
-    return stop
+    const sticky = getComputedStyle(bar).position === "sticky"
+    const top = parseFloat(getComputedStyle(bar).top) || 0
+    const limit = sticky ? top + bar.offsetHeight : top
+    const gap = list.getBoundingClientRect().top - limit - 12
+    if (gap < 0) window.scrollBy({ top: gap, behavior: "instant" })
   }, [deferredQuery, category, sort])
 
   return (
@@ -258,22 +220,13 @@ export function ProductBrowser({
           <p data-ui="store/ProductBrowser/p-3" className="text-sm text-muted-foreground">Try a different word or category.</p>
         </div>
       ) : (
-        <m.div data-ui="store/ProductBrowser/m.div-grid" layout className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
-          <AnimatePresence mode="popLayout">
-            {visible.map((p, i) => (
-              <m.div data-ui="store/ProductBrowser/m.div"
-                key={p.id}
-                layout
-                initial={{ scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ duration: 0.25 }}
-              >
-                <ProductCard product={p} priority={i < 4} />
-              </m.div>
-            ))}
-          </AnimatePresence>
-        </m.div>
+        <div data-ui="store/ProductBrowser/div-grid" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+          {visible.map((p, i) => (
+            <div data-ui="store/ProductBrowser/div-3" key={p.id}>
+              <ProductCard product={p} priority={i < 4} />
+            </div>
+          ))}
+        </div>
       )}
       </div>
     </div>

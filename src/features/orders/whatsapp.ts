@@ -46,13 +46,13 @@ export function buildOrderMessage(
   ]
 
   return [
-    `Hi ${shop.shopName}! 👋 I've placed an order and will pay by UPI.`,
+    `Hi ${shop.shopName}! 👋 I've placed an order and submitted my UPI payment.`,
     ``,
     `🧾 *Order ${input.orderCode}*`,
     ...lines,
     ``,
     ...charges,
-    `*Total to pay: ${formatPrice(p.total)}*`,
+    `*Total paid: ${formatPrice(p.total)}*`,
     ``,
     `📦 *Deliver to*`,
     `${c.name} (${c.phone})`,

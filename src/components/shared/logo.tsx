@@ -7,14 +7,16 @@ import { cn } from "@/lib/utils"
 
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <span data-ui="shared/LogoMark"
+    <span
+      data-ui="shared/LogoMark"
       aria-hidden
       className={cn(
-        "grid size-9 place-items-center rounded-xl bg-linear-to-br from-primary to-[oklch(0.6_0.16_15)] font-heading text-lg font-semibold text-primary-foreground shadow-md shadow-primary/25",
+        "relative grid size-9.5 place-items-center overflow-hidden rounded-xl bg-linear-to-br from-[#d96b38] via-primary to-[#8e2936] font-heading text-lg font-semibold text-[#fffaf4] shadow-md shadow-primary/30 ring-1 ring-inset ring-white/25",
         className
       )}
     >
-      <BrandGlyph size={22} ribbon="var(--primary)" />
+      <span data-ui="shared/LogoMark/span-absolute" className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/15 to-transparent" />
+      <BrandGlyph size={24} ribbon="#fbd07c" accent="#9e333b" className="relative drop-shadow-xs" />
     </span>
   )
 }

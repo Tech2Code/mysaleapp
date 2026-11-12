@@ -24,7 +24,7 @@ describe("rules", () => {
     for (const s of ORDER_STATUSES) expect(statusChoices(s).filter((x) => x !== s)).not.toContain("cancelled")
   })
   it("lists current status first", () => {
-    expect(statusChoices("confirmed")).toEqual(["confirmed", "packed", "shipped"])
+    expect(statusChoices("confirmed")).toEqual(["confirmed", "packed", "shipped", "pending"])
     expect(statusChoices("delivered")).toEqual(["delivered"])
   })
   it("terminal states can't move", () => {

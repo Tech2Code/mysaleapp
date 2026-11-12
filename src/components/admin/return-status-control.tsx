@@ -1,15 +1,18 @@
 "use client"
 
+import { RotateCcwIcon } from "lucide-react"
 import { useState } from "react"
 import { CreateReturnRequest } from "@/components/admin/create-return-request"
+import { RevertOrderStatusDialog } from "@/components/admin/order-controls"
 import { AdminReturnOrder } from "@/components/admin/return-order"
 import { RefundReturnButton } from "@/components/admin/refund-return-button"
 import { DecideDialog, PickedUpButton, UndoStepButton } from "@/components/admin/return-requests"
-import { SelectField } from "@/components/form"
+import { SelectField, type SelectOption } from "@/components/form"
+import { Button } from "@/components/ui/button"
 import { isOpenRequest, returnableQuantities, type ReturnStage } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
 
-type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create"
+type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create" | "revert_shipped"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
 function returnValue(r: OrderReturn, items: OrderItem[]): number {
@@ -48,20 +51,26 @@ export function ReturnStatusControl({
   stage: ReturnStage | null
 }) {
   const [choice, setChoice] = useState<Choice>("current")
+  const [revertOpen, setRevertOpen] = useState(false)
   const open = requests.find(isOpenRequest) ?? null
   const unrefunded = returns.filter((r) => !r.refunded)
 
   const currentLabel = stage ? `${stage.label}` : "Delivered"
-  const options: { value: Choice; label: string }[] = [{ value: "current", label: currentLabel }]
-  if (open?.status === "requested") options.push({ value: "approve", label: "Approve return" }, { value: "reject", label: "Reject return" })
-  if (open?.status === "approved" && !open.pickedUpAt) options.push({ value: "picked_up", label: "Pickup successful" })
+  const options: (SelectOption & { value: Choice })[] = [{ value: "current", label: currentLabel, tone: "current", badge: "Current" }]
+  if (open?.status === "requested") {
+    options.push(
+      { value: "approve", label: "Approve return", tone: "next", badge: "Next step" },
+      { value: "reject", label: "Reject return" }
+    )
+  }
+  if (open?.status === "approved" && !open.pickedUpAt) options.push({ value: "picked_up", label: "Pickup successful", tone: "next", badge: "Next step" })
   // Only while something can still come back: not once everything was returned or the payment is fully refunded.
   // A request still waiting for a decision is approved or rejected first (the database refuses to close it otherwise).
   // Every return starts from an approved customer request (no "received" without one; the database refuses it too).
   // Pickup must be completed before items can be marked received at warehouse or refunded.
   const canReceive = open?.status === "approved" && Boolean(open.pickedUpAt) && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
-  if (canReceive) options.push({ value: "received", label: "Return received (record items)" })
-  if (unrefunded.length > 0 && paymentStatus === "paid") options.push({ value: "refund", label: "Refund the returned items" })
+  if (canReceive) options.push({ value: "received", label: "Return received (record items)", tone: "next", badge: "Next step" })
+  if (unrefunded.length > 0 && paymentStatus === "paid") options.push({ value: "refund", label: "Refund the returned items", tone: "next", badge: "Next step" })
   // The customer asked outside the app: open the request for them (return window ignored), then approve it as usual.
   const canCreateRequest = !open && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
   if (canCreateRequest) options.push({ value: "create", label: "Create return request (customer asked outside the app)" })
@@ -75,7 +84,10 @@ export function ReturnStatusControl({
       : undoTarget.pickedUpAt
         ? { label: "Undo “Pickup successful”", title: "Undo the pickup?", description: "The return goes back to “pickup scheduled”." }
         : { label: "Undo approval", title: "Undo the approval?", description: "The request goes back to “waiting for a decision”. The pickup date and your note are cleared." }
-  if (undoTarget && undoText) options.push({ value: "undo", label: undoText.label })
+  if (undoTarget && undoText) options.push({ value: "undo", label: undoText.label, tone: "revert" })
+  // Allow reverting Delivered -> Shipped as long as no return/refund process has started on this order
+  const canRevertDelivered = requests.length === 0 && returns.length === 0 && paymentStatus !== "refunded" && refundedAmount === 0
+  if (canRevertDelivered) options.push({ value: "revert_shipped", label: "Revert to Shipped (undo Delivered)", tone: "revert" })
 
   // the chosen step can disappear after a refresh (e.g. it was just done): fall back to the current state
   const picked: Choice = options.some((o) => o.value === choice) ? choice : "current"
@@ -89,6 +101,30 @@ export function ReturnStatusControl({
       {picked === "picked_up" && open && <PickedUpButton requestId={open.id} />}
       {picked === "create" && <CreateReturnRequest orderId={orderId} orderCode={orderCode} items={items} returns={returns} />}
       {picked === "undo" && undoTarget && undoText && <UndoStepButton requestId={undoTarget.id} title={undoText.title} description={undoText.description} />}
+      {picked === "revert_shipped" && canRevertDelivered && (
+        <div data-ui="admin/ReturnStatusControl/div" className="space-y-2.5">
+          <p data-ui="admin/ReturnStatusControl/p-flex" className="flex items-center gap-2 rounded-xl border border-amber-300/80 bg-amber-50/70 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
+            <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <span data-ui="admin/ReturnStatusControl/span">Moves this order one step back (Delivered → Shipped). Requires a reason in the next popup.</span>
+          </p>
+          <Button data-ui="admin/ReturnStatusControl/Button-revert-to-shipped"
+            type="button"
+            variant="outline"
+            onClick={() => setRevertOpen(true)}
+            className="w-full gap-1.5 rounded-full border-amber-400 bg-amber-500/15 font-semibold text-amber-950 hover:bg-amber-500/25 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-900/50"
+          >
+            <RotateCcwIcon className="size-4" /> Revert to Shipped
+          </Button>
+          <RevertOrderStatusDialog
+            open={revertOpen}
+            onOpenChange={setRevertOpen}
+            orderId={orderId}
+            orderCode={orderCode}
+            from="delivered"
+            to="shipped"
+          />
+        </div>
+      )}
       {picked === "received" && open && (
         <AdminReturnOrder
           orderId={orderId}

@@ -16,10 +16,10 @@ export function SectionHeading({
   id?: string
 }) {
   return (
-    <FadeIn className="mb-8 flex items-end justify-between gap-4">
+    <FadeIn className="mb-4 flex items-end justify-between gap-4 sm:mb-8">
       <div data-ui="store/SectionHeading/div">
-        {eyebrow && <p data-ui="store/SectionHeading/p" className="text-sm font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>}
-        <h2 data-ui="store/SectionHeading/h2" id={id} className="mt-2 text-3xl font-semibold sm:text-4xl">
+        {eyebrow && <p data-ui="store/SectionHeading/p" className="text-xs font-semibold tracking-widest text-primary uppercase sm:text-sm">{eyebrow}</p>}
+        <h2 data-ui="store/SectionHeading/h2" id={id} className="mt-1 text-2xl font-semibold sm:mt-2 sm:text-4xl">
           {title}
         </h2>
       </div>

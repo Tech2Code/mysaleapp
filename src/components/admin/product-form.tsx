@@ -319,7 +319,7 @@ export function ProductForm({
               error={errors.weightGrams?.message}
               {...form.register("weightGrams")}
             />
-            <p data-ui="admin/ProductForm/p-shipping-preview" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+            <p data-ui="admin/ProductForm/p-8" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
               {shippingClassVal === "oversized"
                 ? storeSettings.oversizedFee > 0
                   ? `Large / bulky handling (${formatPrice(storeSettings.oversizedFee)}) is added once per order.`

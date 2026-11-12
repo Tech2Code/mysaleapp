@@ -60,7 +60,7 @@ export function CheckoutPageView({
     <>
       <PageHeader
         title="Checkout"
-        description="Enter your delivery details, then pay by UPI to confirm your order."
+        description="Confirm your delivery details and pay by UPI to place your order."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
       />
       <Body>
@@ -236,7 +236,7 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
             </span>
             <h2 data-ui="store/ContactView/h2" className="mt-5 font-sans text-xl font-semibold">{c.title}</h2>
             <p data-ui="store/ContactView/p" className="mt-1 text-muted-foreground">{c.text}</p>
-            <span data-ui="store/ContactView/span" className="mt-4 inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
+            <span data-ui="store/ContactView/span-inline-flex" className="mt-4 inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
               {c.cta} <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
             </span>
           </a>

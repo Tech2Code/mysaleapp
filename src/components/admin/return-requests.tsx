@@ -11,7 +11,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { decideReturnRequest, markReturnPickedUp, undoReturnStep } from "@/features/orders/admin-actions"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { requestStatusMeta, type ReturnStage } from "@/features/orders/returns"
-import type { OrderReturn, ReturnRequest } from "@/features/orders/types"
+import type { OrderItem, OrderReturn, ReturnRequest } from "@/features/orders/types"
 import { buildReturnDecisionMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -115,7 +115,7 @@ export function DecideDialog({
         <DialogBody>
           {approve && (
             <DateField
-              label="Pickup date"
+              label="Pickup date *"
               fieldSize="md"
               min={bounds.min}
               max={bounds.max}
@@ -138,7 +138,14 @@ export function DecideDialog({
           <Button data-ui="admin/DecideDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/DecideDialog/Button" type="button" variant={approve ? "default" : "destructive"} onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
+          <Button
+            data-ui="admin/DecideDialog/Button"
+            type="button"
+            variant={approve ? "default" : "destructive"}
+            onClick={submit}
+            disabled={pending || (approve ? !pickupDate : note.trim().length < 3)}
+            className="gap-1.5 rounded-full"
+          >
             {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />} {approve ? "Approve return" : "Reject return"}
           </Button>
         </DialogFooter>
@@ -247,10 +254,12 @@ export function AdminReturnRequests({
   requests,
   returns,
   returnStage,
+  admin,
 }: {
   requests: ReturnRequest[]
   returns: OrderReturn[]
   returnStage: ReturnStage | null
+  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number }
 }) {
   if (requests.length === 0 && returns.length === 0) return null
   return (
@@ -262,7 +271,7 @@ export function AdminReturnRequests({
         <ReturnStageBadge stage={returnStage} audience="admin" alwaysShow />
       </div>
       {/* Newest stage first: goods received back (the later stage) above the requests. */}
-      <ReturnsList bare returns={[...returns].reverse()} audience="admin" />
+      <ReturnsList bare returns={[...returns].reverse()} audience="admin" admin={admin} />
       {requests.length > 0 && <h4 data-ui="admin/AdminReturnRequests/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>}
       <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
         {[...requests].reverse().map((r) => {

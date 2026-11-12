@@ -12,9 +12,10 @@ import {
   SmartphoneIcon,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { TextField } from "@/components/form"
@@ -52,6 +53,8 @@ type PaymentPanelProps = {
   onSubmitted?: () => void
   /** When the order was placed: lets us show the exact time an unpaid order is cancelled automatically. */
   createdAt?: string
+  /** Last update time (e.g. when a rejected payment resets the auto-cancel clock). */
+  updatedAt?: string
 }
 
 function CopyRow({ label, value }: { label: string; value: string }) {
@@ -83,11 +86,13 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 function ReferenceForm({
   orderCode,
   phoneLast4,
+  currentReference,
   submitLabel,
   onSubmitted,
 }: {
   orderCode: string
   phoneLast4: string
+  currentReference?: string | null
   submitLabel: string
   onSubmitted: () => void
 }) {
@@ -96,8 +101,14 @@ function ReferenceForm({
   const later = useToastAfter(pending)
   const [serverError, setServerError] = useState<string | null>(null)
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { reference: "" } })
+  const refValue = useWatch({ control: form.control, name: "reference" })
+  const refClean = (refValue ?? "").trim().toUpperCase()
+  const rawPrev = (currentReference ?? "").trim().toUpperCase()
+  const prevClean = rawPrev.includes("*") ? "" : rawPrev
+  const isUnchangedOrEmpty = !refClean || (Boolean(prevClean) && refClean === prevClean)
 
   const onSubmit = form.handleSubmit((values) => {
+    if (isUnchangedOrEmpty) return
     setServerError(null)
     startTransition(async () => {
       const res = await submitPayment({ code: orderCode, phoneLast4, reference: values.reference })
@@ -114,19 +125,28 @@ function ReferenceForm({
     <form data-ui="store/ReferenceForm" onSubmit={onSubmit} noValidate className="space-y-1">
       <TextField
         label="UTR / UPI reference number" kind="paymentRef"
+        required
         placeholder="e.g. 412345678901"
         autoCapitalize="characters"
         autoComplete="off"
         hint="Find it in your UPI app under the payment details (usually a 12-digit number)."
-        error={form.formState.errors.reference?.message}
+        error={form.formState.errors.reference?.message ?? (Boolean(prevClean) && refClean === prevClean ? "This is already your submitted reference number" : undefined)}
         {...form.register("reference")}
       />
       {serverError && (
         <p data-ui="store/ReferenceForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {serverError}
+          {serverError.includes("Sign in") && (
+            <>
+              {" "}
+              <Link data-ui="store/ReferenceForm/Link-sign-in" href="/login?next=/account/orders" className="font-semibold underline underline-offset-4">
+                Sign in
+              </Link>
+            </>
+          )}
         </p>
       )}
-      <Button data-ui="store/ReferenceForm/Button" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
+      <Button data-ui="store/ReferenceForm/Button" type="submit" size="lg" disabled={pending || isUnchangedOrEmpty} className="w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} {submitLabel}
       </Button>
     </form>
@@ -140,7 +160,7 @@ function ReferenceForm({
  *  paid               → receipt
  * Cash on delivery isn't offered; the order is confirmed after we verify the payment.
  */
-export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, payment, onSubmitted, createdAt }: PaymentPanelProps) {
+export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, payment, onSubmitted, createdAt, updatedAt }: PaymentPanelProps) {
   const router = useRouter()
   const shop = useStoreSettings()
   const { upiId, upiPayeeName } = shop
@@ -214,7 +234,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const upiUrl = upiId ? buildUpiUrl({ upiId, payeeName: upiPayeeName, amount: total, orderCode }) : null
   const rejected = payment.paymentStatus === "failed"
   const expiryHours = shop.unpaidOrderExpiryHours
-  const at = createdAt ? paymentDeadline(createdAt, expiryHours) : null
+  const at = createdAt ? paymentDeadline(createdAt, expiryHours, updatedAt) : null
   const deadline = expiryHours > 0 ? { exact: at ? formatDeadline(at) : null, within: describeHours(expiryHours) } : null
 
   return (
@@ -297,6 +317,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         <ReferenceForm
           orderCode={orderCode}
           phoneLast4={phoneLast4}
+          currentReference={changing ? payment.paymentReference : null}
           submitLabel={changing || rejected ? "Submit again" : "I've paid"}
           onSubmitted={() => {
             setChanging(false)

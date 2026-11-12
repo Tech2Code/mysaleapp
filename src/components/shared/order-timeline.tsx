@@ -39,9 +39,15 @@ function buildSteps(status: OrderStatus, history: StatusHistoryEntry[]): Step[] 
   if (status === "cancelled") {
     const cancelledAt = lastReached(history, "cancelled")
     const until = cancelledAt ? time(cancelledAt) : undefined
+    const lastActiveBeforeCancel = history
+      .filter((h) => h.status !== "cancelled" && (until === undefined || time(h.changedAt) <= until))
+      .sort((a, b) => time(a.changedAt) - time(b.changedAt))
+      .at(-1)?.status
+    const maxReachedIndex = lastActiveBeforeCancel ? FLOW.indexOf(lastActiveBeforeCancel) : FLOW.length - 1
 
-    // Only the steps the order actually went through before it was cancelled.
-    const reached = FLOW.flatMap((s) => {
+    // Only the steps the order was actually at before it was cancelled (excluding any step that was reverted).
+    const reached = FLOW.flatMap((s, idx) => {
+      if (maxReachedIndex >= 0 && idx > maxReachedIndex) return []
       const at = lastReached(history, s, until)
       return at ? [{ key: s, label: STATUS_META[s].label, state: "done" as const, detail: formatDateTime(at) }] : []
     })

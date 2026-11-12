@@ -31,7 +31,7 @@ export function HomeView({
     <>
       <Hero showcase={featured.slice(0, 3)} />
 
-      <div data-ui="store/HomeView/div" className="space-y-14 pt-10 sm:space-y-28 sm:pt-16">
+      <div data-ui="store/HomeView/div" className="space-y-8 pt-3 sm:space-y-28 sm:pt-16">
         {categories.length > 0 && (
           <section data-ui="store/HomeView/section" className="container-page" aria-labelledby="cat-title">
             <SectionHeading id="cat-title" eyebrow="Browse" title="Shop by category" href="/products" />

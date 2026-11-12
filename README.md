@@ -1,12 +1,12 @@
 # Kalakriti: handmade gifts store
 
-A fast, installable (PWA) online store where customers order on **WhatsApp**. It includes an admin panel for products and orders, Google login for customers, a wishlist, order tracking and built-in SEO. Everything runs on free tiers (₹0/month).
+A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns, refunds, and store settings, Google login for customers, saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
 
 | | |
 |---|---|
 | Framework | Next.js 16 (App Router, Cache Components) + TypeScript |
 | UI | Tailwind CSS v4, shadcn/ui (Base UI), Motion animations |
-| Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage) |
+| Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage, `pg_cron`) |
 | Hosting | Vercel (free Hobby plan) |
 
 ---
@@ -23,14 +23,13 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
 ## 2. Connect Supabase (free)
 
 1. Create a project at https://supabase.com. Pick the **Mumbai** region for Indian customers.
-2. Open **SQL Editor** and run, in order:
-   1. `supabase/migrations/0001_init.sql` (tables, security rules, order functions, image bucket)
-   2. `supabase/migrations/0002_shipping.sql` (courier / tracking details for shipped orders)
-   3. `supabase/seed.sql` (optional sample products)
-3. Copy `.env.example` to `.env.local` and fill in the values from **Project Settings → API**:
+2. Copy `.env.example` to `.env.local` and fill in the values from **Project Settings → API**:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
+   - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
+   - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0046_smart_shipping_and_security_hardening.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -50,7 +49,7 @@ npm run db:push    # applies it
 ```
 
 If Supabase says migration `0001` is already applied, or a migration is missing from the history, you have run it by hand before.
-Run `npx supabase migration repair --status applied 0001` once (and the same for any other number you ran manually), then `npm run db:push` again.
+Run `npx supabase migration repair --remote --status applied 0001` once (and the same for any other number you ran manually), then `npm run db:push` again.
 
 ### Create the admin account
 
@@ -85,7 +84,7 @@ Change-email and reset-password links are sent by Supabase Auth. Before going li
 
 1. Push this folder to a GitHub repository.
 2. https://vercel.com → **Add New Project** → import the repository.
-3. Add the environment variables from `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to your live URL and `CRON_SECRET` to a long random string.
+3. Add the environment variables from `.env.example`. Set `NEXT_PUBLIC_SITE_URL` to your live URL, `CRON_SECRET` to a long random string, and `RATE_LIMIT_SALT` to a random secret.
 4. Deploy. `vercel.json` adds a daily cron job that keeps the free Supabase project from pausing after 7 days of inactivity.
 
 Later, buy a `.in` or `.com` domain (about ₹99–800/year). Add it in Vercel → Domains and update `NEXT_PUBLIC_SITE_URL`.
@@ -108,22 +107,32 @@ Searches for your brand name usually reach the top within a few weeks. Generic k
 - **Android (Chrome):** open the site → menu → *Install app* (or the install prompt).
 - **iPhone (Safari):** Share → *Add to Home Screen*.
 
-It opens full-screen, has an app icon and shortcuts, and shows an offline page when there's no internet. (A Play Store listing via TWA is optional later; it has a one-time $25 fee.)
+It opens full-screen, has an app icon and shortcuts, and shows an offline page when there's no internet. (A Play Store listing via TWA is optional later; it has a one-time \$25 fee.)
 
 ---
 
-## How ordering and payment work
+## How ordering, payment, delivery, cancellation, and returns work
 
-Payment comes **first**: cash on delivery is not supported. It is free UPI with manual verification (no payment-gateway fees).
+Payment comes **first**: cash on delivery is not supported. It uses direct UPI with manual admin verification (₹0 payment-gateway fees).
 
-1. **Cart → checkout.** Items live on the customer's device. At checkout they enter (or pick a saved) delivery address. The `create_order` database function **re-reads prices from the database** and adds delivery and per-product extra charges, so a tampered cart can't change the total. The order is saved as *Pending · payment pending* with a code like `KK-7F3K9Q`.
-2. **Pay by UPI.** The customer lands on a payment screen: a "Pay with UPI app" button on mobile, a QR code on desktop, and the UPI ID to copy. The amount and order code are pre-filled. After paying they enter the **UTR / UPI reference number**. The same screen is available later from **Track order** and **My orders**.
-3. **Verify.** The order shows up in Admin → Dashboard ("Payments to verify") and Admin → Orders (filter *To verify*). The admin finds the payment in their UPI/bank app and clicks **Verify payment & confirm order**: the payment becomes *Paid* and the order **Confirmed** in one step. Wrong or missing payment? **Reject** it with a reason; the customer sees the reason and can submit again. One UTR can only be used for one order.
-4. **Fulfil.** The admin moves the order through **Confirmed → Packed → Shipped → Delivered**. An unconfirmed order can't be moved forward until its payment is marked paid. Choosing **Shipped** lets the admin add courier, tracking number, link and expected date. Every step has a "send update on WhatsApp" button.
-5. **Customer view.** `/track` (order code + last 4 phone digits) or **My orders** shows progress, the price breakdown, the payment receipt (reference, amount, date) and shipping details.
-6. **Changing the delivery address.** Until the order is confirmed, the customer can edit name, phone and address on the order. After that it is locked, and the admin sees a note if the customer changed it.
+1. **Cart → Checkout & UPI Payment.** Items live on the customer's device. At checkout they enter (or pick a saved) delivery address, pay by UPI (via "Pay with UPI app" on mobile, QR code on desktop, or copying the UPI ID), and enter their **12-digit UTR / UPI reference number**. The `create_order` database function **re-reads prices, weights, and shipping classes from the database**, computes smart order-level handling fees (fragile / oversized tier once per order + heavy-parcel courier slabs) and delivery charges, snapshots seller/GST tax details for immutable invoices, reserves stock atomically, and records the submitted UTR (`payment_status = 'submitted'`).
+2. **Verify or Reject Payment.** The order appears in Admin → Dashboard ("Payments to verify") and Admin → Orders (filter *To verify*).
+   - **Verify:** The admin checks their UPI/bank app and clicks **Payment received (confirm order)** — payment becomes *Paid* and the order moves to **Confirmed** in one step.
+   - **Reject:** If the UTR is wrong or payment didn't arrive, the admin rejects it with a reason (`payment_status = 'failed'`). The customer sees the reason on `/track` or **My orders**, can submit a corrected UTR, and gets a fresh `unpaid_order_expiry_hours` window before auto-cancellation.
+   - **Unique UTR:** One UTR can only be used for one order.
+3. **Fulfilment & 1-Step Undo.** The admin moves the order through **Confirmed → Packed → Shipped → Delivered**. Choosing **Shipped** records courier, tracking number, tracking link, and expected delivery date. Every step offers a "Tell customer on WhatsApp" shortcut. If a status was advanced by mistake, the admin can **Undo 1 step** (with an audit reason saved to private admin notes).
+4. **Cancellations & Auto-Expiry.**
+   - **Customer cancel:** Customers can cancel while the order is `pending` or `confirmed` (guests verify their full 10-digit mobile number).
+   - **Admin cancel:** Admins can cancel while `pending`, `confirmed`, or `packed`.
+   - **Auto-cancel (`pg_cron`):** Unpaid orders (`pending` / `failed`) older than `unpaid_order_expiry_hours` are automatically cancelled every 15 minutes by `expire_unpaid_orders()`.
+   - **Automatic stock restore:** Cancelling an order automatically restores reserved stock via the `orders_restock_on_cancel` trigger. If the customer had already paid (or submitted a UTR before cancellation), the order appears under **Refund due** so the admin can verify/refund it.
+5. **Returns & Refunds (Myntra-style 4-step flow).**
+   - Within `return_window_days` of delivery, customers can request a return for specific items and quantities.
+   - **Step 1 (Requested) → Step 2 (Approved + Pickup date) → Step 2b (Pickup successful) → Step 3 (Goods received & restocked) → Step 4 (Refunded).**
+   - Returns refund **item value only** (delivery and handling charges are non-refundable and clearly itemised). Admins can also initiate a return on a customer's behalf or undo a return step if clicked by mistake.
+6. **Customer & Guest Tracking.** Signed-in customers manage orders under **My orders** (`/account/orders`) and download printable GST/non-GST invoices. Guests track orders at `/track` using their order code + last 4 phone digits (sensitive details like full address, phone, and UTR prefix are masked for privacy).
 
-Set your UPI ID and delivery charges in **Admin → Settings**. The same page controls your shop name, tagline, description, SEO keywords, WhatsApp number, email, phone, city, Instagram/Facebook links, an announcement banner and the order-code prefix; changes go live on the website as soon as you save. Revenue on the dashboard counts verified payments only.
+Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
 
 ### Saved addresses
 
@@ -135,26 +144,26 @@ Signed-in customers keep an address book under **Profile & addresses**: up to 10
 src/
   app/
     (store)/          Customer pages: home, products, category, cart, checkout, track, account, wishlist…
-    admin/            Admin login + (panel)/ dashboard, orders, products, categories
+    admin/            Admin login + (panel)/ dashboard, orders, products, categories, settings, account
     auth/callback/    Google login return URL
     api/cron/         Keep-alive job
     sitemap.ts robots.ts manifest.ts opengraph-image.tsx icon.tsx …   SEO + PWA
   features/           Business logic per feature (no UI)
     products/         queries (cached), admin-queries, actions, schema, types
-    orders/           actions, queries, admin-*, schema, whatsapp message builder
-    auth/ account/ wishlist/
+    orders/           actions, queries, admin-*, pricing, returns, refund, transitions, deadline, whatsapp
+    auth/ account/ addresses/ settings/ security/ wishlist/ location/
   components/
     ui/               shadcn primitives (don't edit by hand; re-add with the shadcn CLI)
-    form/             The shared inputs: TextField, TextAreaField, SelectField, SearchField, SwitchField. Use these for EVERY form
+    form/             The shared inputs: TextField, TextAreaField, SelectField, SearchField, SwitchField, DateField
     store/ admin/ account/ shared/
-  lib/                supabase clients, seo helpers, formatting
+  lib/                supabase clients, seo helpers, formatting, validation
   store/              Client state (cart, wishlist, auth) with Zustand
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migration + seed
+supabase/             SQL migrations (0001..0046) + seed
 public/sw.js          Service worker (offline support)
 ```
 
-**Rules of thumb:** pages stay thin and call `features/*`. Every Server Action validates input with Zod and checks auth itself. The database enforces access with Row Level Security as a second line of defence.
+**Rules of thumb:** pages stay thin and call `features/*`. Every Server Action validates input with Zod, enforces rate limits, and checks auth itself. The database enforces access and state transitions with Row Level Security (RLS), `SECURITY DEFINER` RPCs, and triggers as a second line of defence.
 
 ## Scripts
 
@@ -164,11 +173,13 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
+| `npm test` | Run the Vitest unit test suite (29 test files, 772 tests) |
+| `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
+| `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 
-## Known limitations / next steps
+## Architecture & Security Highlights
 
-- Orders aren't rate-limited. If spam orders become a problem, add Vercel BotID or Cloudflare Turnstile to checkout.
-- Stock is checked when an order is placed but not deducted automatically. Update stock in the admin panel once an order is confirmed.
-- Guest orders aren't linked to an account later, because phone numbers aren't verified without paid SMS OTP. Customers track them with their order code.
-- The cart lives on each device. The wishlist syncs across devices once signed in.
-- Photos removed from a product while editing stay in Storage until the product is deleted.
+- **Server-side rate limiting:** All public actions (`place-order`, `track-order`, `submit-payment`, `update-delivery`, `cancel-order`, `request-return`, `withdraw-return`) are rate-limited in Postgres via hashed IP buckets (`check_rate_limit`) plus per-order brute-force lockouts (`order_lookup_Export` / `find_order_for_guest`).
+- **Atomic stock management:** Stock is reserved with row locks (`FOR UPDATE` in deterministic UUID order) inside `create_order`, restored automatically on cancellation (`orders_restock_on_cancel`), and restocked selectively when returned goods are received (`record_order_return`).
+- **Automatic guest-to-account order linking:** When a customer signs in (or signs up) with an email or phone matching earlier guest orders, `claim_my_guest_orders` links those orders to their account.
+- **Storage cleanup:** Removing product photos during editing or deleting a product cleans up orphaned files from the Supabase Storage `products` bucket.

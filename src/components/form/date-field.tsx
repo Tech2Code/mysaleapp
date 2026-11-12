@@ -177,7 +177,7 @@ export function DateField({
       className={containerClassName}
       noErrorSpace={noErrorSpace}
     >
-      {name && <input type="hidden" name={name} value={value || ""} />}
+      {name && <input data-ui="form/DateField/input-hidden" type="hidden" name={name} value={value || ""} />}
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
         <div data-ui="form/DateField/div-relative" className="relative">
           <Popover.Trigger
@@ -198,7 +198,7 @@ export function DateField({
             )}
           >
             <span
-              data-ui="form/DateField/span-value"
+              data-ui="form/DateField/span"
               title={value ? formatDisplayDate(value) : placeholder}
               className={cn("block min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}
             >
@@ -208,7 +208,7 @@ export function DateField({
           </Popover.Trigger>
           {clearable && value && !disabled && (
             <button
-              data-ui="form/DateField/button-clear"
+              data-ui="form/DateField/button-clear-date"
               type="button"
               aria-label="Clear date"
               onClick={handleClear}
@@ -230,8 +230,8 @@ export function DateField({
                 className="z-50 w-72 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border/80 bg-popover p-3 text-popover-foreground shadow-2xl backdrop-blur-md outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
               >
                 {/* Header: Month / Year + Navigation */}
-                <div className="flex items-center justify-between gap-1 pb-2">
-                  <Button
+                <div data-ui="form/DateField/div-flex" className="flex items-center justify-between gap-1 pb-2">
+                  <Button data-ui="form/DateField/Button-previous-month"
                     type="button"
                     variant="ghost"
                     size="icon-sm"
@@ -241,10 +241,10 @@ export function DateField({
                   >
                     <ChevronLeftIcon className="size-4" />
                   </Button>
-                  <span className="text-sm font-semibold">
+                  <span data-ui="form/DateField/span-2" className="text-sm font-semibold">
                     {MONTH_NAMES[viewMonth]} {viewYear}
                   </span>
-                  <Button
+                  <Button data-ui="form/DateField/Button-next-month"
                     type="button"
                     variant="ghost"
                     size="icon-sm"
@@ -257,19 +257,19 @@ export function DateField({
                 </div>
 
                 {/* Weekday headers */}
-                <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground py-1 border-y">
+                <div data-ui="form/DateField/div-grid" className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground py-1 border-y">
                   {WEEKDAYS.map((day) => (
-                    <span key={day} className="py-0.5">
+                    <span data-ui="form/DateField/span-3" key={day} className="py-0.5">
                       {day}
                     </span>
                   ))}
                 </div>
 
                 {/* Days Grid */}
-                <div className="grid grid-cols-7 gap-1 pt-2">
+                <div data-ui="form/DateField/div-grid-2" className="grid grid-cols-7 gap-1 pt-2">
                   {calendarDays.map((day, idx) => {
                     if (day === null) {
-                      return <div key={`empty-${idx}`} className="size-8" />
+                      return <div data-ui="form/DateField/div" key={`empty-${idx}`} className="size-8" />
                     }
                     const mStr = String(viewMonth + 1).padStart(2, "0")
                     const dStr = String(day).padStart(2, "0")
@@ -281,7 +281,7 @@ export function DateField({
                     const isDayDisabled = isBeforeMin || isAfterMax
 
                     return (
-                      <button
+                      <button data-ui="form/DateField/button"
                         key={iso}
                         type="button"
                         disabled={isDayDisabled}
@@ -303,8 +303,8 @@ export function DateField({
                 </div>
 
                 {/* Footer Quick Actions */}
-                <div className="flex items-center justify-between border-t mt-2 pt-2 text-xs">
-                  <Button
+                <div data-ui="form/DateField/div-flex-2" className="flex items-center justify-between border-t mt-2 pt-2 text-xs">
+                  <Button data-ui="form/DateField/Button-today"
                     type="button"
                     variant="ghost"
                     size="sm"
@@ -322,7 +322,7 @@ export function DateField({
                     Today
                   </Button>
                   {value && (
-                    <Button
+                    <Button data-ui="form/DateField/Button-clear"
                       type="button"
                       variant="ghost"
                       size="sm"

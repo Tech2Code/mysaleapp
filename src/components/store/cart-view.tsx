@@ -63,9 +63,23 @@ function CartLayout({
   onQuantity?: (productId: string, quantity: number) => void
   onRemove?: (productId: string) => void
 }) {
+  const totalItems = lines.reduce((n, l) => n + l.quantity, 0)
+
   return (
-    <div data-ui="store/CartLayout" className="grid gap-8 lg:grid-cols-[1fr_380px]">
-      <div data-ui="store/CartLayout/div" className="space-y-3">
+    <div data-ui="store/CartLayout" className="grid gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
+      <div data-ui="store/CartLayout/div" className="space-y-4 rounded-3xl border bg-card p-4 sm:p-6">
+        <div data-ui="store/CartLayout/div-flex" className="flex items-center justify-between gap-2">
+          <h2 data-ui="store/CartLayout/h2-cart-items" className="flex items-center gap-2.5 text-xl font-semibold">
+            Cart items
+            <span data-ui="store/CartLayout/span" className="rounded-full bg-secondary px-2.5 py-0.5 font-sans text-xs font-semibold text-foreground/80">
+              {totalItems} item{totalItems === 1 ? "" : "s"}
+            </span>
+          </h2>
+          <Link data-ui="store/CartLayout/Link-continue-shopping" href="/products" className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+            Continue shopping
+          </Link>
+        </div>
+
         {hasUnavailable && (
           <p data-ui="store/CartLayout/p-flex" className="flex items-center gap-2 rounded-2xl bg-destructive/10 p-4 text-sm font-medium text-destructive">
             <AlertTriangleIcon className="size-4 shrink-0" />
@@ -79,7 +93,7 @@ function CartLayout({
                 key={item.productId}
                 layout
                 exit={{ opacity: 0, x: -40 }}
-                className={cn("flex gap-4 rounded-3xl border bg-card p-3 sm:p-4", !item.available && "opacity-60")}
+                className={cn("flex gap-4 rounded-2xl border bg-background/60 p-3 sm:p-4", !item.available && "opacity-60")}
               >
                 <Link data-ui="store/CartLayout/Link-relative"
                   href={`/products/${item.slug}`}
@@ -87,15 +101,15 @@ function CartLayout({
                 >
                   <ProductImage src={item.image} alt={item.name} sizes="112px" />
                 </Link>
-                <div data-ui="store/CartLayout/div-flex" className="flex min-w-0 flex-1 flex-col gap-2">
-                  <div data-ui="store/CartLayout/div-flex-2" className="flex items-start justify-between gap-2">
+                <div data-ui="store/CartLayout/div-flex-2" className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div data-ui="store/CartLayout/div-flex-3" className="flex items-start justify-between gap-2">
                     <div data-ui="store/CartLayout/div-2">
                       <Link data-ui="store/CartLayout/Link" href={`/products/${item.slug}`} className="font-semibold hover:text-primary">
                         {item.name}
                       </Link>
                       <p data-ui="store/CartLayout/p" className="text-sm text-muted-foreground">
                         {item.available ? formatPrice(item.price) : "Unavailable"}
-                        {item.priceChanged && <span data-ui="store/CartLayout/span" className="ml-2 text-xs text-primary">(price updated)</span>}
+                        {item.priceChanged && <span data-ui="store/CartLayout/span-2" className="ml-2 text-xs text-primary">(price updated)</span>}
                       </p>
                       {item.available && (item.shippingClass !== "standard" || item.weightGrams > 0) && (
                         <p data-ui="store/CartLayout/p-2" className="mt-1 inline-block rounded-lg bg-secondary/70 px-2 py-1 text-xs text-muted-foreground">
@@ -118,14 +132,14 @@ function CartLayout({
                     </button>
                   </div>
                   {item.available && (
-                    <div data-ui="store/CartLayout/div-flex-3" className="mt-auto flex items-center justify-between">
+                    <div data-ui="store/CartLayout/div-flex-4" className="mt-auto flex items-center justify-between">
                       <QuantityStepper
                         label={item.name}
                         value={item.quantity}
                         max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
                         onChange={(q) => onQuantity?.(item.productId, q)}
                       />
-                      <span data-ui="store/CartLayout/span-2" className="text-lg font-bold">{formatPrice(item.price * item.quantity)}</span>
+                      <span data-ui="store/CartLayout/span-3" className="text-lg font-bold">{formatPrice(item.price * item.quantity)}</span>
                     </div>
                   )}
                 </div>
@@ -138,14 +152,14 @@ function CartLayout({
       <aside data-ui="store/CartLayout/aside" className="h-fit space-y-4 rounded-3xl border bg-card p-6 lg:sticky-store">
         <h2 data-ui="store/CartLayout/h2-order-summary" className="flex items-baseline justify-between gap-3 text-xl font-semibold">
           Order summary
-          <span data-ui="store/CartLayout/span-3" className="text-sm font-medium text-muted-foreground">
+          <span data-ui="store/CartLayout/span-4" className="text-sm font-medium text-muted-foreground">
             {lines.reduce((n, l) => n + l.quantity, 0)} item{lines.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"}
           </span>
         </h2>
         <FreeShippingBar subtotal={subtotal} />
         <PriceBreakdown {...charges} />
         <p data-ui="store/CartLayout/p-3" className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          <span data-ui="store/CartLayout/span-4" className="font-semibold text-foreground">Pay by UPI after placing your order.</span> Cash on delivery isn&apos;t available.
+          <span data-ui="store/CartLayout/span-5" className="font-semibold text-foreground">Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
         </p>
         <Link data-ui="store/CartLayout/Link-proceed-to-checkout"
           href="/checkout"

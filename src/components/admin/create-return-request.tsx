@@ -10,7 +10,7 @@ import { useToastAfter } from "@/hooks/use-toast-after"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
-import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "@/features/orders/reasons"
+import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, otherNeedsDetail } from "@/features/orders/reasons"
 import { RETURN_REASONS, returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
@@ -23,7 +23,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [qty, setQty] = useState<Record<string, string>>({})
-  const [reason, setReason] = useState<string>(RETURN_REASONS[0])
+  const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [detailsError, setDetailsError] = useState<string | null>(null)
@@ -39,16 +39,21 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
 
   const payload = lines.map((i) => ({ productId: i.productId, name: i.name, quantity: Number(qty[i.productId]) || 0 })).filter((i) => i.quantity > 0)
   const over = (id: string) => Number(qty[id]) > (left.get(id) ?? 0)
+  const detailsMissing = details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
 
   const submit = () =>
     startTransition(async () => {
       setError(null)
       setDetailsError(null)
-      if (otherNeedsDetail(reason, details)) {
+      if (!reason) {
+        setError("Please select a return reason.")
+        return
+      }
+      if (detailsMissing) {
         setDetailsError(OTHER_DETAIL_MESSAGE)
         return
       }
-      const res = await createReturnRequestAsAdmin({ orderId, items: payload, reason, details: details.trim() || undefined })
+      const res = await createReturnRequestAsAdmin({ orderId, items: payload, reason, details: details.trim() })
       if (!res.ok) {
         setDetailsError(res.fieldErrors?.details?.[0] ?? null)
         setError(res.error)
@@ -57,6 +62,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       later(() => {
         setOpen(false)
         setQty({})
+        setReason("")
         setDetails("")
         toast.success("Return request created. Approve it from the status dropdown.")
       })
@@ -68,7 +74,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
     setOpen(nextOpen)
     if (!nextOpen) {
       setQty({})
-      setReason(RETURN_REASONS[0])
+      setReason("")
       setDetails("")
       setError(null)
       setDetailsError(null)
@@ -103,8 +109,17 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
               </li>
             ))}
           </ul>
-          <SelectField label="Reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
-          <TextAreaField label="Details (optional)" rows={2} maxLength={LIMITS.returnDetail.max} value={details} onChange={(e) => setDetails(e.target.value)} error={detailsError ?? undefined} />
+          <SelectField label="Reason *" placeholder="Select a reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
+          <TextAreaField
+            label="Details (required)"
+            required
+            rows={2}
+            maxLength={LIMITS.returnDetail.max}
+            placeholder="Describe why the customer is returning the item(s)"
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            error={detailsError ?? (details.trim().length > 0 && detailsMissing ? OTHER_DETAIL_MESSAGE : undefined)}
+          />
           {error && !detailsError && (
             <p data-ui="admin/CreateReturnRequest/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">{error}</p>
           )}
@@ -113,7 +128,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
           <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId))} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId)) || !reason || detailsMissing} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Create request
           </Button>
         </DialogFooter>

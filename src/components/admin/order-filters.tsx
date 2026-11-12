@@ -18,6 +18,8 @@ const PAYMENT_TABS = [
   { value: "submitted", label: "To verify" },
   { value: "pending", label: "Unpaid" },
   { value: "paid", label: "Paid" },
+  { value: "refund-due", label: "Refund due" },
+  { value: "refunded", label: "Refunded" },
 ]
 
 /** Placeholder rows shown while the list reloads. */

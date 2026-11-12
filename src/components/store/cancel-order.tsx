@@ -38,7 +38,7 @@ export function CancelOrder({
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState<string>(CANCEL_REASONS[0])
+  const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [phone, setPhone] = useState("")
@@ -62,7 +62,7 @@ export function CancelOrder({
   }
 
   const paid = paymentStatus === "paid" || paymentStatus === "submitted"
-  const needsDetail = otherNeedsDetail(reason, detail)
+  const needsDetail = !reason || otherNeedsDetail(reason, detail)
   // A guest (the track page passes their last 4 digits) must type the FULL number to cancel; a signed-in owner
   // (no phoneLast4) is recognised by their account.
   const isGuest = phoneLast4 !== undefined
@@ -78,6 +78,10 @@ export function CancelOrder({
   const submit = () =>
     startTransition(async () => {
       setError(null)
+      if (!reason) {
+        setError("Please select why you are cancelling.")
+        return
+      }
       const res = await cancelOrder({
         code: orderCode,
         phoneLast4,
@@ -101,7 +105,7 @@ export function CancelOrder({
     if (pending) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setReason(CANCEL_REASONS[0])
+      setReason("")
       setDetail("")
       setPhone("")
       setError(null)
@@ -129,7 +133,8 @@ export function CancelOrder({
         <DialogBody>
           <div data-ui="store/CancelOrder/div" className="space-y-1">
             <SelectField
-              label="Why are you cancelling?"
+              label="Why are you cancelling? *"
+              placeholder="Select a reason"
               fieldSize="md"
               value={reason}
               onValueChange={setReason}

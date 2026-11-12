@@ -64,13 +64,13 @@ export function AdminLoginForm() {
         error={form.formState.errors.password?.message}
         {...form.register("password")}
       />
-      <div data-ui="admin/AdminLoginForm/div-forgot" className="flex justify-end pt-0.5 text-sm">
+      <div data-ui="admin/AdminLoginForm/div-flex" className="flex justify-end pt-0.5 text-sm">
         <Link data-ui="admin/AdminLoginForm/Link-forgot-password" href="/admin/forgot-password" className="font-medium text-primary hover:underline">
           Forgot password?
         </Link>
       </div>
       {error && (
-        <p data-ui="admin/AdminLoginForm/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <p data-ui="admin/AdminLoginForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
