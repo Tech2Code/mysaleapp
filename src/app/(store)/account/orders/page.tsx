@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { connection } from "next/server"
 import { MyOrdersView } from "@/components/account/account-views"
 import { istDayKey, resolveOrderPeriod } from "@/features/orders/dashboard-range"
-import { getMyOrders, getMyOrderStatusCounts } from "@/features/orders/queries"
+import { getMyOrders } from "@/features/orders/queries"
 import { getStoreSettings } from "@/features/settings/queries"
 import { firstParam } from "@/lib/validation"
 
@@ -19,6 +19,6 @@ export default async function MyOrdersPage({ searchParams }: PageProps<"/account
     status: firstParam(sp.status),
     today,
   }
-  const [orders, shop, statusCounts] = await Promise.all([getMyOrders(filters), getStoreSettings(), getMyOrderStatusCounts()])
-  return <MyOrdersView orders={orders} shop={shop} filters={filters} statusCounts={statusCounts} />
+  const [orders, shop] = await Promise.all([getMyOrders(filters), getStoreSettings()])
+  return <MyOrdersView orders={orders} shop={shop} filters={filters} />
 }

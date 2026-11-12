@@ -12,7 +12,7 @@ export type CustomerOrderStatusCounts = {
   cancelled: number
 }
 
-/** Orders of the signed-in customer. RLS also limits rows to auth.uid(). */
+/** Orders of the signed-in customer for the selected period (status tabs filter client-side for 0ms switching). */
 export async function getMyOrders(filters?: { year?: string; month?: string; status?: string; today?: string }): Promise<Order[]> {
   const user = await requireUser("/account/orders")
   const supabase = await getServerSupabase()
@@ -22,12 +22,6 @@ export async function getMyOrders(filters?: { year?: string; month?: string; sta
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)
-
-  if (filters?.status === "active") {
-    query = query.in("status", ["pending", "confirmed", "packed", "shipped"])
-  } else if (filters?.status === "delivered" || filters?.status === "cancelled") {
-    query = query.eq("status", filters.status)
-  }
 
   const period = resolveOrderPeriod({ year: filters?.year, month: filters?.month }, filters?.today)
   if (period.startIso && period.endIso) {

@@ -12,6 +12,10 @@ import { ProductImage } from "./product-image"
 
 type Category = { name: string; slug: string }
 
+const MIN_SEARCH_CHARS = 2
+const DEBOUNCE_MS = 300
+const searchCache = new Map<string, SearchResult>()
+
 /**
  * The store-wide search dialog: full-screen search view on mobile, floating dropdown card on tablet/desktop.
  * Results appear as you type (name matches first); Enter or "See all results" opens the full /products list.
@@ -24,6 +28,8 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
   const dropdownRef = useRef<HTMLDivElement>(null)
   const latest = useRef(0)
   const trimmed = query.trim()
+  const cacheKey = trimmed.toLowerCase()
+  const canSearch = trimmed.length >= MIN_SEARCH_CHARS
 
   // Close on Escape, trap Tab focus, or close on click outside
   useEffect(() => {
@@ -67,23 +73,33 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
     }
   }, [open, onOpenChange])
 
-  // Debounced lookup. A counter drops answers that arrive after a newer keystroke.
+  // Debounced lookup with in-memory cache and 2-char minimum gate. A counter drops answers that arrive after a newer keystroke.
   useEffect(() => {
-    if (!open || !trimmed) return
+    if (!open || !canSearch) return
+    const cached = searchCache.get(cacheKey)
+    if (cached) {
+      queueMicrotask(() => setResult({ query: trimmed, data: cached }))
+      return
+    }
     const id = ++latest.current
     const timer = window.setTimeout(async () => {
       setLoading(true)
       try {
         const res = await searchProducts(trimmed)
+        if (searchCache.size >= 50) {
+          const oldest = searchCache.keys().next().value
+          if (oldest !== undefined) searchCache.delete(oldest)
+        }
+        searchCache.set(cacheKey, res)
         if (id === latest.current) setResult({ query: trimmed, data: res })
       } catch {
         if (id === latest.current) setResult({ query: trimmed, data: { hits: [], total: 0 } })
       } finally {
         if (id === latest.current) setLoading(false)
       }
-    }, 200)
+    }, DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
-  }, [trimmed, open])
+  }, [trimmed, cacheKey, canSearch, open])
 
   const close = () => onOpenChange(false)
   const seeAll = () => {
@@ -91,7 +107,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
     close()
     router.push(`/products?q=${encodeURIComponent(trimmed)}`)
   }
-  const shown = trimmed && result?.query === trimmed ? result.data : null
+  const shown = canSearch && (searchCache.get(cacheKey) ?? (result?.query === trimmed ? result.data : null))
 
   if (!open) return null
 
@@ -153,7 +169,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
         </div>
 
         <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16 flex-1 overflow-y-auto">
-          {!trimmed && categories.length > 0 && (
+          {!canSearch && categories.length > 0 && (
             <div data-ui="store/SearchDialog/div-2" className="space-y-2.5">
               <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse categories</p>
               <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-2">
@@ -173,7 +189,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
             </div>
           )}
 
-          {trimmed && !shown && (
+          {canSearch && !shown && (
             <p data-ui="store/SearchDialog/p-flex" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2Icon className="size-4 animate-spin" aria-hidden /> Searching…
             </p>

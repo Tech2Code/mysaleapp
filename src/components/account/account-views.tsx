@@ -4,7 +4,7 @@ import { ArrowLeftIcon, ChevronRightIcon, PackageIcon, ReceiptTextIcon } from "l
 import Link from "next/link"
 import { AddressBook } from "@/components/account/address-book"
 import { ProfileForm } from "@/components/account/profile-form"
-import { CustomerOrdersFilterBar, type CustomerOrderFilters } from "@/components/admin/order-filters"
+import { CustomerOrdersFilterBar, type CustomerOrderFilters, type CustomerOrderRenderItem } from "@/components/admin/order-filters"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { CopyButton } from "@/components/shared/copy-button"
 import { InvoiceDocument } from "@/components/shared/invoice-document"
@@ -20,6 +20,7 @@ import { buttonVariants } from "@/components/ui/button"
 import type { Profile } from "@/features/account/schema"
 import type { Address } from "@/features/addresses/types"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
+import { placeholderOrders } from "@/features/orders/placeholders"
 import type { CustomerOrderStatusCounts } from "@/features/orders/queries"
 import { canRequestAgain, customerStatusLine, stageInputOf } from "@/features/orders/returns"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
@@ -35,6 +36,74 @@ import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------- my orders
 
+function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
+  return (
+    <Link data-ui="account/MyOrderCard"
+      href={`/account/orders/${o.orderCode}`}
+      prefetch={true}
+      className="group flex items-center gap-4 rounded-3xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
+    >
+      <div data-ui="account/MyOrderCard/div" className="min-w-0 flex-1 space-y-1">
+        <div data-ui="account/MyOrderCard/div-flex" className="flex flex-wrap items-center gap-2">
+          <span data-ui="account/MyOrderCard/span" className="font-mono font-semibold">{o.orderCode}</span>
+          <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
+          {isAwaitingPayment(o) && (
+            <span data-ui="account/MyOrderCard/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Update UTR</span>
+          )}
+          {o.status === "pending" && o.paymentStatus === "submitted" && (
+            <span data-ui="account/MyOrderCard/span-3" className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-900/40 dark:text-sky-200">
+              Verifying payment
+            </span>
+          )}
+        </div>
+        <p data-ui="account/MyOrderCard/p" className="truncate text-sm text-muted-foreground">
+          {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
+        </p>
+        {o.returnStage?.badge && o.returnStage.active && (
+          <p data-ui="account/MyOrderCard/p-2" className="text-xs font-medium text-foreground">{o.returnStage.customerDetail}</p>
+        )}
+        <p data-ui="account/MyOrderCard/p-3" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
+        {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
+          <p data-ui="account/MyOrderCard/p-4" className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            Update UTR by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
+          </p>
+        )}
+      </div>
+      <span data-ui="account/MyOrderCard/span-4" className="font-semibold">{formatPrice(o.total)}</span>
+      <ChevronRightIcon className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+    </Link>
+  )
+}
+
+function MyOrdersEmpty({ isFiltered }: { isFiltered: boolean }) {
+  return (
+    <div data-ui="account/MyOrdersEmpty" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
+      <PackageIcon className="size-10 text-muted-foreground" />
+      <p data-ui="account/MyOrdersEmpty/p" className="font-heading text-2xl">
+        {isFiltered ? "No matching orders" : "No orders yet"}
+      </p>
+      <p data-ui="account/MyOrdersEmpty/p-2" className="max-w-sm text-sm text-muted-foreground">
+        {isFiltered
+          ? "Try switching the status tab above, or select Full FY / All time to see older orders."
+          : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
+      </p>
+      <div data-ui="account/MyOrdersEmpty/div-flex" className="flex flex-wrap justify-center gap-3">
+        {isFiltered && (
+          <Link data-ui="account/MyOrdersEmpty/Link-view-all-time-orders" href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5")}>
+            View all-time orders
+          </Link>
+        )}
+        <Link data-ui="account/MyOrdersEmpty/Link-start-shopping" href="/products" className={cn(buttonVariants(), "rounded-full px-5")}>
+          Start shopping
+        </Link>
+        <Link data-ui="account/MyOrdersEmpty/Link-track-a-guest-order" href="/track" className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-5")}>
+          Track a guest order
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export function MyOrdersView({
   orders,
   shop,
@@ -46,78 +115,74 @@ export function MyOrdersView({
   filters?: CustomerOrderFilters
   statusCounts?: CustomerOrderStatusCounts
 }) {
-  const isFiltered = (filters?.year && filters.year !== "all") || (filters?.status && filters.status !== "all")
+  const isPeriodFiltered = Boolean(filters?.year && filters.year !== "all")
+  const items: CustomerOrderRenderItem[] = orders.map((o) => {
+    const cancelRefundDue = o.status === "cancelled" && (o.paymentStatus === "paid" || o.paymentStatus === "submitted")
+    const hasRefund =
+      o.paymentStatus === "refunded" ||
+      (o.refundedAmount ?? 0) > 0 ||
+      Boolean(o.returnStage) ||
+      cancelRefundDue
+    const refundPending = Boolean(o.returnStage?.active) || cancelRefundDue
+    const searchText = [
+      o.orderCode,
+      ...o.items.map((i) => `${i.name} ${i.slug}`),
+      o.customerName,
+      o.phone,
+      o.address,
+      o.city,
+      o.pincode,
+      o.note,
+      String(o.total),
+      formatPrice(o.total),
+      formatDate(o.createdAt),
+      o.shipping?.carrier,
+      o.shipping?.trackingNumber,
+      o.paymentReference,
+      o.paymentNote,
+      o.cancellation?.refundReference,
+      o.cancellation?.reason,
+      STATUS_META[o.status].label,
+      o.returnStage?.badge,
+      o.returnStage?.customerDetail,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+
+    return {
+      id: o.id,
+      category: o.status === "delivered" ? "delivered" : o.status === "cancelled" ? "cancelled" : "active",
+      hasRefund,
+      refundPending,
+      searchText,
+      node: <MyOrderCard o={o} shop={shop} />,
+    }
+  })
+  const skeletonNode = (
+    <ul data-ui="account/MyOrdersView/ul" className="space-y-3">
+      {placeholderOrders(3).map((o) => (
+        <li data-ui="account/MyOrdersView/li" key={o.id}>
+          <MyOrderCard o={o} shop={shop} />
+        </li>
+      ))}
+    </ul>
+  )
+
   return (
     <section data-ui="account/MyOrdersView">
       <h2 data-ui="account/MyOrdersView/h2-my-orders" className="mb-4 text-3xl font-semibold">My orders</h2>
-      <CustomerOrdersFilterBar year={filters?.year} month={filters?.month} status={filters?.status} today={filters?.today} statusCounts={statusCounts} />
-      {orders.length === 0 ? (
-        <div data-ui="account/MyOrdersView/div-flex" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-          <PackageIcon className="size-10 text-muted-foreground" />
-          <p data-ui="account/MyOrdersView/p" className="font-heading text-2xl">
-            {isFiltered ? "No orders in this period" : "No orders yet"}
-          </p>
-          <p data-ui="account/MyOrdersView/p-2" className="max-w-sm text-sm text-muted-foreground">
-            {isFiltered
-              ? "Try selecting Full FY, All time, or another month above to see older orders."
-              : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
-          </p>
-          <div data-ui="account/MyOrdersView/div-flex-2" className="flex flex-wrap justify-center gap-3">
-            {isFiltered && (
-              <Link data-ui="account/MyOrdersView/Link-view-all-time-orders" href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5")}>
-                View all-time orders
-              </Link>
-            )}
-            <Link data-ui="account/MyOrdersView/Link-start-shopping" href="/products" className={cn(buttonVariants(), "rounded-full px-5")}>
-              Start shopping
-            </Link>
-            <Link data-ui="account/MyOrdersView/Link-track-a-guest-order" href="/track" className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-5")}>
-              Track a guest order
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <ul data-ui="account/MyOrdersView/ul" className="space-y-3">
-          {orders.map((o) => (
-            <li data-ui="account/MyOrdersView/li" key={o.id}>
-              <Link data-ui="account/MyOrdersView/Link-flex"
-                href={`/account/orders/${o.orderCode}`}
-                prefetch={true}
-                className="group flex items-center gap-4 rounded-3xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
-              >
-                <div data-ui="account/MyOrdersView/div" className="min-w-0 flex-1 space-y-1">
-                  <div data-ui="account/MyOrdersView/div-flex-3" className="flex flex-wrap items-center gap-2">
-                    <span data-ui="account/MyOrdersView/span" className="font-mono font-semibold">{o.orderCode}</span>
-                    <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
-                    {isAwaitingPayment(o) && (
-                      <span data-ui="account/MyOrdersView/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Update UTR</span>
-                    )}
-                    {o.status === "pending" && o.paymentStatus === "submitted" && (
-                      <span data-ui="account/MyOrdersView/span-3" className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-900/40 dark:text-sky-200">
-                        Verifying payment
-                      </span>
-                    )}
-                  </div>
-                  <p data-ui="account/MyOrdersView/p-3" className="truncate text-sm text-muted-foreground">
-                    {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
-                  </p>
-                  {o.returnStage?.badge && o.returnStage.active && (
-                    <p data-ui="account/MyOrdersView/p-4" className="text-xs font-medium text-foreground">{o.returnStage.customerDetail}</p>
-                  )}
-                  <p data-ui="account/MyOrdersView/p-5" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
-                  {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
-                    <p data-ui="account/MyOrdersView/p-6" className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                      Update UTR by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
-                    </p>
-                  )}
-                </div>
-                <span data-ui="account/MyOrdersView/span-4" className="font-semibold">{formatPrice(o.total)}</span>
-                <ChevronRightIcon className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <CustomerOrdersFilterBar
+        year={filters?.year}
+        month={filters?.month}
+        status={filters?.status}
+        today={filters?.today}
+        statusCounts={statusCounts}
+        items={items}
+        emptyPeriodNode={<MyOrdersEmpty isFiltered={isPeriodFiltered} />}
+        emptyTabNode={<MyOrdersEmpty isFiltered={true} />}
+        skeletonNode={skeletonNode}
+      />
     </section>
   )
 }
