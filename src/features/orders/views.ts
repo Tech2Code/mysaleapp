@@ -5,7 +5,7 @@
  */
 export const ORDER_VIEWS = {
   "to-verify": { label: "Payments to verify" },
-  "awaiting-payment": { label: "Awaiting payment" },
+  "awaiting-payment": { label: "Payment rejected" },
   "to-ship": { label: "To pack & ship" },
   "return-requests": { label: "Return requested" },
   "returns-to-receive": { label: "Return approved" },

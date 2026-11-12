@@ -36,7 +36,6 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
       title: "About",
       links: [
         { href: "/about", label: "Our story" },
-        { href: "/contact", label: "Contact us" },
         ...socials,
       ],
     },

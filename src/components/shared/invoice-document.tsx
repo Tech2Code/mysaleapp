@@ -37,7 +37,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
   })
 
   return (
-    <article data-ui="shared/InvoiceDocument" data-invoice className="mx-auto w-full max-w-3xl rounded-2xl border bg-card p-5 text-foreground sm:p-8" aria-label={`${title} ${order.orderCode}`}>
+    <article data-ui="shared/InvoiceDocument" data-invoice className="mx-auto w-full max-w-3xl rounded-2xl border bg-card p-6 text-foreground sm:p-8" aria-label={`${title} ${order.orderCode}`}>
       <header data-ui="shared/InvoiceDocument/header-flex" className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
         <div data-ui="shared/InvoiceDocument/div" className="min-w-0">
           <h1 data-ui="shared/InvoiceDocument/h1" className="font-sans text-2xl font-semibold">{title}</h1>
@@ -45,16 +45,16 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
             No. <span data-ui="shared/InvoiceDocument/span" className="font-mono font-semibold text-foreground">{order.orderCode}</span> · {formatDate(order.createdAt)}
           </p>
         </div>
-        <div data-ui="shared/InvoiceDocument/div-2" className="text-sm sm:text-right">
+        <div data-ui="shared/InvoiceDocument/div-2" className="text-sm sm:text-right print:text-right">
           <p data-ui="shared/InvoiceDocument/p-2" className="font-semibold">{sellerName}</p>
-          {sellerAddress && <p data-ui="shared/InvoiceDocument/p-3" className="max-w-64 text-muted-foreground">{sellerAddress}</p>}
+          {sellerAddress && <p data-ui="shared/InvoiceDocument/p-3" className="max-w-64 text-muted-foreground sm:ml-auto print:ml-auto">{sellerAddress}</p>}
           {effectiveShop.phone && <p data-ui="shared/InvoiceDocument/p-4" className="text-muted-foreground">{effectiveShop.phone}</p>}
           {effectiveShop.email && <p data-ui="shared/InvoiceDocument/p-5" className="text-muted-foreground">{effectiveShop.email}</p>}
           {taxed && effectiveShop.gstin && <p data-ui="shared/InvoiceDocument/p-6" className="mt-1 font-mono text-xs font-semibold">GSTIN: {effectiveShop.gstin}</p>}
         </div>
       </header>
 
-      <section data-ui="shared/InvoiceDocument/section-billed-to" className="grid gap-4 border-b py-5 text-sm sm:grid-cols-2" aria-label="Billed to">
+      <section data-ui="shared/InvoiceDocument/section-billed-to" className="grid gap-4 border-b py-5 text-sm sm:grid-cols-2 print:grid-cols-2" aria-label="Billed to">
         <div data-ui="shared/InvoiceDocument/div-3">
           <h2 data-ui="shared/InvoiceDocument/h2-billed-to" className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">Billed to</h2>
           <p data-ui="shared/InvoiceDocument/p-7" className="mt-1 font-semibold">{order.customerName}</p>
@@ -62,7 +62,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
           <p data-ui="shared/InvoiceDocument/p-9" className="text-muted-foreground">{order.city} - {order.pincode}</p>
           <p data-ui="shared/InvoiceDocument/p-10" className="text-muted-foreground">{order.phone}</p>
         </div>
-        <div data-ui="shared/InvoiceDocument/div-4" className="sm:text-right">
+        <div data-ui="shared/InvoiceDocument/div-4" className="sm:text-right print:text-right">
           <h2 data-ui="shared/InvoiceDocument/h2-payment" className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">Payment</h2>
           <p data-ui="shared/InvoiceDocument/p-11" className="mt-1 font-semibold">{payment.label}</p>
           {order.returnStage?.badge && order.returnStage.key !== "rejected" && (
@@ -72,8 +72,8 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
         </div>
       </section>
 
-      <div data-ui="shared/InvoiceDocument/div-5" className="overflow-x-auto">
-        <table data-ui="shared/InvoiceDocument/table" className="w-full min-w-[480px] border-collapse text-sm">
+      <div data-ui="shared/InvoiceDocument/div-5" className="overflow-x-auto print:overflow-visible">
+        <table data-ui="shared/InvoiceDocument/table" className="w-full min-w-[480px] border-collapse text-sm print:min-w-0">
           <caption data-ui="shared/InvoiceDocument/caption" className="sr-only">Items in this order</caption>
           <thead data-ui="shared/InvoiceDocument/thead">
             <tr data-ui="shared/InvoiceDocument/tr" className="border-b text-left text-xs tracking-wider text-muted-foreground uppercase">

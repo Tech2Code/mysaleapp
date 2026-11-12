@@ -2,11 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useTransition, type ReactNode } from "react"
+import { useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { SwitchField, TextAreaField, TextField } from "@/components/form"
+import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
+import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { siteConfig } from "@/config/site"
+import { matchState, STATE_OPTIONS } from "@/features/location/states"
 import { saveStoreSettings } from "@/features/settings/actions"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 import { storeSettingsSchema, type StoreSettingsInput, type StoreSettingsValues } from "@/features/settings/schema"
@@ -51,7 +53,7 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     // when the numbers are the same the saved calling number is not used, so show an empty field
     phone: s.phoneSameAsWhatsapp ? "" : (s.phone ?? ""),
     city: s.city ?? "",
-    region: s.region ?? "",
+    region: s.region ? (matchState(s.region) ?? s.region) : "",
     instagramUrl: s.instagramUrl ?? "",
     facebookUrl: s.facebookUrl ?? "",
     orderCodePrefix: s.orderCodePrefix,
@@ -82,7 +84,8 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
     defaultValues: toFormValues(settings),
   })
   const { errors, isDirty } = form.formState
-  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn] = useWatch({
+  const [pincode, setPincode] = useState("")
+  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal] = useWatch({
     control: form.control,
     name: [
       "deliveryFee",
@@ -96,8 +99,23 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
       "shopName",
       "phoneSameAsWhatsapp",
       "gstRegistered",
+      "region",
     ],
   })
+
+  const area = usePincodeLookup({
+    pincode,
+    overwrite: true,
+    getCity: () => String(form.getValues("city") ?? ""),
+    setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
+    getState: () => String(form.getValues("region") ?? ""),
+    setState: (state) => form.setValue("region", state, { shouldValidate: true, shouldDirty: true }),
+  })
+  const regionStr = typeof regionVal === "string" ? regionVal.trim() : ""
+  const stateOptions =
+    regionStr && !STATE_OPTIONS.some((o) => o.value === regionStr)
+      ? [{ value: regionStr, label: regionStr }, ...STATE_OPTIONS]
+      : STATE_OPTIONS
 
   const feeNum = Number(fee)
   const freeNum = Number(freeAbove)
@@ -294,8 +312,27 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             )}
             <div data-ui="admin/StoreSettingsForm/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
+              <TextField
+                label="Pincode"
+                kind="pincode"
+                fieldSize="md"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="e.g. 302001"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                hint={area.hint}
+                error={area.error}
+              />
               <TextField label="City" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
-              <TextField label="State" maxLength={LIMITS.region.max} fieldSize="md" error={errors.region?.message} {...form.register("region")} />
+              <FormSelectField
+                control={form.control}
+                name="region"
+                label="State"
+                fieldSize="md"
+                placeholder="Select state"
+                options={stateOptions}
+              />
             </div>
             <p data-ui="admin/StoreSettingsForm/p-4" className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
           </Card>
@@ -454,7 +491,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
             {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
-          <Card title="Orders" description="How your order numbers look, and how long an unpaid order is kept, and the return window.">
+          <Card title="Orders" description="How your order numbers look, how long an order with a rejected UTR is kept before auto-cancellation, and the return window.">
             <TextField
               label="Order code prefix" kind="orderPrefix"
               fieldSize="md"
@@ -466,12 +503,12 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
               {...form.register("orderCodePrefix")}
             />
             <TextField
-              label="Cancel unpaid orders after (hours)" kind="digits"
+              label="Auto-cancel rejected payments after (hours)" kind="digits"
               fieldSize="md"
               inputMode="numeric"
               maxLength={3}
               containerClassName="sm:w-64"
-              hint="Frees the reserved stock if nobody pays. 0 = never. Orders where the customer already sent a UTR are never auto-cancelled."
+              hint="If a payment UTR is rejected and the customer doesn't submit a new UTR within this time, the order is cancelled and reserved stock goes back on sale. 0 = never."
               error={errors.unpaidOrderExpiryHours?.message}
               {...form.register("unpaidOrderExpiryHours")}
             />

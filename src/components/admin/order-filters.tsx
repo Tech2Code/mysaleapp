@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 const PAYMENT_TABS = [
   { value: "all", label: "Any payment" },
   { value: "submitted", label: "To verify" },
-  { value: "pending", label: "Unpaid" },
+  { value: "failed", label: "Rejected" },
   { value: "paid", label: "Paid" },
   { value: "refund-due", label: "Refund due" },
   { value: "refunded", label: "Refunded" },

@@ -21,7 +21,7 @@ type Fields = {
  *   const area = usePincodeLookup({ pincode, getCity, setCity, getState, setState })
  *   <TextField label="Pincode" hint={area.hint} … />
  */
-export function usePincodeLookup({ pincode, ...fields }: { pincode: string } & Fields) {
+export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pincode: string; overwrite?: boolean } & Fields) {
   const [result, setResult] = useState<{ pin: string; info: PincodeInfo } | null>(null)
   const filled = useRef({ city: "", state: "" })
   const latest = useRef<Fields>(fields)
@@ -40,12 +40,12 @@ export function usePincodeLookup({ pincode, ...fields }: { pincode: string } & F
       if (!info.ok) return
       const f = latest.current
       const city = f.getCity().trim()
-      if (!city || city === filled.current.city) {
+      if (overwrite || !city || city === filled.current.city) {
         filled.current.city = info.city
         f.setCity(info.city)
       }
       const state = f.getState()
-      if (!state || state === filled.current.state) {
+      if (overwrite || !state || state === filled.current.state) {
         filled.current.state = info.state
         f.setState(info.state)
       }
@@ -62,7 +62,7 @@ export function usePincodeLookup({ pincode, ...fields }: { pincode: string } & F
     return () => {
       stale = true
     }
-  }, [pincode])
+  }, [pincode, overwrite])
 
   const isInvalid = valid && result?.pin === pincode && !result.info.ok && result.info.reason === "invalid"
   const error = isInvalid ? "Enter a valid 6-digit Indian pincode" : undefined

@@ -240,24 +240,29 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   return (
     <section data-ui="store/PaymentPanel" aria-label="Pay for your order" className="space-y-5 rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
       <div data-ui="store/PaymentPanel/div">
-        <h3 data-ui="store/PaymentPanel/h3-pay" className="font-heading text-xl font-semibold">Pay {formatPrice(total)} to confirm your order</h3>
+        <h3 data-ui="store/PaymentPanel/h3" className="font-heading text-xl font-semibold">
+          {rejected ? `Update payment reference (${formatPrice(total)})` : changing ? `Change payment reference (${formatPrice(total)})` : `Pay ${formatPrice(total)} to confirm your order`}
+        </h3>
         <p data-ui="store/PaymentPanel/p-3" className="mt-1 text-sm text-muted-foreground">
-          Cash on delivery isn&apos;t available. Pay by UPI now, then enter the reference number below.
+          {rejected
+            ? "Enter the correct 12-digit UPI reference number (UTR) below, or pay by UPI and enter the new UTR."
+            : changing
+              ? "Enter your corrected 12-digit UPI reference number (UTR) below."
+              : "Cash on delivery isn't available. Pay by UPI now, then enter the reference number below."}
         </p>
-        {deadline && (
+        {deadline && !changing && (
           <p data-ui="store/PaymentPanel/p-flex" className="mt-2 flex items-start gap-2 rounded-xl bg-amber-100 p-3 text-xs/snug  text-amber-950 dark:bg-amber-900/30 dark:text-amber-100">
             <ClockIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span data-ui="store/PaymentPanel/span">
               {deadline.exact ? (
                 <>
-                  Please pay by <span data-ui="store/PaymentPanel/span-2" className="font-semibold">{deadline.exact}</span>. If we don&apos;t receive the payment by then, this order is cancelled automatically and the items go back on sale.
+                  Please submit a valid UTR by <span data-ui="store/PaymentPanel/span-2" className="font-semibold">{deadline.exact}</span>. If we can&apos;t verify the payment by then, this order is cancelled automatically and the items go back on sale.
                 </>
               ) : (
                 <>
-                  Please pay within <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.within}</span>. Unpaid orders are cancelled automatically after that and the items go back on sale.
+                  Please submit a valid UTR within <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.within}</span>. If we can&apos;t verify the payment after that, this order is cancelled automatically and the items go back on sale.
                 </>
               )}
-              {" "}Already paid? Enter your UTR below and we&apos;ll keep your order.
             </span>
           </p>
         )}

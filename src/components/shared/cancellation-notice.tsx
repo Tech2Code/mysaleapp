@@ -26,7 +26,7 @@ export function CancellationNotice({
       : cancellation.by === "system"
         ? audience === "customer"
           ? "This order was cancelled automatically"
-          : "Cancelled automatically (unpaid)"
+          : "Cancelled automatically (payment not verified in time)"
       : cancellation.by === "admin"
         ? audience === "customer"
           ? "The shop cancelled this order"
@@ -67,7 +67,7 @@ export function CancellationNotice({
           </span>
         </p>
       ) : (
-        <p data-ui="shared/CancellationNotice/p-2" className="text-sm text-muted-foreground">No payment was made, so there is nothing to refund.</p>
+        <p data-ui="shared/CancellationNotice/p-2" className="text-sm text-muted-foreground">No payment was verified for this order, so there is nothing to refund.</p>
       )}
     </section>
   )

@@ -67,7 +67,7 @@ export function MyOrdersView({ orders, shop }: { orders: Order[]; shop: StoreSet
                     <span data-ui="account/MyOrdersView/span" className="font-mono font-semibold">{o.orderCode}</span>
                     <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
                     {isAwaitingPayment(o) && (
-                      <span data-ui="account/MyOrdersView/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{o.paymentStatus === "failed" ? "Update UTR" : "Pay now"}</span>
+                      <span data-ui="account/MyOrdersView/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Update UTR</span>
                     )}
                     {o.status === "pending" && o.paymentStatus === "submitted" && (
                       <span data-ui="account/MyOrdersView/span-3" className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-900/40 dark:text-sky-200">
@@ -84,7 +84,7 @@ export function MyOrdersView({ orders, shop }: { orders: Order[]; shop: StoreSet
                   <p data-ui="account/MyOrdersView/p-5" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
                   {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
                     <p data-ui="account/MyOrdersView/p-6" className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                      Pay by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · unpaid orders are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
+                      Update UTR by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
                     </p>
                   )}
                 </div>

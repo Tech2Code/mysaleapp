@@ -50,8 +50,8 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
           icon={ClockIcon}
           tone="amber"
           count={d.attention.awaitingPayment}
-          label="Awaiting payment"
-          hint="Orders not yet paid"
+          label="Payment rejected"
+          hint="Waiting for customer to update UTR"
         />
       </StaggerItem>
       <StaggerItem>

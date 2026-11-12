@@ -66,7 +66,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
         )}
         {autoCancelAt && (
           <span data-ui="admin/AdminOrderView/span-2" className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-            Auto-cancels {formatDeadline(autoCancelAt)} if unpaid
+            Auto-cancels {formatDeadline(autoCancelAt)} if UTR not updated
           </span>
         )}
       </header>
