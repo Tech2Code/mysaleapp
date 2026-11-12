@@ -10,22 +10,15 @@ import { formatDate, formatMoney } from "@/lib/format"
  * Colours follow the theme on screen; globals.css prints it black on white.
  */
 export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSettings }) {
-  // Prefer the immutable tax/seller snapshot recorded when the order was created; fall back to live settings for older orders.
+  // Always use live Store Settings for seller contact & address details so any update in Settings reflects
+  // on all Bill of Supply / Tax Invoices, while locking GST rate/registration from the order-time snapshot.
   const snap = order.taxSnapshot
-  const effectiveShop = snap
-    ? {
-        gstRegistered: snap.gstRegistered,
-        gstin: snap.gstin,
-        gstRate: snap.gstRate,
-        legalName: snap.legalName,
-        businessAddress: snap.businessAddress,
-        shopName: snap.shopName || shop.shopName,
-        city: snap.city,
-        region: snap.region,
-        phone: snap.phone,
-        email: snap.email,
-      }
-    : shop
+  const effectiveShop = {
+    ...shop,
+    gstRegistered: snap ? snap.gstRegistered : shop.gstRegistered,
+    gstin: snap ? snap.gstin : shop.gstin,
+    gstRate: snap ? snap.gstRate : shop.gstRate,
+  }
   const title = invoiceTitle(effectiveShop)
   const taxed = gstActive(effectiveShop)
   const tax = taxed ? gstIncluded(order.total, effectiveShop.gstRate) : null

@@ -103,4 +103,22 @@ describe("order views (dashboard tile and list share one filter)", () => {
     expect(has(c, "eq", "payment_status", "paid")).toBe(true)
     expect(has(c, "neq", "status", "cancelled")).toBe(false)
   })
+
+  it("date filter restricts created_at on normal browsing and bypasses on search or action views", async () => {
+    let s = setup()
+    await listOrders({ year: "2025", month: "all" })
+    let c = ordersCall(s.calls)
+    expect(c.ops.some(([m, a]) => m === "gte" && a[0] === "created_at")).toBe(true)
+    expect(c.ops.some(([m, a]) => m === "lt" && a[0] === "created_at")).toBe(true)
+
+    s = setup()
+    await listOrders({ year: "2025", month: "all", view: "to-verify" })
+    c = ordersCall(s.calls)
+    expect(c.ops.some(([m]) => m === "gte")).toBe(false)
+
+    s = setup()
+    await listOrders({ year: "2025", month: "all", q: "KK-123" })
+    c = ordersCall(s.calls)
+    expect(c.ops.some(([m]) => m === "gte")).toBe(false)
+  })
 })

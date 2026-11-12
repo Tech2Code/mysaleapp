@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { profileSchema } from "@/features/account/schema"
 import { safeExternalUrl, safeNextPath } from "@/lib/safe-redirect"
 import { toNumberOrUndefined } from "@/lib/zod-helpers"
 import { FIELD_KINDS, PATTERNS, addDays, todayIST, v } from "./index"
@@ -188,6 +189,12 @@ describe("urls, dates, quantities", () => {
   })
   it("v.phoneIN normalises formatted Indian numbers to 10 digits", () => {
     expect(v.phoneIN().parse("+91 98765 43210")).toBe("9876543210")
+    const bad = profileSchema.safeParse({ fullName: "Asha", phone: "98765" })
+    expect(bad.success).toBe(false)
+    if (!bad.success) {
+      expect(bad.error.issues[0]?.message).toBe("Enter a valid 10-digit mobile number")
+    }
+    expect(profileSchema.parse({ fullName: "Asha", phone: "" }).phone).toBe("")
   })
   it("v.city allows India Post district names with digits and parentheses", () => {
     expect(ok(v.city(), "North 24 Parganas")).toBe(true)

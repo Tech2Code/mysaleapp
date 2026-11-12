@@ -4,6 +4,7 @@ import { ArrowLeftIcon, ChevronRightIcon, PackageIcon, ReceiptTextIcon } from "l
 import Link from "next/link"
 import { AddressBook } from "@/components/account/address-book"
 import { ProfileForm } from "@/components/account/profile-form"
+import { CustomerOrdersFilterBar, type CustomerOrderFilters } from "@/components/admin/order-filters"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { CopyButton } from "@/components/shared/copy-button"
 import { InvoiceDocument } from "@/components/shared/invoice-document"
@@ -19,6 +20,7 @@ import { buttonVariants } from "@/components/ui/button"
 import type { Profile } from "@/features/account/schema"
 import type { Address } from "@/features/addresses/types"
 import { describeHours, formatDeadline, paymentDeadline } from "@/features/orders/deadline"
+import type { CustomerOrderStatusCounts } from "@/features/orders/queries"
 import { canRequestAgain, customerStatusLine, stageInputOf } from "@/features/orders/returns"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { isAwaitingPayment, STATUS_META, type Order, type OrderWithHistory } from "@/features/orders/types"
@@ -33,18 +35,39 @@ import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------- my orders
 
-export function MyOrdersView({ orders, shop }: { orders: Order[]; shop: StoreSettings }) {
+export function MyOrdersView({
+  orders,
+  shop,
+  filters,
+  statusCounts,
+}: {
+  orders: Order[]
+  shop: StoreSettings
+  filters?: CustomerOrderFilters
+  statusCounts?: CustomerOrderStatusCounts
+}) {
+  const isFiltered = (filters?.year && filters.year !== "all") || (filters?.status && filters.status !== "all")
   return (
     <section data-ui="account/MyOrdersView">
-      <h2 data-ui="account/MyOrdersView/h2-my-orders" className="mb-6 text-3xl font-semibold">My orders</h2>
+      <h2 data-ui="account/MyOrdersView/h2-my-orders" className="mb-4 text-3xl font-semibold">My orders</h2>
+      <CustomerOrdersFilterBar year={filters?.year} month={filters?.month} status={filters?.status} today={filters?.today} statusCounts={statusCounts} />
       {orders.length === 0 ? (
         <div data-ui="account/MyOrdersView/div-flex" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
           <PackageIcon className="size-10 text-muted-foreground" />
-          <p data-ui="account/MyOrdersView/p" className="font-heading text-2xl">No orders yet</p>
-          <p data-ui="account/MyOrdersView/p-2" className="max-w-sm text-sm text-muted-foreground">
-            Orders you place while signed in appear here. Guest orders can be tracked with their order code.
+          <p data-ui="account/MyOrdersView/p" className="font-heading text-2xl">
+            {isFiltered ? "No orders in this period" : "No orders yet"}
           </p>
-          <div data-ui="account/MyOrdersView/div-flex-2" className="flex gap-3">
+          <p data-ui="account/MyOrdersView/p-2" className="max-w-sm text-sm text-muted-foreground">
+            {isFiltered
+              ? "Try selecting Full FY, All time, or another month above to see older orders."
+              : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
+          </p>
+          <div data-ui="account/MyOrdersView/div-flex-2" className="flex flex-wrap justify-center gap-3">
+            {isFiltered && (
+              <Link data-ui="account/MyOrdersView/Link-view-all-time-orders" href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5")}>
+                View all-time orders
+              </Link>
+            )}
             <Link data-ui="account/MyOrdersView/Link-start-shopping" href="/products" className={cn(buttonVariants(), "rounded-full px-5")}>
               Start shopping
             </Link>

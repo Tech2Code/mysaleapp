@@ -5,7 +5,7 @@ import { requireAdmin } from "@/features/auth/guards"
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { getServerSupabase } from "@/lib/supabase/server"
-import { istDayKey, type DashboardRange } from "./dashboard-range"
+import { istDayKey, resolveOrderPeriod, type DashboardRange } from "./dashboard-range"
 import { isOrderView, RETURN_VIEWS, type OrderView } from "./views"
 import {
   isOrderStatus,
@@ -23,7 +23,7 @@ export const ADMIN_ORDERS_PAGE_SIZE = 20
 /** Just enough of the return rows for a list row to show its return stage (see returnStage()). */
 const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at)"
 
-export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string }
+export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string; year?: string; month?: string; today?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
 export const PAYMENT_FILTERS = ["submitted", "failed", "pending", "paid", "refund-due", "refunded"] as const
 const isPaymentFilter = (v: unknown): v is (typeof PAYMENT_FILTERS)[number] => (PAYMENT_FILTERS as readonly unknown[]).includes(v)
@@ -111,6 +111,18 @@ async function countOrdersInView(supabase: Supabase, view: OrderView) {
 /** Counts for the return chips of the orders list: the same filter as the lists (see orderViewFilter). */
 export type ReturnViewCounts = Record<(typeof RETURN_VIEWS)[number], number>
 
+export type OrderFilterCounts = {
+  returns: ReturnViewCounts
+  status: Record<OrderStatus, number>
+  payment: {
+    submitted: number
+    failed: number
+    paid: number
+    "refund-due": number
+    refunded: number
+  }
+}
+
 export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
   const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
@@ -119,6 +131,37 @@ export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
     Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
   ])
   return Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, counts[i]])) as ReturnViewCounts
+}
+
+export async function getOrderFilterCounts(): Promise<OrderFilterCounts> {
+  const adminCheck = requireAdmin()
+  const supabase = await getServerSupabase()
+  const head = () => supabase.from("orders").select("id", { count: "exact", head: true })
+
+  const [, returnCounts, statusCounts, paymentCounts] = await Promise.all([
+    adminCheck,
+    Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
+    Promise.all(ORDER_STATUSES.map(async (s) => (await head().eq("status", s)).count ?? 0)),
+    Promise.all([
+      head().eq("payment_status", "submitted").neq("status", "cancelled").then((r) => r.count ?? 0),
+      head().eq("payment_status", "failed").neq("status", "cancelled").then((r) => r.count ?? 0),
+      head().eq("payment_status", "paid").then((r) => r.count ?? 0),
+      head().eq("status", "cancelled").in("payment_status", ["paid", "submitted"]).then((r) => r.count ?? 0),
+      head().eq("payment_status", "refunded").then((r) => r.count ?? 0),
+    ]),
+  ])
+
+  return {
+    returns: Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, returnCounts[i]])) as ReturnViewCounts,
+    status: Object.fromEntries(ORDER_STATUSES.map((s, i) => [s, statusCounts[i]])) as Record<OrderStatus, number>,
+    payment: {
+      submitted: paymentCounts[0],
+      failed: paymentCounts[1],
+      paid: paymentCounts[2],
+      "refund-due": paymentCounts[3],
+      refunded: paymentCounts[4],
+    },
+  }
 }
 
 export async function listOrders(filters: OrderFilters): Promise<{ orders: Order[]; total: number; page: number }> {
@@ -159,6 +202,11 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   }
   if (q) {
     query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
+  } else if (!isOrderView(filters.view) && (filters.year !== undefined || filters.month !== undefined)) {
+    const period = resolveOrderPeriod({ year: filters.year, month: filters.month }, filters.today)
+    if (period.startIso && period.endIso) {
+      query = query.gte("created_at", period.startIso).lt("created_at", period.endIso)
+    }
   }
 
   const [, { data, error, count }] = await Promise.all([adminCheck, query.returns<OrderRow[]>()])

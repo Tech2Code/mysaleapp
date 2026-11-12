@@ -163,3 +163,97 @@ export function resolveRange(input: { range?: string; month?: string; fy?: strin
     end: earlier(new Date(prevStart.getTime() + (tomorrow.getTime() - start.getTime())), start),
   })
 }
+
+export type OrderPeriod = {
+  /** Financial year start year (e.g. "2026" for FY 2026-27) or "all" for all-time. */
+  year: string
+  /** Month in YYYY-MM format (e.g. "2026-11") or "all" for the full financial year. */
+  month: string
+  startIso: string | null
+  endIso: string | null
+  label: string
+}
+
+/** Financial year options for the customer & admin orders list: current FY, 4 previous FYs, and "All time". */
+export function orderYearOptions(today: string, selectedYear?: string): RangeOption[] {
+  const cy = fyStartYearOf(today)
+  const years = [cy, cy - 1, cy - 2, cy - 3, cy - 4]
+  if (selectedYear && /^\d{4}$/.test(selectedYear)) {
+    const y = Number(selectedYear)
+    if (!years.includes(y)) years.push(y)
+  }
+  return [
+    ...years.map((y) => ({ value: String(y), label: fyLabel(y) })),
+    { value: "all", label: "All time" },
+  ]
+}
+
+/** Month options for one financial year (April → March, up to the current month): "Full FY YYYY-YY" plus each month. */
+export function orderMonthOptions(today: string, fyYear: string): RangeOption[] {
+  if (fyYear === "all" || !/^\d{4}$/.test(fyYear)) return [{ value: "all", label: "All months" }]
+  const fyNum = Number(fyYear)
+  const thisMonth = today.slice(0, 7)
+  const options: RangeOption[] = [{ value: "all", label: `Full ${fyLabel(fyNum)}` }]
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(Date.UTC(fyNum, 3 + i, 1))
+    const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
+    if (ym > thisMonth) break
+    options.push({ value: ym, label: monthLabelUtc(ym) })
+  }
+  return options
+}
+
+/**
+ * Resolves the date window for orders lists using Indian Financial Year (1 April – 31 March).
+ * Default (no year/month params) = current financial year + current month in IST.
+ * Pass `todayOrNow` after calling `await connection()` or `await getServerSupabase()` so prerendering never touches `new Date()`.
+ */
+export function resolveOrderPeriod(input: { year?: string; month?: string }, todayOrNow: string | Date = "2026-04-01"): OrderPeriod {
+  const today = typeof todayOrNow === "string" ? todayOrNow : istDayKey(todayOrNow)
+  const currentFy = String(fyStartYearOf(today))
+  const currentYm = today.slice(0, 7)
+
+  if (input.year === "all") {
+    return { year: "all", month: "all", startIso: null, endIso: null, label: "All time" }
+  }
+
+  const validFy =
+    input.year && /^\d{4}$/.test(input.year) && Number(input.year) >= 2000 && Number(input.year) <= Number(currentFy) + 1
+      ? input.year
+      : currentFy
+
+  let month: string
+  if (input.month === "all") {
+    month = "all"
+  } else if (input.month && YM.test(input.month)) {
+    const ymFy = String(fyStartYearOf(`${input.month}-01`))
+    if (ymFy !== validFy) {
+      month = validFy === currentFy ? currentYm : "all"
+    } else {
+      month = input.month > currentYm ? currentYm : input.month
+    }
+  } else {
+    month = validFy === currentFy ? currentYm : "all"
+  }
+
+  if (month === "all") {
+    const fyNum = Number(validFy)
+    return {
+      year: validFy,
+      month: "all",
+      startIso: startOfDay(`${fyNum}-04-01`).toISOString(),
+      endIso: startOfDay(`${fyNum + 1}-04-01`).toISOString(),
+      label: `${fyLabel(fyNum)} (Apr–Mar)`,
+    }
+  }
+
+  const start = startOfDay(`${month}-01`)
+  const end = monthStart(`${month}-01`, 1)
+  return {
+    year: validFy,
+    month,
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+    label: monthLabelUtc(month),
+  }
+}

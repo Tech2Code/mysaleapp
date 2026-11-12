@@ -9,8 +9,8 @@ import { describedBy, FieldShell, FIELD_HEIGHT, PILL, type FieldSize } from "./f
 export type SelectOption = {
   value: string
   label: string
-  /** Visual role of the option (e.g. current status, recommended next step, or step revert/undo). */
-  tone?: "default" | "current" | "next" | "revert"
+  /** Visual role of the option (e.g. current status, recommended next step, step revert/undo, or attention count). */
+  tone?: "default" | "current" | "next" | "revert" | "attention"
   /** Optional custom pill badge text shown on the right of the option. */
   badge?: string
 }
@@ -30,6 +30,10 @@ export type SelectFieldProps = {
   disabled?: boolean
   /** Adds a first, empty choice with this text; it is also what shows when nothing is chosen. */
   placeholder?: string
+  /** Short category prefix shown inside the closed trigger (e.g. "Status:", "Payment:"). */
+  prefix?: string
+  /** Highlights the trigger border/background when a non-default filter value is active. */
+  activeFilter?: boolean
   fieldSize?: FieldSize
   pill?: boolean
   className?: string
@@ -59,6 +63,8 @@ export function SelectField({
   id: idProp,
   disabled,
   placeholder,
+  prefix,
+  activeFilter,
   fieldSize = "lg",
   pill,
   className,
@@ -99,26 +105,48 @@ export function SelectField({
             "disabled:cursor-not-allowed disabled:opacity-50",
             isRevertSelected && "border-amber-400/90 bg-amber-50/70 text-amber-950 hover:border-amber-500 dark:border-amber-700/80 dark:bg-amber-950/30 dark:text-amber-100",
             isNextSelected && "border-emerald-400/90 bg-emerald-50/60 text-emerald-950 hover:border-emerald-500 dark:border-emerald-700/80 dark:bg-emerald-950/25 dark:text-emerald-100",
+            activeFilter && !isRevertSelected && !isNextSelected && "border-primary/60 bg-primary/5 font-medium text-foreground",
             pill ? `${PILL} bg-card font-medium shadow-sm` : FIELD_HEIGHT[fieldSize],
             className
           )}
         >
           <span
             data-ui="form/SelectField/span"
-            title={selectedLabel ?? placeholder ?? undefined}
-            className={cn("flex min-w-0 flex-1 items-center gap-2 text-left", !selectedLabel && "text-muted-foreground/60")}
+            title={selectedLabel ? (prefix ? `${prefix} ${selectedLabel}` : selectedLabel) : placeholder ?? undefined}
+            className={cn("flex min-w-0 flex-1 items-center gap-1.5 text-left", !selectedLabel && "text-muted-foreground/60")}
           >
             {isRevertSelected && <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />}
             {isNextSelected && <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
-            <span data-ui="form/SelectField/span-2" className="truncate">{selectedLabel ?? placeholder ?? "Select…"}</span>
+            {prefix && (
+              <span data-ui="form/SelectField/span-2" className="shrink-0 text-xs font-medium text-muted-foreground">
+                {prefix}
+              </span>
+            )}
+            <span data-ui="form/SelectField/span-3" className={cn("truncate", prefix && "font-medium")}>
+              {selectedLabel ?? placeholder ?? "Select…"}
+            </span>
             {isRevertSelected && (
-              <span data-ui="form/SelectField/span-3" className="ml-auto shrink-0 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
+              <span data-ui="form/SelectField/span-4" className="ml-auto shrink-0 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
                 {selectedOption?.badge ?? "Revert"}
               </span>
             )}
             {isNextSelected && (
-              <span data-ui="form/SelectField/span-4" className="ml-auto shrink-0 rounded-full bg-emerald-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
+              <span data-ui="form/SelectField/span-5" className="ml-auto shrink-0 rounded-full bg-emerald-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
                 {selectedOption?.badge ?? "Next step"}
+              </span>
+            )}
+            {selectedOption?.badge && !isRevertSelected && !isNextSelected && (
+              <span
+                data-ui="form/SelectField/span-6"
+                className={cn(
+                  "ml-auto inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+                  selectedOption.tone === "attention"
+                    ? "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {selectedOption.tone === "attention" && <span data-ui="form/SelectField/span-7" className="size-1.5 rounded-full bg-amber-500" aria-hidden />}
+                {selectedOption.badge}
               </span>
             )}
           </span>
@@ -164,18 +192,31 @@ export function SelectField({
                       {isNext && <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
                       <SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">{item.label}</SelectPrimitive.ItemText>
                       {isCurrent && (
-                        <span data-ui="form/SelectField/span-5" className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
+                        <span data-ui="form/SelectField/span-8" className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
                           {item.badge ?? "Current"}
                         </span>
                       )}
                       {isNext && (
-                        <span data-ui="form/SelectField/span-6" className="shrink-0 rounded-full bg-emerald-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
+                        <span data-ui="form/SelectField/span-9" className="shrink-0 rounded-full bg-emerald-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
                           {item.badge ?? "Next step"}
                         </span>
                       )}
                       {isRevert && (
-                        <span data-ui="form/SelectField/span-7" className="shrink-0 rounded-full bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
+                        <span data-ui="form/SelectField/span-10" className="shrink-0 rounded-full bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
                           {item.badge ?? "Undo"}
+                        </span>
+                      )}
+                      {item.badge && !isCurrent && !isNext && !isRevert && (
+                        <span
+                          data-ui="form/SelectField/span-11"
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+                            item.tone === "attention"
+                              ? "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {item.badge}
                         </span>
                       )}
                       <SelectPrimitive.ItemIndicator
