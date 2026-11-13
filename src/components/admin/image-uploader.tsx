@@ -22,12 +22,15 @@ export function ImageUploader({
   value,
   onChange,
   onUploadingChange,
+  savedRef,
 }: {
   value: string[]
   /** Accepts a new list, or an updater that receives the CURRENT list (uploads finish later than they start). */
   onChange: (urls: string[] | ((current: string[]) => string[])) => void
   /** True while photos are still uploading (the form must not be saved yet: they would be lost). */
   onUploadingChange?: (busy: boolean) => void
+  /** Set to true by the parent form right before saving so newly uploaded files are kept when leaving the page. */
+  savedRef?: React.RefObject<boolean>
 }) {
   const inputId = useId()
   const [uploading, setUploading] = useState(0)
@@ -36,10 +39,18 @@ export function ImageUploader({
 
   useEffect(() => {
     mountedRef.current = true
+    const sessionMap = sessionPaths.current
+    const saved = savedRef
     return () => {
       mountedRef.current = false
+      // If leaving or hiding (<Activity>) without saving, remove any newly uploaded unsaved files from storage
+      if (!saved?.current && sessionMap.size > 0) {
+        const paths = Array.from(sessionMap.values())
+        sessionMap.clear()
+        void getBrowserSupabase()?.storage.from(BUCKET).remove(paths)
+      }
     }
-  }, [])
+  }, [savedRef])
 
   useEffect(() => {
     onUploadingChange?.(uploading > 0)
@@ -113,8 +124,12 @@ export function ImageUploader({
     <div data-ui="admin/ImageUploader" className="space-y-3">
       <div data-ui="admin/ImageUploader/div-grid" className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {value.map((url, i) => (
-          <div data-ui="admin/ImageUploader/div-relative" key={url} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
-            <Image data-ui="admin/ImageUploader/Image" src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
+          <div data-ui="admin/ImageUploader/div-relative" key={`${url}-${i}`} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
+            {url.startsWith("data:") ? (
+              <div className="absolute inset-0 bg-muted" />
+            ) : (
+              <Image data-ui="admin/ImageUploader/Image" src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
+            )}
             {i === 0 && (
               <span data-ui="admin/ImageUploader/span-absolute" className="absolute top-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
                 Cover

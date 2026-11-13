@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useState, useTransition, type ReactNode } from "react"
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
@@ -85,6 +85,17 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
   })
   const { errors, isDirty } = form.formState
   const [pincode, setPincode] = useState("")
+  const baselineRef = useRef<StoreSettingsInput>(toFormValues(settings))
+
+  useEffect(() => {
+    const next = toFormValues(settings)
+    baselineRef.current = next
+    form.reset(next)
+    return () => {
+      form.reset(baselineRef.current)
+      setPincode("")
+    }
+  }, [settings, form])
   const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal] = useWatch({
     control: form.control,
     name: [
@@ -140,55 +151,58 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
         ].join(" ")
       : null
 
-  const onSubmit = form.handleSubmit((values) =>
-    startTransition(async () => {
-      const res = await saveStoreSettings(values)
-      if (!res.ok) {
-        toast.error(res.error)
-        for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
-          if (messages?.[0] && field in values) form.setError(field as keyof StoreSettingsInput, { message: messages[0] })
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) =>
+    void form.handleSubmit((values) =>
+      startTransition(async () => {
+        const res = await saveStoreSettings(values)
+        if (!res.ok) {
+          toast.error(res.error)
+          for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+            if (messages?.[0] && field in values) form.setError(field as keyof StoreSettingsInput, { message: messages[0] })
+          }
+          return
         }
-        return
-      }
-      later(() => toast.success("Settings saved. Your website is updated."))
-      // keep exactly what was saved (normalised phone number, upper-case prefix…) as the new baseline
-      form.reset({
-        shopName: values.shopName,
-        tagline: values.tagline,
-        description: values.description,
-        keywords: values.keywords,
-        announcement: values.announcement ?? "",
-        highlightLine: values.highlightLine ?? DEFAULT_SETTINGS.highlightLine,
-        heroBadge: values.heroBadge ?? DEFAULT_SETTINGS.heroBadge,
-        priceNote: values.priceNote ?? "",
-        gstRegistered: values.gstRegistered,
-        gstin: values.gstin ?? "",
-        gstRate: values.gstRate,
-        legalName: values.legalName ?? "",
-        businessAddress: values.businessAddress ?? "",
-        whatsappNumber: values.whatsappNumber,
-        phoneSameAsWhatsapp: values.phoneSameAsWhatsapp,
-        email: values.email ?? "",
-        phone: values.phoneSameAsWhatsapp ? "" : (values.phone ?? ""),
-        city: values.city ?? "",
-        region: values.region ?? "",
-        instagramUrl: values.instagramUrl ?? "",
-        facebookUrl: values.facebookUrl ?? "",
-        orderCodePrefix: values.orderCodePrefix,
-        unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
-        returnWindowDays: values.returnWindowDays,
-        deliveryFee: values.deliveryFee,
-        freeDeliveryAbove: values.freeDeliveryAbove,
-        fragileFee: values.fragileFee,
-        oversizedFee: values.oversizedFee,
-        freeWeightGrams: values.freeWeightGrams,
-        extraWeightFeePerKg: values.extraWeightFeePerKg,
-        upiId: values.upiId ?? "",
-        upiPayeeName: values.upiPayeeName ?? "",
+        later(() => toast.success("Settings saved. Your website is updated."))
+        // keep exactly what was saved (normalised phone number, upper-case prefix…) as the new baseline
+        const nextBaseline: StoreSettingsInput = {
+          shopName: values.shopName,
+          tagline: values.tagline,
+          description: values.description,
+          keywords: values.keywords,
+          announcement: values.announcement ?? "",
+          highlightLine: values.highlightLine ?? DEFAULT_SETTINGS.highlightLine,
+          heroBadge: values.heroBadge ?? DEFAULT_SETTINGS.heroBadge,
+          priceNote: values.priceNote ?? "",
+          gstRegistered: values.gstRegistered,
+          gstin: values.gstin ?? "",
+          gstRate: values.gstRate,
+          legalName: values.legalName ?? "",
+          businessAddress: values.businessAddress ?? "",
+          whatsappNumber: values.whatsappNumber,
+          phoneSameAsWhatsapp: values.phoneSameAsWhatsapp,
+          email: values.email ?? "",
+          phone: values.phoneSameAsWhatsapp ? "" : (values.phone ?? ""),
+          city: values.city ?? "",
+          region: values.region ?? "",
+          instagramUrl: values.instagramUrl ?? "",
+          facebookUrl: values.facebookUrl ?? "",
+          orderCodePrefix: values.orderCodePrefix,
+          unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
+          returnWindowDays: values.returnWindowDays,
+          deliveryFee: values.deliveryFee,
+          freeDeliveryAbove: values.freeDeliveryAbove,
+          fragileFee: values.fragileFee,
+          oversizedFee: values.oversizedFee,
+          freeWeightGrams: values.freeWeightGrams,
+          extraWeightFeePerKg: values.extraWeightFeePerKg,
+          upiId: values.upiId ?? "",
+          upiPayeeName: values.upiPayeeName ?? "",
+        }
+        baselineRef.current = nextBaseline
+        form.reset(nextBaseline)
+        router.refresh()
       })
-      router.refresh()
-    })
-  )
+    )(e)
 
   return (
     <form data-ui="admin/StoreSettingsForm" onSubmit={onSubmit} noValidate>

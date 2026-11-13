@@ -1,10 +1,19 @@
 "use client"
 
-import { usePathname, useSearchParams } from "next/navigation"
-import { useEffect, useLayoutEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
+import { useEffect, useLayoutEffect } from "react"
 import { SCROLL_HOLD, holdFinished, shouldResetScroll } from "@/lib/scroll-reset"
 
 const scrollPositions = new Map<string, number>()
+
+// Module-level navigation state so React Suspense / Strict Mode / remounts never wipe out history flags or scroll positions
+let committedPath: string | null = null
+let committedKey: string | null = null
+let previousPath: string | null = null
+let lastScrollY = 0
+let viaHistory = false
+let isTransitioning = false
+let activeNav: { key: string; prevPath: string; viaHistory: boolean } | null = null
 
 function getStorageKey(url: string) {
   return `agy:scroll:${url}`
@@ -57,37 +66,31 @@ function getSavedScrollPosition(fullKey: string, pathnameOnly: string): number |
  */
 export function ScrollReset() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const search = searchParams.toString()
-  const routeKey = `${pathname}${search ? `?${search}` : ""}`
-
-  const committedPath = useRef(pathname)
-  const committedKey = useRef(routeKey)
-  const lastScrollY = useRef(0)
-  const viaHistory = useRef(false)
-  const isTransitioning = useRef(false)
 
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual"
     }
-    lastScrollY.current = window.scrollY
-    saveScrollPosition(committedKey.current, committedPath.current, window.scrollY)
+    if (committedPath === null) {
+      committedPath = window.location.pathname
+      committedKey = window.location.pathname + window.location.search
+      lastScrollY = window.scrollY
+    }
 
     let ticking = false
     const onScroll = () => {
-      if (isTransitioning.current) return
+      if (isTransitioning) return
       // Only record scroll when browser URL still matches the committed React route
-      if (window.location.pathname !== committedPath.current) return
+      if (!committedPath || window.location.pathname !== committedPath) return
       const y = window.scrollY
-      lastScrollY.current = y
+      lastScrollY = y
       if (!ticking) {
         ticking = true
         window.requestAnimationFrame(() => {
           ticking = false
-          if (isTransitioning.current || window.location.pathname !== committedPath.current) return
+          if (isTransitioning || !committedPath || window.location.pathname !== committedPath) return
           const liveKey = window.location.pathname + window.location.search
-          saveScrollPosition(liveKey, committedPath.current, lastScrollY.current)
+          saveScrollPosition(liveKey, committedPath, lastScrollY)
         })
       }
     }
@@ -101,21 +104,35 @@ export function ScrollReset() {
         const url = new URL(anchor.href, window.location.href)
         if (url.origin !== window.location.origin) return
         if (url.pathname !== window.location.pathname || url.search !== window.location.search) {
+          const currentPath = committedPath ?? window.location.pathname
           const liveKey = window.location.pathname + window.location.search
-          saveScrollPosition(liveKey, committedPath.current, window.scrollY)
-          lastScrollY.current = window.scrollY
-          isTransitioning.current = true
+          const currentY = isTransitioning ? lastScrollY : window.scrollY
+          saveScrollPosition(liveKey, currentPath, currentY)
+          lastScrollY = currentY
+          isTransitioning = true
+          // If clicking an explicit back link (e.g. "All orders" / "Back to order") returning to the previous route, restore scroll
+          if (
+            anchor.hasAttribute("data-back-link") ||
+            (previousPath && url.pathname === previousPath && currentPath.startsWith(`${url.pathname}/`))
+          ) {
+            viaHistory = true
+          } else {
+            viaHistory = false
+          }
         }
       } catch {
         // ignore invalid href
       }
     }
 
-    const onPop = () => {
+    const onPop = (e: PopStateEvent) => {
+      if (e.state?.__searchDialog) return
       // Save the leaving page's last known genuine scroll position before popstate mutates scrollY
-      saveScrollPosition(committedKey.current, committedPath.current, lastScrollY.current)
-      viaHistory.current = true
-      isTransitioning.current = true
+      if (committedKey && committedPath) {
+        saveScrollPosition(committedKey, committedPath, lastScrollY)
+      }
+      viaHistory = true
+      isTransitioning = true
     }
 
     window.addEventListener("scroll", onScroll, { passive: true })
@@ -129,31 +146,61 @@ export function ScrollReset() {
   }, [])
 
   useLayoutEffect(() => {
-    const targetKey = `${pathname}${window.location.search || (search ? `?${search}` : "")}`
-    const wasHistory = viaHistory.current
+    const search = typeof window !== "undefined" ? window.location.search : ""
+    const targetKey = `${pathname}${search}`
+
+    if (committedPath === null) {
+      committedPath = pathname
+      committedKey = targetKey
+      lastScrollY = window.scrollY
+    }
+
+    let wasHistory: boolean
+    let prevPath: string
+
+    if (activeNav && activeNav.key === targetKey) {
+      // React Strict Mode or effect re-run for the same target route: preserve the original navigation intent
+      wasHistory = activeNav.viaHistory
+      prevPath = activeNav.prevPath
+    } else {
+      wasHistory = viaHistory
+      prevPath = committedPath
+
+      // Save the leaving route using its last genuine scroll position (never window.scrollY which Next.js may have reset to 0)
+      if (committedKey && committedKey !== targetKey) {
+        saveScrollPosition(committedKey, committedPath, lastScrollY)
+      }
+      if (committedPath !== pathname) {
+        previousPath = committedPath
+      }
+
+      activeNav = { key: targetKey, prevPath, viaHistory: wasHistory }
+      committedPath = pathname
+      committedKey = targetKey
+      viaHistory = false
+    }
+
+    isTransitioning = true
+
     const decision = {
-      previousPath: committedPath.current,
+      previousPath: prevPath,
       nextPath: pathname,
       viaHistory: wasHistory,
       hash: window.location.hash,
     }
 
-    // Save the leaving route using its last genuine scroll position (never window.scrollY which Next.js may have reset to 0)
-    if (committedKey.current && committedKey.current !== targetKey) {
-      saveScrollPosition(committedKey.current, committedPath.current, lastScrollY.current)
-    }
-
-    committedPath.current = pathname
-    committedKey.current = targetKey
-    viaHistory.current = false
+    const savedY = wasHistory ? (getSavedScrollPosition(targetKey, pathname) ?? 0) : 0
 
     const releaseTransition = (finalY: number) => {
-      lastScrollY.current = finalY
-      isTransitioning.current = false
+      lastScrollY = finalY
+      isTransitioning = false
+      const liveKey = window.location.pathname + window.location.search
+      // Never clobber a non-zero saved history scroll position if the page hasn't grown tall enough yet
+      if (wasHistory && savedY > 0 && finalY < 10) return
+      saveScrollPosition(liveKey, committedPath ?? pathname, finalY)
     }
 
     if (wasHistory) {
-      const savedY = getSavedScrollPosition(targetKey, pathname) ?? 0
       return holdAtPosition(savedY, releaseTransition)
     }
 
@@ -162,28 +209,32 @@ export function ScrollReset() {
       return
     }
     return holdAtPosition(0, releaseTransition)
-  }, [pathname, search])
+  }, [pathname])
 
   return null
 }
 
 /**
- * Restore scroll to `targetY` immediately and re-apply via ResizeObserver only when streamed content
- * changes document height or when an internal router effect tries to reset scroll during transition.
+ * Restore scroll to `targetY` immediately and re-apply via ResizeObserver and polling when streamed content
+ * or `<Activity>` visibility changes document height or when an internal router effect tries to reset scroll.
  */
 function holdAtPosition(targetY: number, onDone: (finalY: number) => void): () => void {
   let stopped = false
+  let hasReachedTarget = targetY <= 0
+
   const applyScroll = () => {
     if (stopped) return
     if (Math.abs(window.scrollY - targetY) > 1) {
       window.scrollTo({ top: targetY, left: 0, behavior: "instant" })
+    }
+    if (targetY > 0 && Math.abs(window.scrollY - targetY) <= 2) {
+      hasReachedTarget = true
     }
   }
 
   applyScroll()
   const rafId = window.requestAnimationFrame(() => {
     applyScroll()
-    if (targetY === 0) onDone(0)
   })
 
   const startedAt = performance.now()
@@ -200,43 +251,50 @@ function holdAtPosition(targetY: number, onDone: (finalY: number) => void): () =
     }
     applyScroll()
     const maxScroll = Math.max(0, next - window.innerHeight)
-    if (targetY > 0 && maxScroll >= targetY && Math.abs(window.scrollY - targetY) <= 2) {
-      onDone(window.scrollY)
-    }
-    if (holdFinished({ now, startedAt, lastHeightChangeAt })) {
-      stop()
+    const reachedTarget = targetY <= 0 || (maxScroll >= targetY && Math.abs(window.scrollY - targetY) <= 2)
+    if (reachedTarget) hasReachedTarget = true
+    if (holdFinished({ now, startedAt, lastHeightChangeAt }) && (reachedTarget || now - startedAt >= SCROLL_HOLD.maxMs)) {
+      stop(false)
     }
   }
 
   const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(checkAndRestore) : null
   ro?.observe(document.body)
+  ro?.observe(document.documentElement)
 
-  // Guard against Next.js internal post-commit scrollTo(0) wiping out back-navigation restoration
+  // Guard against Next.js internal post-commit scrollTo(0) or layout clamping wiping out restoration
   const onScrollGuard = () => {
     if (stopped) return
-    const now = performance.now()
-    if (now - startedAt < 350 && targetY > 0 && window.scrollY < 10) {
+    if (Math.abs(window.scrollY - targetY) > 2) {
       applyScroll()
     }
   }
   window.addEventListener("scroll", onScrollGuard, { passive: true })
 
-  const settleTimer = window.setTimeout(() => {
-    checkAndRestore()
-    stop()
-  }, SCROLL_HOLD.stableMs)
+  const pollTimer = window.setInterval(checkAndRestore, 50)
 
-  const events = ["wheel", "touchmove", "keydown", "mousedown"] as const
-  const stop = () => {
+  const events = ["wheel", "touchmove", "keydown"] as const
+  const onUserInteract = () => {
+    const elapsed = performance.now() - startedAt
+    // Ignore trailing momentum wheel/touchmove events from before the navigation
+    if (elapsed < 220) return
+    // If restoring to a deep scroll position, wait until the target position is actually reached (or 900ms max)
+    if (targetY > 0 && !hasReachedTarget && elapsed < 900) return
+    stop(false)
+  }
+
+  const stop = (cancelled = false) => {
     if (stopped) return
     stopped = true
     window.cancelAnimationFrame(rafId)
-    window.clearTimeout(settleTimer)
+    window.clearInterval(pollTimer)
     ro?.disconnect()
     window.removeEventListener("scroll", onScrollGuard)
-    for (const e of events) window.removeEventListener(e, stop)
-    onDone(window.scrollY)
+    for (const e of events) window.removeEventListener(e, onUserInteract)
+    if (!cancelled) {
+      onDone(window.scrollY)
+    }
   }
-  for (const e of events) window.addEventListener(e, stop, { passive: true })
-  return stop
+  for (const e of events) window.addEventListener(e, onUserInteract, { passive: true })
+  return () => stop(true)
 }

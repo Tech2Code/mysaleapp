@@ -48,7 +48,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
 
   return (
     <>
-      <Link data-ui="admin/AdminOrderView/Link-all-orders" href="/admin/orders" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link data-ui="admin/AdminOrderView/Link-all-orders" data-back-link href="/admin/orders" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeftIcon className="size-4" /> All orders
       </Link>
 

@@ -26,13 +26,13 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
         <div data-ui="store/Hero/div-absolute-4" className="absolute -bottom-32 left-1/3 size-96 rounded-full bg-amber-200/40 blur-3xl sm:animate-blob sm:will-change-transform [animation-delay:-12s] dark:bg-amber-900/20" />
       </div>
 
-      <div data-ui="store/Hero/div-grid" className="container-page grid items-center gap-5 pt-3 pb-6 sm:gap-12 sm:pt-10 sm:pb-20 md:pt-16 lg:grid-cols-2 lg:pb-28">
-        <div data-ui="store/Hero/div" className="max-w-xl max-sm:rounded-3xl max-sm:border max-sm:border-primary/15 max-sm:bg-card/85 max-sm:p-5 max-sm:shadow-lg max-sm:backdrop-blur-md">
+      <div data-ui="store/Hero/div-grid" className="container-page grid items-center gap-8 py-10 sm:gap-10 sm:py-14 lg:grid-cols-2 lg:gap-12 lg:py-20">
+        <div data-ui="store/Hero/div" className="max-w-xl">
           <m.span data-ui="store/Hero/m.span-inline-flex"
             initial={{ y: 8 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.35, ease }}
-            className="inline-flex items-center gap-1.5 rounded-full border bg-background/80 px-3 py-1 text-[0.7rem] font-semibold text-primary shadow-xs backdrop-blur sm:gap-2 sm:px-3.5 sm:py-1.5 sm:text-xs"
+            className="inline-flex items-center gap-2 rounded-full border bg-background/80 px-3.5 py-1.5 text-xs font-semibold text-primary shadow-xs backdrop-blur"
           >
             <SparklesIcon className="size-3.5" /> {heroBadge}
           </m.span>
@@ -41,7 +41,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             initial={{ y: 12 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.45, ease, delay: 0.04 }}
-            className="mt-3 text-[1.75rem]/tight font-semibold sm:mt-6 sm:text-6xl lg:text-7xl"
+            className="mt-4 text-5xl font-semibold sm:mt-5 sm:text-6xl lg:text-7xl"
           >
             Little things, <span data-ui="store/Hero/span" className="text-gradient italic">made by hand</span>, loved for years.
           </m.h1>
@@ -50,7 +50,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             initial={{ y: 12 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.45, ease, delay: 0.08 }}
-            className="mt-2.5 max-w-lg line-clamp-2 text-xs/relaxed text-muted-foreground sm:mt-6 sm:line-clamp-none sm:text-lg/relaxed"
+            className="mt-3.5 max-w-lg text-base/relaxed text-muted-foreground sm:mt-5 sm:text-lg/relaxed"
           >
             {description}
           </m.p>
@@ -59,62 +59,37 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
             initial={{ y: 12 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.45, ease, delay: 0.12 }}
-            className="mt-4 flex flex-wrap items-center gap-3 sm:mt-8 sm:gap-4"
+            className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2.5 sm:mt-7"
           >
             <Link data-ui="store/Hero/Link"
               href="/products"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "group h-10 gap-2 rounded-full pl-5 pr-4 text-sm leading-none font-semibold shadow-lg shadow-primary/25 sm:h-12 sm:gap-2.5 sm:pl-7 sm:pr-5.5 sm:text-base sm:shadow-xl"
+                "group h-12 gap-2.5 rounded-full pl-7 pr-5.5 text-base leading-none font-semibold shadow-xl shadow-primary/25"
               )}
             >
-              <span data-ui="store/Hero/span-2">Shop now</span>
-              <ArrowRightIcon className="size-4 translate-y-[0.5px] transition-transform group-hover:translate-x-1 sm:size-4.5" />
+              <span data-ui="store/Hero/span-2">Shop the collection</span>
+              <ArrowRightIcon className="size-4.5 translate-y-[0.5px] transition-transform group-hover:translate-x-1" />
             </Link>
-            <span data-ui="store/Hero/span-inline-flex" className="inline-flex h-10 items-center gap-1.5 text-xs leading-none font-medium text-muted-foreground sm:h-12 sm:gap-2 sm:text-sm">
-              <WhatsAppIcon className="size-4 shrink-0 text-whatsapp sm:size-4.5" />
-              <span data-ui="store/Hero/span-3">Easy WhatsApp order</span>
+            <span data-ui="store/Hero/span-inline-flex" className="inline-flex items-center gap-2 py-1 text-sm leading-none font-medium text-muted-foreground">
+              <WhatsAppIcon className="size-4.5 shrink-0 text-whatsapp" />
+              <span data-ui="store/Hero/span-3">Easy ordering on WhatsApp</span>
             </span>
           </m.div>
-
-          {/* Mobile horizontal mini-showcase strip inside the promo card */}
-          {a && (
-            <div data-ui="store/Hero/div-grid-2" className="mt-4 grid grid-cols-3 gap-2 sm:hidden">
-              {[a, b, c].map((p, i) =>
-                p ? (
-                  <Link
-                    data-ui="store/Hero/Link-2"
-                    key={p.id}
-                    href={`/products/${p.slug}`}
-                    className="group overflow-hidden rounded-2xl border bg-background p-1.5 shadow-xs active:scale-97"
-                  >
-                    <div data-ui="store/Hero/div-relative" className="relative aspect-square overflow-hidden rounded-xl bg-muted @container">
-                      <ProductImage src={p.images[0]} alt={p.name} sizes="30vw" priority={i === 0} />
-                    </div>
-                    <p data-ui="store/Hero/p" className="mt-1 truncate px-0.5 text-[0.68rem] font-medium">{p.name}</p>
-                    <p data-ui="store/Hero/p-2" className="px-0.5 text-[0.7rem] font-bold text-primary">{formatPrice(p.price)}</p>
-                  </Link>
-                ) : null
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Floating product collage (tablet & desktop) */}
+        {/* Floating product collage */}
         {a && (
-          <div data-ui="store/Hero/div-relative-2" className="relative mx-auto hidden aspect-square w-full max-w-lg sm:block">
+          <div data-ui="store/Hero/div-relative-2" className="relative mx-auto aspect-square w-full max-w-md sm:max-w-lg">
             {[a, b, c].map((p, i) =>
               p ? (
-                <m.div data-ui="store/Hero/m.div"
+                <div data-ui="store/Hero/m.div"
                   key={p.id}
-                  initial={{ scale: 0.85, rotate: 0 }}
-                  animate={{ scale: 1, rotate: [-6, 5, -3][i] }}
-                  transition={{ duration: 0.9, ease, delay: 0.2 + i * 0.12 }}
                   className={cn(
                     "absolute",
-                    i === 0 && "top-0 left-[6%] z-20 w-[55%]",
-                    i === 1 && "top-[18%] right-0 z-10 w-[48%]",
-                    i === 2 && "bottom-0 left-[22%] z-30 w-[46%]"
+                    i === 0 && "top-0 left-[4%] z-20 w-[52%] -rotate-6",
+                    i === 1 && "top-[16%] right-[4%] z-10 w-[48%] rotate-5",
+                    i === 2 && "bottom-0 left-[27%] z-30 w-[46%] -rotate-3"
                   )}
                 >
                   <Link data-ui="store/Hero/Link-3"
@@ -136,7 +111,7 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
                       <span data-ui="store/Hero/span-5" className="shrink-0 text-xs font-bold text-primary">{formatPrice(p.price)}</span>
                     </div>
                   </Link>
-                </m.div>
+                </div>
               ) : null
             )}
           </div>

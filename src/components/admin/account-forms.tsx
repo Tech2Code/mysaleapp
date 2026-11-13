@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, MailCheckIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition, type ReactNode } from "react"
+import { useEffect, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
@@ -59,6 +59,12 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
   const phoneStr = typeof phoneVal === "string" ? phoneVal : ""
   const { pending, run, later } = useSubmit<{ name: string; phone: string }>((n, m) => form.setError(n, { message: m }))
 
+  useEffect(() => {
+    return () => {
+      form.reset(saved)
+    }
+  }, [saved, form])
+
   const hasChanges =
     (nameVal ?? "").trim() !== saved.name.trim() ||
     (normalizeIndianPhone(phoneStr) ?? phoneStr.trim()) !== (normalizeIndianPhone(saved.phone) ?? saved.phone.trim())
@@ -101,6 +107,12 @@ function EmailForm({ email }: { email: string }) {
   const { pending, run } = useSubmit<{ email: string }>((n, m) => form.setError(n, { message: m }))
   const cleanEmail = (emailVal ?? "").trim().toLowerCase()
   const emailUnchanged = !cleanEmail || cleanEmail === email.trim().toLowerCase()
+
+  useEffect(() => {
+    return () => {
+      form.reset({ email: "" })
+    }
+  }, [form])
 
   return (
     <form
@@ -147,6 +159,12 @@ function PasswordForm() {
   const [currentVal, nextVal, confirmVal] = useWatch({ control: form.control, name: ["current", "next", "confirm"] })
   const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
   const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
+
+  useEffect(() => {
+    return () => {
+      form.reset({ current: "", next: "", confirm: "" })
+    }
+  }, [form])
 
   return (
     <form

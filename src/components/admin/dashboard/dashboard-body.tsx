@@ -172,7 +172,6 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
                 <li data-ui="admin/DashboardBody/li" key={o.id}>
                   <Link data-ui="admin/DashboardBody/Link-grid"
                     href={`/admin/orders/${o.id}`}
-                    prefetch={true}
                     className="grid items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-muted/50 sm:grid-cols-[auto_1fr_auto] sm:px-6"
                   >
                     <div data-ui="admin/DashboardBody/div-flex-2" className="flex items-center gap-3 sm:contents">
@@ -266,7 +265,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
             <ul data-ui="admin/DashboardBody/ul-3" className="space-y-3">
               {d.lowStock.map((p) => (
                 <li data-ui="admin/DashboardBody/li-3" key={p.id}>
-                  <Link data-ui="admin/DashboardBody/Link-flex" href={`/admin/products/${p.id}`} prefetch={true} className="flex items-center gap-3 hover:text-primary">
+                  <Link data-ui="admin/DashboardBody/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3 hover:text-primary">
                     <span data-ui="admin/DashboardBody/span-relative-2" className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                       <ProductImage src={p.image} alt={p.name} sizes="40px" />
                     </span>

@@ -19,7 +19,7 @@ const DASHBOARD_PATH = "/admin"
 
 /**
  * Date-range picker + the dashboard numbers it controls (`children`, rendered on the server).
- * Default = this financial year. A skeleton shows while new numbers load; you can pick again at any time.
+ * Default = current month. A skeleton shows while new numbers load; you can pick again at any time.
  */
 export function DashboardRangeShell({
   current,
@@ -41,6 +41,7 @@ export function DashboardRangeShell({
   const fys = fyOptions(today, current)
   const months = monthOptions(today, Number(fyYear))
   const currentFy = String(fyYearOf(today))
+  const currentMonth = today.slice(0, 7)
 
   const go = (qs: string) =>
     startTransition(() => {
@@ -53,14 +54,20 @@ export function DashboardRangeShell({
 
   const onPickYear = (y: string) => {
     setFyYear(y)
-    setMonthSel("all")
-    go(y === currentFy ? "" : `?fy=${y}`)
+    if (y === currentFy) {
+      setMonthSel(currentMonth)
+      go("")
+    } else {
+      setMonthSel("all")
+      go(`?fy=${y}`)
+    }
   }
 
   const onPickMonth = (m: string) => {
     setMonthSel(m)
-    if (m === "all") go(fyYear === currentFy ? "" : `?fy=${fyYear}`)
+    if (m === "all") go(fyYear === currentFy ? "?range=fy" : `?fy=${fyYear}`)
     else if (m === "custom") applyCustom(from, to)
+    else if (m === currentMonth && fyYear === currentFy) go("")
     else go(`?month=${m}`)
   }
 

@@ -23,15 +23,17 @@ export function HomeView({
   categories: (Category & { count: number })[]
   shop: StoreSettings
 }) {
-  const newArrivals = all.slice(0, 4)
+  const inStockAll = all.filter((p) => p.stock > 0)
+  const inStockFeatured = featured.filter((p) => p.stock > 0)
+  const newArrivals = inStockAll.slice(0, 4)
   // Keep the grid's last row full on 4-column desktops (4 or 8 cards).
-  const bestsellers = featured.length >= 8 ? featured.slice(0, 8) : featured.slice(0, 4)
+  const bestsellers = inStockFeatured.length >= 8 ? inStockFeatured.slice(0, 8) : inStockFeatured.slice(0, 4)
 
   return (
     <>
-      <Hero showcase={featured.slice(0, 3)} />
+      <Hero showcase={inStockFeatured.slice(0, 3)} />
 
-      <div data-ui="store/HomeView/div" className="space-y-8 pt-3 sm:space-y-28 sm:pt-16">
+      <div data-ui="store/HomeView/div" className="space-y-12 pt-12 sm:space-y-20 sm:pt-20">
         {categories.length > 0 && (
           <section data-ui="store/HomeView/section" className="container-page" aria-labelledby="cat-title">
             <SectionHeading id="cat-title" eyebrow="Browse" title="Shop by category" href="/products" />

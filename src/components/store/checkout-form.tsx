@@ -486,7 +486,7 @@ export function CheckoutForm({
           type="submit"
           size="lg"
           disabled={pending || placeholder}
-          className="h-13 w-full rounded-full text-base shadow-lg shadow-primary/25"
+          className="hidden h-13 w-full rounded-full text-base shadow-lg shadow-primary/25 sm:inline-flex"
         >
           {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
           {pending ? "Placing order…" : `Proceed to pay · ${formatPrice(shownCharges.total)}`}
@@ -502,6 +502,32 @@ export function CheckoutForm({
           </p>
         </div>
       </aside>
+
+      {/* Native e-commerce sticky bottom pay bar on phones */}
+      <div
+        data-ui="store/CheckoutForm/div-mobile-sticky-bar"
+        data-mobile-bottom-bar
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
+      >
+        <div data-ui="store/CheckoutForm/div-mobile-total" className="min-w-0 pr-1">
+          <p data-ui="store/CheckoutForm/p-mobile-total-label" className="text-[0.65rem] font-medium text-muted-foreground uppercase">
+            Total to pay
+          </p>
+          <p data-ui="store/CheckoutForm/p-mobile-total-amount" className="font-heading text-lg/tight font-bold">
+            {formatPrice(shownCharges.total)}
+          </p>
+        </div>
+        <Button
+          data-ui="store/CheckoutForm/Button-mobile-pay"
+          type="submit"
+          size="lg"
+          disabled={pending || placeholder}
+          className="h-11 min-w-0 flex-1 rounded-full px-5 text-sm font-semibold shadow-md shadow-primary/25 active:scale-97"
+        >
+          {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
+          {pending ? "Placing order…" : "Proceed to pay"}
+        </Button>
+      </div>
 
       <Dialog open={payDialogOpen} onOpenChange={(next) => !pending && setPayDialogOpen(next)}>
         <DialogContent data-ui="store/CheckoutForm/DialogContent" className="sm:max-w-md">

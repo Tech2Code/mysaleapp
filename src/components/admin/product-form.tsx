@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition, type ReactNode } from "react"
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
@@ -39,6 +39,29 @@ function Section({ title, description, children }: { title: string; description?
   )
 }
 
+function toFormValues(product: Product | null): ProductInput {
+  return {
+    name: product?.name ?? "",
+    slug: product?.slug ?? "",
+    description: product?.description ?? "",
+    shortDescription: product?.shortDescription ?? "",
+    highlights: (product?.highlights ?? []).join("\n"),
+    specs: product?.specs ?? [],
+    careInstructions: product?.careInstructions ?? "",
+    price: product?.price ?? "",
+    compareAtPrice: product?.compareAtPrice ?? "",
+    images: product?.images ? [...product.images] : [],
+    categoryId: product?.categoryId ?? "",
+    stock: product?.stock ?? 10,
+    weightGrams: product?.weightGrams ?? 0,
+    shippingClass: product?.shippingClass ?? "standard",
+    isActive: product?.isActive ?? true,
+    isFeatured: product?.isFeatured ?? false,
+    seoTitle: product?.seoTitle ?? "",
+    seoDescription: product?.seoDescription ?? "",
+  }
+}
+
 export function ProductForm({
   product,
   categories,
@@ -52,33 +75,30 @@ export function ProductForm({
   const later = useToastAfter(pending)
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
   const [uploading, setUploading] = useState(false)
+  const savedRef = useRef(false)
+  const productRef = useRef(product)
   const storeSettings = useStoreSettings()
   const { shopName } = storeSettings
 
   const form = useForm<ProductInput, unknown, ProductValues>({
     resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: product?.name ?? "",
-      slug: product?.slug ?? "",
-      description: product?.description ?? "",
-      shortDescription: product?.shortDescription ?? "",
-      highlights: (product?.highlights ?? []).join("\n"),
-      specs: product?.specs ?? [],
-      careInstructions: product?.careInstructions ?? "",
-      price: product?.price ?? "",
-      compareAtPrice: product?.compareAtPrice ?? "",
-      images: product?.images ?? [],
-      categoryId: product?.categoryId ?? "",
-      stock: product?.stock ?? 10,
-      weightGrams: product?.weightGrams ?? 0,
-      shippingClass: product?.shippingClass ?? "standard",
-      isActive: product?.isActive ?? true,
-      isFeatured: product?.isFeatured ?? false,
-      seoTitle: product?.seoTitle ?? "",
-      seoDescription: product?.seoDescription ?? "",
-    },
+    defaultValues: toFormValues(product),
   })
   const { errors, isDirty } = form.formState
+
+  // Sync form when server product prop updates, and discard unsaved edits (e.g. removed images)
+  // when Next.js <Activity> hides this route on Back/navigation without saving.
+  useEffect(() => {
+    productRef.current = product
+    savedRef.current = false
+    form.reset(toFormValues(product))
+    return () => {
+      if (!savedRef.current) {
+        form.reset(toFormValues(productRef.current))
+        setSlugTouched(Boolean(productRef.current))
+      }
+    }
+  }, [product, form])
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
   const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal] = useWatch({
     control: form.control,
@@ -86,28 +106,31 @@ export function ProductForm({
   })
   const highlightCount = String(highlightsText ?? "").split("\n").filter((l) => l.trim()).length
 
-  const onSubmit = form.handleSubmit((values) => {
-    if (uploading) {
-      toast.warning("Photos are still uploading. Save once they finish.")
-      return
-    }
-    startTransition(async () => {
-      const res = await saveProduct(product?.id ?? null, values, product?.stock)
-      if (!res.ok) {
-        toast.error(res.error)
-        for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
-          if (messages?.[0]) form.setError(field as keyof ProductInput, { message: messages[0] })
-        }
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) =>
+    void form.handleSubmit((values) => {
+      if (uploading) {
+        toast.warning("Photos are still uploading. Save once they finish.")
         return
       }
-      later(() => toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store."))
-      if (product && res.data.stock !== values.stock) {
-        toast.info(`Stock is now ${res.data.stock} (it changed while you were editing, e.g. a new order).`)
-      }
-      router.push("/admin/products")
-      router.refresh()
-    })
-  })
+      startTransition(async () => {
+        const res = await saveProduct(product?.id ?? null, values, product?.stock)
+        if (!res.ok) {
+          toast.error(res.error)
+          for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+            if (messages?.[0]) form.setError(field as keyof ProductInput, { message: messages[0] })
+          }
+          return
+        }
+        savedRef.current = true
+        form.reset({ ...form.getValues(), stock: res.data.stock })
+        later(() => toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store."))
+        if (product && res.data.stock !== values.stock) {
+          toast.info(`Stock is now ${res.data.stock} (it changed while you were editing, e.g. a new order).`)
+        }
+        router.push("/admin/products")
+        router.refresh()
+      })
+    })(e)
 
   const previewTitle = (seoTitle as string) || `${name || "Product name"} | ${shopName}`
   const previewDesc = (seoDescription as string) || (description as string)?.slice(0, 155) || "Product description…"
@@ -216,7 +239,7 @@ export function ProductForm({
             <Controller
               control={form.control}
               name="images"
-              render={({ field }) => <ImageUploader onUploadingChange={setUploading} value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
+              render={({ field }) => <ImageUploader savedRef={savedRef} onUploadingChange={setUploading} value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
             />
             {errors.images && <p data-ui="admin/ProductForm/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>
@@ -341,7 +364,11 @@ export function ProductForm({
         busy={uploading}
         requireChanges={Boolean(product)}
         saveLabel={product ? "Save changes" : "Create product"}
-        onCancel={() => router.back()}
+        onCancel={() => {
+          form.reset(toFormValues(product))
+          setSlugTouched(Boolean(product))
+          router.back()
+        }}
       />
     </form>
   )

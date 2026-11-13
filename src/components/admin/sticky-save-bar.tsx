@@ -1,7 +1,6 @@
 "use client"
 
 import { Loader2Icon } from "lucide-react"
-import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -29,14 +28,6 @@ export function StickySaveBar({
   className?: string
 }) {
   const unsaved = dirty
-
-  // Closing / reloading the tab with edits that were never saved: let the browser ask first.
-  useEffect(() => {
-    if (!unsaved || pending) return
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
-    window.addEventListener("beforeunload", warn)
-    return () => window.removeEventListener("beforeunload", warn)
-  }, [unsaved, pending])
 
   return (
     <div data-ui="admin/StickySaveBar"

@@ -54,7 +54,7 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
             href={l.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative rounded-full px-3.5 py-2 text-sm font-medium text-foreground/75 transition-colors hover:text-foreground",
+              "relative max-w-44 truncate rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-foreground/75 transition-colors hover:text-foreground",
               active && "text-foreground"
             )}
           >
@@ -96,7 +96,7 @@ function MobileNavItems({
             onClick={onNavigate}
             aria-current={isActive(pathname, l.href) ? "page" : undefined}
             className={cn(
-              "block rounded-xl px-4 py-3 text-base font-medium transition-colors hover:bg-muted",
+              "block truncate rounded-xl px-4 py-3 text-base font-medium transition-colors hover:bg-muted",
               isActive(pathname, l.href) && "bg-secondary text-primary"
             )}
           >
@@ -140,10 +140,10 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
       )}
     >
-      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) items-center gap-2 sm:gap-3">
+      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) min-w-0 items-center gap-2 sm:gap-3">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger data-ui="store/Header/SheetTrigger-open-menu"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex lg:hidden")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden shrink-0 rounded-full sm:inline-flex lg:hidden")}
             aria-label="Open menu"
           >
             <MenuIcon className="size-5" />
@@ -166,15 +166,15 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </SheetContent>
         </Sheet>
 
-        <Logo />
+        <Logo className="min-w-0" />
 
-        <nav data-ui="store/Header/nav-main" className="ml-8 hidden items-center gap-1 lg:flex" aria-label="Main">
+        <nav data-ui="store/Header/nav-main" className="ml-8 hidden min-w-0 items-center gap-1 lg:flex" aria-label="Main">
           <Suspense fallback={<DesktopNavItems links={links} pathname={null} />}>
             <DesktopNavWithPath links={links} />
           </Suspense>
         </nav>
 
-        <div data-ui="store/Header/div-flex-4" className="ml-auto flex items-center gap-1 sm:gap-1.5">
+        <div data-ui="store/Header/div-flex-4" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
           <button data-ui="store/Header/button-search-products"
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
@@ -208,7 +208,9 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         </div>
       </div>
     </header>
-    <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
+    <Suspense fallback={null}>
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} categories={categories} />
+    </Suspense>
     </>
   )
 }

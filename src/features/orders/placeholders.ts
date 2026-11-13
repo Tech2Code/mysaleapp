@@ -107,8 +107,8 @@ export function placeholderDashboard(): DashboardData {
   }
 }
 
-/** The date-range picker's state while the dashboard loads (this financial year). */
-export const placeholderDashboardRange = () => ({ key: "fy" as const, from: "2026-04-01", to: "2026-04-12", bucket: "day" as const })
+/** The date-range picker's state while the dashboard loads (current month). */
+export const placeholderDashboardRange = () => ({ key: "month" as const, from: "2026-04-01", to: "2026-04-12", bucket: "day" as const })
 export const PLACEHOLDER_TODAY = "2026-04-12"
 
 /** A delivered order with a received return request and two recorded returns (one refunded, one not): the busiest typical order page. */

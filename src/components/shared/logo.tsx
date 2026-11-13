@@ -24,9 +24,9 @@ export function LogoMark({ className }: { className?: string }) {
 export function Logo({ href = "/", className }: { href?: string; className?: string }) {
   const { shopName } = useStoreSettings()
   return (
-    <ScrollLink data-ui="shared/Logo" href={href} className={cn("group flex items-center gap-2.5", className)} aria-label={`${shopName} home`}>
-      <LogoMark className="transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105" />
-      <span data-ui="shared/Logo/span" className="font-heading text-xl font-semibold tracking-tight">{shopName}</span>
+    <ScrollLink data-ui="shared/Logo" href={href} className={cn("group flex min-w-0 items-center gap-2.5", className)} aria-label={`${shopName} home`}>
+      <LogoMark className="shrink-0 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105" />
+      <span data-ui="shared/Logo/span" className="truncate font-heading text-xl font-semibold tracking-tight">{shopName}</span>
     </ScrollLink>
   )
 }

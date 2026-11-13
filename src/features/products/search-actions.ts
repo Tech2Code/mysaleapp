@@ -39,7 +39,7 @@ export async function searchProducts(input: unknown): Promise<SearchResult> {
       return { p, rank: (inName ? 0 : 2) + (name.startsWith(words[0]) ? 0 : 1) }
     })
     .filter((x): x is { p: Awaited<ReturnType<typeof getActiveProducts>>[number]; rank: number } => x !== null)
-    .sort((a, b) => a.rank - b.rank)
+    .sort((a, b) => Number(b.p.stock > 0) - Number(a.p.stock > 0) || a.rank - b.rank)
 
   return {
     total: scored.length,

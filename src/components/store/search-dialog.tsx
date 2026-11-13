@@ -3,8 +3,8 @@
 import { ArrowLeftIcon, ArrowRightIcon, Loader2Icon, SearchXIcon, XIcon } from "lucide-react"
 import { LIMITS } from "@/lib/validation"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { SearchField } from "@/components/form"
 import { searchProducts, type SearchResult } from "@/features/products/search-actions"
 import { formatPrice } from "@/lib/format"
@@ -22,21 +22,98 @@ const searchCache = new Map<string, SearchResult>()
  */
 export function SearchDialog({ open, onOpenChange, categories }: { open: boolean; onOpenChange: (open: boolean) => void; categories: Category[] }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [query, setQuery] = useState("")
   const [result, setResult] = useState<{ query: string; data: SearchResult } | null>(null)
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const latest = useRef(0)
+  const pushedHistoryRef = useRef(false)
+  const closingModeRef = useRef<"ui" | "pop" | "nav" | null>(null)
   const trimmed = query.trim()
   const cacheKey = trimmed.toLowerCase()
   const canSearch = trimmed.length >= MIN_SEARCH_CHARS
+
+  const close = useCallback(() => {
+    if (!open) return
+    closingModeRef.current = "ui"
+    setQuery("")
+    onOpenChange(false)
+    if (pushedHistoryRef.current && typeof window !== "undefined" && window.history.state?.__searchDialog) {
+      pushedHistoryRef.current = false
+      window.history.back()
+    } else {
+      pushedHistoryRef.current = false
+    }
+  }, [open, onOpenChange])
+
+  const navigateFromSearch = useCallback(
+    (href: string) => {
+      closingModeRef.current = "nav"
+      const hadPushedState = pushedHistoryRef.current && typeof window !== "undefined" && Boolean(window.history.state?.__searchDialog)
+      pushedHistoryRef.current = false
+      setQuery("")
+      onOpenChange(false)
+      // When SearchDialog opened it pushed a history entry on top of the current page.
+      // Replacing that temporary entry with `href` leaves [previousPage, href] in history so Back goes straight to previousPage.
+      if (hadPushedState || pathname === "/products") {
+        router.replace(href)
+      } else {
+        router.push(href)
+      }
+    },
+    [onOpenChange, pathname, router]
+  )
+
+  // Push a shallow history state when opened so the browser/phone Back button closes Global Search instead of staying stuck on it
+  useEffect(() => {
+    if (!open) {
+      closingModeRef.current = null
+      return
+    }
+    closingModeRef.current = null
+    if (typeof window !== "undefined" && !window.history.state?.__searchDialog) {
+      window.history.pushState({ ...window.history.state, __searchDialog: true }, "")
+      pushedHistoryRef.current = true
+    }
+
+    const onPopState = () => {
+      if (closingModeRef.current === "ui") return
+      closingModeRef.current = "pop"
+      pushedHistoryRef.current = false
+      setQuery("")
+      onOpenChange(false)
+    }
+
+    window.addEventListener("popstate", onPopState)
+    return () => {
+      window.removeEventListener("popstate", onPopState)
+    }
+  }, [open, onOpenChange])
+
+  // Auto-close if route or query changes externally while open
+  const routeSignature = `${pathname}?${searchParams.toString()}`
+  const lastRouteRef = useRef(routeSignature)
+  useEffect(() => {
+    if (lastRouteRef.current !== routeSignature) {
+      lastRouteRef.current = routeSignature
+      if (open) {
+        pushedHistoryRef.current = false
+        queueMicrotask(() => {
+          setQuery("")
+          onOpenChange(false)
+        })
+      }
+    }
+  }, [routeSignature, open, onOpenChange])
 
   // Close on Escape, trap Tab focus, or close on click outside
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onOpenChange(false)
+        close()
         return
       }
       if (e.key === "Tab" && dropdownRef.current) {
@@ -60,7 +137,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
         const searchBtn = document.querySelector('[data-ui="store/Header/button-search-products"]')
         const mobileBtn = document.querySelector('[data-ui="store/Header/button-search-pill-mobile"]')
         if ((searchBtn && searchBtn.contains(e.target as Node)) || (mobileBtn && mobileBtn.contains(e.target as Node))) return
-        onOpenChange(false)
+        close()
       }
     }
     window.addEventListener("keydown", onKeyDown)
@@ -71,7 +148,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
       window.removeEventListener("mousedown", onPointerDown)
       window.removeEventListener("touchstart", onPointerDown)
     }
-  }, [open, onOpenChange])
+  }, [open, close])
 
   // Debounced lookup with in-memory cache and 2-char minimum gate. A counter drops answers that arrive after a newer keystroke.
   useEffect(() => {
@@ -101,11 +178,9 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
     return () => window.clearTimeout(timer)
   }, [trimmed, cacheKey, canSearch, open])
 
-  const close = () => onOpenChange(false)
   const seeAll = () => {
     if (!trimmed) return
-    close()
-    router.push(`/products?q=${encodeURIComponent(trimmed)}`)
+    navigateFromSearch(`/products?q=${encodeURIComponent(trimmed)}`)
   }
   const shown = canSearch && (searchCache.get(cacheKey) ?? (result?.query === trimmed ? result.data : null))
 
@@ -174,13 +249,37 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse categories</p>
               <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-2">
                 <li data-ui="store/SearchDialog/li">
-                  <Link data-ui="store/SearchDialog/Link-all-products" href="/products" onClick={close} className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors">
+                  <Link
+                    data-ui="store/SearchDialog/Link-all-products"
+                    href="/products"
+                    onClick={(e) => {
+                      if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                        e.preventDefault()
+                        navigateFromSearch("/products")
+                      } else {
+                        close()
+                      }
+                    }}
+                    className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors"
+                  >
                     All products
                   </Link>
                 </li>
                 {categories.map((c) => (
                   <li data-ui="store/SearchDialog/li-2" key={c.slug}>
-                    <Link data-ui="store/SearchDialog/Link-inline-flex" href={`/category/${c.slug}`} onClick={close} className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors">
+                    <Link
+                      data-ui="store/SearchDialog/Link-inline-flex"
+                      href={`/category/${c.slug}`}
+                      onClick={(e) => {
+                        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                          e.preventDefault()
+                          navigateFromSearch(`/category/${c.slug}`)
+                        } else {
+                          close()
+                        }
+                      }}
+                      className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors"
+                    >
                       {c.name}
                     </Link>
                   </li>
@@ -208,7 +307,19 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               <ul data-ui="store/SearchDialog/ul" className="divide-y divide-border/60">
                 {shown.hits.map((h) => (
                   <li data-ui="store/SearchDialog/li-3" key={h.id}>
-                    <Link data-ui="store/SearchDialog/Link-flex" href={`/products/${h.slug}`} onClick={close} className="flex items-center gap-3 py-2.5 sm:py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors">
+                    <Link
+                      data-ui="store/SearchDialog/Link-flex"
+                      href={`/products/${h.slug}`}
+                      onClick={(e) => {
+                        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                          e.preventDefault()
+                          navigateFromSearch(`/products/${h.slug}`)
+                        } else {
+                          close()
+                        }
+                      }}
+                      className="flex items-center gap-3 py-2.5 sm:py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
                       <span data-ui="store/SearchDialog/span-relative" className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={h.image} alt={h.name} sizes="48px" />
                       </span>

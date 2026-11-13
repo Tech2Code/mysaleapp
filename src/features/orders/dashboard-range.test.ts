@@ -3,18 +3,26 @@ import { fyOptions, monthOptions, resolveRange } from "./dashboard-range"
 
 const at = (iso: string) => new Date(iso)
 
-describe("resolveRange default (financial year)", () => {
-  it("IST edge: 18:29:59Z is still 31 Mar, 18:30:00Z is 1 Apr", () => {
-    const before = resolveRange({}, at("2026-03-31T18:29:59Z"))
+describe("resolveRange default (current month) & ?range=fy", () => {
+  it("defaults to the current month in IST", () => {
+    const r = resolveRange({}, at("2026-11-06T06:00:00Z"))
+    expect(r.key).toBe("month")
+    expect(r.label).toBe("November 2026")
+    expect(r.from).toBe("2026-11-01")
+    expect(r.to).toBe("2026-11-06")
+    expect(r.bucket).toBe("day")
+  })
+  it("IST edge for ?range=fy: 18:29:59Z is still 31 Mar, 18:30:00Z is 1 Apr", () => {
+    const before = resolveRange({ range: "fy" }, at("2026-03-31T18:29:59Z"))
     expect(before.label).toBe("FY 2025-26")
     expect(before.to).toBe("2026-03-31")
-    const after = resolveRange({}, at("2026-03-31T18:30:00Z"))
+    const after = resolveRange({ range: "fy" }, at("2026-03-31T18:30:00Z"))
     expect(after.label).toBe("FY 2026-27")
     expect(after.from).toBe("2026-04-01")
     expect(after.start.toISOString()).toBe("2026-03-31T18:30:00.000Z")
   })
-  it("compares with the same stretch of last year", () => {
-    const r = resolveRange({}, at("2026-11-06T06:00:00Z"))
+  it("?range=fy compares with the same stretch of last year", () => {
+    const r = resolveRange({ range: "fy" }, at("2026-11-06T06:00:00Z"))
     expect(r.key).toBe("fy")
     expect(r.from).toBe("2026-04-01")
     expect(r.to).toBe("2026-11-06")
@@ -24,7 +32,7 @@ describe("resolveRange default (financial year)", () => {
     expect(r.bucket).toBe("month")
   })
   it("on 1 April the previous range is one day", () => {
-    const r = resolveRange({}, at("2026-04-01T06:00:00Z"))
+    const r = resolveRange({ range: "fy" }, at("2026-04-01T06:00:00Z"))
     expect(r.bucket).toBe("day")
     expect(r.previous!.end.getTime() - r.previous!.start.getTime()).toBe(86_400_000)
   })
@@ -36,8 +44,8 @@ describe("resolveRange default (financial year)", () => {
     expect((r.end.getTime() - r.start.getTime()) / 86_400_000).toBe(366)
     expect(r.previous?.start.toISOString()).toBe("2022-03-31T18:30:00.000Z")
   })
-  it("ignores fy for the current/future year or garbage", () => {
-    for (const fy of ["2026", "2030", "abc", "26"]) expect(resolveRange({ fy }, at("2026-11-06T06:00:00Z")).key).toBe("fy")
+  it("ignores fy for the current/future year or garbage and falls back to default (month)", () => {
+    for (const fy of ["2026", "2030", "abc", "26"]) expect(resolveRange({ fy }, at("2026-11-06T06:00:00Z")).key).toBe("month")
   })
 })
 
@@ -56,10 +64,10 @@ describe("?month=", () => {
     expect(r.to).toBe("2026-11-06")
   })
   it("a future month falls back to the default", () => {
-    expect(resolveRange({ month: "2027-01" }, now).key).toBe("fy")
+    expect(resolveRange({ month: "2027-01" }, now).key).toBe("month")
   })
   it("invalid months fall back to the default", () => {
-    for (const month of ["2026-13", "2026-00", "2026-1", "nope"]) expect(resolveRange({ month }, now).key).toBe("fy")
+    for (const month of ["2026-13", "2026-00", "2026-1", "nope"]) expect(resolveRange({ month }, now).key).toBe("month")
   })
 })
 
@@ -77,22 +85,22 @@ describe("custom from/to", () => {
     expect(r.previous!.end.getTime()).toBe(r.start.getTime())
   })
   it("ignores impossible dates like 2026-02-31", () => {
-    expect(resolveRange({ from: "2026-02-31", to: "2026-03-05" }, now).key).toBe("fy")
-    expect(resolveRange({ from: "2026-03-01", to: "2026-13-05" }, now).key).toBe("fy")
+    expect(resolveRange({ from: "2026-02-31", to: "2026-03-05" }, now).key).toBe("month")
+    expect(resolveRange({ from: "2026-03-01", to: "2026-13-05" }, now).key).toBe("month")
   })
   it("ignores spans over 1100 days but accepts exactly 1100", () => {
-    expect(resolveRange({ from: "1900-01-01", to: "2100-12-31" }, now).key).toBe("fy")
+    expect(resolveRange({ from: "1900-01-01", to: "2100-12-31" }, now).key).toBe("month")
     // 2023-01-01 .. 2026-01-04 inclusive = 1100 days
     expect(resolveRange({ from: "2023-01-01", to: "2026-01-04" }, now).key).toBe("custom")
-    expect(resolveRange({ from: "2023-01-01", to: "2026-01-05" }, now).key).toBe("fy")
-    expect(resolveRange({ from: "1999-12-01", to: "1999-12-10" }, now).key).toBe("fy")
+    expect(resolveRange({ from: "2023-01-01", to: "2026-01-05" }, now).key).toBe("month")
+    expect(resolveRange({ from: "1999-12-01", to: "1999-12-10" }, now).key).toBe("month")
   })
   it("flips bucket above 92 days", () => {
     expect(resolveRange({ from: "2026-01-01", to: "2026-04-02" }, now).bucket).toBe("day") // 92 days
     expect(resolveRange({ from: "2026-01-01", to: "2026-04-03" }, now).bucket).toBe("month") // 93 days
   })
   it("needs both ends", () => {
-    expect(resolveRange({ from: "2026-05-01" }, now).key).toBe("fy")
+    expect(resolveRange({ from: "2026-05-01" }, now).key).toBe("month")
   })
 })
 

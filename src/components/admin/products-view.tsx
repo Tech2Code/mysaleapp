@@ -127,8 +127,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                   </div>
                   <Link data-ui="admin/ProductsView/Link"
                     href={`/admin/products/${p.id}`}
-                    prefetch={true}
-                    className="block text-sm font-medium leading-snug text-foreground transition-colors line-clamp-2 hover:text-primary"
+                    className="block text-sm/snug font-medium text-foreground transition-colors line-clamp-2 hover:text-primary"
                   >
                     {p.name}
                   </Link>
@@ -171,7 +170,7 @@ export function ProductsView({ products }: { products: Product[] }) {
               {products.map((p) => (
                 <TableRow data-ui="admin/ProductsView/TableRow-2" key={p.id}>
                   <TableCell data-ui="admin/ProductsView/TableCell" className="pl-5">
-                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} prefetch={true} className="flex items-center gap-3">
+                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3">
                       <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>

@@ -40,7 +40,6 @@ function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
   return (
     <Link data-ui="account/MyOrderCard"
       href={`/account/orders/${o.orderCode}`}
-      prefetch={true}
       className="group flex items-center gap-4 rounded-3xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
     >
       <div data-ui="account/MyOrderCard/div" className="min-w-0 flex-1 space-y-1">
@@ -201,7 +200,7 @@ export function MyOrderView({
 }) {
   return (
     <section data-ui="account/MyOrderView" className="space-y-6">
-      <Link data-ui="account/MyOrderView/Link-all-orders" href="/account/orders" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+      <Link data-ui="account/MyOrderView/Link-all-orders" data-back-link href="/account/orders" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
         <ArrowLeftIcon className="size-4" /> All orders
       </Link>
       <div data-ui="account/MyOrderView/div" className="space-y-6">
@@ -310,7 +309,7 @@ export function InvoicePageView({ order, shop, backHref }: { order: Order; shop:
   return (
     <div data-ui="account/InvoicePageView" className="space-y-4">
       <div data-ui="account/InvoicePageView/div-flex" className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link data-ui="account/InvoicePageView/Link-back-to-order" href={backHref} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <Link data-ui="account/InvoicePageView/Link-back-to-order" data-back-link href={backHref} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeftIcon className="size-4" /> Back to order
         </Link>
         {order.status !== "cancelled" && <PrintButton />}

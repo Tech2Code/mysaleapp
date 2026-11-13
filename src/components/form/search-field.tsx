@@ -26,11 +26,16 @@ export function SearchField({
   containerClassName,
   id: idProp,
   value,
+  placeholder = "Search…",
   ...props
 }: SearchFieldProps) {
   const autoId = useId()
   const id = idProp ?? autoId
   const hasText = String(value ?? "").length > 0
+  const formattedPlaceholder =
+    placeholder && !placeholder.endsWith("…") && !placeholder.endsWith("...")
+      ? `${placeholder.replace(/\.+$/, "")}…`
+      : placeholder
 
   return (
     <div data-ui="form/SearchField" className={cn("relative", containerClassName)}>
@@ -45,8 +50,10 @@ export function SearchField({
         id={id}
         type="search"
         value={value}
+        placeholder={formattedPlaceholder}
         className={cn(
-          pill ? `${PILL} bg-card pr-10 pl-11 shadow-sm` : cn(FIELD_HEIGHT[fieldSize], "pl-9"),
+          pill ? `${PILL} bg-card pr-10 pl-11 shadow-sm` : cn(FIELD_HEIGHT[fieldSize], "pl-9", onClear && hasText ? "pr-9" : "pr-3"),
+          "overflow-hidden text-ellipsis placeholder:overflow-hidden placeholder:text-ellipsis",
           // the browser's own clear icon would double up with ours
           "[&::-webkit-search-cancel-button]:hidden",
           className

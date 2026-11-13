@@ -107,7 +107,6 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                   <div data-ui="admin/OrdersTable/div-2">
                     <Link data-ui="admin/OrdersTable/Link"
                       href={`/admin/orders/${o.id}`}
-                      prefetch={true}
                       className="font-mono text-base font-bold text-primary hover:underline"
                     >
                       {o.orderCode}
@@ -168,7 +167,6 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
                 <Link data-ui="admin/OrdersTable/Link-manage-order"
                   href={`/admin/orders/${o.id}`}
-                  prefetch={true}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   Manage order <ArrowRightIcon className="size-3.5" />
@@ -195,7 +193,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               {orders.map((o) => (
                 <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className="group">
                   <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
-                    <Link data-ui="admin/OrdersTable/Link-2" href={`/admin/orders/${o.id}`} prefetch={true} className="font-mono font-semibold text-primary group-hover:underline">
+                    <Link data-ui="admin/OrdersTable/Link-2" href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
                       {o.orderCode}
                     </Link>
                   </TableCell>

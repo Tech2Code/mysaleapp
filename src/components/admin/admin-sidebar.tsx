@@ -149,10 +149,10 @@ export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode;
   const [open, setOpen] = useState(false)
 
   return (
-    <div data-ui="admin/AdminTopbar" className="sticky top-0 z-30 flex h-(--admin-topbar-h) items-center gap-2 border-b glass px-3 sm:px-6 lg:px-8">
+    <div data-ui="admin/AdminTopbar" className="sticky top-0 z-30 flex h-(--admin-topbar-h) min-w-0 items-center gap-2 border-b glass px-3 sm:px-6 lg:px-8">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger data-ui="admin/AdminTopbar/SheetTrigger-open-admin-menu"
-          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full lg:hidden")}
+          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "shrink-0 rounded-full lg:hidden")}
           aria-label="Open admin menu"
         >
           <MenuIcon className="size-5" />
@@ -164,10 +164,10 @@ export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode;
           <SidebarBody onNavigate={() => setOpen(false)} ordersBadge={ordersBadge} />
         </SheetContent>
       </Sheet>
-      <div data-ui="admin/AdminTopbar/div" className="lg:hidden">
+      <div data-ui="admin/AdminTopbar/div" className="min-w-0 flex-1 lg:hidden">
         <Logo href="/admin" />
       </div>
-      <div data-ui="admin/AdminTopbar/div-flex" className="ml-auto flex items-center gap-1.5">
+      <div data-ui="admin/AdminTopbar/div-flex" className="ml-auto flex shrink-0 items-center gap-1.5">
         <Link data-ui="admin/AdminTopbar/Link-view-store"
           href="/"
           target="_blank"

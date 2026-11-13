@@ -66,8 +66,9 @@ export async function getCategories(): Promise<Category[]> {
 
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   const products = await getActiveProducts()
-  const featured = products.filter((p) => p.isFeatured)
-  return (featured.length ? featured : products).slice(0, limit)
+  const inStock = products.filter((p) => p.stock > 0)
+  const featured = inStock.filter((p) => p.isFeatured)
+  return (featured.length ? featured : inStock).slice(0, limit)
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -82,15 +83,16 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
 
 export async function getProductsByCategory(slug: string): Promise<Product[]> {
   const products = await getActiveProducts()
-  return products.filter((p) => p.category?.slug === slug)
+  return products
+    .filter((p) => p.category?.slug === slug)
+    .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0) || Number(b.isFeatured) - Number(a.isFeatured))
 }
 
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
   const products = await getActiveProducts()
-  const sameCategory = products.filter(
-    (p) => p.id !== product.id && p.categoryId === product.categoryId
-  )
-  const others = products.filter((p) => p.id !== product.id && p.categoryId !== product.categoryId)
+  const inStock = products.filter((p) => p.id !== product.id && p.stock > 0)
+  const sameCategory = inStock.filter((p) => p.categoryId === product.categoryId)
+  const others = inStock.filter((p) => p.categoryId !== product.categoryId)
   return [...sameCategory, ...others].slice(0, limit)
 }
 
@@ -104,8 +106,12 @@ export async function getCategoriesWithCounts(): Promise<(Category & { count: nu
   return categories
     .map((c) => {
       const inCategory = products.filter((p) => p.categoryId === c.id)
-      // No category photo? Use the cover of its first product with a photo, so cards are never blank.
-      const cover = c.imageUrl ?? inCategory.find((p) => p.images[0])?.images[0] ?? null
+      // No category photo? Use the cover of its first in-stock product with a photo, so cards are never blank.
+      const cover =
+        c.imageUrl ??
+        inCategory.find((p) => p.stock > 0 && p.images[0])?.images[0] ??
+        inCategory.find((p) => p.images[0])?.images[0] ??
+        null
       return { ...c, imageUrl: cover, count: inCategory.length }
     })
     .filter((c) => c.count > 0)

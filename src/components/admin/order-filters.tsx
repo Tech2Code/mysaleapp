@@ -3,7 +3,7 @@
 import { RotateCcwIcon, SlidersHorizontalIcon } from "lucide-react"
 import { LIMITS } from "@/lib/validation"
 import { useRouter } from "next/navigation"
-import { useDeferredValue, useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react"
+import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNode } from "react"
 import { OrdersTable } from "@/components/admin/orders-table"
 import { SearchField, SelectField, type SelectOption } from "@/components/form"
 import { Skeletonize } from "@/components/shared/skeletonize"
@@ -190,9 +190,9 @@ export function OrdersBrowser({
 
   return (
     <div data-ui="admin/OrdersBrowser">
-      <div data-ui="admin/OrdersBrowser/div" className="mb-4 space-y-2.5 rounded-2xl border bg-card p-3 sm:p-4">
+      <div data-ui="admin/OrdersBrowser/div" className="mb-4 space-y-3 rounded-2xl border bg-card p-3.5 shadow-2xs sm:p-4">
         {/* Row 1: Search + Mobile Filter Toggle + Financial Year & Month */}
-        <div data-ui="admin/OrdersBrowser/div-flex" className="flex flex-wrap items-center gap-2">
+        <div data-ui="admin/OrdersBrowser/div-flex" className="flex flex-wrap items-center gap-2.5">
           <form
             data-ui="admin/OrdersBrowser/form"
             onSubmit={(e) => {
@@ -232,7 +232,7 @@ export function OrdersBrowser({
             <SlidersHorizontalIcon className="size-3.5" aria-hidden />
             <span data-ui="admin/OrdersBrowser/span">Filters</span>
             {activeCategoryFilterCount > 0 && (
-              <span data-ui="admin/OrdersBrowser/span-2" className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground tabular-nums">
+              <span data-ui="admin/OrdersBrowser/span-2" className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground tabular-nums">
                 {activeCategoryFilterCount}
               </span>
             )}
@@ -240,7 +240,7 @@ export function OrdersBrowser({
 
           <div
             data-ui="admin/OrdersBrowser/div-grid"
-            className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto sm:items-center"
+            className="grid w-full grid-cols-2 gap-2.5 sm:ml-auto sm:flex sm:w-auto sm:items-center"
           >
             <SelectField
               label="Financial year"
@@ -272,7 +272,7 @@ export function OrdersBrowser({
         <div
           data-ui="admin/OrdersBrowser/div-2"
           className={cn(
-            "grid-cols-2 gap-2 border-t pt-2.5 sm:flex sm:flex-wrap sm:items-center",
+            "grid-cols-2 gap-2.5 border-t border-border/70 pt-3 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5",
             mobileOpen || activeCategoryFilterCount > 0 ? "grid" : "hidden sm:flex"
           )}
         >
@@ -322,7 +322,7 @@ export function OrdersBrowser({
                 setMobileOpen(false)
                 go({ view: "", status: "all", payment: "all", q: "", year: currentFy, month: currentYm })
               }}
-              className="col-span-2 inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:ml-auto sm:w-auto"
+              className="col-span-2 inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary/55 px-3.5 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-secondary active:scale-98 sm:ml-auto sm:w-auto"
             >
               <RotateCcwIcon className="size-3.5" aria-hidden /> Reset
             </button>
@@ -358,16 +358,38 @@ export type CustomerOrderFilters = {
   skeletonNode?: ReactNode
 }
 
+const CUSTOMER_ORDER_MIN_SEARCH_CHARS = 2
+const CUSTOMER_ORDER_DEBOUNCE_MS = 300
+
 export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [applied, setApplied] = useOptimistic<CustomerOrderFilters, CustomerOrderFilters>(current, (state, next) => ({ ...state, ...next }))
   const [status, setStatus] = useState(current.status ?? "all")
   const [query, setQuery] = useState("")
-  const deferredQuery = useDeferredValue(query)
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+
+  // Debounce search by 300ms and enforce a 2-character minimum gate (clearing is instant)
   useEffect(() => {
-    setStatus(current.status ?? "all")
-  }, [current.status])
+    const typed = query.trim()
+    if (typed.length < CUSTOMER_ORDER_MIN_SEARCH_CHARS) return
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(typed)
+    }, CUSTOMER_ORDER_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val)
+    if (val.trim().length === 0) {
+      setDebouncedQuery("")
+    }
+  }
+
+  const clearSearch = () => {
+    setQuery("")
+    setDebouncedQuery("")
+  }
 
   const today = current.today ?? PLACEHOLDER_TODAY
   const currentFy = String(fyYearOf(today))
@@ -377,8 +399,8 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
   const monthOptions = orderMonthOptions(today, period.year)
 
   const rawItems = current.items
-  const trimmedQuery = deferredQuery.trim().toLowerCase()
-  const queryTokens = trimmedQuery ? trimmedQuery.split(/\s+/) : []
+  const trimmedQuery = query.trim().length < CUSTOMER_ORDER_MIN_SEARCH_CHARS ? "" : debouncedQuery.trim().toLowerCase()
+  const queryTokens = trimmedQuery.length >= CUSTOMER_ORDER_MIN_SEARCH_CHARS ? trimmedQuery.split(/\s+/) : []
   const items = rawItems
     ? queryTokens.length > 0
       ? rawItems.filter((i) => {
@@ -404,7 +426,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
     { value: "refund", label: "Refund", count: refundCount, attention: refundPendingCount > 0 },
   ]
   const hasPeriodFilter = period.year !== currentFy || period.month !== currentYm
-  const hasActiveFilters = Boolean(trimmedQuery) || status !== "all" || hasPeriodFilter
+  const hasActiveFilters = Boolean(query.trim()) || status !== "all" || hasPeriodFilter
 
   const buildPeriodUrl = (nextYear: string, nextMonth: string) => {
     const sp = new URLSearchParams()
@@ -441,22 +463,22 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
 
   return (
     <div data-ui="admin/CustomerOrdersFilterBar">
-      <div data-ui="admin/CustomerOrdersFilterBar/div" className="mb-6 space-y-2.5 rounded-2xl border bg-card p-3 sm:p-4">
-        {/* Row 1: Instant Search Box + Financial Year & Month */}
-        <div data-ui="admin/CustomerOrdersFilterBar/div-flex" className="flex flex-wrap items-center gap-2">
+      <div data-ui="admin/CustomerOrdersFilterBar/div" className="mb-6 space-y-3 rounded-2xl border bg-card p-3.5 shadow-2xs sm:p-4">
+        {/* Row 1: Debounced Search Box + Financial Year & Month */}
+        <div data-ui="admin/CustomerOrdersFilterBar/div-flex" className="flex flex-wrap items-center gap-2.5">
           <div data-ui="admin/CustomerOrdersFilterBar/div-2" className="min-w-0 flex-1">
             <SearchField
               label="Search my orders"
               maxLength={LIMITS.orderSearch.max}
               fieldSize="md"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onClear={() => setQuery("")}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              onClear={clearSearch}
               placeholder="Search product, order ID, city, tracking or UTR…"
             />
           </div>
 
-          <div data-ui="admin/CustomerOrdersFilterBar/div-grid" className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto sm:items-center">
+          <div data-ui="admin/CustomerOrdersFilterBar/div-grid" className="grid w-full grid-cols-2 gap-2.5 sm:ml-auto sm:flex sm:w-auto sm:items-center">
             <SelectField
               label="Financial year"
               hideLabel
@@ -484,12 +506,12 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
         </div>
 
         {/* Row 2: Status Tabs (All, Active, Delivered, Cancelled, Refund) + Reset */}
-        <div data-ui="admin/CustomerOrdersFilterBar/div-flex-2" className="flex flex-wrap items-center justify-between gap-2 border-t pt-2.5">
+        <div data-ui="admin/CustomerOrdersFilterBar/div-flex-2" className="flex flex-col gap-3 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div
             data-ui="admin/CustomerOrdersFilterBar/div-order-status"
             role="group"
             aria-label="Order status"
-            className="scroll-row flex w-full items-center gap-1.5 rounded-xl bg-muted/60 p-1 sm:w-auto"
+            className="flex w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border/60 bg-muted/50 p-1 sm:w-auto"
           >
             {statusTabs.map((tab) => {
               const isSelected = status === tab.value
@@ -501,10 +523,10 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
                   aria-pressed={isSelected}
                   onClick={() => selectTab(tab.value)}
                   className={cn(
-                    "inline-flex h-8 flex-1 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-medium transition-all sm:flex-initial",
+                    "inline-flex h-8.5 flex-1 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs transition-all sm:flex-initial",
                     isSelected
-                      ? "bg-primary font-semibold text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                      ? "bg-primary font-semibold text-primary-foreground shadow-xs"
+                      : "font-medium text-foreground/75 hover:bg-background/90 hover:text-foreground"
                   )}
                 >
                   <span data-ui="admin/CustomerOrdersFilterBar/span">{tab.label}</span>
@@ -512,12 +534,12 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
                     <span
                       data-ui="admin/CustomerOrdersFilterBar/span-2"
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none",
+                        "inline-flex h-5 min-w-5 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums leading-none",
                         isSelected
-                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          ? "bg-primary-foreground text-primary shadow-2xs"
                           : tab.attention
-                            ? "bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
-                            : "bg-background text-muted-foreground"
+                            ? "bg-amber-500/20 text-amber-950 ring-1 ring-amber-500/40 dark:bg-amber-500/25 dark:text-amber-200"
+                            : "bg-background text-foreground shadow-2xs ring-1 ring-border/80"
                       )}
                     >
                       {tab.attention && !isSelected && <span data-ui="admin/CustomerOrdersFilterBar/span-3" className="size-1.5 rounded-full bg-amber-500" aria-hidden />}
@@ -534,14 +556,14 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
               data-ui="admin/CustomerOrdersFilterBar/button-reset"
               type="button"
               onClick={() => {
-                setQuery("")
+                clearSearch()
                 if (!hasPeriodFilter) {
                   selectTab("all")
                 } else {
                   goPeriod({ status: "all", year: currentFy, month: currentYm })
                 }
               }}
-              className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:ml-auto sm:w-auto"
+              className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary/55 px-3.5 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-secondary active:scale-98 sm:ml-auto sm:w-auto"
             >
               <RotateCcwIcon className="size-3.5" aria-hidden /> Reset
             </button>
@@ -559,7 +581,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
             trimmedQuery && period.year !== "all" ? (
               <div data-ui="admin/CustomerOrdersFilterBar/div-flex-3" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-12 text-center">
                 <p data-ui="admin/CustomerOrdersFilterBar/p" className="font-heading text-xl">
-                  No orders matching &ldquo;{query.trim()}&rdquo; in this period
+                  No orders matching &ldquo;{debouncedQuery.trim()}&rdquo; in this period
                 </p>
                 <p data-ui="admin/CustomerOrdersFilterBar/p-2" className="max-w-sm text-sm text-muted-foreground">
                   Search across all your past orders to find older purchases.
@@ -576,7 +598,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
                   <button
                     data-ui="admin/CustomerOrdersFilterBar/button-clear-search"
                     type="button"
-                    onClick={() => setQuery("")}
+                    onClick={clearSearch}
                     className="inline-flex h-10 items-center justify-center rounded-full border bg-background px-5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     Clear search

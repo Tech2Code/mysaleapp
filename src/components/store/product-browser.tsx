@@ -81,7 +81,7 @@ export function ProductBrowser({
     synced.current = filterKey(f.q, f.category, f.sort)
     const qs = sp.toString()
     if (qs === window.location.search.slice(1)) return
-    window.history.replaceState(null, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`)
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash}`)
   }, [])
 
   useEffect(() => {
@@ -119,15 +119,16 @@ export function ProductBrowser({
         (category === "all" || p.category?.slug === category) &&
         (!q || p.searchText.includes(q))
     )
+    const inStockFirst = (a: ProductListItem, b: ProductListItem) => Number(b.stock > 0) - Number(a.stock > 0)
     switch (sort) {
       case "new":
-        return [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        return [...list].sort((a, b) => inStockFirst(a, b) || b.createdAt.localeCompare(a.createdAt))
       case "price-asc":
-        return [...list].sort((a, b) => a.price - b.price)
+        return [...list].sort((a, b) => inStockFirst(a, b) || a.price - b.price)
       case "price-desc":
-        return [...list].sort((a, b) => b.price - a.price)
+        return [...list].sort((a, b) => inStockFirst(a, b) || b.price - a.price)
       default:
-        return [...list].sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured))
+        return [...list].sort((a, b) => inStockFirst(a, b) || Number(b.isFeatured) - Number(a.isFeatured))
     }
   }, [products, deferredQuery, category, sort])
 

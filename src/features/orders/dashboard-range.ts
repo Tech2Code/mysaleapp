@@ -1,7 +1,8 @@
 /**
  * Date ranges for the admin dashboard. All dates are India time, and the default is the current
- * financial year (1 April to 31 March):
- *   /admin                       this financial year so far (default)
+ * month (1st of this month to today):
+ *   /admin                       this month so far (default)
+ *   /admin?range=fy              this financial year so far (1 April to today)
  *   /admin?fy=2025               a whole past financial year (FY 2025-26)
  *   /admin?range=month           this month so far
  *   /admin?month=2026-03         one particular month
@@ -145,20 +146,20 @@ export function resolveRange(input: { range?: string; month?: string; fy?: strin
     return make("past-fy", fyLabel(fyYear), start, end, { start: startOfDay(`${fyYear - 1}-04-01`), end: start })
   }
 
-  if (input.range === "month") {
-    const start = monthStart(today)
-    const prevStart = monthStart(today, -1)
-    return make("month", "This month", start, tomorrow, {
+  if (input.range === "fy") {
+    const fyStartYear = fyStartYearOf(today)
+    const start = startOfDay(`${fyStartYear}-04-01`)
+    const prevStart = startOfDay(`${fyStartYear - 1}-04-01`)
+    return make("fy", fyLabel(fyStartYear), start, tomorrow, {
       start: prevStart,
       end: earlier(new Date(prevStart.getTime() + (tomorrow.getTime() - start.getTime())), start),
     })
   }
 
-  // default: this financial year (April → March), compared with the same stretch of last year
-  const fyStartYear = fyStartYearOf(today)
-  const start = startOfDay(`${fyStartYear}-04-01`)
-  const prevStart = startOfDay(`${fyStartYear - 1}-04-01`)
-  return make("fy", fyLabel(fyStartYear), start, tomorrow, {
+  // default: this month so far, compared with the same stretch of the previous month
+  const start = monthStart(today)
+  const prevStart = monthStart(today, -1)
+  return make("month", monthName(start), start, tomorrow, {
     start: prevStart,
     end: earlier(new Date(prevStart.getTime() + (tomorrow.getTime() - start.getTime())), start),
   })

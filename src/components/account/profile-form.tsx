@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextField } from "@/components/form"
@@ -24,6 +24,12 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   })
   const { errors } = form.formState
   const [fullNameVal, phoneVal] = useWatch({ control: form.control, name: ["fullName", "phone"] })
+
+  useEffect(() => {
+    return () => {
+      form.reset(saved)
+    }
+  }, [saved, form])
 
   const hasChanges =
     (fullNameVal ?? "").trim() !== saved.fullName.trim() ||
