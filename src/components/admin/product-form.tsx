@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { PlusIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
+import { useLayoutEffect, useRef, useState, useTransition, type ReactNode } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
@@ -69,6 +69,42 @@ export function ProductForm({
   product: Product | null
   categories: Pick<Category, "id" | "name">[]
 }) {
+  const [visitKey, setVisitKey] = useState(0)
+  const [baselineProduct, setBaselineProduct] = useState<Product | null>(product)
+  const [prevProductProp, setPrevProductProp] = useState<Product | null>(product)
+
+  if (product !== prevProductProp) {
+    setPrevProductProp(product)
+    setBaselineProduct(product)
+  }
+
+  // When Next.js <Activity> hides this route on Back/navigation, increment visitKey
+  // so reopening the route mounts a fresh form instance from the saved baselineProduct.
+  useLayoutEffect(() => {
+    return () => {
+      setVisitKey((k) => k + 1)
+    }
+  }, [])
+
+  return (
+    <ProductFormInner
+      key={`${baselineProduct?.id ?? "new"}-${visitKey}`}
+      product={baselineProduct}
+      categories={categories}
+      onSaved={setBaselineProduct}
+    />
+  )
+}
+
+function ProductFormInner({
+  product,
+  categories,
+  onSaved,
+}: {
+  product: Product | null
+  categories: Pick<Category, "id" | "name">[]
+  onSaved: (next: Product | null) => void
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -76,7 +112,6 @@ export function ProductForm({
   const [slugTouched, setSlugTouched] = useState(Boolean(product))
   const [uploading, setUploading] = useState(false)
   const savedRef = useRef(false)
-  const productRef = useRef(product)
   const storeSettings = useStoreSettings()
   const { shopName } = storeSettings
 
@@ -86,19 +121,6 @@ export function ProductForm({
   })
   const { errors, isDirty } = form.formState
 
-  // Sync form when server product prop updates, and discard unsaved edits (e.g. removed images)
-  // when Next.js <Activity> hides this route on Back/navigation without saving.
-  useEffect(() => {
-    productRef.current = product
-    savedRef.current = false
-    form.reset(toFormValues(product))
-    return () => {
-      if (!savedRef.current) {
-        form.reset(toFormValues(productRef.current))
-        setSlugTouched(Boolean(productRef.current))
-      }
-    }
-  }, [product, form])
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
   const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal] = useWatch({
     control: form.control,
@@ -122,6 +144,29 @@ export function ProductForm({
           return
         }
         savedRef.current = true
+        if (product) {
+          onSaved({
+            ...product,
+            name: values.name,
+            slug: values.slug,
+            description: values.description,
+            shortDescription: values.shortDescription,
+            highlights: values.highlights,
+            specs: values.specs,
+            careInstructions: values.careInstructions,
+            price: values.price,
+            compareAtPrice: values.compareAtPrice,
+            images: [...values.images],
+            categoryId: values.categoryId,
+            stock: res.data.stock,
+            weightGrams: values.weightGrams,
+            shippingClass: values.shippingClass,
+            isActive: values.isActive,
+            isFeatured: values.isFeatured,
+            seoTitle: values.seoTitle ?? null,
+            seoDescription: values.seoDescription ?? null,
+          })
+        }
         form.reset({ ...form.getValues(), stock: res.data.stock })
         later(() => toast.success(product ? "Product updated. It's live on the store." : "Product created. It's live on the store."))
         if (product && res.data.stock !== values.stock) {

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, MailCheckIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition, type ReactNode } from "react"
+import { useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
@@ -46,7 +46,7 @@ function useSubmit<T extends Record<string, string>>(setError: (name: keyof T & 
 
 type ProfileValues = z.input<typeof profileSchema>
 
-function ProfileForm({ name, phone }: { name: string; phone: string }) {
+function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; onSaved: (next: { name: string; phone: string }) => void }) {
   const router = useRouter()
   const [saved, setSaved] = useState({ name, phone })
   const form = useForm<ProfileValues, unknown, z.output<typeof profileSchema>>({
@@ -58,12 +58,6 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
   const phoneVal = useWatch({ control: form.control, name: "phone" })
   const phoneStr = typeof phoneVal === "string" ? phoneVal : ""
   const { pending, run, later } = useSubmit<{ name: string; phone: string }>((n, m) => form.setError(n, { message: m }))
-
-  useEffect(() => {
-    return () => {
-      form.reset(saved)
-    }
-  }, [saved, form])
 
   const hasChanges =
     (nameVal ?? "").trim() !== saved.name.trim() ||
@@ -81,6 +75,7 @@ function ProfileForm({ name, phone }: { name: string; phone: string }) {
           () => {
             const nextSaved = { name: values.name, phone: values.phone ?? "" }
             setSaved(nextSaved)
+            onSaved(nextSaved)
             later(() => toast.success("Details saved"))
             form.reset(nextSaved)
             router.refresh()
@@ -107,12 +102,6 @@ function EmailForm({ email }: { email: string }) {
   const { pending, run } = useSubmit<{ email: string }>((n, m) => form.setError(n, { message: m }))
   const cleanEmail = (emailVal ?? "").trim().toLowerCase()
   const emailUnchanged = !cleanEmail || cleanEmail === email.trim().toLowerCase()
-
-  useEffect(() => {
-    return () => {
-      form.reset({ email: "" })
-    }
-  }, [form])
 
   return (
     <form
@@ -159,12 +148,6 @@ function PasswordForm() {
   const [currentVal, nextVal, confirmVal] = useWatch({ control: form.control, name: ["current", "next", "confirm"] })
   const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
   const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
-
-  useEffect(() => {
-    return () => {
-      form.reset({ current: "", next: "", confirm: "" })
-    }
-  }, [form])
 
   return (
     <form
@@ -220,16 +203,31 @@ function PasswordForm() {
 
 /** Everything about the signed-in admin: details, login email and password. */
 export function AccountSettings({ name, phone, email }: { name: string; phone: string; email: string }) {
+  const [visitKey, setVisitKey] = useState(0)
+  const [savedProfile, setSavedProfile] = useState({ name, phone })
+  const [prevProps, setPrevProps] = useState({ name, phone })
+
+  if (name !== prevProps.name || phone !== prevProps.phone) {
+    setPrevProps({ name, phone })
+    setSavedProfile({ name, phone })
+  }
+
+  useLayoutEffect(() => {
+    return () => {
+      setVisitKey((k) => k + 1)
+    }
+  }, [])
+
   return (
     <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-6">
       <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
-        <ProfileForm name={name} phone={phone} />
+        <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
       </Card>
       <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
-        <EmailForm email={email} />
+        <EmailForm key={`email-${visitKey}`} email={email} />
       </Card>
       <Card title="Password" description="Forgot it instead? Use “Forgot password” on the sign-in page.">
-        <PasswordForm />
+        <PasswordForm key={`password-${visitKey}`} />
       </Card>
     </div>
   )

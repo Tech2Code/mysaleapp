@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon } from "lucide-react"
-import { useEffect, useState, useTransition } from "react"
+import { useLayoutEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextField } from "@/components/form"
@@ -14,22 +14,42 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
+  const [visitKey, setVisitKey] = useState(0)
+  const [saved, setSaved] = useState({ fullName: profile.fullName, phone: profile.phone })
+  const [prevProfile, setPrevProfile] = useState(profile)
+
+  if (profile.fullName !== prevProfile.fullName || profile.phone !== prevProfile.phone) {
+    setPrevProfile(profile)
+    setSaved({ fullName: profile.fullName, phone: profile.phone })
+  }
+
+  useLayoutEffect(() => {
+    return () => {
+      setVisitKey((k) => k + 1)
+    }
+  }, [])
+
+  return <ProfileFormInner key={visitKey} email={profile.email} saved={saved} onSaved={setSaved} />
+}
+
+function ProfileFormInner({
+  email,
+  saved,
+  onSaved,
+}: {
+  email: string
+  saved: { fullName: string; phone: string }
+  onSaved: (next: { fullName: string; phone: string }) => void
+}) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
-  const [saved, setSaved] = useState({ fullName: profile.fullName, phone: profile.phone })
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { fullName: profile.fullName, phone: profile.phone },
+    defaultValues: { fullName: saved.fullName, phone: saved.phone },
   })
   const { errors } = form.formState
   const [fullNameVal, phoneVal] = useWatch({ control: form.control, name: ["fullName", "phone"] })
-
-  useEffect(() => {
-    return () => {
-      form.reset(saved)
-    }
-  }, [saved, form])
 
   const hasChanges =
     (fullNameVal ?? "").trim() !== saved.fullName.trim() ||
@@ -42,7 +62,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       if (res.ok) {
         const rawPhone = values.phone ?? ""
         const nextSaved = { fullName: values.fullName.trim(), phone: normalizeIndianPhone(rawPhone) ?? rawPhone.trim() }
-        setSaved(nextSaved)
+        onSaved(nextSaved)
         later(() => toast.success("Profile saved"))
         form.reset(nextSaved)
       } else toast.error(res.error)
@@ -53,7 +73,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     <form data-ui="account/ProfileForm" onSubmit={onSubmit} noValidate className="space-y-1 rounded-3xl border bg-card p-6 sm:p-8">
       <div data-ui="account/ProfileForm/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
         <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
-        <TextField label="Email" kind="email" hint="From your Google account" value={profile.email} readOnly disabled />
+        <TextField label="Email" kind="email" hint="From your Google account" value={email} readOnly disabled />
         <TextField
           label="Mobile number" kind="phone"
           type="tel"

@@ -36,6 +36,11 @@ export function ImageUploader({
   const [uploading, setUploading] = useState(0)
   const mountedRef = useRef(true)
   const sessionPaths = useRef<Map<string, string>>(new Map())
+  const latestValueRef = useRef<string[]>(value)
+
+  useEffect(() => {
+    latestValueRef.current = value
+  }, [value])
 
   useEffect(() => {
     mountedRef.current = true
@@ -43,11 +48,23 @@ export function ImageUploader({
     const saved = savedRef
     return () => {
       mountedRef.current = false
-      // If leaving or hiding (<Activity>) without saving, remove any newly uploaded unsaved files from storage
-      if (!saved?.current && sessionMap.size > 0) {
+      if (sessionMap.size === 0) return
+      if (!saved?.current) {
+        // Leaving or hiding (<Activity>) without saving: remove all newly uploaded files from this visit
         const paths = Array.from(sessionMap.values())
         sessionMap.clear()
         void getBrowserSupabase()?.storage.from(BUCKET).remove(paths)
+      } else {
+        // Saved: keep uploaded files that are in the final saved value; remove any that were discarded before saving
+        const keptUrls = new Set(latestValueRef.current)
+        const discardedPaths: string[] = []
+        for (const [url, path] of sessionMap.entries()) {
+          if (!keptUrls.has(url)) discardedPaths.push(path)
+        }
+        sessionMap.clear()
+        if (discardedPaths.length > 0) {
+          void getBrowserSupabase()?.storage.from(BUCKET).remove(discardedPaths)
+        }
       }
     }
   }, [savedRef])
@@ -103,11 +120,6 @@ export function ImageUploader({
 
   const removeImage = (url: string) => {
     onChange((current) => current.filter((u) => u !== url))
-    const sessionPath = sessionPaths.current.get(url)
-    if (sessionPath) {
-      sessionPaths.current.delete(url)
-      void getBrowserSupabase()?.storage.from(BUCKET).remove([sessionPath])
-    }
   }
 
   const move = (from: number, to: number) => {

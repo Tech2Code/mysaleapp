@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react"
+import { useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
@@ -75,27 +75,41 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
  * Two columns on wide screens so no side is left empty; one save bar covers the whole page.
  */
 export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
+  const [visitKey, setVisitKey] = useState(0)
+  const [baseline, setBaseline] = useState<StoreSettingsInput>(() => toFormValues(settings))
+  const [prevSettings, setPrevSettings] = useState(settings)
+
+  if (settings !== prevSettings) {
+    setPrevSettings(settings)
+    setBaseline(toFormValues(settings))
+  }
+
+  useLayoutEffect(() => {
+    return () => {
+      setVisitKey((k) => k + 1)
+    }
+  }, [])
+
+  return <StoreSettingsFormInner key={visitKey} baseline={baseline} onSaved={setBaseline} />
+}
+
+function StoreSettingsFormInner({
+  baseline,
+  onSaved,
+}: {
+  baseline: StoreSettingsInput
+  onSaved: (next: StoreSettingsInput) => void
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   const form = useForm<StoreSettingsInput, unknown, StoreSettingsValues>({
     resolver: zodResolver(storeSettingsSchema),
-    defaultValues: toFormValues(settings),
+    defaultValues: baseline,
   })
   const { errors, isDirty } = form.formState
   const [pincode, setPincode] = useState("")
-  const baselineRef = useRef<StoreSettingsInput>(toFormValues(settings))
-
-  useEffect(() => {
-    const next = toFormValues(settings)
-    baselineRef.current = next
-    form.reset(next)
-    return () => {
-      form.reset(baselineRef.current)
-      setPincode("")
-    }
-  }, [settings, form])
   const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal] = useWatch({
     control: form.control,
     name: [
@@ -198,7 +212,7 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
           upiId: values.upiId ?? "",
           upiPayeeName: values.upiPayeeName ?? "",
         }
-        baselineRef.current = nextBaseline
+        onSaved(nextBaseline)
         form.reset(nextBaseline)
         router.refresh()
       })
