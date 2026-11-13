@@ -18,7 +18,8 @@ Rules:
 - **Never** put a raw `<input>`, `<textarea>`, `<select>` or `ui/input` / `ui/textarea` in a page or feature component. Label, hint, error text and ARIA wiring live in the shared components.
 - Missing an input type? Add it to `src/components/form/` and export it from `index.ts`. Don't build a one-off.
 - They work with react-hook-form: `<TextField label="Name" error={errors.name?.message} {...register("name")} />`. Use `fieldSize="md"` in the admin panel, default `lg` on the storefront, and `pill` for search/filter bars.
-- The one exception: `ImageUploader` (a file drop-zone) owns its own `<input type="file">`.
+- The one exception: `ImageUploader` (a file drop-zone) owns its own `<input type="file">`. Removing an already-saved image in `ImageUploader` must ONLY update the form array (`onChange`); storage deletion happens on the server inside `saveProduct()` when the form is saved. Only newly uploaded images from the current unsaved session (`newlyUploadedRef`) are deleted from storage immediately via `deleteUnusedUpload`.
+- **Next.js `<Activity>` (bfcache) form state:** Because Cache Components keeps visited routes mounted inside hidden `<Activity>` boundaries, forms that edit server records (`ProductForm`, `StoreSettingsForm`, `ProfileForm`, `AdminNameForm`, `AdminEmailForm`) must sync `reset(...)` when their server prop snapshot changes and discard unsaved dirty edits (plus any unsaved uploaded files) in an unmount cleanup effect so navigating away and coming back never shows stale unsaved changes.
 
 ## UI patterns to reuse (don't re-invent per page)
 
@@ -28,7 +29,7 @@ Rules:
   1. Put the page's markup in a view component that takes props (`components/{admin,store,account}/…-view.tsx`); the page only fetches and renders `<XView data={…} />`. A new UI element goes inside the view and gets its skeleton for free.
   2. Add the entity's placeholder data to `features/<feature>/placeholders.ts` (typed, so `tsc` forces you to update it when the type grows).
   3. Add `loading.tsx` next to the page: `<Skeletonize><XView {...placeholders} /></Skeletonize>`. Busy states inside client components do the same (`pending ? <Skeletonize><Table rows={placeholders}/></Skeletonize> : children`); a component whose content lives in the browser (cart, wishlist) takes a `preview` prop and wraps itself in `<Skeletonize>` until hydrated.
-  - Never write skeleton markup (`<Skeleton>`, `animate-pulse bg-muted`, `h-*`/`w-*` blocks, `fallback={<div…>}`). `src/app/loading-contract.test.ts` fails if a dynamic page has no own `loading.tsx`, if a `loading.tsx` contains raw markup/classes or doesn't reuse the page's view, or if hand-built skeletons appear anywhere. Every dynamic admin or store page needs its own `loading.tsx`; `params` / `searchParams` are awaited inside that boundary.
+  - Never write skeleton markup (`<Skeleton>`, `animate-pulse bg-muted`, `h-*`/`w-*` blocks, `fallback={<div…>}`). `src/app/loading-contract.test.ts` fails if a dynamic page has no own `loading.tsx`, if a `loading.tsx` contains raw markup/classes or doesn't reuse the page's view, or if hand-built skeletons appear anywhere. Every dynamic admin or store page needs its own `loading.tsx`; in dynamic `[param]` pages (`[slug]`, `[id]`, `[code]`), `await params` must be read inside an inner async component wrapped in `<Suspense fallback={<Loading />}>` so PPR / refresh never blocks on an uncached param promise.
   - Opt-outs inside a view: `data-skeleton-block` makes an element one block; real text stays hidden, so keep placeholder strings realistic in length.
 - **Never leave a column empty on wide screens.** Use a two-column grid (`xl:grid-cols-2`) or a main + side layout, and keep the side column short.
 - Button heights match inputs: default = `h-10` (admin, `fieldSize="md"`), `size="lg"` = `h-11` (storefront). Don't hand-set heights on buttons that sit next to fields.
@@ -42,13 +43,16 @@ Rules:
   - Filters/sort/search above a list (`ProductBrowser`): after the list changes, scroll the list start back under the sticky bar (see the `useLayoutEffect` there). Do NOT add a `min-h` to the list: it leaves a blank gap under a short result.
 - Any new "submit, then the screen changes" flow must do this. Check at 360px with the page scrolled to the bottom.
 
-## Scroll position on navigation (a new page always opens at the top)
+## Scroll position on navigation (a new page always opens at the top, back restores position)
 
-- **Symptom this prevents:** a page opened from a link landing halfway down, at the bottom, or a bit above the top (worst on phones). Cause: Next scrolls to the top only ONCE, on the first commit of a navigation (the `loading.tsx` skeleton); the real page then streams in, the document height changes and the browser clamps/anchors the scroll position.
-- **`<ScrollReset />`** (`components/shared/scroll-reset.tsx`, rules in `lib/scroll-reset.ts`, tested) is mounted once in every layout that hosts pages, inside `<Suspense fallback={null}>`: `(store)/layout.tsx` and `admin/(panel)/layout.tsx`. It scrolls to the top when the PATH changes and holds the top until the page height has been stable for 700 ms (cap 3.5 s), with `overflow-anchor: none` on html/body or the reader scrolls. It leaves back/forward (the browser restores the position), `#hash` links and same-path changes (filters, `?query`) alone. **A new layout group (new area of the site) must mount it too.**
+- **Symptom this prevents:** a page opened from a link landing halfway down, or pressing Back returning to the top banner (`y = 0`) instead of the clicked product tile.
+- **`<ScrollReset />`** (`components/shared/scroll-reset.tsx`, rules in `lib/scroll-reset.ts`, tested in `lib/scroll-reset.test.ts`) is mounted once globally in `Providers` (`components/shared/providers.tsx`).
+  - The outer `ScrollReset` component never calls `usePathname()` or `useSearchParams()` (so it never suspends during PPR/SSR) and registers `popstate` (capture), `window.navigation` (`traverse`), `scroll`, `pointerdown`, and `click` listeners inside `useInsertionEffect` — guaranteeing our `popstate` listener runs BEFORE Next.js `Router`'s `useEffect` `popstate` handler.
+  - The inner `ScrollResetCommitWatcher` mounts on the client via `useSyncExternalStore` and tracks `usePathname()`.
+  - Scroll positions are saved per route in memory and `sessionStorage` (`agy:scroll:<url>`). Forward navigations reset to `top: 0`; browser Back/Forward and `[data-back-link]` / parent-route back links call `holdAtPosition(savedY)` (250 ms quiet window, 2500 ms cap) so the exact scroll position is restored and held across `<Suspense>` streaming and `<Activity>` transitions.
 - **Never move the scroll from an effect that runs on mount.** `scrollTo` / `scrollBy` / `scrollIntoView` are only for a real change the reader caused (a filter, an action result): use `revealTop()` / `useRevealOnChange(key)`, or the `ProductBrowser` pattern.
 - **A "first run" flag (`useRef(true)`) is not a guard.** React Strict Mode and Next's hidden-page cache (Cache Components keeps old pages mounted and re-runs their effects when they are shown again) run effects again with nothing changed. Compare against the last value instead (`lastFilters` in `ProductBrowser`).
-- To watch the page height use `document.body` (or the element), never `<html>`: `html` is `h-full`, so its size does not follow the content.
+- To watch the page height use `document.body` (and `document.documentElement`).
 - Don't add `scroll-behavior: smooth` tricks per page: `html` has `scroll-smooth` + `data-scroll-behavior="smooth"` so Next turns smooth scrolling off during route changes. Programmatic scrolls that must be instant pass `behavior: "instant"`.
 
 ## Product photos
@@ -216,9 +220,10 @@ Default is the current **financial year** (April–March, India), compared with 
 - Only create clearly marked test data (customer name "AUDIT TEST", products "AUDIT TEST …"), delete it in a `finally`, and check that real products' stock is unchanged. Never run `admin_reset_data`.
 - Browser checks: install Playwright in the scratchpad (not in the project); the user's `next dev` runs on port 3000.
 
-## Tests
+## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, validation. Run it with `npx tsc --noEmit` and `npx eslint src` before every push.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 774 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
+- **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 
 ## Rate limiting and abuse

@@ -1,8 +1,10 @@
 "use client"
 
-import { usePathname, useSearchParams } from "next/navigation"
-import { useEffect, useLayoutEffect } from "react"
+import { usePathname } from "next/navigation"
+import { useInsertionEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { SCROLL_HOLD, holdFinished, shouldResetScroll } from "@/lib/scroll-reset"
+
+const emptySubscribe = () => () => {}
 
 const scrollPositions = new Map<string, number>()
 
@@ -72,12 +74,11 @@ function isParentOrBackPath(targetPath: string, currentPath: string, prevPath: s
  * On browser back / forward navigation, restores the saved scroll position as content streams in.
  */
 export function ScrollReset() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const searchStr = searchParams.toString()
-  const routeKey = searchStr ? `${pathname}?${searchStr}` : pathname
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
-  useEffect(() => {
+  // Register listeners in useInsertionEffect on an outer component that never calls usePathname/useSearchParams
+  // so it never suspends during PPR/SSR and always registers its popstate listener BEFORE Next.js Router's useEffect.
+  useInsertionEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual"
     }
@@ -89,12 +90,10 @@ export function ScrollReset() {
 
     let ticking = false
     const onScroll = () => {
-      if (isTransitioning) return
+      if (isTransitioning || isHolding) return
       // Only record scroll when browser URL still matches the committed React route
       if (!committedPath || !committedKey || window.location.pathname !== committedPath) return
       const y = window.scrollY
-      // While back-navigation scroll hold is active, ignore transient resets to 0 before onScrollGuard restores targetY
-      if (isHolding && y < 10) return
       lastScrollY = y
       const snapKey = committedKey
       const snapPath = committedPath
@@ -106,6 +105,7 @@ export function ScrollReset() {
         ticking = true
         window.requestAnimationFrame(() => {
           ticking = false
+          if (isTransitioning || isHolding || committedKey !== snapKey) return
           saveScrollPosition(snapKey, snapPath, lastScrollY)
         })
       }
@@ -113,7 +113,7 @@ export function ScrollReset() {
 
     // Snapshot scroll position on pointerdown before any click or programmatic router.push/back handler runs
     const onPointerDownCapture = () => {
-      if (!isTransitioning && committedPath && committedKey && window.location.pathname === committedPath) {
+      if (!isTransitioning && !isHolding && committedPath && committedKey && window.location.pathname === committedPath) {
         const y = window.scrollY
         lastScrollY = y
         saveScrollPosition(committedKey, committedPath, y)
@@ -130,7 +130,7 @@ export function ScrollReset() {
         if (url.origin !== window.location.origin) return
         const currentPath = committedPath ?? window.location.pathname
         const currentKey = committedKey ?? (window.location.pathname + window.location.search)
-        if (window.location.pathname === currentPath && !isTransitioning) {
+        if (window.location.pathname === currentPath && !isTransitioning && !isHolding) {
           lastScrollY = window.scrollY
         }
         saveScrollPosition(currentKey, currentPath, lastScrollY)
@@ -151,9 +151,25 @@ export function ScrollReset() {
       }
     }
 
+    // Navigation API fires synchronously BEFORE popstate and before Next.js Router's popstate handler
+    const onNavigate = (e: Event & { navigationType?: string }) => {
+      if (e.navigationType === "traverse") {
+        if (committedKey && committedPath && window.location.pathname === committedPath) {
+          saveScrollPosition(committedKey, committedPath, lastScrollY)
+        }
+        viaHistory = true
+        isTransitioning = true
+      }
+    }
+
     const onPop = (e: PopStateEvent) => {
       if (e.state?.__searchDialog) return
-      // Save the leaving page's last known genuine scroll position before popstate mutates scrollY
+      const browserKey = window.location.pathname + window.location.search
+      // If React already committed the target route synchronously inside Next.js's popstate handler,
+      // do not overwrite the newly restored route's saved scroll position or leave viaHistory=true
+      if (committedPath === window.location.pathname && committedKey === browserKey) {
+        return
+      }
       if (committedKey && committedPath) {
         saveScrollPosition(committedKey, committedPath, lastScrollY)
       }
@@ -161,20 +177,30 @@ export function ScrollReset() {
       isTransitioning = true
     }
 
+    const nav = (window as Window & { navigation?: EventTarget }).navigation
+    nav?.addEventListener("navigate", onNavigate)
     window.addEventListener("scroll", onScroll, { passive: true })
-    window.addEventListener("popstate", onPop)
+    window.addEventListener("popstate", onPop, true)
     document.addEventListener("pointerdown", onPointerDownCapture, true)
     document.addEventListener("click", onClickCapture, true)
     return () => {
+      nav?.removeEventListener("navigate", onNavigate)
       window.removeEventListener("scroll", onScroll)
-      window.removeEventListener("popstate", onPop)
+      window.removeEventListener("popstate", onPop, true)
       document.removeEventListener("pointerdown", onPointerDownCapture, true)
       document.removeEventListener("click", onClickCapture, true)
     }
   }, [])
 
+  return isClient ? <ScrollResetCommitWatcher /> : null
+}
+
+function ScrollResetCommitWatcher() {
+  const pathname = usePathname()
+
   useLayoutEffect(() => {
-    const targetKey = routeKey
+    const search = window.location.search
+    const targetKey = search ? `${pathname}${search}` : pathname
 
     if (committedPath === null) {
       committedPath = pathname
@@ -182,10 +208,16 @@ export function ScrollReset() {
       lastScrollY = window.scrollY
     }
 
+    // Detect if this commit is happening synchronously inside a browser popstate dispatch even if Router's listener ran first
+    const currentEventType = (window.event as Event | undefined)?.type
+    if (currentEventType === "popstate" || currentEventType === "navigate") {
+      viaHistory = true
+    }
+
     let wasHistory: boolean
     let prevPath: string
 
-    if (activeNav && activeNav.key === targetKey) {
+    if (activeNav && activeNav.key === targetKey && committedPath === pathname) {
       // React Strict Mode or effect re-run for the same target route: preserve the original navigation intent
       wasHistory = activeNav.viaHistory
       prevPath = activeNav.prevPath
@@ -250,7 +282,7 @@ export function ScrollReset() {
     return () => {
       window.cancelAnimationFrame(rafId)
     }
-  }, [pathname, routeKey])
+  }, [pathname])
 
   return null
 }

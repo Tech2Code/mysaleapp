@@ -173,7 +173,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 772 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 774 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 
@@ -182,4 +182,5 @@ public/sw.js          Service worker (offline support)
 - **Server-side rate limiting:** All public actions (`place-order`, `track-order`, `submit-payment`, `update-delivery`, `cancel-order`, `request-return`, `withdraw-return`) are rate-limited in Postgres via hashed IP buckets (`check_rate_limit`) plus per-order brute-force lockouts (`order_lookup_Export` / `find_order_for_guest`).
 - **Atomic stock management:** Stock is reserved with row locks (`FOR UPDATE` in deterministic UUID order) inside `create_order`, restored automatically on cancellation (`orders_restock_on_cancel`), and restocked selectively when returned goods are received (`record_order_return`).
 - **Automatic guest-to-account order linking:** When a customer signs in (or signs up) with an email or phone matching earlier guest orders, `claim_my_guest_orders` links those orders to their account.
-- **Storage cleanup:** Removing product photos during editing or deleting a product cleans up orphaned files from the Supabase Storage `products` bucket.
+- **Safe storage cleanup & draft isolation:** Removing existing product photos in the admin editor only updates form state until saved (`saveProduct` deletes removed files from the `products` bucket only upon saving, while unsaved newly uploaded files are cleaned up via `deleteUnusedUpload`). Leaving an unsaved form automatically discards dirty edits when Next.js `<Activity>` caches unmount the route.
+- **Instant PPR streaming & scroll restoration:** Dynamic detail pages wrap `await params` inside `<Suspense fallback={<Loading />}>` with derived `<Skeletonize>` views for instant navigation and refresh, while `<ScrollReset />` (`useInsertionEffect` + `Navigation API` + `sessionStorage`) restores exact scroll positions across browser Back/Forward and back-link navigations.
