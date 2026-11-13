@@ -95,23 +95,32 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   // Which action is waiting for "are you sure?" (verify / reject / refund change money records).
   const [refundValues, setRefundValues] = useState<Omit<PaymentValues, "otherMethod"> | null>(null)
   const [refundOpen, setRefundOpen] = useState(false)
-  const [ask, setAsk] = useState<"verify" | "reject" | "refund" | null>(null)
+  const [ask, setAsk] = useState<"verify" | "reject" | null>(null)
 
   // Paid and the order is closed: the amount / UTR / method are locked and the only thing left is a refund,
   // so the manual form turns into a small "Refund this payment" form (nothing to edit is shown).
   const refundOnly = isPaymentMoneyLocked(order) && order.paymentStatus === "paid"
   const remainingToRefund = Math.max(0, Math.round(((order.paymentAmount ?? order.total) - Number(order.refundedAmount ?? 0)) * 100) / 100)
   const initialNoteParts = splitOtherPaymentNote(order.paymentMethod, order.paymentNote)
+  const defaultFormValues: PaymentValues = {
+    status: refundOnly ? "refunded" : order.paymentStatus,
+    method: order.paymentMethod ?? "",
+    otherMethod: refundOnly ? "" : initialNoteParts.otherMethod,
+    reference: refundOnly ? "" : (order.paymentReference ?? ""),
+    amount: refundOnly ? "" : order.paymentAmount == null ? "" : String(order.paymentAmount),
+    note: refundOnly ? "" : initialNoteParts.note,
+  }
   const form = useForm<PaymentValues>({
-    defaultValues: {
-      status: refundOnly ? "refunded" : order.paymentStatus,
-      method: order.paymentMethod ?? "",
-      otherMethod: refundOnly ? "" : initialNoteParts.otherMethod,
-      reference: refundOnly ? "" : (order.paymentReference ?? ""),
-      amount: refundOnly ? "" : order.paymentAmount == null ? "" : String(order.paymentAmount),
-      note: refundOnly ? "" : initialNoteParts.note,
-    },
+    defaultValues: defaultFormValues,
   })
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setRefundOpen(nextOpen)
+    if (!nextOpen) {
+      form.reset(defaultFormValues)
+      form.clearErrors()
+    }
+  }
   const { errors } = form.formState
   const [statusNow, methodNow, otherMethodNow, referenceNow, amountNow, noteNow] = useWatch({
     control: form.control,
@@ -165,7 +174,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       buildPaymentMessage(shop, { orderCode: order.orderCode, customerName: order.customerName, result, amount, reason: why })
     )
 
-  const run = (values: Omit<PaymentValues, "otherMethod">, after: (confirmed: boolean) => void) =>
+  const run = (values: Omit<PaymentValues, "otherMethod">, after: (confirmed: boolean) => void, onFail?: () => void) =>
     startTransition(async () => {
       // expectedRefunded: what this screen showed, so a double click / stale tab can't refund twice
       const res = await updateOrderPayment({ orderId: order.id, expectedRefunded: Number(order.refundedAmount ?? 0), ...values })
@@ -174,6 +183,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
           if (messages?.[0] && field in values) form.setError(field as keyof PaymentValues, { message: messages[0] })
         }
+        onFail?.()
         return
       }
       after(res.data.confirmed)
@@ -376,7 +386,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             <Button data-ui="admin/PaymentControl/Button-reject-payment" type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className="rounded-full">
               {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Reject payment
             </Button>
-            <Button data-ui="admin/PaymentControl/Button-cancel" type="button" variant="ghost" onClick={() => setRejecting(false)} className="rounded-full">
+            <Button data-ui="admin/PaymentControl/Button-cancel" type="button" variant="ghost" onClick={() => { setRejecting(false); setReason("") }} className="rounded-full">
               <XIcon className="size-4" /> Cancel
             </Button>
           </div>
@@ -391,7 +401,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
               <PencilIcon className="size-4" /> Edit payment record manually
             </Button>
           )}
-          <Dialog open={refundOpen} onOpenChange={(o) => !pending && setRefundOpen(o)}>
+          <Dialog open={refundOpen} onOpenChange={handleDialogOpenChange}>
             <DialogContent data-ui="admin/PaymentControl/DialogContent" className="sm:max-w-md">
               <form data-ui="admin/PaymentControl/form-flex" onSubmit={onSave} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
                 <DialogHeader>
@@ -461,7 +471,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                   />
                 </DialogBody>
                 <DialogFooter>
-                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="outline" onClick={() => setRefundOpen(false)} disabled={pending} className="gap-1.5 rounded-full">
+                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={pending} className="gap-1.5 rounded-full">
                     <XIcon className="size-4" /> Cancel
                   </Button>
                   <Button data-ui="admin/PaymentControl/Button-2" type="submit" disabled={!canSubmitDialog || pending} className="gap-1.5 rounded-full">
@@ -475,18 +485,28 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       )}
       <ConfirmDialog
         open={refundValues !== null}
-        onOpenChange={(o) => !o && setRefundValues(null)}
+        onOpenChange={(o) => !o && !pending && setRefundValues(null)}
         destructive
         title="Refund this payment?"
         description="Only do this after you have sent the money back to the customer. A refund can't be undone."
         confirmLabel="Yes, mark refunded"
         pending={pending}
-        onConfirm={() => refundValues && run(refundValues, () => {
-          later(() => {
-            setRefundValues(null)
-            toast.success("Refund recorded")
-          })
-        })}
+        onConfirm={() =>
+          refundValues &&
+          run(
+            refundValues,
+            () => {
+              later(() => {
+                setRefundValues(null)
+                toast.success("Refund recorded")
+              })
+            },
+            () => {
+              setRefundValues(null)
+              setRefundOpen(true)
+            }
+          )
+        }
       />
       <ConfirmDialog
         open={ask !== null}

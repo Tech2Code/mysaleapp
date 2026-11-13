@@ -43,7 +43,7 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
       </Button>
       <ConfirmDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(o) => !pending && setOpen(o)}
         title={`Record a refund of ${formatPrice(value)}?`}
         description="Only do this after you have sent the money back to the customer. It marks this return as refunded."
         confirmLabel="Yes, I have refunded"

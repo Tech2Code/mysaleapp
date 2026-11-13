@@ -38,6 +38,15 @@ export function DashboardRangeShell({
   const [monthSel, setMonthSel] = useState(monthValue(current.key, current.from))
   const [from, setFrom] = useState(current.key === "custom" ? current.from : "")
   const [to, setTo] = useState(current.key === "custom" ? current.to : "")
+  const currentSignature = `${current.key}:${current.from}:${current.to}`
+  const [prevSignature, setPrevSignature] = useState(currentSignature)
+  if (currentSignature !== prevSignature) {
+    setPrevSignature(currentSignature)
+    setFyYear(String(fyYearOf(current.from)))
+    setMonthSel(monthValue(current.key, current.from))
+    setFrom(current.key === "custom" ? current.from : "")
+    setTo(current.key === "custom" ? current.to : "")
+  }
   const fys = fyOptions(today, current)
   const months = monthOptions(today, Number(fyYear))
   const currentFy = String(fyYearOf(today))

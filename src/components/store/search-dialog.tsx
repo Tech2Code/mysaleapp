@@ -152,13 +152,19 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
 
   // Debounced lookup with in-memory cache and 2-char minimum gate. A counter drops answers that arrive after a newer keystroke.
   useEffect(() => {
-    if (!open || !canSearch) return
-    const cached = searchCache.get(cacheKey)
-    if (cached) {
-      queueMicrotask(() => setResult({ query: trimmed, data: cached }))
+    const id = ++latest.current
+    if (!open || !canSearch) {
+      queueMicrotask(() => setLoading(false))
       return
     }
-    const id = ++latest.current
+    const cached = searchCache.get(cacheKey)
+    if (cached) {
+      queueMicrotask(() => {
+        setLoading(false)
+        setResult({ query: trimmed, data: cached })
+      })
+      return
+    }
     const timer = window.setTimeout(async () => {
       setLoading(true)
       try {

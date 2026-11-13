@@ -63,19 +63,31 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
 
   const load = useCallback(async () => {
     if (!order) return
-    const res = await trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 })
-    if (res.ok) setState(res.data)
+    try {
+      const res = await trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 })
+      if (res.ok) {
+        setLookupFailed(false)
+        setState(res.data)
+      }
+    } catch {
+      /* keep current view on transient refresh failure */
+    }
   }, [order])
 
   // Read the real payment state on mount (and whenever the order changes).
   useEffect(() => {
     if (!order || preview) return
     let cancelled = false
+    queueMicrotask(() => setLookupFailed(false))
     trackOrder({ code: order.orderCode, phoneLast4: order.phoneLast4 })
       .then((res) => {
         if (cancelled) return
-        if (res.ok) setState(res.data)
-        else setLookupFailed(true)
+        if (res.ok) {
+          setLookupFailed(false)
+          setState(res.data)
+        } else {
+          setLookupFailed(true)
+        }
       })
       .catch(() => {
         if (!cancelled) setLookupFailed(true)

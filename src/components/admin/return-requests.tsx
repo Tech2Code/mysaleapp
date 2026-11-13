@@ -193,6 +193,7 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
       <ConfirmDialog
         open={open}
         onOpenChange={(o) => {
+          if (pending) return
           setOpen(o)
           if (!o) setError(null)
         }}
@@ -238,7 +239,11 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
       {error && !open && <p data-ui="admin/UndoStepButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
       <ConfirmDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(o) => {
+          if (pending) return
+          setOpen(o)
+          if (!o) setError(null)
+        }}
         title={title}
         description={error ? `${description} (${error})` : description}
         confirmLabel="Yes, undo"

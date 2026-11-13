@@ -86,12 +86,12 @@ export function OrdersBrowser({
 
   // Search as you type: wait for a short pause (and at least 2 characters, or empty to clear), then update the list.
   useEffect(() => {
-    const typed = query.trim()
-    if (typed === (applied.q ?? "").trim()) return
-    if (typed.length > 0 && typed.length < 2) return
+    const rawTyped = query.trim()
+    const effective = rawTyped.length >= 2 ? rawTyped : ""
+    if (effective === (applied.q ?? "").trim()) return
     const timer = setTimeout(() => {
       timerRef.current = null
-      goRef.current({ q: typed })
+      goRef.current({ q: effective })
     }, 350)
     timerRef.current = timer
     return () => {
@@ -366,6 +366,11 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
   const [pending, startTransition] = useTransition()
   const [applied, setApplied] = useOptimistic<CustomerOrderFilters, CustomerOrderFilters>(current, (state, next) => ({ ...state, ...next }))
   const [status, setStatus] = useState(current.status ?? "all")
+  const [prevServerStatus, setPrevServerStatus] = useState(current.status ?? "all")
+  if ((current.status ?? "all") !== prevServerStatus) {
+    setPrevServerStatus(current.status ?? "all")
+    setStatus(current.status ?? "all")
+  }
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
 
