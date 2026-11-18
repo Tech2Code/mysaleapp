@@ -165,6 +165,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const shop = useStoreSettings()
   const { upiId, upiPayeeName } = shop
   const [changing, setChanging] = useState(false)
+  const [showMobileQr, setShowMobileQr] = useState(false)
   const done = onSubmitted ?? (() => router.refresh())
   // The pay form is tall and the "we're verifying" card is short: without this the reader is left at the bottom.
   useRevealOnChange(`${payment.paymentStatus}:${payment.paymentReference ?? ""}`)
@@ -285,16 +286,32 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
             Pay with any UPI app
           </p>
 
-          {/* On a phone: open the UPI app. On desktop: scan the QR with your phone. */}
+          {/* On a phone: open the UPI app or toggle QR code. On desktop: scan the QR with your phone. */}
           <a data-ui="store/PaymentPanel/a-pay"
             href={upiUrl}
             className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 md:hidden"
           >
             <SmartphoneIcon className="size-5" /> Pay {formatPrice(total)} with UPI app
           </a>
-          <div data-ui="store/PaymentPanel/div-hidden" className="hidden items-center gap-4 rounded-2xl border bg-white p-4 md:flex">
+          <button
+            data-ui="store/PaymentPanel/button-flex"
+            type="button"
+            onClick={() => setShowMobileQr((v) => !v)}
+            aria-expanded={showMobileQr}
+            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/80 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 md:hidden"
+          >
+            <QrCodeIcon className="size-4 text-primary" />
+            {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
+          </button>
+          <div
+            data-ui="store/PaymentPanel/div-3"
+            className={cn(
+              "items-center gap-4 rounded-2xl border bg-white p-4 md:flex",
+              showMobileQr ? "flex" : "hidden",
+            )}
+          >
             <QRCodeSVG value={upiUrl} size={132} marginSize={1} title={`UPI QR code to pay ${formatPrice(total)}`} />
-            <div data-ui="store/PaymentPanel/div-3" className="text-sm text-neutral-700">
+            <div data-ui="store/PaymentPanel/div-4" className="text-sm text-neutral-700">
               <p data-ui="store/PaymentPanel/p-flex-4" className="flex items-center gap-2 font-semibold text-neutral-900">
                 <QrCodeIcon className="size-4" /> Scan with any UPI app
               </p>
@@ -302,7 +319,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
             </div>
           </div>
 
-          <div data-ui="store/PaymentPanel/div-4" className="space-y-2">
+          <div data-ui="store/PaymentPanel/div-5" className="space-y-2">
             <CopyRow label="UPI ID" value={upiId} />
             {upiPayeeName && <CopyRow label="Name" value={upiPayeeName} />}
             <CopyRow label="Amount" value={total.toFixed(2)} />
@@ -314,7 +331,7 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
         </p>
       )}
 
-      <div data-ui="store/PaymentPanel/div-5" className="space-y-3">
+      <div data-ui="store/PaymentPanel/div-6" className="space-y-3">
         <p data-ui="store/PaymentPanel/p-flex-5" className="flex items-center gap-2 text-sm font-semibold">
           <span data-ui="store/PaymentPanel/span-grid-2" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
           After paying, enter the reference number

@@ -232,7 +232,7 @@ export function OrdersBrowser({
             <SlidersHorizontalIcon className="size-3.5" aria-hidden />
             <span data-ui="admin/OrdersBrowser/span">Filters</span>
             {activeCategoryFilterCount > 0 && (
-              <span data-ui="admin/OrdersBrowser/span-2" className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground tabular-nums">
+              <span data-ui="admin/OrdersBrowser/span-inline-flex" className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground tabular-nums">
                 {activeCategoryFilterCount}
               </span>
             )}

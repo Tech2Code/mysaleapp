@@ -26,18 +26,18 @@ export function ProductActions({
   // stock can drop while the page is open: never show or add more than can be bought
   const qty = Math.max(1, Math.min(chosen, max))
   const addToCart = () => {
-    if (inCart + qty > max) {
+    const unit = max === 1 ? "item" : "items"
+    if (inCart > 0 && inCart + qty > max) {
       toast.info(
         inCart >= max
-          ? `You already have the most we can offer (${max}) in your cart.`
-          : `Only ${max} available, so your cart is set to ${max}.`
+          ? `You already have all ${max} available ${unit} in your cart.`
+          : `Only ${max} ${unit} available (${inCart} already in cart), so your cart is set to ${max}.`
       )
     }
     add(line, qty)
   }
 
   const buyNow = () => {
-    if (inCart + qty > max) toast.info(`Only ${max} available, so your cart is set to ${max}.`)
     add(line, qty)
     setOpen(false)
     router.push("/checkout")
@@ -77,7 +77,9 @@ export function ProductActions({
   return (
     <div data-ui="store/ProductActions" className="space-y-3 sm:space-y-4">
       {product.stock <= 5 && (
-        <p data-ui="store/ProductActions/p" className="text-sm font-medium text-destructive">Only {product.stock} left</p>
+        <p data-ui="store/ProductActions/p" className="text-sm font-medium text-destructive">
+          Only {product.stock} {product.stock === 1 ? "item" : "items"} left in stock
+        </p>
       )}
       {/* Row 1: quantity | add to cart, 50 / 50. Row 2: buy now (the rest of the row) + wishlist. Every control is h-13. */}
       <div data-ui="store/ProductActions/div-grid" className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-2 sm:gap-3">
@@ -93,42 +95,40 @@ export function ProductActions({
         </Button>
       </div>
       <div data-ui="store/ProductActions/div-hidden" className="hidden gap-2 sm:flex sm:gap-3">
-        <Button data-ui="store/ProductActions/Button-buy-now-2"
+        <Button data-ui="store/ProductActions/Button"
           size="lg"
-          className="h-13 min-w-0 flex-1 rounded-full bg-whatsapp-solid text-base text-white shadow-lg shadow-whatsapp/25 hover:bg-whatsapp-solid/90"
+          className="h-14 min-w-0 flex-1 flex-col gap-0.5 rounded-full bg-whatsapp-solid py-1.5 text-white shadow-lg shadow-whatsapp/25 tabular-nums hover:bg-whatsapp-solid/90"
           onClick={buyNow}
         >
-          Buy now
+          <span data-ui="store/ProductActions/span-2" className="text-sm/tight font-semibold">Buy now</span>
+          <span data-ui="store/ProductActions/span-3" className="text-base/tight font-extrabold tracking-tight">{formatPrice(product.price * qty)}</span>
         </Button>
-        <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-13 shrink-0" />
+        <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-14 shrink-0" />
       </div>
 
       {/* Native Android e-commerce sticky bottom buy bar on phones */}
       <div
-        data-ui="store/ProductActions/div-flex-2"
+        data-ui="store/ProductActions/div-grid-2"
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2.5 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2.5 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
       >
-        <div data-ui="store/ProductActions/div" className="min-w-0 pr-1">
-          <p data-ui="store/ProductActions/p-2" className="text-[0.65rem] font-medium text-muted-foreground uppercase">Total</p>
-          <p data-ui="store/ProductActions/p-3" className="font-heading text-lg/tight font-bold">{formatPrice(product.price * qty)}</p>
-        </div>
         <Button
           data-ui="store/ProductActions/Button-add-to-cart-2"
           size="lg"
           variant="outline"
-          className="h-11 min-w-0 flex-1 rounded-full px-3 text-xs font-semibold active:scale-97"
+          className="h-13 min-w-0 rounded-full px-3 text-sm font-semibold active:scale-97"
           onClick={addToCart}
         >
-          <ShoppingBagIcon className="size-4" /> Add to cart
+          <ShoppingBagIcon className="size-4.5" /> Add to cart
         </Button>
         <Button
-          data-ui="store/ProductActions/Button-buy-now-3"
+          data-ui="store/ProductActions/Button-2"
           size="lg"
-          className="h-11 min-w-0 flex-1 rounded-full bg-whatsapp-solid px-3 text-xs font-semibold text-white shadow-md shadow-whatsapp/25 active:scale-97 hover:bg-whatsapp-solid/90"
+          className="h-13 min-w-0 flex-col gap-0.5 rounded-full bg-whatsapp-solid px-3 py-1.5 text-white shadow-md shadow-whatsapp/25 tabular-nums active:scale-97 hover:bg-whatsapp-solid/90"
           onClick={buyNow}
         >
-          Buy now
+          <span data-ui="store/ProductActions/span-4" className="text-sm/tight font-semibold">Buy now</span>
+          <span data-ui="store/ProductActions/span-5" className="text-sm/tight font-extrabold tracking-tight">{formatPrice(product.price * qty)}</span>
         </Button>
       </div>
     </div>

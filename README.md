@@ -115,7 +115,7 @@ It opens full-screen, has an app icon and shortcuts, and shows an offline page w
 
 Payment comes **first**: cash on delivery is not supported. It uses direct UPI with manual admin verification (₹0 payment-gateway fees).
 
-1. **Cart → Checkout & UPI Payment.** Items live on the customer's device. At checkout they enter (or pick a saved) delivery address, pay by UPI (via "Pay with UPI app" on mobile, QR code on desktop, or copying the UPI ID), and enter their **12-digit UTR / UPI reference number**. The `create_order` database function **re-reads prices, weights, and shipping classes from the database**, computes smart order-level handling fees (fragile / oversized tier once per order + heavy-parcel courier slabs) and delivery charges, snapshots seller/GST tax details for immutable invoices, reserves stock atomically, and records the submitted UTR (`payment_status = 'submitted'`).
+1. **Cart → Checkout & UPI Payment.** Items live on the customer's device. At checkout they enter (or pick a saved) delivery address, pay by UPI (via "Pay with UPI app" on mobile, "Show QR code" on mobile or QR code on desktop, or copying the UPI ID), and enter their **12-digit UTR / UPI reference number**. The `create_order` database function **re-reads prices, weights, and shipping classes from the database**, computes smart order-level handling fees (fragile / oversized tier once per order + heavy-parcel courier slabs) and delivery charges, snapshots seller/GST tax details for immutable invoices, reserves stock atomically, and records the submitted UTR (`payment_status = 'submitted'`).
 2. **Verify or Reject Payment.** The order appears in Admin → Dashboard ("Payments to verify") and Admin → Orders (filter *To verify*).
    - **Verify:** The admin checks their UPI/bank app and clicks **Payment received (confirm order)** — payment becomes *Paid* and the order moves to **Confirmed** in one step.
    - **Reject:** If the UTR is wrong or payment didn't arrive, the admin rejects it with a reason (`payment_status = 'failed'`). The customer sees the reason on `/track` or **My orders**, can submit a corrected UTR, and gets a fresh `unpaid_order_expiry_hours` window before auto-cancellation.
@@ -134,9 +134,9 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
 
 Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
 
-### Saved addresses
+### Saved addresses & account tabs
 
-Signed-in customers keep an address book under **Profile & addresses**: up to 10 addresses (Home / Work / Other), a default one, add / edit / delete. At checkout they pick one in a tap, or enter a new one and tick "Save this address".
+Signed-in customers manage their account across 4 tabs (**Orders**, **Profile**, **Addresses**, and **Settings**): up to 10 saved addresses under `/account/addresses` (Home / Work / Other, default selection, add / edit / delete) and appearance/theme preferences under `/account/settings`. At checkout they pick a saved address in a tap, or enter a new one and tick "Save this address".
 
 ## Folder structure
 
@@ -173,7 +173,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 774 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 780 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

@@ -138,7 +138,7 @@ export function ImageUploader({
         {value.map((url, i) => (
           <div data-ui="admin/ImageUploader/div-relative" key={`${url}-${i}`} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
             {url.startsWith("data:") ? (
-              <div className="absolute inset-0 bg-muted" />
+              <div data-ui="admin/ImageUploader/div-absolute" className="absolute inset-0 bg-muted" />
             ) : (
               <Image data-ui="admin/ImageUploader/Image" src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
             )}

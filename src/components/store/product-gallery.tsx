@@ -106,7 +106,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
         {list.length > 1 && (
           <>
             <button
-              data-ui="store/ProductGallery/button-prev"
+              data-ui="store/ProductGallery/button-previous-photo"
               type="button"
               onClick={goPrev}
               aria-label="Previous photo"
@@ -115,7 +115,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               <ChevronLeftIcon className="size-5" />
             </button>
             <button
-              data-ui="store/ProductGallery/button-next"
+              data-ui="store/ProductGallery/button-next-photo"
               type="button"
               onClick={goNext}
               aria-label="Next photo"

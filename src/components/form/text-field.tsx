@@ -11,7 +11,7 @@ export type TextFieldProps = ComponentProps<"input"> & {
   label: string
   hideLabel?: boolean
   error?: string
-  hint?: string
+  hint?: ReactNode
   /** Short text or icon shown inside the left edge, e.g. "₹" or "+91". */
   leading?: ReactNode
   /** Autocomplete suggestions (the user can still type anything else). */

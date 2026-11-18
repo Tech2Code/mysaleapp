@@ -14,7 +14,7 @@ export const placeholderChecklist = (): ChecklistItem[] =>
     "UPI ID for payments",
     "Contact email",
     "Contact phone",
-    "City",
+    "City / District",
     "At least one product",
     "Your admin login email",
   ].map((label, i) => ({ label, done: i > 6, settings: i < 7, href: "/admin/settings", hint: "A short hint about what to do next" }))

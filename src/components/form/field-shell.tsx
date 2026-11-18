@@ -13,7 +13,7 @@ export const PILL = "h-12 rounded-full px-5"
 /** Id of the hint/error paragraph, for aria-describedby. */
 export const descriptionId = (id: string) => `${id}-desc`
 
-export const describedBy = (id: string, error?: string, hint?: string) =>
+export const describedBy = (id: string, error?: string, hint?: ReactNode) =>
   error || hint ? descriptionId(id) : undefined
 
 /**
@@ -40,7 +40,7 @@ export function FieldShell({
   label: string
   hideLabel?: boolean
   error?: string
-  hint?: string
+  hint?: ReactNode
   className?: string
   /** Skip the reserved error strip: for filters/search boxes that never show validation errors. */
   noErrorSpace?: boolean

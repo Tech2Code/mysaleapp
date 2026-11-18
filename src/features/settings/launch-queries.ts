@@ -41,7 +41,7 @@ export async function getLaunchOverview(): Promise<{ counts: LaunchCounts; check
     { settings: true, label: "UPI ID for payments", done: Boolean(settings.upiId?.trim()) && settings.upiId !== DEFAULT_SETTINGS.upiId, href: "/admin/settings", hint: "Customers can't pay without it" },
     { settings: true, label: "Contact email", done: Boolean(settings.email?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },
     { settings: true, label: "Contact phone", done: settings.phoneSameAsWhatsapp ? !settings.whatsappNumber.startsWith("999999") : Boolean(settings.phone?.trim()) && !/9{6}/.test(settings.phone ?? ""), href: "/admin/settings", hint: "Not set, or still a sample number" },
-    { settings: true, label: "City", done: Boolean(settings.city?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },
+    { settings: true, label: "City / District", done: Boolean(settings.city?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },
     ...(settings.gstRegistered ? [{ settings: true, label: "GST details", done: gstActive(settings), href: "/admin/settings", hint: "GST is on but the GSTIN or rate is missing" }] : []),
     { label: "At least one product", done: counts.products > 0, href: "/admin/products/new", hint: "Your store is empty" },
     { label: "Your admin login email", done: true, href: "/admin/account", hint: "Change it under My account" },

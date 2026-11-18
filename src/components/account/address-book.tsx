@@ -152,7 +152,7 @@ function AddressDialog({
                 error={errors.pincode?.message || area.error}
                 {...form.register("pincode")}
               />
-              <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+              <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
               <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
             </div>
             <Controller
@@ -239,10 +239,10 @@ export function AddressBook({
     <section data-ui="account/AddressBook" aria-labelledby="addresses-title" className="space-y-4">
       <div data-ui="account/AddressBook/div-flex" className="flex flex-wrap items-end justify-between gap-3">
         <div data-ui="account/AddressBook/div">
-          <h2 data-ui="account/AddressBook/h2-saved-addresses" id="addresses-title" className="text-2xl font-semibold">
+          <h2 data-ui="account/AddressBook/h2-saved-addresses" id="addresses-title" className="text-3xl font-semibold">
             Saved addresses
           </h2>
-          <p data-ui="account/AddressBook/p" className="text-sm text-muted-foreground">
+          <p data-ui="account/AddressBook/p" className="mt-1 text-muted-foreground">
             {addresses.length} of {MAX_ADDRESSES} saved. Pick one at checkout in a single tap.
           </p>
         </div>

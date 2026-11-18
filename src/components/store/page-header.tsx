@@ -10,7 +10,7 @@ export function Breadcrumbs({ items }: { items: { name: string; href?: string }[
           const isLast = i === items.length - 1
           return (
             <li
-              data-ui="store/Breadcrumbs/li-flex"
+              data-ui="store/Breadcrumbs/li"
               key={item.name}
               className={isLast ? "flex min-w-0 items-center gap-1" : "flex shrink-0 items-center gap-1"}
             >

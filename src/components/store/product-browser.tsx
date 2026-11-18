@@ -1,11 +1,10 @@
 "use client"
 
-import { SearchXIcon } from "lucide-react"
 import * as m from "motion/react-m"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { SearchField, SelectField } from "@/components/form"
-import type { Category, ProductListItem } from "@/features/products/types"
+import { parseSearchQuery, priceDistanceToQuery, scoreProductSearch, type Category, type ProductListItem } from "@/features/products/types"
 import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { ProductCard } from "./product-card"
@@ -113,22 +112,31 @@ export function ProductBrowser({
   const deferredQuery = useDeferredValue(query)
 
   const visible = useMemo(() => {
-    const q = deferredQuery.trim().toLowerCase()
-    const list = products.filter(
-      (p) =>
-        (category === "all" || p.category?.slug === category) &&
-        (!q || p.searchText.includes(q))
-    )
-    const inStockFirst = (a: ProductListItem, b: ProductListItem) => Number(b.stock > 0) - Number(a.stock > 0)
+    const q = deferredQuery.trim()
+    const parsed = q ? parseSearchQuery(q) : null
+    const scored = products
+      .map((p) => {
+        if (category !== "all" && p.category?.slug !== category) return null
+        if (!parsed) return { p, score: Number(p.isFeatured) }
+        const score = scoreProductSearch(p, parsed)
+        if (score === null) return null
+        return { p, score }
+      })
+      .filter((x): x is { p: ProductListItem; score: number } => x !== null)
+
+    const inStockFirst = (a: { p: ProductListItem }, b: { p: ProductListItem }) =>
+      Number(b.p.stock > 0) - Number(a.p.stock > 0)
     switch (sort) {
       case "new":
-        return [...list].sort((a, b) => inStockFirst(a, b) || b.createdAt.localeCompare(a.createdAt))
+        return scored.sort((a, b) => inStockFirst(a, b) || b.p.createdAt.localeCompare(a.p.createdAt)).map((x) => x.p)
       case "price-asc":
-        return [...list].sort((a, b) => inStockFirst(a, b) || a.price - b.price)
+        return scored.sort((a, b) => inStockFirst(a, b) || a.p.price - b.p.price).map((x) => x.p)
       case "price-desc":
-        return [...list].sort((a, b) => inStockFirst(a, b) || b.price - a.price)
+        return scored.sort((a, b) => inStockFirst(a, b) || b.p.price - a.p.price).map((x) => x.p)
       default:
-        return [...list].sort((a, b) => inStockFirst(a, b) || Number(b.isFeatured) - Number(a.isFeatured))
+        return scored
+          .sort((a, b) => inStockFirst(a, b) || b.score - a.score || Number(b.p.isFeatured) - Number(a.p.isFeatured))
+          .map((x) => x.p)
     }
   }, [products, deferredQuery, category, sort])
 
@@ -215,15 +223,53 @@ export function ProductBrowser({
       </p>
 
       {visible.length === 0 ? (
-        <div data-ui="store/ProductBrowser/div-flex-2" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-          <SearchXIcon className="size-10 text-muted-foreground" />
-          <p data-ui="store/ProductBrowser/p-2" className="font-heading text-xl">No matches found</p>
-          <p data-ui="store/ProductBrowser/p-3" className="text-sm text-muted-foreground">Try a different word or category.</p>
+        <div data-ui="store/ProductBrowser/div-3" className="space-y-6">
+          <div data-ui="store/ProductBrowser/div-flex-2" className="flex flex-col items-center gap-2 rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-center">
+            <p data-ui="store/ProductBrowser/p-2" className="font-sans text-sm font-semibold">
+              No exact matches for “{deferredQuery.trim() || category}” — showing popular picks you might like
+            </p>
+            <button data-ui="store/ProductBrowser/button-clear-filters-amp-show"
+              type="button"
+              onClick={() => {
+                setQuery("")
+                setCategory("all")
+              }}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Clear filters &amp; show all products
+            </button>
+          </div>
+          <div data-ui="store/ProductBrowser/div-grid" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+            {(() => {
+              const q = deferredQuery.trim()
+              const parsed = q ? parseSearchQuery(q) : null
+              const relaxedParsed = parsed ? { ...parsed, minPrice: null, maxPrice: null } : null
+              return [...products]
+                .sort((a, b) => {
+                  const stockDiff = Number(b.stock > 0) - Number(a.stock > 0)
+                  if (stockDiff !== 0) return stockDiff
+                  if (parsed && relaxedParsed) {
+                    const aScore = scoreProductSearch(a, relaxedParsed) ?? 0
+                    const bScore = scoreProductSearch(b, relaxedParsed) ?? 0
+                    if (bScore !== aScore) return bScore - aScore
+                    const distDiff = priceDistanceToQuery(a.price, parsed) - priceDistanceToQuery(b.price, parsed)
+                    if (distDiff !== 0) return distDiff
+                  }
+                  return Number(b.isFeatured) - Number(a.isFeatured)
+                })
+                .slice(0, 8)
+                .map((p, i) => (
+                  <div data-ui="store/ProductBrowser/div-4" key={p.id}>
+                    <ProductCard product={p} priority={i < 4} />
+                  </div>
+                ))
+            })()}
+          </div>
         </div>
       ) : (
-        <div data-ui="store/ProductBrowser/div-grid" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+        <div data-ui="store/ProductBrowser/div-grid-2" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
           {visible.map((p, i) => (
-            <div data-ui="store/ProductBrowser/div-3" key={p.id}>
+            <div data-ui="store/ProductBrowser/div-5" key={p.id}>
               <ProductCard product={p} priority={i < 4} />
             </div>
           ))}

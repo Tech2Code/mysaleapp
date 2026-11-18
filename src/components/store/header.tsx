@@ -8,7 +8,6 @@ import { ScrollLink } from "@/components/shared/scroll-link"
 import { usePathname } from "next/navigation"
 import { Suspense, useState } from "react"
 import { Logo } from "@/components/shared/logo"
-import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useMounted } from "@/hooks/use-mounted"
@@ -112,6 +111,48 @@ function MobileNavWithPath(props: { links: NavLinkItem[]; onNavigate: () => void
   return <MobileNavItems {...props} pathname={usePathname()} />
 }
 
+function MobileHeaderShortcuts({
+  mounted,
+  wishCount,
+  itemCount,
+  onOpenCart,
+}: {
+  mounted: boolean
+  wishCount: number
+  itemCount: number
+  onOpenCart: () => void
+}) {
+  const pathname = usePathname()
+  const isDetailOrCheckout =
+    pathname !== null && (/^\/products\/[^/]+$/.test(pathname) || pathname === "/checkout")
+  if (!isDetailOrCheckout) return null
+
+  return (
+    <div data-ui="store/MobileHeaderShortcuts" className="flex items-center gap-0.5 sm:hidden">
+      <Link
+        data-ui="store/MobileHeaderShortcuts/Link"
+        href="/wishlist"
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+        aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
+      >
+        <HeartIcon className="size-4.6" />
+        {mounted && <CountBadge count={wishCount} />}
+      </Link>
+      <button
+        data-ui="store/MobileHeaderShortcuts/button"
+        type="button"
+        onClick={onOpenCart}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+        aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
+      >
+        <ShoppingBagIcon className="size-4.6" />
+        {mounted && <CountBadge count={itemCount} />}
+      </button>
+      <AccountMenu />
+    </div>
+  )
+}
+
 export function Header({ categories }: { categories: NavCategory[] }) {
   const mounted = useMounted()
   const itemCount = useCart((s) => cartCount(s.items))
@@ -158,11 +199,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
                 <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
               </Suspense>
             </nav>
-            <div data-ui="store/Header/div-flex-2" className="mt-auto flex items-center justify-end gap-3 border-t p-4 text-sm">
-              <div data-ui="store/Header/div-flex-3" className="flex items-center gap-2 text-muted-foreground">
-                Theme <ThemeToggle />
-              </div>
-            </div>
           </SheetContent>
         </Sheet>
 
@@ -174,7 +210,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </Suspense>
         </nav>
 
-        <div data-ui="store/Header/div-flex-4" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+        <div data-ui="store/Header/div-flex-2" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
           <button data-ui="store/Header/button-search-products"
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
@@ -184,9 +220,14 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           >
             <SearchIcon className="size-4.6" />
           </button>
-          <div data-ui="store/Header/div" className="block">
-            <ThemeToggle />
-          </div>
+          <Suspense fallback={null}>
+            <MobileHeaderShortcuts
+              mounted={mounted}
+              wishCount={wishCount}
+              itemCount={itemCount}
+              onOpenCart={() => openCart(true)}
+            />
+          </Suspense>
           <Link data-ui="store/Header/Link"
             href="/wishlist"
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}

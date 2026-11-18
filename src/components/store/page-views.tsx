@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Suspense, type ComponentType, type ReactNode, type SVGProps } from "react"
 import { LogoMark } from "@/components/shared/logo"
 import { FadeIn } from "@/components/shared/motion"
+import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/store/brand-icons"
 import { CartView } from "@/components/store/cart-view"
 import { CheckoutForm } from "@/components/store/checkout-form"
@@ -290,6 +291,13 @@ export function LoginView({ shop }: { shop: StoreSettings }) {
             </Link>
             .
           </p>
+
+          <div data-ui="store/LoginView/div-2" className="mt-6 border-t border-border/70 pt-5">
+            <p data-ui="store/LoginView/p-3" className="mb-2 text-center text-xs font-medium text-muted-foreground">
+              Settings · Appearance
+            </p>
+            <ThemeSegmentedControl />
+          </div>
         </div>
       </div>
     </section>

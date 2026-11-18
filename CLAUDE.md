@@ -61,7 +61,7 @@ Always render photos with `ProductImage` (`components/store/product-image.tsx`, 
 
 ## Pincode
 
-Every pincode field fills the city and shows "City, State" via `usePincodeLookup` (`components/shared/use-pincode-lookup.ts`, server action `features/location/actions.ts`, India Post free API). City and State are separate fields in forms (State is a `FormSelectField`, `v.state()`); the DB has no `state` column, so the server joins them into `city` as "City, State" (`joinCityState`) and forms split it back (`splitCityState`), both in `features/location/states.ts`. Autofill never overwrites a value the user typed.
+Every pincode field fills the `City / District` and `State` via `usePincodeLookup` (`components/shared/use-pincode-lookup.ts`, server action `features/location/actions.ts`, India Post free API) and displays a green verified match indicator (`✓ {City}, {State} — filled from pincode`). `City / District` and `State` are separate fields in forms (State is a `FormSelectField`, `v.state()`); the DB has no `state` column, so the server joins them into `city` as "City, State" (`joinCityState`) and forms split it back (`splitCityState`), both in `features/location/states.ts`. Autofill never overwrites a custom value the user typed unless the pincode itself is changed.
 
 ## "Other" reasons and guest privacy
 
@@ -175,8 +175,8 @@ Customer flow: delivered order → **Request a return** (inside `store_settings.
 
 ## Header, search and account menu
 
-- The header search icon (all sizes) opens `<SearchDialog>` (`components/store/search-dialog.tsx`, server action `searchProducts` in `features/products/search-actions.ts` over the cached catalogue): live results, Enter or "See all results" goes to `/products?q=`. Don't link the search icon to /products.
-- Below `sm` the wishlist and cart icons are not in the header: they are rows in the account dropdown (`AccountMenu`, opens on click, with a dot on the icon when either has items). Guests get Sign in + Track order there on phones; on web the guest icon is a plain link straight to /login. From `sm` up the icons stay in the header.
+- The header search icon (all sizes) opens `<SearchDialog>` (`components/store/search-dialog.tsx`, server action `searchProducts` / `getSearchDiscovery` in `features/products/search-actions.ts` and 3-tier smart search `searchCatalogProducts` in `features/products/types.ts` supporting natural-language gift/recipient queries, Hinglish price ranges like `under 500 to 700`, synonyms, typo tolerance, price-relaxed matches, and similar-product fallbacks): zero-scroll discovery view (Recent Searches, Trending chips, and 2×2 `SearchMiniCard` grid) when empty, live results + fallback suggestions when typing, and Enter or "See all results" goes to `/products?q=`. Don't link the search icon to `/products`.
+- Account pages are organised into 4 tabs (`Orders`, `Profile`, `Addresses`, `Settings` in `AccountNav`), and `ThemeToggle` lives under `/account/settings` (both mobile and desktop). On mobile (`< md`), pages that hide `MobileBottomNav` (Product Detail `/products/[slug]` and `/checkout`) show `MobileHeaderShortcuts` (Wishlist, Cart, and Account icons) directly in the top header.
 
 - A paid payment can only be marked refunded once the order is shipped, delivered or cancelled (`REFUNDABLE_STATUSES` in payment-rules.ts, DB guard in migration 0043). Before dispatch (pending / confirmed / packed) the admin cancels the order first, then records the refund.
 
@@ -222,7 +222,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 774 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 780 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
 - **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 

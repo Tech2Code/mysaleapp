@@ -80,10 +80,10 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
 
         {/* Floating product collage */}
         {a && (
-          <div data-ui="store/Hero/div-relative-2" className="relative mx-auto aspect-square w-full max-w-md sm:max-w-lg">
+          <div data-ui="store/Hero/div-relative" className="relative mx-auto aspect-square w-full max-w-md sm:max-w-lg">
             {[a, b, c].map((p, i) =>
               p ? (
-                <div data-ui="store/Hero/m.div"
+                <div data-ui="store/Hero/div-2"
                   key={p.id}
                   className={cn(
                     "absolute",
@@ -92,12 +92,12 @@ export function Hero({ showcase }: { showcase: Pick<Product, "id" | "slug" | "na
                     i === 2 && "bottom-0 left-[27%] z-30 w-[46%] -rotate-3"
                   )}
                 >
-                  <Link data-ui="store/Hero/Link-3"
+                  <Link data-ui="store/Hero/Link-2"
                     href={`/products/${p.slug}`}
                     className="group block animate-float rounded-3xl bg-card p-2 shadow-2xl shadow-black/10 ring-1 ring-black/5"
                     style={{ animationDelay: `${-i * 2}s` }}
                   >
-                    <div data-ui="store/Hero/div-relative-3" className="relative aspect-4/5 overflow-hidden rounded-2xl @container">
+                    <div data-ui="store/Hero/div-relative-2" className="relative aspect-4/5 overflow-hidden rounded-2xl @container">
                       <ProductImage
                         src={p.images[0]}
                         alt={p.name}

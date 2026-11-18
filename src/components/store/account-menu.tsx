@@ -1,9 +1,10 @@
 "use client"
 
-import { HeartIcon, LogInIcon, LogOutIcon, PackageIcon, PackageSearchIcon, ShoppingBagIcon, UserIcon, UserRoundIcon } from "lucide-react"
+import { LogInIcon, LogOutIcon, MapPinIcon, PackageIcon, PackageSearchIcon, SettingsIcon, UserIcon, UserRoundIcon } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,34 +19,11 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { useState } from "react"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
-import { useMounted } from "@/hooks/use-mounted"
 import { useAuth } from "@/store/auth"
-import { cartCount, useCart } from "@/store/cart"
-import { useWishlist } from "@/store/wishlist"
-
-/** Wishlist / cart rows of the menu: only needed on phones, where the header has no room for their icons. */
-function PhoneShortcuts({ onCart, onWishlist, wishCount, cartItems }: { onCart: () => void; onWishlist: () => void; wishCount: number; cartItems: number }) {
-  return (
-    <>
-      <DropdownMenuItem data-ui="store/PhoneShortcuts/DropdownMenuItem" className="sm:hidden" onClick={onWishlist}>
-        <HeartIcon /> Wishlist
-        {wishCount > 0 && <span data-ui="store/PhoneShortcuts/span" className="ml-auto text-xs font-semibold text-primary">{wishCount}</span>}
-      </DropdownMenuItem>
-      <DropdownMenuItem data-ui="store/PhoneShortcuts/DropdownMenuItem-2" className="sm:hidden" onClick={onCart}>
-        <ShoppingBagIcon /> Cart
-        {cartItems > 0 && <span data-ui="store/PhoneShortcuts/span-2" className="ml-auto text-xs font-semibold text-primary">{cartItems}</span>}
-      </DropdownMenuItem>
-    </>
-  )
-}
 
 export function AccountMenu() {
   const { user, ready } = useAuth()
   const router = useRouter()
-  const mounted = useMounted()
-  const openCart = useCart((s) => s.setOpen)
-  const cartItems = useCart((s) => cartCount(s.items))
-  const wishCount = useWishlist((s) => s.ids.length)
   const [askSignOut, setAskSignOut] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
 
@@ -63,15 +41,9 @@ export function AccountMenu() {
     router.refresh()
   }
 
-  // On phones the wishlist and cart live in this menu, so a dot on the icon says "something is in there".
-  const phoneCount = mounted ? wishCount + cartItems : 0
-  const shortcuts = (
-    <PhoneShortcuts onCart={() => openCart(true)} onWishlist={() => router.push("/wishlist")} wishCount={mounted ? wishCount : 0} cartItems={mounted ? cartItems : 0} />
-  )
-
   return (
     <>
-      {/* Web: the guest icon goes straight to the login page. Phones get the dropdown below (it also holds wishlist and cart). */}
+      {/* Web: the guest icon goes straight to the login page. Phones get the dropdown below. */}
       {!user && (
         <Link data-ui="store/AccountMenu/Link-sign-in" href="/login" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex")} aria-label="Sign in">
           <UserRoundIcon className="size-4.6" />
@@ -96,9 +68,6 @@ export function AccountMenu() {
           ) : (
             <UserRoundIcon className="size-4.6" />
           )}
-          {phoneCount > 0 && (
-            <span data-ui="store/AccountMenu/span-absolute" aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-primary ring-2 ring-background sm:hidden" />
-          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent data-ui="store/AccountMenu/DropdownMenuContent" align="end" className="w-56 border border-border/80 bg-popover/98 shadow-xl">
           {user ? (
@@ -113,27 +82,35 @@ export function AccountMenu() {
               <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem" onClick={() => router.push("/account/orders")}>
                 <PackageIcon /> My orders
               </DropdownMenuItem>
-              {shortcuts}
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-2" className="max-sm:hidden" onClick={() => router.push("/wishlist")}>
-                <HeartIcon /> Wishlist
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-2" onClick={() => router.push("/account/profile")}>
+                <UserIcon /> Profile
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-3" onClick={() => router.push("/account/profile")}>
-                <UserIcon /> Profile & address
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-3" onClick={() => router.push("/account/profile?tab=addresses")}>
+                <MapPinIcon /> Addresses
+              </DropdownMenuItem>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-4" onClick={() => router.push("/account/profile?tab=settings")}>
+                <SettingsIcon /> Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-4" variant="destructive" onClick={() => setAskSignOut(true)}>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-5" variant="destructive" onClick={() => setAskSignOut(true)}>
                 <LogOutIcon /> Sign out
               </DropdownMenuItem>
             </>
           ) : (
             <>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-5" onClick={() => router.push("/login")}>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-6" onClick={() => router.push("/login")}>
                 <LogInIcon /> Sign in
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-6" onClick={() => router.push("/track")}>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-7" onClick={() => router.push("/track")}>
                 <PackageSearchIcon /> Track order
               </DropdownMenuItem>
-              {shortcuts}
+              <DropdownMenuSeparator />
+              <div data-ui="store/AccountMenu/div" className="px-2 py-1.5">
+                <p data-ui="store/AccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  Settings · Theme
+                </p>
+                <ThemeSegmentedControl />
+              </div>
             </>
           )}
         </DropdownMenuContent>

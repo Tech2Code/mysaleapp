@@ -219,15 +219,15 @@ function StoreSettingsFormInner({
     )(e)
 
   return (
-    <form data-ui="admin/StoreSettingsForm" onSubmit={onSubmit} noValidate>
-      <div data-ui="admin/StoreSettingsForm/div" className="xl:columns-2 xl:gap-6">
+    <form data-ui="admin/StoreSettingsFormInner" onSubmit={onSubmit} noValidate>
+      <div data-ui="admin/StoreSettingsFormInner/div" className="xl:columns-2 xl:gap-6">
         {/* ----------------------------------------------- column 1: your shop */}
-        <div data-ui="admin/StoreSettingsForm/div-2" className="contents">
+        <div data-ui="admin/StoreSettingsFormInner/div-2" className="contents">
           <Card
             title="Shop profile"
             description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
           >
-            <div data-ui="admin/StoreSettingsForm/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
               <TextField label="Tagline" maxLength={LIMITS.tagline.max} fieldSize="md" error={errors.tagline?.message} {...form.register("tagline")} />
             </div>
@@ -245,7 +245,7 @@ function StoreSettingsFormInner({
               error={errors.announcement?.message}
               {...form.register("announcement")}
             />
-            <div data-ui="admin/StoreSettingsForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Product page highlight" maxLength={LIMITS.highlightText.max} fieldSize="md"
                 hint="Short line with an icon on every product page. Leave empty for the default."
@@ -262,7 +262,7 @@ function StoreSettingsFormInner({
           </Card>
 
           <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link.">
-            <div data-ui="admin/StoreSettingsForm/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Instagram" kind="url"
                 fieldSize="md"
@@ -293,16 +293,16 @@ function StoreSettingsFormInner({
               error={errors.keywords?.message}
               {...form.register("keywords")}
             />
-            <div data-ui="admin/StoreSettingsForm/div-3" className="rounded-xl border bg-background p-4">
-              <p data-ui="admin/StoreSettingsForm/p" className="truncate text-xs text-muted-foreground">{siteConfig.url.replace(/^https?:\/\//, "")}</p>
-              <p data-ui="admin/StoreSettingsForm/p-2" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{String(name ?? "")}</p>
-              <p data-ui="admin/StoreSettingsForm/p-3" className="line-clamp-2 text-sm text-muted-foreground">{String(description ?? "")}</p>
+            <div data-ui="admin/StoreSettingsFormInner/div-3" className="rounded-xl border bg-background p-4">
+              <p data-ui="admin/StoreSettingsFormInner/p" className="truncate text-xs text-muted-foreground">{siteConfig.url.replace(/^https?:\/\//, "")}</p>
+              <p data-ui="admin/StoreSettingsFormInner/p-2" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{String(name ?? "")}</p>
+              <p data-ui="admin/StoreSettingsFormInner/p-3" className="line-clamp-2 text-sm text-muted-foreground">{String(description ?? "")}</p>
             </div>
           </Card>
         </div>
 
         {/* ----------------------------------------------- column 2: contact, money, orders */}
-        <div data-ui="admin/StoreSettingsForm/div-4" className="contents">
+        <div data-ui="admin/StoreSettingsFormInner/div-4" className="contents">
           <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message.">
             <TextField
               label="WhatsApp number" kind="intlPhone"
@@ -338,7 +338,7 @@ function StoreSettingsFormInner({
                 {...form.register("phone")}
               />
             )}
-            <div data-ui="admin/StoreSettingsForm/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
               <TextField
                 label="Pincode"
@@ -352,7 +352,7 @@ function StoreSettingsFormInner({
                 hint={area.hint}
                 error={area.error}
               />
-              <TextField label="City" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
+              <TextField label="City / District" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
               <FormSelectField
                 control={form.control}
                 name="region"
@@ -362,14 +362,14 @@ function StoreSettingsFormInner({
                 options={stateOptions}
               />
             </div>
-            <p data-ui="admin/StoreSettingsForm/p-4" className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
+            <p data-ui="admin/StoreSettingsFormInner/p-4" className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
           </Card>
 
           <Card
             title="Payment (UPI)"
             description="Customers pay this UPI ID at checkout and enter the UTR to place their order. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
           >
-            <div data-ui="admin/StoreSettingsForm/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="UPI ID" kind="upiId"
                 fieldSize="md"
@@ -408,7 +408,7 @@ function StoreSettingsFormInner({
               )}
             />
             {gstOn && (
-              <div data-ui="admin/StoreSettingsForm/div-grid-6" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <div data-ui="admin/StoreSettingsFormInner/div-grid-6" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
                 <TextField
                   label="GSTIN" kind="gstin" fieldSize="md"
                   placeholder="22AAAAA0000A1Z5"
@@ -435,7 +435,7 @@ function StoreSettingsFormInner({
               error={errors.priceNote?.message}
               {...form.register("priceNote")}
             />
-            <div data-ui="admin/StoreSettingsForm/div-grid-7" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-7" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Name on invoices" maxLength={LIMITS.legalName.max} fieldSize="md"
                 hint="Leave empty to use your shop name."
@@ -456,7 +456,7 @@ function StoreSettingsFormInner({
             title="Delivery & handling charges"
             description="Centralised courier & packaging rules. Products only declare their weight and handling class — rates apply automatically per order."
           >
-            <div data-ui="admin/StoreSettingsForm/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Standard delivery charge" kind="money"
                 fieldSize="md"
@@ -476,7 +476,7 @@ function StoreSettingsFormInner({
                 {...form.register("freeDeliveryAbove")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsForm/div-grid-9" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-9" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Fragile packaging fee" kind="money"
                 fieldSize="md"
@@ -496,7 +496,7 @@ function StoreSettingsFormInner({
                 {...form.register("oversizedFee")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsForm/div-grid-10" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-10" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Included parcel weight (grams)" kind="digits"
                 fieldSize="md"
@@ -516,7 +516,7 @@ function StoreSettingsFormInner({
                 {...form.register("extraWeightFeePerKg")}
               />
             </div>
-            {deliveryPreview && <p data-ui="admin/StoreSettingsForm/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
+            {deliveryPreview && <p data-ui="admin/StoreSettingsFormInner/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
           <Card title="Orders" description="How your order numbers look, how long an order with a rejected UTR is kept before auto-cancellation, and the return window.">

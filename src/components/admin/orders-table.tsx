@@ -10,14 +10,42 @@ import type { Order } from "@/features/orders/types"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
+const SEEN_ORDERS_KEY = "admin_seen_orders"
+const MAX_SEEN_ORDERS = 500
+
+function readSeenOrders(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_ORDERS_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((id): id is string => typeof id === "string"))
+    }
+  } catch {}
+  return new Set()
+}
+
+function writeSeenOrders(ids: Set<string>) {
+  try {
+    const list = Array.from(ids).slice(-MAX_SEEN_ORDERS)
+    localStorage.setItem(SEEN_ORDERS_KEY, JSON.stringify(list))
+  } catch {}
+}
+
 /** The admin orders table/tiles view. Used by the page, by loading.tsx (placeholder rows) and while the filters reload. */
 export function OrdersTable({ orders }: { orders: Order[] }) {
   const [viewMode, setViewMode] = useState<"tiles" | "table">("table")
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     try {
       localStorage.removeItem("admin_orders_view")
     } catch {}
+
+    const syncSeen = () => {
+      setSeenIds(readSeenOrders())
+    }
+    syncSeen()
 
     const mql = window.matchMedia("(max-width: 767px)")
     const syncView = () => {
@@ -36,8 +64,26 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
 
     syncView()
     mql.addEventListener("change", syncView)
-    return () => mql.removeEventListener("change", syncView)
+    window.addEventListener("focus", syncSeen)
+    window.addEventListener("storage", syncSeen)
+    return () => {
+      mql.removeEventListener("change", syncView)
+      window.removeEventListener("focus", syncSeen)
+      window.removeEventListener("storage", syncSeen)
+    }
   }, [])
+
+  const markSeen = (orderId: string) => {
+    setSeenIds((prev) => {
+      if (prev.has(orderId)) return prev
+      const next = new Set(prev)
+      next.add(orderId)
+      writeSeenOrders(next)
+      return next
+    })
+  }
+
+  const isNewOrder = (o: Order) => o.status === "pending" && !seenIds.has(o.id)
 
   const changeView = (mode: "tiles" | "table") => {
     setViewMode(mode)
@@ -95,88 +141,108 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
 
       {viewMode === "tiles" ? (
         <div data-ui="admin/OrdersTable/div-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {orders.map((o) => (
-            <div
-              key={o.id}
-              data-ui="admin/OrdersTable/div-flex-2"
-              className="group flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md"
-            >
-              <div data-ui="admin/OrdersTable/div" className="space-y-3">
-                {/* Header: Code, Placed date */}
-                <div data-ui="admin/OrdersTable/div-flex-3" className="flex items-start justify-between gap-2 border-b pb-3">
-                  <div data-ui="admin/OrdersTable/div-2">
-                    <Link data-ui="admin/OrdersTable/Link"
-                      href={`/admin/orders/${o.id}`}
-                      className="font-mono text-base font-bold text-primary hover:underline"
-                    >
-                      {o.orderCode}
-                    </Link>
-                    <div data-ui="admin/OrdersTable/div-3" className="mt-0.5 text-xs text-muted-foreground">
-                      Placed {formatDateTime(o.createdAt)}
+          {orders.map((o) => {
+            const isNew = isNewOrder(o)
+            return (
+              <div
+                key={o.id}
+                data-ui="admin/OrdersTable/div"
+                className={cn(
+                  "group flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md",
+                  isNew && "border-primary/45 bg-primary/2"
+                )}
+              >
+                <div data-ui="admin/OrdersTable/div-2" className="space-y-3">
+                  {/* Header: Code, Placed date */}
+                  <div data-ui="admin/OrdersTable/div-flex-2" className="flex items-start justify-between gap-2 border-b pb-3">
+                    <div data-ui="admin/OrdersTable/div-3">
+                      <div data-ui="admin/OrdersTable/div-flex-3" className="flex flex-wrap items-center gap-2">
+                        <Link data-ui="admin/OrdersTable/Link"
+                          href={`/admin/orders/${o.id}`}
+                          onClick={() => markSeen(o.id)}
+                          className="font-mono text-base font-bold text-primary hover:underline"
+                        >
+                          {o.orderCode}
+                        </Link>
+                        {isNew && (
+                          <span
+                            data-ui="admin/OrdersTable/span-inline-flex"
+                            className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-primary px-2 font-sans text-[10px] leading-none font-bold tracking-wide text-primary-foreground uppercase shadow-2xs"
+                            title="New order — open to review"
+                          >
+                            <span data-ui="admin/OrdersTable/span-4" className="size-1.5 animate-pulse rounded-full bg-primary-foreground" aria-hidden />
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <div data-ui="admin/OrdersTable/div-4" className="mt-0.5 text-xs text-muted-foreground">
+                        Placed {formatDateTime(o.createdAt)}
+                      </div>
+                    </div>
+                    <div data-ui="admin/OrdersTable/div-5" className="text-right">
+                      <span data-ui="admin/OrdersTable/span-5" className="text-xs text-muted-foreground">Total</span>
+                      <div data-ui="admin/OrdersTable/div-6" className="text-base font-bold text-foreground">{formatPrice(o.total)}</div>
                     </div>
                   </div>
-                  <div data-ui="admin/OrdersTable/div-4" className="text-right">
-                    <span data-ui="admin/OrdersTable/span-4" className="text-xs text-muted-foreground">Total</span>
-                    <div data-ui="admin/OrdersTable/div-5" className="text-base font-bold text-foreground">{formatPrice(o.total)}</div>
+
+                  {/* Status & Payment badges + Last updated status date */}
+                  <div data-ui="admin/OrdersTable/div-7" className="space-y-2 rounded-xl bg-muted/30 p-2.5">
+                    <div data-ui="admin/OrdersTable/div-flex-4" className="flex flex-wrap items-center gap-1.5">
+                      <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
+                      <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
+                    </div>
+                    <div data-ui="admin/OrdersTable/div-flex-5" className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <ClockIcon className="size-3 shrink-0" />
+                      <span data-ui="admin/OrdersTable/span-6">Status updated:</span>
+                      <span data-ui="admin/OrdersTable/span-7" className="font-medium text-foreground">{formatDateTime(o.updatedAt)}</span>
+                    </div>
+                  </div>
+
+                  {/* Customer info */}
+                  <div data-ui="admin/OrdersTable/div-8" className="text-xs space-y-0.5">
+                    <div data-ui="admin/OrdersTable/div-9" className="font-semibold text-foreground text-sm">{o.customerName}</div>
+                    <div data-ui="admin/OrdersTable/div-10" className="text-muted-foreground">{o.phone} · {o.city}</div>
+                  </div>
+
+                  {/* Products in this order */}
+                  <div data-ui="admin/OrdersTable/div-11" className="rounded-xl border bg-muted/20 p-3 space-y-1.5">
+                    <div data-ui="admin/OrdersTable/div-flex-6" className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                      <span data-ui="admin/OrdersTable/span-flex" className="flex items-center gap-1.5">
+                        <PackageIcon className="size-3.5 text-primary" />
+                        <span data-ui="admin/OrdersTable/span-8">Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
+                      </span>
+                    </div>
+                    <ul data-ui="admin/OrdersTable/ul" className="space-y-1 divide-y divide-border/30">
+                      {o.items.map((item, idx) => (
+                        <li data-ui="admin/OrdersTable/li-flex" key={idx} className="flex items-center justify-between gap-2 pt-1 first:pt-0">
+                          <span data-ui="admin/OrdersTable/span-9" className="truncate text-xs font-medium text-foreground" title={item.name}>
+                            {item.name}
+                          </span>
+                          <span data-ui="admin/OrdersTable/span-10" className="shrink-0 font-mono text-xs font-semibold text-muted-foreground">
+                            ×{item.quantity}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
-                {/* Status & Payment badges + Last updated status date */}
-                <div data-ui="admin/OrdersTable/div-6" className="space-y-2 rounded-xl bg-muted/30 p-2.5">
-                  <div data-ui="admin/OrdersTable/div-flex-4" className="flex flex-wrap items-center gap-1.5">
-                    <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
-                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
-                  </div>
-                  <div data-ui="admin/OrdersTable/div-flex-5" className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <ClockIcon className="size-3 shrink-0" />
-                    <span data-ui="admin/OrdersTable/span-5">Status updated:</span>
-                    <span data-ui="admin/OrdersTable/span-6" className="font-medium text-foreground">{formatDateTime(o.updatedAt)}</span>
-                  </div>
-                </div>
-
-                {/* Customer info */}
-                <div data-ui="admin/OrdersTable/div-7" className="text-xs space-y-0.5">
-                  <div data-ui="admin/OrdersTable/div-8" className="font-semibold text-foreground text-sm">{o.customerName}</div>
-                  <div data-ui="admin/OrdersTable/div-9" className="text-muted-foreground">{o.phone} · {o.city}</div>
-                </div>
-
-                {/* Products in this order */}
-                <div data-ui="admin/OrdersTable/div-10" className="rounded-xl border bg-muted/20 p-3 space-y-1.5">
-                  <div data-ui="admin/OrdersTable/div-flex-6" className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                    <span data-ui="admin/OrdersTable/span-flex" className="flex items-center gap-1.5">
-                      <PackageIcon className="size-3.5 text-primary" />
-                      <span data-ui="admin/OrdersTable/span-7">Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
-                    </span>
-                  </div>
-                  <ul data-ui="admin/OrdersTable/ul" className="space-y-1 divide-y divide-border/30">
-                    {o.items.map((item, idx) => (
-                      <li data-ui="admin/OrdersTable/li-flex" key={idx} className="flex items-center justify-between gap-2 pt-1 first:pt-0">
-                        <span data-ui="admin/OrdersTable/span-8" className="truncate text-xs font-medium text-foreground" title={item.name}>
-                          {item.name}
-                        </span>
-                        <span data-ui="admin/OrdersTable/span-9" className="shrink-0 font-mono text-xs font-semibold text-muted-foreground">
-                          ×{item.quantity}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                {/* Card Footer: View order link */}
+                <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
+                  <Link data-ui="admin/OrdersTable/Link-manage-order"
+                    href={`/admin/orders/${o.id}`}
+                    onClick={() => markSeen(o.id)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Manage order <ArrowRightIcon className="size-3.5" />
+                  </Link>
                 </div>
               </div>
-
-              {/* Card Footer: View order link */}
-              <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
-                <Link data-ui="admin/OrdersTable/Link-manage-order"
-                  href={`/admin/orders/${o.id}`}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                >
-                  Manage order <ArrowRightIcon className="size-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <div data-ui="admin/OrdersTable/div-11" className="overflow-hidden rounded-2xl border bg-card">
+        <div data-ui="admin/OrdersTable/div-12" className="overflow-hidden rounded-2xl border bg-card">
           <Table data-ui="admin/OrdersTable/Table">
             <TableHeader data-ui="admin/OrdersTable/TableHeader">
               <TableRow data-ui="admin/OrdersTable/TableRow">
@@ -190,43 +256,63 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               </TableRow>
             </TableHeader>
             <TableBody data-ui="admin/OrdersTable/TableBody">
-              {orders.map((o) => (
-                <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className="group">
-                  <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
-                    <Link data-ui="admin/OrdersTable/Link-2" href={`/admin/orders/${o.id}`} className="font-mono font-semibold text-primary group-hover:underline">
-                      {o.orderCode}
-                    </Link>
-                  </TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-2">
-                    <div data-ui="admin/OrdersTable/div-12" className="font-medium">{o.customerName}</div>
-                    <div data-ui="admin/OrdersTable/div-13" className="text-xs text-muted-foreground">
-                      {o.phone} · {o.city}
-                    </div>
-                  </TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-hidden" className="hidden max-w-72 text-sm md:table-cell">
-                    <div data-ui="admin/OrdersTable/div-flex-8" className="flex flex-col gap-0.5">
-                      {o.items.map((i, idx) => (
-                        <div data-ui="admin/OrdersTable/div-14" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
-                          <span data-ui="admin/OrdersTable/span-10" className="text-foreground">{i.name}</span> <span data-ui="admin/OrdersTable/span-11" className="font-mono font-semibold">×{i.quantity}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-3">
-                    <div data-ui="admin/OrdersTable/div-flex-9" className="flex flex-col items-start gap-1">
-                      <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
-                      <span data-ui="admin/OrdersTable/span-12" className="text-[11px] text-muted-foreground">Updated {formatDateTime(o.updatedAt)}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">
-                    <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
-                  </TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
-                  <TableCell data-ui="admin/OrdersTable/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
-                    {formatDateTime(o.createdAt)}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {orders.map((o) => {
+                const isNew = isNewOrder(o)
+                return (
+                  <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className={cn("group", isNew && "bg-primary/3")}>
+                    <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
+                      <div data-ui="admin/OrdersTable/div-flex-8" className="flex flex-wrap items-center gap-2">
+                        <Link
+                          data-ui="admin/OrdersTable/Link-2"
+                          href={`/admin/orders/${o.id}`}
+                          onClick={() => markSeen(o.id)}
+                          className="font-mono font-semibold text-primary group-hover:underline"
+                        >
+                          {o.orderCode}
+                        </Link>
+                        {isNew && (
+                          <span
+                            data-ui="admin/OrdersTable/span-inline-flex-2"
+                            className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-primary px-2 font-sans text-[10px] leading-none font-bold tracking-wide text-primary-foreground uppercase shadow-2xs"
+                            title="New order — open to review"
+                          >
+                            <span data-ui="admin/OrdersTable/span-11" className="size-1.5 animate-pulse rounded-full bg-primary-foreground" aria-hidden />
+                            New
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-2">
+                      <div data-ui="admin/OrdersTable/div-13" className="font-medium">{o.customerName}</div>
+                      <div data-ui="admin/OrdersTable/div-14" className="text-xs text-muted-foreground">
+                        {o.phone} · {o.city}
+                      </div>
+                    </TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden" className="hidden max-w-72 text-sm md:table-cell">
+                      <div data-ui="admin/OrdersTable/div-flex-9" className="flex flex-col gap-0.5">
+                        {o.items.map((i, idx) => (
+                          <div data-ui="admin/OrdersTable/div-15" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
+                            <span data-ui="admin/OrdersTable/span-12" className="text-foreground">{i.name}</span> <span data-ui="admin/OrdersTable/span-13" className="font-mono font-semibold">×{i.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-3">
+                      <div data-ui="admin/OrdersTable/div-flex-10" className="flex flex-col items-start gap-1">
+                        <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
+                        <span data-ui="admin/OrdersTable/span-14" className="text-[11px] text-muted-foreground">Updated {formatDateTime(o.updatedAt)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">
+                      <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
+                    </TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
+                      {formatDateTime(o.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>

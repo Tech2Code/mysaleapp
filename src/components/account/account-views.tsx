@@ -3,6 +3,7 @@ import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import { ArrowLeftIcon, ChevronRightIcon, PackageIcon, ReceiptTextIcon } from "lucide-react"
 import Link from "next/link"
 import { AddressBook } from "@/components/account/address-book"
+import { ProfileOrSettingsView } from "@/components/account/account-nav"
 import { ProfileForm } from "@/components/account/profile-form"
 import { CustomerOrdersFilterBar, type CustomerOrderFilters, type CustomerOrderRenderItem } from "@/components/admin/order-filters"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
@@ -327,18 +328,19 @@ export function InvoicePageView({ order, shop, backHref }: { order: Order; shop:
 
 export function ProfileView({ profile, addresses }: { profile: Profile; addresses: Address[] }) {
   return (
-    <section data-ui="account/ProfileView">
-      <h2 data-ui="account/ProfileView/h2-profile-addresses" className="text-3xl font-semibold">Profile & addresses</h2>
-      <p data-ui="account/ProfileView/p" className="mt-1 mb-8 text-muted-foreground">Manage your details and saved delivery addresses.</p>
-      <div data-ui="account/ProfileView/div" className="space-y-8 sm:space-y-12">
-        <section data-ui="account/ProfileView/section" aria-labelledby="profile-title" className="space-y-4">
-          <h2 data-ui="account/ProfileView/h2-your-details" id="profile-title" className="text-2xl font-semibold">
-            Your details
-          </h2>
+    <ProfileOrSettingsView
+      profileContent={
+        <section data-ui="account/ProfileView/section">
+          <h2 data-ui="account/ProfileView/h2-profile" className="text-3xl font-semibold">Profile</h2>
+          <p data-ui="account/ProfileView/p" className="mt-1 mb-8 text-muted-foreground">Manage your personal details and contact number.</p>
           <ProfileForm profile={profile} />
         </section>
-        <AddressBook addresses={addresses} defaults={{ fullName: profile.fullName, phone: profile.phone }} />
-      </div>
-    </section>
+      }
+      addressesContent={
+        <section data-ui="account/ProfileView/section-2">
+          <AddressBook addresses={addresses} defaults={{ fullName: profile.fullName, phone: profile.phone }} />
+        </section>
+      }
+    />
   )
 }

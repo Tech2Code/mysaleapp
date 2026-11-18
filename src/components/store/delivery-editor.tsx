@@ -209,7 +209,7 @@ export function DeliveryEditor({
                     error={errors.pincode?.message || area.error}
                     {...form.register("pincode")}
                   />
-                  <TextField label="City" kind="city" error={errors.city?.message} {...form.register("city")} />
+                  <TextField label="City / District" kind="city" error={errors.city?.message} {...form.register("city")} />
                   <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
                 </div>
                 <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />

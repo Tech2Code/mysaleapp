@@ -42,7 +42,7 @@ async function OrdersBadge() {
   if (count === 0) return null
   return (
     <span data-ui="layout:/admin#OrdersBadge"
-      className="grid min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[0.7rem]/5  font-bold text-primary-foreground"
+      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[0.7rem] leading-none font-bold text-primary-foreground shadow-xs transition-colors group-aria-[current=page]:bg-sidebar-primary-foreground group-aria-[current=page]:text-sidebar-primary"
       title={`${count} payment${count === 1 ? "" : "s"} to verify`}
     >
       {count > 99 ? "99+" : count}

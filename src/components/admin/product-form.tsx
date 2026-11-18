@@ -181,10 +181,10 @@ function ProductFormInner({
   const previewDesc = (seoDescription as string) || (description as string)?.slice(0, 155) || "Product description…"
 
   return (
-    <form data-ui="admin/ProductForm" onSubmit={onSubmit} noValidate className="space-y-6">
-      <div data-ui="admin/ProductForm/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+    <form data-ui="admin/ProductFormInner" onSubmit={onSubmit} noValidate className="space-y-6">
+      <div data-ui="admin/ProductFormInner/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
         {/* ------------------------------------------------ main column */}
-        <div data-ui="admin/ProductForm/div" className="min-w-0 space-y-1">
+        <div data-ui="admin/ProductFormInner/div" className="min-w-0 space-y-1">
           <Section title="Basic details">
             <TextField
               label="Product name" maxLength={LIMITS.productName.max}
@@ -233,13 +233,13 @@ function ProductFormInner({
               {...form.register("highlights")}
             />
 
-            <div data-ui="admin/ProductForm/div-2" className="space-y-3">
-              <div data-ui="admin/ProductForm/div-3">
-                <p data-ui="admin/ProductForm/p" className="text-sm font-medium">Specifications</p>
-                <p data-ui="admin/ProductForm/p-2" className="text-xs text-muted-foreground">Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
+            <div data-ui="admin/ProductFormInner/div-2" className="space-y-3">
+              <div data-ui="admin/ProductFormInner/div-3">
+                <p data-ui="admin/ProductFormInner/p" className="text-sm font-medium">Specifications</p>
+                <p data-ui="admin/ProductFormInner/p-2" className="text-xs text-muted-foreground">Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
               </div>
               {specs.map((field, i) => (
-                <div data-ui="admin/ProductForm/div-grid-2" key={field.id} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[200px_1fr_auto]">
+                <div data-ui="admin/ProductFormInner/div-grid-2" key={field.id} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[200px_1fr_auto]">
                   <TextField
                     label={`Detail ${i + 1} name`} maxLength={LIMITS.specLabel.max}
                     hideLabel
@@ -258,14 +258,14 @@ function ProductFormInner({
                     error={errors.specs?.[i]?.value?.message}
                     {...form.register(`specs.${i}.value`)}
                   />
-                  <Button data-ui="admin/ProductForm/Button" type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
+                  <Button data-ui="admin/ProductFormInner/Button" type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
                     <Trash2Icon />
                   </Button>
                 </div>
               ))}
-              {errors.specs?.message && <p data-ui="admin/ProductForm/p-3" className="text-xs font-medium text-destructive">{errors.specs.message}</p>}
+              {errors.specs?.message && <p data-ui="admin/ProductFormInner/p-3" className="text-xs font-medium text-destructive">{errors.specs.message}</p>}
               {specs.length < MAX_SPECS && (
-                <Button data-ui="admin/ProductForm/Button-add-a-detail" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => appendSpec({ label: "", value: "" })}>
+                <Button data-ui="admin/ProductFormInner/Button-add-a-detail" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => appendSpec({ label: "", value: "" })}>
                   <PlusIcon /> Add a detail
                 </Button>
               )}
@@ -286,16 +286,16 @@ function ProductFormInner({
               name="images"
               render={({ field }) => <ImageUploader savedRef={savedRef} onUploadingChange={setUploading} value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
             />
-            {errors.images && <p data-ui="admin/ProductForm/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
+            {errors.images && <p data-ui="admin/ProductFormInner/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>
 
           <Section title="Search engine listing" description="How this product appears on Google. Leave blank to auto-fill.">
-            <div data-ui="admin/ProductForm/div-4" className="rounded-xl border bg-background p-4">
-              <p data-ui="admin/ProductForm/p-5" className="truncate text-xs text-muted-foreground">
+            <div data-ui="admin/ProductFormInner/div-4" className="rounded-xl border bg-background p-4">
+              <p data-ui="admin/ProductFormInner/p-5" className="truncate text-xs text-muted-foreground">
                 {siteConfig.url.replace(/^https?:\/\//, "")} › products › {slug || "…"}
               </p>
-              <p data-ui="admin/ProductForm/p-6" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{previewTitle}</p>
-              <p data-ui="admin/ProductForm/p-7" className="line-clamp-2 text-sm text-muted-foreground">{previewDesc}</p>
+              <p data-ui="admin/ProductFormInner/p-6" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{previewTitle}</p>
+              <p data-ui="admin/ProductFormInner/p-7" className="line-clamp-2 text-sm text-muted-foreground">{previewDesc}</p>
             </div>
             <TextField
               label="SEO title" maxLength={LIMITS.seoTitle.max}
@@ -315,7 +315,7 @@ function ProductFormInner({
         </div>
 
         {/* ------------------------------------------------ side column (settings for this product) */}
-        <div data-ui="admin/ProductForm/div-5" className="min-w-0 space-y-6">
+        <div data-ui="admin/ProductFormInner/div-5" className="min-w-0 space-y-6">
           <Section title="Visibility">
             <Controller
               control={form.control}
@@ -339,7 +339,7 @@ function ProductFormInner({
           </Section>
 
           <Section title="Pricing & stock">
-            <div data-ui="admin/ProductForm/div-grid-3" className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div data-ui="admin/ProductFormInner/div-grid-3" className="grid grid-cols-2 gap-x-4 gap-y-1">
               <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
               <TextField
                 label="MRP" kind="money"
@@ -387,7 +387,7 @@ function ProductFormInner({
               error={errors.weightGrams?.message}
               {...form.register("weightGrams")}
             />
-            <p data-ui="admin/ProductForm/p-8" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+            <p data-ui="admin/ProductFormInner/p-8" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
               {shippingClassVal === "oversized"
                 ? storeSettings.oversizedFee > 0
                   ? `Large / bulky handling (${formatPrice(storeSettings.oversizedFee)}) is added once per order.`

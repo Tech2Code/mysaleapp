@@ -175,6 +175,7 @@ export function CheckoutForm({
   }, [authReady, user, form, initialAddresses.length])
 
   const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [showMobileQr, setShowMobileQr] = useState(false)
   const [validatedCustomer, setValidatedCustomer] = useState<CheckoutInput | null>(null)
   const [paymentRef, setPaymentRef] = useState("")
   const [paymentRefError, setPaymentRefError] = useState<string | null>(null)
@@ -291,7 +292,7 @@ export function CheckoutForm({
             {user && addresses.length > 0 && (
               <Link
                 data-ui="store/CheckoutForm/Link-manage-addresses"
-                href="/account/profile"
+                href="/account/profile?tab=addresses"
                 className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
               >
                 Manage addresses
@@ -377,7 +378,7 @@ export function CheckoutForm({
                 error={errors.pincode?.message || area.error}
                 {...form.register("pincode")}
               />
-              <TextField label="City" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+              <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
               <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
             </div>
           )}
@@ -414,31 +415,37 @@ export function CheckoutForm({
 
           <ul data-ui="store/CheckoutForm/ul" className="space-y-3">
             {shown.map((l) => (
-              <li data-ui="store/CheckoutForm/li-flex" key={l.productId} className="flex items-center gap-3.5 rounded-2xl border bg-background/60 p-3 sm:p-3.5">
-                <div data-ui="store/CheckoutForm/div-relative" className="relative size-15 shrink-0 overflow-hidden rounded-xl bg-muted @container">
-                  <ProductImage src={l.image} alt={l.name} sizes="60px" />
-                  <span data-ui="store/CheckoutForm/span-grid-3" className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-foreground text-[0.65rem] font-bold text-background">
-                    {l.quantity}
+              <li data-ui="store/CheckoutForm/li" key={l.productId}>
+                <Link
+                  data-ui="store/CheckoutForm/Link-flex"
+                  href={`/products/${l.slug}`}
+                  className="group flex items-center gap-3.5 rounded-2xl border bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 sm:p-3.5"
+                >
+                  <div data-ui="store/CheckoutForm/div-relative" className="relative size-15 shrink-0 overflow-hidden rounded-xl bg-muted @container">
+                    <ProductImage src={l.image} alt={l.name} sizes="60px" className="transition-transform duration-300 ease-out group-hover:scale-105" />
+                    <span data-ui="store/CheckoutForm/span-grid-3" className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-foreground text-[0.65rem] font-bold text-background">
+                      {l.quantity}
+                    </span>
+                  </div>
+                  <span data-ui="store/CheckoutForm/span-6" className="min-w-0 flex-1 text-sm font-medium">
+                    <span data-ui="store/CheckoutForm/span-7" className="line-clamp-2 transition-colors group-hover:text-primary">{l.name}</span>
+                    <span data-ui="store/CheckoutForm/span-8" className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                      {formatPrice(l.price)} × {l.quantity}
+                      {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
+                        <>
+                          {" · "}
+                          {[
+                            l.shippingClass === "oversized" ? "Large / bulky" : l.shippingClass === "fragile" ? "Fragile" : null,
+                            l.weightGrams > 0 ? formatWeightGrams(l.weightGrams * l.quantity) : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </>
+                      )}
+                    </span>
                   </span>
-                </div>
-                <span data-ui="store/CheckoutForm/span-6" className="min-w-0 flex-1 text-sm font-medium">
-                  <span data-ui="store/CheckoutForm/span-7" className="line-clamp-2">{l.name}</span>
-                  <span data-ui="store/CheckoutForm/span-8" className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                    {formatPrice(l.price)} × {l.quantity}
-                    {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
-                      <>
-                        {" · "}
-                        {[
-                          l.shippingClass === "oversized" ? "Large / bulky" : l.shippingClass === "fragile" ? "Fragile" : null,
-                          l.weightGrams > 0 ? formatWeightGrams(l.weightGrams * l.quantity) : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </>
-                    )}
-                  </span>
-                </span>
-                <span data-ui="store/CheckoutForm/span-9" className="shrink-0 text-sm font-semibold">{formatPrice(l.price * l.quantity)}</span>
+                  <span data-ui="store/CheckoutForm/span-9" className="shrink-0 text-sm font-semibold tabular-nums">{formatPrice(l.price * l.quantity)}</span>
+                </Link>
               </li>
             ))}
           </ul>
@@ -482,50 +489,58 @@ export function CheckoutForm({
             {serverError}
           </p>
         )}
-        <Button data-ui="store/CheckoutForm/Button"
+        <Button data-ui="store/CheckoutForm/Button-hidden"
           type="submit"
           size="lg"
           disabled={pending || placeholder}
-          className="hidden h-13 w-full rounded-full text-base shadow-lg shadow-primary/25 sm:inline-flex"
+          className="hidden h-14 w-full flex-col gap-0.5 rounded-full py-1.5 shadow-lg shadow-primary/25 sm:inline-flex"
         >
-          {pending ? <Loader2Icon className="size-5 animate-spin" /> : null}
-          {pending ? "Placing order…" : `Proceed to pay · ${formatPrice(shownCharges.total)}`}
+          {pending ? (
+            <span data-ui="store/CheckoutForm/span-inline-flex" className="inline-flex items-center gap-2 text-base font-semibold">
+              <Loader2Icon className="size-5 animate-spin" /> Placing order…
+            </span>
+          ) : (
+            <>
+              <span data-ui="store/CheckoutForm/span-10" className="text-sm/tight font-semibold">Proceed to pay</span>
+              <span data-ui="store/CheckoutForm/span-11" className="text-base/tight font-extrabold tracking-tight tabular-nums">{formatPrice(shownCharges.total)}</span>
+            </>
+          )}
         </Button>
         <div data-ui="store/CheckoutForm/div-4" className="space-y-2 rounded-xl bg-muted/40 px-3.5 py-3 text-xs text-muted-foreground">
           <p data-ui="store/CheckoutForm/p-flex" className="flex items-center gap-2">
             <CheckCircle2Icon className="size-4 shrink-0 text-primary" />
-            <span data-ui="store/CheckoutForm/span-10">Order is placed after UPI payment</span>
+            <span data-ui="store/CheckoutForm/span-12">Order is placed after UPI payment</span>
           </p>
           <p data-ui="store/CheckoutForm/p-flex-2" className="flex items-center gap-2">
             <CheckCircle2Icon className="size-4 shrink-0 text-primary" />
-            <span data-ui="store/CheckoutForm/span-11" className="font-medium text-foreground/80">100% Safe Checkout</span>
+            <span data-ui="store/CheckoutForm/span-13" className="font-medium text-foreground/80">100% Safe Checkout</span>
           </p>
         </div>
       </aside>
 
       {/* Native e-commerce sticky bottom pay bar on phones */}
       <div
-        data-ui="store/CheckoutForm/div-mobile-sticky-bar"
+        data-ui="store/CheckoutForm/div-flex-5"
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
       >
-        <div data-ui="store/CheckoutForm/div-mobile-total" className="min-w-0 pr-1">
-          <p data-ui="store/CheckoutForm/p-mobile-total-label" className="text-[0.65rem] font-medium text-muted-foreground uppercase">
-            Total to pay
-          </p>
-          <p data-ui="store/CheckoutForm/p-mobile-total-amount" className="font-heading text-lg/tight font-bold">
-            {formatPrice(shownCharges.total)}
-          </p>
-        </div>
         <Button
-          data-ui="store/CheckoutForm/Button-mobile-pay"
+          data-ui="store/CheckoutForm/Button"
           type="submit"
           size="lg"
           disabled={pending || placeholder}
-          className="h-11 min-w-0 flex-1 rounded-full px-5 text-sm font-semibold shadow-md shadow-primary/25 active:scale-97"
+          className="h-13 min-w-0 w-full flex-col gap-0.5 rounded-full px-5 py-1.5 shadow-md shadow-primary/25 active:scale-97"
         >
-          {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-          {pending ? "Placing order…" : "Proceed to pay"}
+          {pending ? (
+            <span data-ui="store/CheckoutForm/span-inline-flex-2" className="inline-flex items-center gap-2 text-sm font-semibold">
+              <Loader2Icon className="size-4 animate-spin" /> Placing order…
+            </span>
+          ) : (
+            <>
+              <span data-ui="store/CheckoutForm/span-14" className="text-sm/tight font-semibold">Proceed to pay</span>
+              <span data-ui="store/CheckoutForm/span-15" className="text-sm/tight font-extrabold tracking-tight tabular-nums">{formatPrice(shownCharges.total)}</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -564,11 +579,27 @@ export function CheckoutForm({
                       >
                         <SmartphoneIcon className="size-4" /> Pay {formatPrice(shownCharges.total)} with UPI app
                       </a>
-                      <div data-ui="store/CheckoutForm/div-hidden" className="hidden items-center gap-4 rounded-2xl border border-border/80 bg-white p-3.5 shadow-2xs md:flex">
-                        <div data-ui="store/CheckoutForm/div-6" className="shrink-0 rounded-xl border border-neutral-200/80 bg-white p-1.5">
+                      <button
+                        data-ui="store/CheckoutForm/button-flex"
+                        type="button"
+                        onClick={() => setShowMobileQr((v) => !v)}
+                        aria-expanded={showMobileQr}
+                        className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/80 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 md:hidden"
+                      >
+                        <QrCodeIcon className="size-4 text-primary" />
+                        {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
+                      </button>
+                      <div
+                        data-ui="store/CheckoutForm/div-6"
+                        className={cn(
+                          "items-center gap-4 rounded-2xl border border-border/80 bg-white p-3.5 shadow-2xs md:flex",
+                          showMobileQr ? "flex" : "hidden",
+                        )}
+                      >
+                        <div data-ui="store/CheckoutForm/div-7" className="shrink-0 rounded-xl border border-neutral-200/80 bg-white p-1.5">
                           <QRCodeSVG value={upiUrl} size={104} marginSize={0} title={`UPI QR code to pay ${formatPrice(shownCharges.total)}`} />
                         </div>
-                        <div data-ui="store/CheckoutForm/div-7" className="space-y-1 text-sm text-neutral-700">
+                        <div data-ui="store/CheckoutForm/div-8" className="space-y-1 text-sm text-neutral-700">
                           <p data-ui="store/CheckoutForm/p-flex-4" className="flex items-center gap-2 font-semibold text-neutral-900">
                             <QrCodeIcon className="size-4 text-primary" /> Scan with any UPI app
                           </p>
@@ -578,16 +609,16 @@ export function CheckoutForm({
                         </div>
                       </div>
 
-                      <div data-ui="store/CheckoutForm/div-8" className="space-y-2">
+                      <div data-ui="store/CheckoutForm/div-9" className="space-y-2">
                         {[
                           { label: "UPI ID", value: upiId },
                           ...(upiPayeeName ? [{ label: "Name", value: upiPayeeName }] : []),
                           { label: "Amount", value: shownCharges.total.toFixed(2) },
                         ].map((row) => (
-                          <div data-ui="store/CheckoutForm/div-flex-5" key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/45 px-3.5 py-2 text-xs">
-                            <span data-ui="store/CheckoutForm/span-12" className="font-medium text-muted-foreground">{row.label}</span>
+                          <div data-ui="store/CheckoutForm/div-flex-6" key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/45 px-3.5 py-2 text-xs">
+                            <span data-ui="store/CheckoutForm/span-16" className="font-medium text-muted-foreground">{row.label}</span>
                             <span data-ui="store/CheckoutForm/span-flex-2" className="flex min-w-0 items-center gap-1.5 font-mono font-semibold text-foreground">
-                              <span data-ui="store/CheckoutForm/span-13" className="truncate">{row.value}</span>
+                              <span data-ui="store/CheckoutForm/span-17" className="truncate">{row.value}</span>
                               <button data-ui="store/CheckoutForm/button-grid"
                                 type="button"
                                 aria-label={`Copy ${row.label}`}
@@ -623,7 +654,7 @@ export function CheckoutForm({
                     </p>
                   )}
 
-                  <div data-ui="store/CheckoutForm/div-9" className="space-y-3 border-t pt-4">
+                  <div data-ui="store/CheckoutForm/div-10" className="space-y-3 border-t pt-4">
                     <p data-ui="store/CheckoutForm/p-flex-5" className="flex items-center gap-2.5 text-sm font-semibold">
                       <span data-ui="store/CheckoutForm/span-grid-5" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
                       Enter your UTR / UPI reference number

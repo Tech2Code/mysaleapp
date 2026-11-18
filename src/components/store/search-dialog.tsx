@@ -1,20 +1,100 @@
 "use client"
 
-import { ArrowLeftIcon, ArrowRightIcon, Loader2Icon, SearchXIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, ClockIcon, FlameIcon, Loader2Icon, SearchXIcon, SparklesIcon, Trash2Icon, XIcon } from "lucide-react"
 import { LIMITS } from "@/lib/validation"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { SearchField } from "@/components/form"
-import { searchProducts, type SearchResult } from "@/features/products/search-actions"
-import { formatPrice } from "@/lib/format"
+import { getSearchDiscovery, searchProducts, type SearchDiscovery, type SearchHit, type SearchResult } from "@/features/products/search-actions"
+import { discountPercent, formatPrice } from "@/lib/format"
 import { ProductImage } from "./product-image"
 
 type Category = { name: string; slug: string }
 
 const MIN_SEARCH_CHARS = 2
 const DEBOUNCE_MS = 300
+const RECENT_SEARCHES_KEY = "kk-recent-searches"
+const MAX_RECENT_SEARCHES = 5
 const searchCache = new Map<string, SearchResult>()
+let cachedDiscovery: SearchDiscovery | null = null
+
+function readRecentSearches(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, MAX_RECENT_SEARCHES)
+    }
+  } catch {}
+  return []
+}
+
+function writeRecentSearches(items: string[]) {
+  try {
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(items.slice(0, MAX_RECENT_SEARCHES)))
+  } catch {}
+}
+
+function SearchMiniCard({
+  hit,
+  onSelect,
+  onClose,
+}: {
+  hit: SearchHit
+  onSelect: (href: string) => void
+  onClose: () => void
+}) {
+  const off = discountPercent(hit.price, hit.compareAtPrice)
+  const href = `/products/${hit.slug}`
+
+  return (
+    <Link
+      data-ui="store/SearchMiniCard"
+      href={href}
+      onClick={(e) => {
+        if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+          e.preventDefault()
+          onSelect(href)
+        } else {
+          onClose()
+        }
+      }}
+      className="group flex items-center gap-2.5 rounded-xl border border-border/75 bg-card p-1.5 transition-colors hover:border-primary/40 hover:bg-muted/40"
+    >
+      <div data-ui="store/SearchMiniCard/div-relative" className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted sm:size-12 @container">
+        <ProductImage
+          src={hit.image}
+          alt={hit.name}
+          sizes="48px"
+          className={`transition-transform duration-300 ease-out group-hover:scale-105 ${!hit.inStock ? "opacity-60 grayscale" : ""}`}
+        />
+      </div>
+
+      <div data-ui="store/SearchMiniCard/div" className="min-w-0 flex-1">
+        <span data-ui="store/SearchMiniCard/span" className="block truncate font-sans text-xs font-semibold text-foreground group-hover:text-primary">
+          {hit.name}
+        </span>
+        <div data-ui="store/SearchMiniCard/div-flex" className="mt-0.5 flex flex-wrap items-center gap-1 tabular-nums">
+          <span data-ui="store/SearchMiniCard/span-2" className="text-xs font-bold text-foreground">
+            {formatPrice(hit.price)}
+          </span>
+          {hit.compareAtPrice && hit.compareAtPrice > hit.price && (
+            <span data-ui="store/SearchMiniCard/span-hidden" className="hidden text-[10px] text-muted-foreground line-through sm:inline">
+              {formatPrice(hit.compareAtPrice)}
+            </span>
+          )}
+          {off && (
+            <span data-ui="store/SearchMiniCard/span-3" className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-primary sm:text-[10px]">
+              {off}% off
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 /**
  * The store-wide search dialog: full-screen search view on mobile, floating dropdown card on tablet/desktop.
@@ -27,6 +107,8 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
   const [query, setQuery] = useState("")
   const [result, setResult] = useState<{ query: string; data: SearchResult } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [discovery, setDiscovery] = useState<SearchDiscovery | null>(cachedDiscovery)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const latest = useRef(0)
   const pushedHistoryRef = useRef(false)
@@ -34,6 +116,53 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
   const trimmed = query.trim()
   const cacheKey = trimmed.toLowerCase()
   const canSearch = trimmed.length >= MIN_SEARCH_CHARS
+
+  const saveRecentTerm = useCallback((term: string) => {
+    const clean = term.trim()
+    if (clean.length < MIN_SEARCH_CHARS) return
+    setRecentSearches((prev) => {
+      const next = [clean, ...prev.filter((t) => t.toLowerCase() !== clean.toLowerCase())].slice(0, MAX_RECENT_SEARCHES)
+      writeRecentSearches(next)
+      return next
+    })
+  }, [])
+
+  const removeRecentTerm = useCallback((term: string) => {
+    setRecentSearches((prev) => {
+      const next = prev.filter((t) => t !== term)
+      writeRecentSearches(next)
+      return next
+    })
+  }, [])
+
+  const clearRecentTerms = useCallback(() => {
+    setRecentSearches([])
+    writeRecentSearches([])
+  }, [])
+
+  // Load recent searches and discovery suggestions when dialog opens
+  useEffect(() => {
+    if (!open) return
+    queueMicrotask(() => {
+      setRecentSearches(readRecentSearches())
+    })
+    if (cachedDiscovery) {
+      queueMicrotask(() => {
+        setDiscovery(cachedDiscovery)
+      })
+      return
+    }
+    let cancelled = false
+    getSearchDiscovery()
+      .then((res) => {
+        cachedDiscovery = res
+        if (!cancelled) setDiscovery(res)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   const close = useCallback(() => {
     if (!open) return
@@ -49,7 +178,8 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
   }, [open, onOpenChange])
 
   const navigateFromSearch = useCallback(
-    (href: string) => {
+    (href: string, termToSave?: string) => {
+      if (termToSave) saveRecentTerm(termToSave)
       closingModeRef.current = "nav"
       const hadPushedState = pushedHistoryRef.current && typeof window !== "undefined" && Boolean(window.history.state?.__searchDialog)
       pushedHistoryRef.current = false
@@ -63,7 +193,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
         router.push(href)
       }
     },
-    [onOpenChange, pathname, router]
+    [onOpenChange, pathname, router, saveRecentTerm]
   )
 
   // Push a shallow history state when opened so the browser/phone Back button closes Global Search instead of staying stuck on it
@@ -186,7 +316,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
 
   const seeAll = () => {
     if (!trimmed) return
-    navigateFromSearch(`/products?q=${encodeURIComponent(trimmed)}`)
+    navigateFromSearch(`/products?q=${encodeURIComponent(trimmed)}`, trimmed)
   }
   const shown = canSearch && (searchCache.get(cacheKey) ?? (result?.query === trimmed ? result.data : null))
 
@@ -207,9 +337,9 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
         role="dialog"
         aria-modal="true"
         aria-label="Search products"
-        className="fixed inset-0 z-60 flex h-dvh w-screen flex-col overflow-hidden bg-background p-4 sm:inset-x-0 sm:top-[calc(var(--store-header-h)+8px)] sm:bottom-auto sm:mx-auto sm:h-auto sm:max-h-[calc(100dvh-5.5rem)] sm:w-[calc(100%-1.5rem)] sm:max-w-lg sm:rounded-2xl sm:border sm:bg-card sm:shadow-2xl animate-in fade-in-0 duration-150"
+        className="fixed inset-0 z-60 flex h-dvh w-screen flex-col overflow-hidden bg-background p-3.5 sm:inset-x-0 sm:top-[calc(var(--store-header-h)+8px)] sm:bottom-auto sm:mx-auto sm:h-auto sm:max-h-[calc(100dvh-5rem)] sm:w-[calc(100%-1.5rem)] sm:max-w-xl sm:rounded-2xl sm:border sm:bg-card sm:p-4 sm:shadow-2xl animate-in fade-in-0 duration-150"
       >
-        <div data-ui="store/SearchDialog/div-flex" className="flex shrink-0 items-center gap-2 border-b pb-3 mb-3 sm:border-b-0 sm:pb-0">
+        <div data-ui="store/SearchDialog/div-flex" className="flex shrink-0 items-center gap-2 border-b pb-2.5 mb-2.5 sm:border-b-0 sm:pb-0">
           <button data-ui="store/SearchDialog/button-back"
             type="button"
             onClick={close}
@@ -230,7 +360,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
             <SearchField
               label="Search products"
               maxLength={LIMITS.search.max}
-              placeholder="Search products…"
+              placeholder="Search products, gifts for men, candles…"
               autoFocus
               autoComplete="off"
               pill
@@ -249,97 +379,197 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
           </button>
         </div>
 
-        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16 flex-1 overflow-y-auto">
-          {!canSearch && categories.length > 0 && (
-            <div data-ui="store/SearchDialog/div-2" className="space-y-2.5">
-              <p data-ui="store/SearchDialog/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Browse categories</p>
-              <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-2">
-                <li data-ui="store/SearchDialog/li">
-                  <Link
-                    data-ui="store/SearchDialog/Link-all-products"
-                    href="/products"
-                    onClick={(e) => {
-                      if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-                        e.preventDefault()
-                        navigateFromSearch("/products")
-                      } else {
-                        close()
-                      }
-                    }}
-                    className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors"
-                  >
-                    All products
-                  </Link>
-                </li>
-                {categories.map((c) => (
-                  <li data-ui="store/SearchDialog/li-2" key={c.slug}>
-                    <Link
-                      data-ui="store/SearchDialog/Link-inline-flex"
-                      href={`/category/${c.slug}`}
+        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16 flex-1 space-y-3 overflow-y-auto">
+          {!canSearch && (
+            <>
+              {recentSearches.length > 0 && (
+                <div data-ui="store/SearchDialog/div-2" className="space-y-1.5">
+                  <div data-ui="store/SearchDialog/div-flex-2" className="flex items-center justify-between">
+                    <p data-ui="store/SearchDialog/p-flex" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      <ClockIcon className="size-3" aria-hidden /> Recent searches
+                    </p>
+                    <button data-ui="store/SearchDialog/button-clear-all"
+                      type="button"
+                      onClick={clearRecentTerms}
+                      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <Trash2Icon className="size-3" aria-hidden /> Clear all
+                    </button>
+                  </div>
+                  <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-1.5">
+                    {recentSearches.map((term) => (
+                      <li data-ui="store/SearchDialog/li-inline-flex" key={term} className="inline-flex items-center rounded-full border bg-muted/40 text-xs font-medium transition-colors hover:bg-muted">
+                        <button data-ui="store/SearchDialog/button-inline-flex"
+                          type="button"
+                          onClick={() => setQuery(term)}
+                          className="inline-flex h-7 items-center gap-1 pl-2.5 pr-1 text-foreground"
+                        >
+                          <ClockIcon className="size-3 text-muted-foreground" aria-hidden />
+                          <span data-ui="store/SearchDialog/span">{term}</span>
+                        </button>
+                        <button data-ui="store/SearchDialog/button-inline-flex-2"
+                          type="button"
+                          onClick={() => removeRecentTerm(term)}
+                          aria-label={`Remove ${term} from recent searches`}
+                          className="inline-flex size-5 mr-0.5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                        >
+                          <XIcon className="size-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(categories.length > 0 || (discovery?.trendingTerms && discovery.trendingTerms.length > 0)) && (
+                <div data-ui="store/SearchDialog/div-3" className="space-y-1.5">
+                  <p data-ui="store/SearchDialog/p-flex-2" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    <FlameIcon className="size-3 text-primary" aria-hidden /> Trending &amp; categories
+                  </p>
+                  <ul data-ui="store/SearchDialog/ul-flex-2" className="flex flex-wrap gap-1.5">
+                    {discovery?.trendingTerms.map((term) => (
+                      <li data-ui="store/SearchDialog/li" key={`trend-${term}`}>
+                        <button data-ui="store/SearchDialog/button-inline-flex-3"
+                          type="button"
+                          onClick={() => setQuery(term)}
+                          className="inline-flex h-7 items-center gap-1 rounded-full border border-primary/25 bg-primary/8 px-2.5 text-xs font-medium text-foreground hover:bg-primary/15 transition-colors"
+                        >
+                          <FlameIcon className="size-3 text-primary" aria-hidden />
+                          {term}
+                        </button>
+                      </li>
+                    ))}
+                    <li data-ui="store/SearchDialog/li-2">
+                      <Link
+                        data-ui="store/SearchDialog/Link-all-products"
+                        href="/products"
+                        onClick={(e) => {
+                          if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                            e.preventDefault()
+                            navigateFromSearch("/products")
+                          } else {
+                            close()
+                          }
+                        }}
+                        className="inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium hover:bg-muted transition-colors"
+                      >
+                        All products
+                      </Link>
+                    </li>
+                    {categories.map((c) => (
+                      <li data-ui="store/SearchDialog/li-3" key={c.slug}>
+                        <Link
+                          data-ui="store/SearchDialog/Link-inline-flex"
+                          href={`/category/${c.slug}`}
+                          onClick={(e) => {
+                            if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+                              e.preventDefault()
+                              navigateFromSearch(`/category/${c.slug}`)
+                            } else {
+                              close()
+                            }
+                          }}
+                          className="inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium hover:bg-muted transition-colors"
+                        >
+                          {c.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {discovery && discovery.recommended.length > 0 && (
+                <div data-ui="store/SearchDialog/div-4" className="space-y-1.5">
+                  <div data-ui="store/SearchDialog/div-flex-3" className="flex items-center justify-between">
+                    <p data-ui="store/SearchDialog/p-flex-3" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      <SparklesIcon className="size-3 text-primary" aria-hidden /> Trending &amp; recommended
+                    </p>
+                    <Link data-ui="store/SearchDialog/Link-view-all"
+                      href="/products"
                       onClick={(e) => {
                         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
                           e.preventDefault()
-                          navigateFromSearch(`/category/${c.slug}`)
+                          navigateFromSearch("/products")
                         } else {
                           close()
                         }
                       }}
-                      className="inline-flex h-9 sm:h-8 items-center rounded-full border px-3.5 text-xs font-medium hover:bg-muted transition-colors"
+                      className="text-xs font-semibold text-primary hover:underline"
                     >
-                      {c.name}
+                      View all
                     </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  </div>
+                  <div data-ui="store/SearchDialog/div-grid" className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    {discovery.recommended.slice(0, 4).map((hit) => (
+                      <SearchMiniCard
+                        key={hit.id}
+                        hit={hit}
+                        onSelect={(href) => navigateFromSearch(href, hit.name)}
+                        onClose={() => {
+                          saveRecentTerm(hit.name)
+                          close()
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {canSearch && !shown && (
-            <p data-ui="store/SearchDialog/p-flex" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+            <p data-ui="store/SearchDialog/p-flex-4" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
               <Loader2Icon className="size-4 animate-spin" aria-hidden /> Searching…
             </p>
           )}
 
           {shown && shown.hits.length === 0 && (
-            <div data-ui="store/SearchDialog/div-flex-2" className="flex flex-col items-center gap-2 py-10 sm:py-6 text-center">
+            <div data-ui="store/SearchDialog/div-flex-4" className="flex flex-col items-center gap-2 py-10 sm:py-6 text-center">
               <SearchXIcon className="size-8 text-muted-foreground" aria-hidden />
-              <p data-ui="store/SearchDialog/p-2" className="text-sm font-medium">No products match “{trimmed}”</p>
-              <p data-ui="store/SearchDialog/p-3" className="text-xs text-muted-foreground">Try a shorter word, or browse a category.</p>
+              <p data-ui="store/SearchDialog/p" className="text-sm font-medium">No products match “{trimmed}”</p>
+              <p data-ui="store/SearchDialog/p-2" className="text-xs text-muted-foreground">Try a shorter word, or browse a category.</p>
             </div>
           )}
 
           {shown && shown.hits.length > 0 && (
             <>
+              {shown.isFallback && (
+                <div data-ui="store/SearchDialog/div-5" className="rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  No exact match for <span data-ui="store/SearchDialog/span-2" className="font-semibold text-foreground">“{trimmed}”</span> — showing popular &amp; similar picks:
+                </div>
+              )}
               <ul data-ui="store/SearchDialog/ul" className="divide-y divide-border/60">
                 {shown.hits.map((h) => (
-                  <li data-ui="store/SearchDialog/li-3" key={h.id}>
+                  <li data-ui="store/SearchDialog/li-4" key={h.id}>
                     <Link
                       data-ui="store/SearchDialog/Link-flex"
                       href={`/products/${h.slug}`}
                       onClick={(e) => {
                         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
                           e.preventDefault()
-                          navigateFromSearch(`/products/${h.slug}`)
+                          navigateFromSearch(`/products/${h.slug}`, shown.isFallback ? h.name : trimmed)
                         } else {
+                          saveRecentTerm(shown.isFallback ? h.name : trimmed)
                           close()
                         }
                       }}
-                      className="flex items-center gap-3 py-2.5 sm:py-2 px-1 rounded-lg hover:bg-muted/50 transition-colors"
+                      className="flex items-center gap-3 py-2 sm:py-1.5 px-1 rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <span data-ui="store/SearchDialog/span-relative" className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted @container">
-                        <ProductImage src={h.image} alt={h.name} sizes="48px" />
+                      <span data-ui="store/SearchDialog/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
+                        <ProductImage src={h.image} alt={h.name} sizes="44px" />
                       </span>
-                      <span data-ui="store/SearchDialog/span" className="min-w-0 flex-1">
-                        <span data-ui="store/SearchDialog/span-2" className="block truncate text-sm font-medium">{h.name}</span>
-                        <span data-ui="store/SearchDialog/span-3" className="block truncate text-xs text-muted-foreground">
+                      <span data-ui="store/SearchDialog/span-3" className="min-w-0 flex-1">
+                        <span data-ui="store/SearchDialog/span-4" className="block truncate text-sm font-medium">{h.name}</span>
+                        <span data-ui="store/SearchDialog/span-5" className="block truncate text-xs text-muted-foreground">
                           {h.category ?? "Product"}
                           {!h.inStock ? " · Out of stock" : ""}
                         </span>
                       </span>
-                      <span data-ui="store/SearchDialog/span-4" className="shrink-0 text-sm font-semibold">
+                      <span data-ui="store/SearchDialog/span-6" className="shrink-0 text-sm font-semibold tabular-nums">
                         {formatPrice(h.price)}
                         {h.compareAtPrice && h.compareAtPrice > h.price && (
-                          <span data-ui="store/SearchDialog/span-5" className="ml-1.5 text-xs font-normal text-muted-foreground line-through">{formatPrice(h.compareAtPrice)}</span>
+                          <span data-ui="store/SearchDialog/span-7" className="ml-1.5 text-xs font-normal text-muted-foreground line-through">{formatPrice(h.compareAtPrice)}</span>
                         )}
                       </span>
                     </Link>
@@ -347,16 +577,20 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                 ))}
               </ul>
               <button
-                data-ui="store/SearchDialog/button-see-all"
+                data-ui="store/SearchDialog/button-flex"
                 type="button"
-                onClick={seeAll}
-                className="mt-3 flex h-10 sm:h-9.5 w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                onClick={() => (shown.isFallback ? navigateFromSearch("/products") : seeAll())}
+                className="mt-2 flex h-9.5 w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className="size-3.5" aria-hidden />
+                {shown.isFallback ? (
+                  <>Browse all products <ArrowRightIcon className="size-3.5" aria-hidden /></>
+                ) : (
+                  <>See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className="size-3.5" aria-hidden /></>
+                )}
               </button>
             </>
           )}
-          {loading && shown && <span data-ui="store/SearchDialog/span-6" className="sr-only">Updating results</span>}
+          {loading && shown && <span data-ui="store/SearchDialog/span-8" className="sr-only">Updating results</span>}
         </div>
       </div>
     </>
