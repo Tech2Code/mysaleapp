@@ -31,6 +31,7 @@ async function AccountSlot() {
         email: user.email ?? "",
         avatarUrl: safeAvatarUrl(meta.avatar_url),
         lastSignIn,
+        lastSignInAt: user.last_sign_in_at ?? null,
       }}
     />
   )

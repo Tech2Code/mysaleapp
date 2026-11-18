@@ -3,7 +3,8 @@
 import { LogOutIcon, SettingsIcon, ShieldCheckIcon, UserRoundCogIcon } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useTransition, useState } from "react"
+import { useEffect, useTransition, useState } from "react"
+import { toast } from "sonner"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +15,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { applyClientSignOut } from "@/components/shared/auth-listener"
 import { signOutAdmin } from "@/features/auth/actions"
-import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import { useToastAfter } from "@/hooks/use-toast-after"
+import { getBrowserSupabase } from "@/lib/supabase/client"
 
-export type AdminAccount = { name: string; email: string; avatarUrl: string | null; lastSignIn: string | null }
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000
+
+export type AdminAccount = { name: string; email: string; avatarUrl: string | null; lastSignIn: string | null; lastSignInAt?: string | null }
 
 /** Who is signed in to the admin panel, plus quick links and Sign out. */
 export function AdminAccountMenu({ account }: { account: AdminAccount }) {
@@ -25,7 +31,50 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   const [pending, startTransition] = useTransition()
   const [askSignOut, setAskSignOut] = useState(false)
   useBlockWhile(pending)
+  const showSuccess = useBusySuccess()
+  const later = useToastAfter(pending)
   const initial = (account.name || account.email).charAt(0).toUpperCase()
+
+  useEffect(() => {
+    if (!account.lastSignInAt) return
+    const signedInAt = Date.parse(account.lastSignInAt)
+    if (Number.isNaN(signedInAt)) return
+
+    let expired = false
+    const expireSession = () => {
+      if (expired) return
+      expired = true
+      startTransition(async () => {
+        applyClientSignOut()
+        await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+        await signOutAdmin("session-expired")
+        showSuccess("Session expired")
+        later(() => toast.info("Your 12-hour admin session expired. Please sign in again."))
+      })
+    }
+
+    const checkExpiry = () => {
+      const remaining = signedInAt + ADMIN_SESSION_MAX_AGE_MS - Date.now()
+      if (remaining <= 0) {
+        expireSession()
+        return null
+      }
+      return window.setTimeout(expireSession, remaining)
+    }
+
+    const timerId = checkExpiry()
+    const onVisible = () => {
+      if (document.visibilityState === "visible") checkExpiry()
+    }
+    window.addEventListener("focus", checkExpiry)
+    document.addEventListener("visibilitychange", onVisible)
+
+    return () => {
+      if (timerId !== null) window.clearTimeout(timerId)
+      window.removeEventListener("focus", checkExpiry)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+  }, [account.lastSignInAt, later, showSuccess])
 
   return (
     <DropdownMenu>
@@ -71,7 +120,15 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
         confirmLabel="Sign out"
         destructive
         pending={pending}
-        onConfirm={() => startTransition(() => signOutAdmin())}
+        onConfirm={() =>
+          startTransition(async () => {
+            applyClientSignOut()
+            await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+            await signOutAdmin()
+            showSuccess("Signed out")
+            later(() => toast.success("Signed out"))
+          })
+        }
       />
     </DropdownMenu>
   )

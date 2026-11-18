@@ -3,10 +3,15 @@
 import { LogOutIcon, MapPinIcon, PackageIcon, SettingsIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useState, type ReactNode } from "react"
+import { Suspense, useState, useTransition, type ReactNode } from "react"
+import { toast } from "sonner"
+import { applyClientSignOut } from "@/components/shared/auth-listener"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { ThemeSettingSection } from "@/components/shared/theme-toggle"
 import { Button } from "@/components/ui/button"
+import { signOutCustomer } from "@/features/auth/actions"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -70,19 +75,23 @@ export function AccountNav() {
 function AccountSignOutCard() {
   const router = useRouter()
   const [askSignOut, setAskSignOut] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
+  const [signingOut, startSignOut] = useTransition()
+  useBlockWhile(signingOut)
+  const showSuccess = useBusySuccess()
+  const later = useToastAfter(signingOut)
 
-  const signOut = async () => {
-    setSigningOut(true)
-    try {
-      sessionStorage.removeItem("kk-last-order")
-    } catch {}
-    await getBrowserSupabase()?.auth.signOut()
-    setAskSignOut(false)
-    setSigningOut(false)
-    router.push("/")
-    router.refresh()
-  }
+  const signOut = () =>
+    startSignOut(async () => {
+      setAskSignOut(false)
+      applyClientSignOut()
+      await Promise.allSettled([
+        getBrowserSupabase()?.auth.signOut({ scope: "local" }),
+        signOutCustomer(),
+      ])
+      showSuccess("Signed out")
+      later(() => toast.success("Signed out successfully"))
+      router.push("/")
+    })
 
   return (
     <>

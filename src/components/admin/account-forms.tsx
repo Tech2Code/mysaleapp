@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, MailCheckIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useLayoutEffect, useState, useTransition, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
+import { applyClientProfileUpdate } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
 import { changeAdminPassword, requestAdminEmailChange, updateAdminProfile } from "@/features/auth/account-actions"
 import { changePasswordSchema, emailSchema, profileSchema } from "@/features/auth/account-schema"
@@ -76,6 +77,9 @@ function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; on
             const nextSaved = { name: values.name, phone: values.phone ?? "" }
             setSaved(nextSaved)
             onSaved(nextSaved)
+            if (nextSaved.name.trim()) {
+              applyClientProfileUpdate({ name: nextSaved.name.trim() })
+            }
             later(() => toast.success("Details saved"))
             form.reset(nextSaved)
             router.refresh()
@@ -95,13 +99,51 @@ function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; on
 }
 
 function EmailForm({ email }: { email: string }) {
+  const router = useRouter()
   const [sentTo, setSentTo] = useState<string | null>(null)
+  const [callbackBanner, setCallbackBanner] = useState<{ tone: "success" | "error"; text: string } | null>(null)
   const form = useForm<z.input<typeof emailSchema>>({ resolver: zodResolver(emailSchema), defaultValues: { email: "" } })
   const { errors } = form.formState
   const emailVal = useWatch({ control: form.control, name: "email" })
-  const { pending, run } = useSubmit<{ email: string }>((n, m) => form.setError(n, { message: m }))
+  const { pending, run, later } = useSubmit<{ email: string }>((n, m) => form.setError(n, { message: m }))
   const cleanEmail = (emailVal ?? "").trim().toLowerCase()
   const emailUnchanged = !cleanEmail || cleanEmail === email.trim().toLowerCase()
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+    const searchParams = new URLSearchParams(window.location.search)
+    const errorDesc = hashParams.get("error_description") ?? searchParams.get("error_description")
+    const stepMessage = hashParams.get("message") ?? searchParams.get("message")
+    const emailChanged = searchParams.get("email_changed") === "1" || (!errorDesc && hashParams.get("type") === "email_change")
+
+    if (!errorDesc && !stepMessage && !emailChanged) return
+
+    window.history.replaceState(null, "", window.location.pathname)
+
+    if (errorDesc) {
+      const text = errorDesc.replace(/\+/g, " ")
+      queueMicrotask(() => setCallbackBanner({ tone: "error", text }))
+      toast.error(text)
+      return
+    }
+
+    if (emailChanged) {
+      const text = "Your login email address has been updated."
+      queueMicrotask(() => setCallbackBanner({ tone: "success", text }))
+      toast.success("Email address updated")
+      router.refresh()
+      return
+    }
+
+    if (stepMessage) {
+      const isTwoStep = stepMessage.toLowerCase().includes("other email")
+      const text = isTwoStep
+        ? "First confirmation link accepted! Please also open your other email inbox (current or new email) and click the second confirmation link to finish changing your email."
+        : stepMessage.replace(/\+/g, " ")
+      queueMicrotask(() => setCallbackBanner({ tone: "success", text }))
+      toast.success(isTwoStep ? "Step 1 confirmed — check your other email inbox to finish" : text)
+    }
+  }, [router])
 
   return (
     <form
@@ -113,7 +155,9 @@ function EmailForm({ email }: { email: string }) {
         run(
           () => requestAdminEmailChange(values),
           () => {
+            setCallbackBanner(null)
             setSentTo(values.email)
+            later(() => toast.success("Confirmation email sent"))
             form.reset()
           }
         )
@@ -123,11 +167,24 @@ function EmailForm({ email }: { email: string }) {
         Signed in as <span data-ui="admin/EmailForm/span" className="font-semibold">{email}</span>
       </p>
       <TextField label="New email address" kind="email" fieldSize="md" error={errors.email?.message} {...form.register("email")} />
+      {callbackBanner && (
+        <p
+          data-ui="admin/EmailForm/p-callback"
+          role="status"
+          className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
+            callbackBanner.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-success/10"
+          }`}
+        >
+          <MailCheckIcon className={`mt-0.5 size-4 shrink-0 ${callbackBanner.tone === "error" ? "text-destructive" : "text-success"}`} aria-hidden />
+          <span data-ui="admin/EmailForm/span-callback">{callbackBanner.text}</span>
+        </p>
+      )}
       {sentTo && (
         <p data-ui="admin/EmailForm/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
           <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
           <span data-ui="admin/EmailForm/span-2">
-            We sent a confirmation link to <span data-ui="admin/EmailForm/span-3" className="font-semibold">{sentTo}</span>. Open it to finish. Until then you keep signing in with{" "}
+            We sent a confirmation link to <span data-ui="admin/EmailForm/span-3" className="font-semibold">{sentTo}</span> (and to{" "}
+            <span className="font-semibold">{email}</span> if double confirmation is enabled). Open the link(s) to finish. Until then you keep signing in with{" "}
             {email}.
           </span>
         </p>
@@ -211,6 +268,10 @@ export function AccountSettings({ name, phone, email }: { name: string; phone: s
     setPrevProps({ name, phone })
     setSavedProfile({ name, phone })
   }
+
+  useEffect(() => {
+    applyClientProfileUpdate({ name, email })
+  }, [name, email])
 
   useLayoutEffect(() => {
     return () => {

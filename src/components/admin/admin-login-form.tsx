@@ -4,10 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, LogInIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { useLayoutEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { TextField } from "@/components/form"
+import { applyClientSignIn } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
 import { signInAdmin } from "@/features/auth/actions"
 import { safeNextPath } from "@/lib/safe-redirect"
@@ -27,11 +28,15 @@ export function AdminLoginForm() {
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
   const [error, setError] = useState<string | null>(
-    params.get("error") === "not-admin" ? "This account doesn't have admin access." : null
+    params.get("error") === "not-admin"
+      ? "This account doesn't have admin access."
+      : params.get("reason") === "session-expired"
+        ? "Your 12-hour admin session has expired. Please sign in again."
+        : null
   )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       form.reset({ email: "", password: "" })
       setError(null)
@@ -46,11 +51,12 @@ export function AdminLoginForm() {
         setError(res.error)
         return
       }
+      form.reset({ email: "", password: "" })
+      applyClientSignIn(res.data.user)
       showSuccess("Login successful")
       const next = safeNextPath(params.get("next"), "/admin")
       const adminTarget = (next === "/admin" || next.startsWith("/admin/")) && !next.startsWith("/admin/reset-password") ? next : "/admin"
       router.replace(adminTarget)
-      router.refresh()
     })
   )
 

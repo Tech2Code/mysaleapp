@@ -14,6 +14,7 @@ import { placeholderPlacedOrder, placeholderTrackedOrder } from "@/features/orde
 import type { TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/store/auth"
 import { LAST_ORDER_KEY } from "./checkout-form"
 import { WhatsAppIcon } from "./brand-icons"
 import { PaymentPanel } from "./payment-panel"
@@ -43,8 +44,12 @@ const HEADLINE: Record<string, { title: string; text: string }> = {
 /** `preview`: render a placeholder order and read nothing (loading.tsx wraps it in <Skeletonize>). */
 export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   const shop = useStoreSettings()
+  const user = useAuth((s) => s.user)
+  const signedIn = Boolean(user)
   const urlCode = (useSearchParams().get("code") ?? "").toUpperCase()
   const code = preview ? placeholderPlacedOrder().orderCode : urlCode
+  const myOrderHref = code ? `/account/orders/${encodeURIComponent(code)}` : "/account/orders"
+  const trackHref = `/track?code=${encodeURIComponent(code)}`
   // sessionStorage is read as an external store: null on the server, real value on the client.
   const raw = useSyncExternalStore(noopSubscribe, () => readSession(LAST_ORDER_KEY), () => null)
 
@@ -60,6 +65,14 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
 
   const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "submitted" }) : null)
   const [lookupFailed, setLookupFailed] = useState(false)
+  const isOwner = Boolean(
+    signedIn &&
+      (!state ||
+        state.delivery ||
+        state.paymentMethod ||
+        (state.paymentReference && !state.paymentReference.includes("*")))
+  )
+  const orderDetailHref = order && code ? myOrderHref : "/account/orders"
 
   const load = useCallback(async () => {
     if (!order) return
@@ -74,7 +87,8 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     }
   }, [order])
 
-  // Read the real payment state on mount (and whenever the order changes).
+  // Read the real payment state on mount (and whenever the order or signed-in user changes).
+  const userId = user?.id ?? null
   useEffect(() => {
     if (!order || preview) return
     let cancelled = false
@@ -95,7 +109,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     return () => {
       cancelled = true
     }
-  }, [order, preview])
+  }, [order, preview, userId])
 
   const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.submitted) : HEADLINE.submitted
   const whatsappHref =
@@ -139,11 +153,27 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         <div data-ui="store/OrderPlaced/div" className="mt-8 text-left">
           {!order ? (
             <p data-ui="store/OrderPlaced/p-2" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
-              To check your order status and payment verification, open{" "}
-              <Link data-ui="store/OrderPlaced/Link-track-order" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
-                Track order
-              </Link>{" "}
-              and enter your order code with the last 4 digits of your phone.
+              {signedIn ? (
+                <>
+                  To check your order status and payment verification, open{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    My orders
+                  </Link>{" "}
+                  or{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order-guest" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Track order
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  To check your order status and payment verification, open{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Track order
+                  </Link>{" "}
+                  and enter your order code with the last 4 digits of your phone.
+                </>
+              )}
             </p>
           ) : state ? (
             <PaymentPanel
@@ -157,11 +187,27 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
             />
           ) : lookupFailed ? (
             <p data-ui="store/OrderPlaced/p-3" role="alert" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
-              We couldn&apos;t load your order details just now. Open{" "}
-              <Link data-ui="store/OrderPlaced/Link-track-order-2" href={`/track?code=${encodeURIComponent(code)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
-                Track order
-              </Link>{" "}
-              and enter your order code with the last 4 digits of your phone to check your order status.
+              {signedIn ? (
+                <>
+                  We couldn&apos;t load your order details just now. Open{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    My orders
+                  </Link>{" "}
+                  or{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order-2-guest" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Track order
+                  </Link>{" "}
+                  to check your order status.
+                </>
+              ) : (
+                <>
+                  We couldn&apos;t load your order details just now. Open{" "}
+                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Track order
+                  </Link>{" "}
+                  and enter your order code with the last 4 digits of your phone to check your order status.
+                </>
+              )}
             </p>
           ) : (
             // Show the compact "verifying payment" skeleton matching the newly placed order state
@@ -178,8 +224,8 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         </div>
 
         <div data-ui="store/OrderPlaced/div-flex" className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={`/track?code=${encodeURIComponent(code)}`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
-            Track this order
+          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={isOwner ? orderDetailHref : trackHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
+            {isOwner ? "View in My orders" : "Track this order"}
           </Link>
           <Link data-ui="store/OrderPlaced/Link-continue-shopping" href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>
             Continue shopping

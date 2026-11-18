@@ -15,7 +15,7 @@ import { ProductCard, type ProductCardData } from "./product-card"
 export function WishlistView({ products, preview = false }: { products: ProductCardData[]; preview?: boolean }) {
   const mounted = useMounted()
   const ids = useWishlist((s) => s.ids)
-  const user = useAuth((s) => s.user)
+  const { user, ready: authReady } = useAuth()
 
   if (preview || !mounted) {
     // The saved list lives in the browser: show placeholder cards in the real grid meanwhile.
@@ -28,7 +28,7 @@ export function WishlistView({ products, preview = false }: { products: ProductC
 
   return (
     <div data-ui="store/WishlistView" className="space-y-8">
-      {!user && saved.length > 0 && (
+      {authReady && !user && saved.length > 0 && (
         <p data-ui="store/WishlistView/p" className="rounded-2xl bg-secondary/70 p-4 text-sm">
           Your wishlist is saved on this device.{" "}
           <Link data-ui="store/WishlistView/Link-sign-in" href="/login?next=/wishlist" className="font-semibold text-primary underline-offset-4 hover:underline">

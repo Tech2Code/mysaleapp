@@ -19,9 +19,9 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   return data.user
 })
 
-export async function requireUser(nextPath = "/account"): Promise<User> {
+export async function requireUser(nextPath = "/account/orders"): Promise<User> {
   const user = await getCurrentUser()
-  if (!user) redirect(nextPath === "/account" ? "/login" : `/login?next=${encodeURIComponent(nextPath)}`)
+  if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`)
   return user
 }
 

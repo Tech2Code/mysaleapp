@@ -35,6 +35,7 @@ import { DeliveryEditor } from "./delivery-editor"
 import { useStoreSettings } from "./store-settings-provider"
 import { PaymentPanel } from "./payment-panel"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useAuth } from "@/store/auth"
 
 type TrackInput = z.input<typeof trackOrderSchema>
 
@@ -44,7 +45,7 @@ const hints = [
   { icon: PackageSearchIcon, text: "See live status, courier and tracking details right here." },
 ]
 
-function EmptyState() {
+function EmptyState({ signedIn }: { signedIn: boolean }) {
   return (
     <div data-ui="store/EmptyState" className="flex h-full min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed bg-card/50 p-6 sm:p-8 text-center">
       <div data-ui="store/EmptyState/div-grid" className="grid size-16 place-items-center rounded-full bg-secondary animate-float">
@@ -62,10 +63,21 @@ function EmptyState() {
         ))}
       </ol>
       <p data-ui="store/EmptyState/p" className="mt-6 text-sm text-muted-foreground">
-        Signed in?{" "}
-        <Link data-ui="store/EmptyState/Link-see-all-your-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
-          See all your orders
-        </Link>
+        {signedIn ? (
+          <>
+            Ordered with your account?{" "}
+            <Link data-ui="store/EmptyState/Link-see-all-your-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              See all your orders
+            </Link>
+          </>
+        ) : (
+          <>
+            Have an account?{" "}
+            <Link data-ui="store/EmptyState/Link-see-all-your-orders" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              Sign in to see all your orders
+            </Link>
+          </>
+        )}
       </p>
     </div>
   )
@@ -78,14 +90,23 @@ function TrackResult({
   result,
   query,
   shop,
+  signedIn,
   refetch,
 }: {
   result: TrackedOrder
   query: { code: string; phoneLast4: string } | null
   shop: StoreSettings
+  signedIn: boolean
   refetch: (phoneLast4?: string) => Promise<void>
 }) {
   const itemCount = result.items.reduce((n, i) => n + i.quantity, 0)
+  // `track_order` only returns `delivery`, `paymentMethod`, and an unmasked `paymentReference` for the signed-in owner.
+  const isOwner = Boolean(
+    signedIn &&
+      (result.delivery ||
+        result.paymentMethod ||
+        (result.paymentReference && !result.paymentReference.includes("*")))
+  )
   return (
     <m.section data-ui="store/TrackResult"
       initial={{ opacity: 0, y: 20 }}
@@ -113,14 +134,14 @@ function TrackResult({
                   canRequestAgain: result.status === "delivered" ? canRequestAgain(result.returnRequests, result.returnWindow.open) : undefined,
                 })}
               </p>
-      {query ? <ReturnRequestsPanel requests={result.returnRequests} returns={result.returns} refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} orderCode={result.orderCode} phoneLast4={query.phoneLast4} onChanged={() => void refetch()} /> : <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />}
+      {query ? <ReturnRequestsPanel requests={result.returnRequests} returns={result.returns} refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} orderCode={result.orderCode} phoneLast4={isOwner ? undefined : query.phoneLast4} onChanged={() => void refetch()} /> : <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />}
       <RefundSummary order={result} />
       {result.cancellation && (
         <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
       )}
       {/* Guests only get what they can act on (pay / "we're verifying"). The receipt, UTR and the priced item list
           need no code+4-digits lookup to be readable by anyone, so they stay in the signed-in order page. */}
-      {query && result.paymentStatus !== "paid" && (
+      {query && (result.paymentStatus !== "paid" || isOwner) && (
         <PaymentPanel
           orderCode={result.orderCode}
           phoneLast4={query.phoneLast4}
@@ -148,8 +169,8 @@ function TrackResult({
           />
           <CancelOrder
             orderCode={result.orderCode}
-            // `delivery` only comes back for the signed-in owner; everyone else is a guest and must type the full number to cancel
-            phoneLast4={result.delivery ? undefined : query.phoneLast4}
+            // The signed-in owner is recognised by session; everyone else is a guest and must type the full number to cancel
+            phoneLast4={isOwner ? undefined : query.phoneLast4}
             status={result.status}
             paymentStatus={result.paymentStatus}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I want to cancel my order ${result.orderCode}.`)}
@@ -170,10 +191,28 @@ function TrackResult({
           ))}
         </ul>
         <p data-ui="store/TrackResult/p-4" className="mt-3 text-xs text-muted-foreground">
-          Need the invoice or payment details?{" "}
-          <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
-            Sign in and open My orders
-          </Link>
+          {isOwner ? (
+            <>
+              Need the invoice or full order details?{" "}
+              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href={`/account/orders/${encodeURIComponent(result.orderCode)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+                Open in My orders
+              </Link>
+            </>
+          ) : signedIn ? (
+            <>
+              Looking for orders placed with your account?{" "}
+              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                Open My orders
+              </Link>
+            </>
+          ) : (
+            <>
+              Need the invoice or payment details?{" "}
+              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                Sign in and open My orders
+              </Link>
+            </>
+          )}
         </p>
       </section>
       {query && result.delivery && (
@@ -199,8 +238,18 @@ function TrackResult({
             className="font-semibold text-foreground underline underline-offset-4"
           >
             message us on WhatsApp
-          </a>{" "}
-          or sign in.
+          </a>
+          {signedIn ? (
+            "."
+          ) : (
+            <>
+              {" "}or{" "}
+              <Link data-ui="store/TrackResult/Link-sign-in" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                sign in
+              </Link>
+              .
+            </>
+          )}
         </p>
       )}
     </m.section>
@@ -215,6 +264,8 @@ export function TrackOrder() {
 
 function TrackOrderBody({ urlCode }: { urlCode: string }) {
   const shop = useStoreSettings()
+  const user = useAuth((s) => s.user)
+  const signedIn = Boolean(user)
   const [result, setResult] = useState<TrackedOrder | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -274,13 +325,30 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
     }
   }
 
+  // Re-fetch automatically when auth user changes so signing in unlocks owner delivery/payment details immediately
+  const userId = user?.id ?? null
+  useEffect(() => {
+    if (!query) return
+    let cancelled = false
+    trackOrder(query)
+      .then((res) => {
+        if (!cancelled && res.ok) setResult(res.data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [userId, query])
+
   return (
     <div data-ui="store/TrackOrderBody" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
       {/* Left: find your order */}
       <form data-ui="store/TrackOrderBody/form" onSubmit={onSubmit} noValidate className={`space-y-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
         <div data-ui="store/TrackOrderBody/div">
           <h2 data-ui="store/TrackOrderBody/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
-          <p data-ui="store/TrackOrderBody/p" className="mt-1 text-sm text-muted-foreground">Takes 5 seconds. No login needed.</p>
+          <p data-ui="store/TrackOrderBody/p" className="mt-1 text-sm text-muted-foreground">
+            {signedIn ? "Takes 5 seconds. Enter your order code and phone's last 4 digits." : "Takes 5 seconds. No login needed."}
+          </p>
         </div>
         <TextField
           label="Order code" kind="orderCode"
@@ -325,14 +393,14 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
           {pending ? (
             <m.div data-ui="store/TrackOrderBody/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Skeletonize>
-                <TrackResult result={placeholderTrackedOrder()} query={PLACEHOLDER_QUERY} shop={shop} refetch={async () => {}} />
+                <TrackResult result={placeholderTrackedOrder()} query={PLACEHOLDER_QUERY} shop={shop} signedIn={signedIn} refetch={async () => {}} />
               </Skeletonize>
             </m.div>
           ) : result ? (
-            <TrackResult key={result.orderCode} result={result} query={query} shop={shop} refetch={refetch} />
+            <TrackResult key={result.orderCode} result={result} query={query} shop={shop} signedIn={signedIn} refetch={refetch} />
           ) : (
             <m.div data-ui="store/TrackOrderBody/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
-              <EmptyState />
+              <EmptyState signedIn={signedIn} />
             </m.div>
           )}
         </AnimatePresence>

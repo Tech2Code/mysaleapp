@@ -1,6 +1,6 @@
 # Kalakriti: handmade gifts store
 
-A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns, refunds, and store settings, Google login for customers, saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
+A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns, refunds, and store settings, email/password & Google login for customers, saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
 
 | | |
 |---|---|
@@ -136,7 +136,7 @@ Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GS
 
 ### Saved addresses & account tabs
 
-Signed-in customers manage their account across 4 tabs (**Orders**, **Profile**, **Addresses**, and **Settings**): up to 10 saved addresses under `/account/addresses` (Home / Work / Other, default selection, add / edit / delete) and appearance/theme preferences under `/account/settings`. At checkout they pick a saved address in a tap, or enter a new one and tick "Save this address".
+Signed-in customers manage their account across 2 tabs (**My orders** at `/account/orders` and **Profile & addresses** at `/account/profile`), with up to 10 saved addresses (Home / Work / Other, default selection, add / edit / delete) and profile details (name, email with confirmation, mobile number) on one unified page. At checkout they pick a saved address in a tap, or enter a new one and tick "Save this address".
 
 ## Folder structure
 

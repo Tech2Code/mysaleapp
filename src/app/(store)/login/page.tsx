@@ -15,7 +15,7 @@ export default async function LoginPage({
   const user = await getCurrentUser()
   const params = await searchParams
   if (user) {
-    redirect(safeNextPath(params.next, "/account/orders"))
+    redirect(safeNextPath(params.next, "/"))
   }
 
   return <LoginView shop={await getStoreSettings()} />

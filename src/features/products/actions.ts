@@ -1,6 +1,6 @@
 "use server"
 
-import { updateTag } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
@@ -59,10 +59,12 @@ function extractStoragePaths(urls: readonly string[]): string[] {
   return out
 }
 
-/** Storefront pages are cached; refresh them instantly after any catalogue change. */
+/** Storefront and admin pages are refreshed instantly after any catalogue change. */
 function refreshCatalogue() {
   updateTag(CACHE_TAGS.products)
   updateTag(CACHE_TAGS.categories)
+  revalidatePath("/admin", "layout")
+  revalidatePath("/", "layout")
 }
 
 /**

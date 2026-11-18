@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { isSupabaseConfigured, supabaseConfig } from "./config"
 
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000
+
 /**
  * Refreshes the Supabase auth cookie on every matched request so Server
  * Components always see a valid session. Also does a cheap, optimistic
@@ -44,11 +46,26 @@ export async function updateSession(request: NextRequest) {
   const isAccount = pathname === "/account" || pathname.startsWith("/account/")
   const needsLogin = (isAdmin && !isAdminPublic) || isAccount
 
+  if (user && isAdmin && !isAdminPublic) {
+    const signedInAt = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : NaN
+    if (!Number.isNaN(signedInAt) && Date.now() - signedInAt >= ADMIN_SESSION_MAX_AGE_MS) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin/login"
+      url.search = "?reason=session-expired"
+      const redirectResponse = NextResponse.redirect(url)
+      for (const cookie of response.cookies.getAll()) {
+        redirectResponse.cookies.set(cookie)
+      }
+      return redirectResponse
+    }
+  }
+
   if (!user && needsLogin) {
     const url = request.nextUrl.clone()
     url.pathname = isAdmin ? "/admin/login" : "/login"
     const fullTarget = `${pathname}${search}`
-    const isDefaultLanding = (isAdmin && fullTarget === "/admin") || (!isAdmin && fullTarget === "/account")
+    const isDefaultLanding = isAdmin && fullTarget === "/admin"
     if (!isDefaultLanding) {
       url.search = `?next=${encodeURIComponent(fullTarget)}`
     } else {

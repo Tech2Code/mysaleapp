@@ -2,8 +2,7 @@
 
 import { LogInIcon, LogOutIcon, MapPinIcon, PackageIcon, PackageSearchIcon, SettingsIcon, UserIcon, UserRoundIcon } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -16,48 +15,72 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { useState } from "react"
+import { applyClientSignOut } from "@/components/shared/auth-listener"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import { signOutCustomer } from "@/features/auth/actions"
+import { useToastAfter } from "@/hooks/use-toast-after"
+import { Suspense, useEffect, useState, useTransition } from "react"
+import { toast } from "sonner"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 
+function PathnameSync({ onPathname }: { onPathname: (pathname: string | null) => void }) {
+  const pathname = usePathname()
+  useEffect(() => {
+    onPathname(pathname)
+  }, [pathname, onPathname])
+  return null
+}
+
+function buildLoginHref(pathname: string | null): string {
+  if (!pathname || pathname === "/" || pathname === "/login" || pathname.startsWith("/login/")) {
+    return "/login"
+  }
+  return `/login?next=${encodeURIComponent(pathname)}`
+}
+
 export function AccountMenu() {
   const { user, ready } = useAuth()
   const router = useRouter()
+  const [pathname, setPathname] = useState<string | null>(null)
   const [askSignOut, setAskSignOut] = useState(false)
-  const [signingOut, setSigningOut] = useState(false)
+  const [signingOut, startSignOut] = useTransition()
+  useBlockWhile(signingOut)
+  const showSuccess = useBusySuccess()
+  const later = useToastAfter(signingOut)
 
   if (!ready) return <span data-ui="store/AccountMenu" className="size-10 max-sm:size-9" aria-hidden />
 
-  const signOut = async () => {
-    setSigningOut(true)
-    try {
-      sessionStorage.removeItem("kk-last-order")
-    } catch {}
-    await getBrowserSupabase()?.auth.signOut()
-    setAskSignOut(false)
-    setSigningOut(false)
-    router.push("/")
-    router.refresh()
-  }
+  const loginHref = buildLoginHref(pathname)
+
+  const signOut = () =>
+    startSignOut(async () => {
+      setAskSignOut(false)
+      applyClientSignOut()
+      await Promise.allSettled([
+        getBrowserSupabase()?.auth.signOut({ scope: "local" }),
+        signOutCustomer(),
+      ])
+      showSuccess("Signed out")
+      later(() => toast.success("Signed out successfully"))
+      router.push("/")
+    })
 
   return (
     <>
-      {/* Web: the guest icon goes straight to the login page. Phones get the dropdown below. */}
-      {!user && (
-        <Link data-ui="store/AccountMenu/Link-sign-in" href="/login" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden rounded-full sm:inline-flex")} aria-label="Sign in">
-          <UserRoundIcon className="size-4.6" />
-        </Link>
-      )}
+      <Suspense fallback={null}>
+        <PathnameSync onPathname={setPathname} />
+      </Suspense>
       <DropdownMenu>
         <DropdownMenuTrigger data-ui="store/AccountMenu/DropdownMenuTrigger"
           className={cn(
             "relative grid place-items-center rounded-full transition",
             user
               ? "size-10 max-sm:size-9 ring-2 ring-primary/20 hover:ring-primary/50"
-              : cn(buttonVariants({ variant: "ghost", size: "icon" }), "max-sm:size-9 sm:hidden")
+              : cn(buttonVariants({ variant: "ghost", size: "icon" }), "max-sm:size-9")
           )}
-          aria-label={user ? "Account menu" : "Sign in and more"}
+          aria-label={user ? "Account menu" : "Sign in and theme settings"}
         >
           {user ? (
             user.avatarUrl ? (
@@ -98,7 +121,7 @@ export function AccountMenu() {
             </>
           ) : (
             <>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-6" onClick={() => router.push("/login")}>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-6" onClick={() => router.push(loginHref)}>
                 <LogInIcon /> Sign in
               </DropdownMenuItem>
               <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-7" onClick={() => router.push("/track")}>

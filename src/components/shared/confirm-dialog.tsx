@@ -40,7 +40,7 @@ export function ConfirmDialog({
         </DialogHeader>
         {description && (
           <DialogBody>
-            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+            <DialogDescription className="text-sm/relaxed text-muted-foreground">
               {description}
             </DialogDescription>
           </DialogBody>

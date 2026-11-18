@@ -63,6 +63,7 @@ export function CheckoutForm({
   const clearCart = useCart((s) => s.clear)
   const shop = useStoreSettings()
   const { user, ready: authReady } = useAuth()
+  const signedIn = Boolean(user) || (!authReady && (initialProfile !== null || initialAddresses.length > 0))
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -124,10 +125,12 @@ export function CheckoutForm({
     form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
   }
 
-  // Pre-fill form if initialAddresses arrives from server revalidation while form is still blank
+  // Pre-fill form if initialAddresses or initialProfile arrives from server revalidation while form is still blank
   useEffect(() => {
+    if (form.formState.isDirty) return
     const first = initialAddresses[0]
-    if (first && !form.formState.isDirty && !form.getValues("address")) {
+    if (first && !form.getValues("address")) {
+      queueMicrotask(() => setSelected(first.id))
       form.reset({
         name: first.fullName,
         phone: first.phone,
@@ -136,8 +139,25 @@ export function CheckoutForm({
         pincode: first.pincode,
         note: form.getValues("note"),
       })
+    } else if (!first && initialProfile && (!form.getValues("name") || !form.getValues("phone"))) {
+      const current = form.getValues()
+      form.reset({
+        ...current,
+        name: current.name || initialProfile.fullName,
+        phone: current.phone || initialProfile.phone,
+      })
     }
-  }, [initialAddresses, form])
+  }, [initialAddresses, initialProfile, form])
+
+  // Clear cached account addresses/autofill if the user signs out while CheckoutForm stays mounted
+  useEffect(() => {
+    if (!authReady || signedIn) return
+    fetchedForUser.current = null
+    queueMicrotask(() => {
+      setClientAddresses(null)
+      setSelected("new")
+    })
+  }, [authReady, signedIn])
 
   // Signed-in customers: fallback if server did not preload addresses (e.g. client-only session)
   useEffect(() => {
@@ -209,7 +229,7 @@ export function CheckoutForm({
         items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
         paymentReference: parsedRef.data,
         // only offer to save when the customer typed a new address
-        saveAddress: Boolean(user) && selected === "new" && saveAddress,
+        saveAddress: signedIn && selected === "new" && saveAddress,
       })
       if (!res.ok) {
         const refFieldMsg = res.fieldErrors?.paymentReference?.[0]
@@ -260,7 +280,7 @@ export function CheckoutForm({
   const hasAddressFieldError = Boolean(
     errors.name || errors.phone || errors.address || errors.pincode || errors.city || errors.state || area.error
   )
-  const showAddressInputs = !user || addresses.length === 0 || selected === "new" || hasAddressFieldError
+  const showAddressInputs = !signedIn || addresses.length === 0 || selected === "new" || hasAddressFieldError
 
   const view = (
     <form data-ui="store/CheckoutForm/form-grid" onSubmit={onSubmit} noValidate className="grid gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
@@ -276,9 +296,9 @@ export function CheckoutForm({
                 Delivery details
               </h2>
               <p data-ui="store/CheckoutForm/p-2" className="mt-1 text-sm text-muted-foreground">
-                {user ? (
+                {signedIn ? (
                   addresses.length > 0 ? "Select a delivery address or add a new one." : "Enter where we should deliver."
-                ) : (
+                ) : authReady ? (
                   <>
                     Checking out as a guest.{" "}
                     <Link data-ui="store/CheckoutForm/Link-sign-in" href="/login?next=/checkout" className="font-medium text-primary underline-offset-4 hover:underline">
@@ -286,10 +306,12 @@ export function CheckoutForm({
                     </Link>{" "}
                     to save your address and track orders.
                   </>
+                ) : (
+                  "Enter where we should deliver."
                 )}
               </p>
             </div>
-            {user && addresses.length > 0 && (
+            {signedIn && addresses.length > 0 && (
               <Link
                 data-ui="store/CheckoutForm/Link-manage-addresses"
                 href="/account/profile?tab=addresses"
@@ -300,7 +322,7 @@ export function CheckoutForm({
             )}
           </div>
 
-          {user && addresses.length > 0 && (
+          {signedIn && addresses.length > 0 && (
             <fieldset data-ui="store/CheckoutForm/fieldset" className="space-y-3">
               <legend data-ui="store/CheckoutForm/legend-saved-addresses" className="sr-only">Saved addresses</legend>
               <div data-ui="store/CheckoutForm/div-grid" className="grid gap-3 sm:grid-cols-2">
@@ -383,7 +405,7 @@ export function CheckoutForm({
             </div>
           )}
 
-          {user && selected === "new" && (
+          {signedIn && selected === "new" && (
             <SwitchField
               label="Save this address to my account"
               description="Use it next time in one tap"
@@ -603,7 +625,7 @@ export function CheckoutForm({
                           <p data-ui="store/CheckoutForm/p-flex-4" className="flex items-center gap-2 font-semibold text-neutral-900">
                             <QrCodeIcon className="size-4 text-primary" /> Scan with any UPI app
                           </p>
-                          <p data-ui="store/CheckoutForm/p-5" className="text-xs leading-relaxed text-neutral-600">
+                          <p data-ui="store/CheckoutForm/p-5" className="text-xs/relaxed text-neutral-600">
                             Amount <strong data-ui="store/CheckoutForm/strong" className="font-semibold text-neutral-900">{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
                           </p>
                         </div>
@@ -640,7 +662,7 @@ export function CheckoutForm({
                       </div>
                     </div>
                   ) : (
-                    <p data-ui="store/CheckoutForm/p-6" className="rounded-2xl border bg-muted/50 p-4 text-sm leading-relaxed">
+                    <p data-ui="store/CheckoutForm/p-6" className="rounded-2xl border bg-muted/50 p-4 text-sm/relaxed">
                       UPI details aren&apos;t configured yet.{" "}
                       <a data-ui="store/CheckoutForm/a-message-us-on-whatsapp"
                         href={shopWhatsappLink(shop, `Hi! I'd like to pay ${formatPrice(shownCharges.total)} and place my order.`)}

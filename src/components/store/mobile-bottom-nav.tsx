@@ -25,7 +25,7 @@ function TabBadge({ count }: { count: number }) {
 
 function BottomNavTabs({ pathname }: { pathname: string | null }) {
   const mounted = useMounted()
-  const { user } = useAuth()
+  const { user, ready } = useAuth()
   const itemCount = useCart((s) => cartCount(s.items))
   const isCartOpen = useCart((s) => s.isOpen)
   const openCart = useCart((s) => s.setOpen)
@@ -41,7 +41,12 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
   const isWishlist = pathname === "/wishlist"
   const isAccount =
     pathname !== null && (pathname.startsWith("/account") || pathname === "/login" || pathname === "/track")
-  const accountHref = user ? "/account/orders" : "/login"
+  const showSignIn = ready && !user && !pathname?.startsWith("/account")
+  const loginHref =
+    pathname && pathname !== "/" && pathname !== "/login" && !pathname.startsWith("/login/")
+      ? `/login?next=${encodeURIComponent(pathname)}`
+      : "/login"
+  const accountHref = showSignIn ? loginHref : "/account/orders"
 
   const tabs = [
     { key: "home", href: "/", label: "Home", icon: HomeIcon, active: isHome && !isCartOpen },
@@ -65,7 +70,7 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
     {
       key: "account",
       href: accountHref,
-      label: user ? "Account" : "Sign in",
+      label: showSignIn ? "Sign in" : "Account",
       icon: UserRoundIcon,
       active: isAccount && !isCartOpen,
     },

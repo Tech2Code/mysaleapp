@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { getCurrentUser } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
@@ -19,13 +20,10 @@ async function readIds(userId: string): Promise<ActionResult<string[]>> {
 }
 
 /**
- * Called once after login: adds the guest's local wishlist to the account
- * (duplicates ignored) and returns the full, merged list from the database.
+ * Merges a guest's local wishlist into `userId`'s database wishlist and returns the full list.
+ * Used directly by signInCustomer / signUpCustomer to avoid a second auth round-trip after login.
  */
-export async function syncWishlist(localIds: unknown): Promise<ActionResult<string[]>> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Not signed in")
-
+export async function syncWishlistForUser(userId: string, localIds: unknown): Promise<ActionResult<string[]>> {
   const rawList = Array.isArray(localIds) ? localIds.slice(0, 200) : []
   const candidateIds = Array.from(new Set(rawList.filter((x): x is string => uuidItem.safeParse(x).success)))
 
@@ -42,14 +40,24 @@ export async function syncWishlist(localIds: unknown): Promise<ActionResult<stri
       const { error } = await supabase
         .from("wishlists")
         .upsert(
-          validIds.map((product_id) => ({ user_id: user.id, product_id })),
+          validIds.map((product_id) => ({ user_id: userId, product_id })),
           { onConflict: "user_id,product_id", ignoreDuplicates: true }
         )
       if (error && error.code !== "23503") return fail("Could not sync wishlist")
     }
   }
 
-  return readIds(user.id)
+  return readIds(userId)
+}
+
+/**
+ * Called once after login: adds the guest's local wishlist to the account
+ * (duplicates ignored) and returns the full, merged list from the database.
+ */
+export async function syncWishlist(localIds: unknown): Promise<ActionResult<string[]>> {
+  const user = await getCurrentUser()
+  if (!user) return fail("Not signed in")
+  return syncWishlistForUser(user.id, localIds)
 }
 
 export async function setWishlisted(productId: unknown, on: unknown): Promise<ActionResult> {
@@ -68,5 +76,6 @@ export async function setWishlisted(productId: unknown, on: unknown): Promise<Ac
     : await supabase.from("wishlists").delete().eq("user_id", user.id).eq("product_id", parsed.data)
 
   if (error) return fail("Could not update wishlist")
+  revalidatePath("/wishlist")
   return { ok: true }
 }

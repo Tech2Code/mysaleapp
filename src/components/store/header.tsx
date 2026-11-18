@@ -148,7 +148,6 @@ function MobileHeaderShortcuts({
         <ShoppingBagIcon className="size-4.6" />
         {mounted && <CountBadge count={itemCount} />}
       </button>
-      <AccountMenu />
     </div>
   )
 }
@@ -245,7 +244,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             <ShoppingBagIcon className="size-4.6" />
             {mounted && <CountBadge count={itemCount} />}
           </button>
-          <span data-ui="store/Header/span-hidden" className="hidden sm:inline-flex"><AccountMenu /></span>
+          <span data-ui="store/Header/span" className="inline-flex"><AccountMenu /></span>
         </div>
       </div>
     </header>

@@ -2,6 +2,7 @@
 
 // Admin account: login email, password change and reset. The customer's profile lives in features/account.
 
+import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
@@ -25,6 +26,7 @@ import { changePasswordSchema, emailSchema, profileSchema, resetSchema } from ".
  * NEXT_PUBLIC_SITE_URL yields no redirect override (Supabase falls back to its own Site URL).
  */
 async function trustedOrigin(): Promise<string | undefined> {
+  if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(siteConfig.url)) return siteConfig.url
   if (process.env.NEXT_PUBLIC_SITE_URL) return siteConfig.url
   if (process.env.NODE_ENV === "production") return undefined
   return (await headers()).get("origin") ?? undefined
@@ -37,8 +39,17 @@ export async function updateAdminProfile(input: unknown): Promise<ActionResult> 
   if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase.auth.updateUser({ data: { full_name: parsed.data.name, phone: parsed.data.phone ?? null } })
+  const [{ error }] = await Promise.all([
+    supabase.auth.updateUser({ data: { full_name: parsed.data.name, phone: parsed.data.phone ?? null } }),
+    supabase.from("profiles").upsert({
+      id: auth.user.id,
+      full_name: parsed.data.name,
+      phone: parsed.data.phone ?? null,
+    }),
+  ])
   if (error) return fail("Could not save your details. Please try again.")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/", "layout")
   return { ok: true }
 }
 
@@ -54,7 +65,7 @@ export async function requestAdminEmailChange(input: unknown): Promise<ActionRes
   const origin = await trustedOrigin()
   const { error } = await supabase.auth.updateUser(
     { email: parsed.data.email },
-    origin ? { emailRedirectTo: `${origin}/auth/callback?next=/admin/account` } : undefined
+    origin ? { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/admin/account?email_changed=1")}` } : undefined
   )
   if (error) {
     return fail(error.message.toLowerCase().includes("already") ? "That email is already used by another account." : "Could not change the email. Please try again.")

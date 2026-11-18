@@ -1,9 +1,7 @@
-import { ArrowRightIcon, HandHeartIcon, HeartIcon, LeafIcon, MailIcon, MapPinIcon, PackageIcon, PhoneIcon, SparklesIcon } from "lucide-react"
+import { ArrowRightIcon, HandHeartIcon, LeafIcon, MailIcon, MapPinIcon, PhoneIcon, SparklesIcon } from "lucide-react"
 import Link from "next/link"
 import { Suspense, type ComponentType, type ReactNode, type SVGProps } from "react"
-import { LogoMark } from "@/components/shared/logo"
 import { FadeIn } from "@/components/shared/motion"
-import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/store/brand-icons"
 import { CartView } from "@/components/store/cart-view"
 import { CheckoutForm } from "@/components/store/checkout-form"
@@ -254,51 +252,11 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
 
 // ---------------------------------------------------------------- login
 
-const perks = [
-  { icon: PackageIcon, text: "Track all your orders in one place" },
-  { icon: HeartIcon, text: "Keep your wishlist on every device" },
-  { icon: MapPinIcon, text: "Save your address for faster checkout" },
-]
-
 export function LoginView({ shop }: { shop: StoreSettings }) {
   return (
     <section data-ui="store/LoginView" className="bg-hero">
-      <div data-ui="store/LoginView/div-flex" className="container-page flex min-h-[70vh] items-center justify-center py-12 sm:py-16">
-        <div data-ui="store/LoginView/div" className="w-full max-w-md rounded-4xl border bg-card/80 p-8 shadow-2xl shadow-black/5 backdrop-blur sm:p-10">
-          <LogoMark className="size-12 text-2xl" />
-          <h1 data-ui="store/LoginView/h1-welcome-to" className="mt-6 text-3xl font-semibold">Welcome to {shop.shopName}</h1>
-          <p data-ui="store/LoginView/p" className="mt-2 text-muted-foreground">Sign in with one tap — no password to remember.</p>
-
-          <ul data-ui="store/LoginView/ul" className="my-8 space-y-3">
-            {perks.map((p) => (
-              <li data-ui="store/LoginView/li-flex" key={p.text} className="flex items-center gap-3 text-sm">
-                <span data-ui="store/LoginView/span-grid" className="grid size-8 place-items-center rounded-full bg-secondary text-primary">
-                  <p.icon data-ui="store/LoginView/p.icon" className="size-4" />
-                </span>
-                {p.text}
-              </li>
-            ))}
-          </ul>
-
-          <Suspense>
-            <GoogleSignIn />
-          </Suspense>
-
-          <p data-ui="store/LoginView/p-2" className="mt-6 text-center text-xs text-muted-foreground">
-            Signing in is optional — you can also{" "}
-            <Link data-ui="store/LoginView/Link-order-as-a-guest" href="/products" className="font-medium text-primary underline-offset-4 hover:underline">
-              order as a guest
-            </Link>
-            .
-          </p>
-
-          <div data-ui="store/LoginView/div-2" className="mt-6 border-t border-border/70 pt-5">
-            <p data-ui="store/LoginView/p-3" className="mb-2 text-center text-xs font-medium text-muted-foreground">
-              Settings · Appearance
-            </p>
-            <ThemeSegmentedControl />
-          </div>
-        </div>
+      <div data-ui="store/LoginView/div-flex" className="container-page flex min-h-[72vh] items-center justify-center py-10 sm:py-16">
+        <GoogleSignIn shopName={shop.shopName} />
       </div>
     </section>
   )

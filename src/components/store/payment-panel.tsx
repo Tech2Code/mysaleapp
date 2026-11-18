@@ -38,6 +38,7 @@ import { useStoreSettings } from "./store-settings-provider"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
+import { useAuth } from "@/store/auth"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
 type FormValues = z.input<typeof formSchema>
@@ -99,6 +100,7 @@ function ReferenceForm({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+  const user = useAuth((s) => s.user)
   const [serverError, setServerError] = useState<string | null>(null)
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { reference: "" } })
   const refValue = useWatch({ control: form.control, name: "reference" })
@@ -136,7 +138,7 @@ function ReferenceForm({
       {serverError && (
         <p data-ui="store/ReferenceForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
           {serverError}
-          {serverError.includes("Sign in") && (
+          {!user && /sign in/i.test(serverError) && (
             <>
               {" "}
               <Link data-ui="store/ReferenceForm/Link-sign-in" href="/login?next=/account/orders" className="font-semibold underline underline-offset-4">

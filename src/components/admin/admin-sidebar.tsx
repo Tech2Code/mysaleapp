@@ -16,12 +16,17 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Suspense, useState, useTransition, type ReactNode } from "react"
+import { toast } from "sonner"
+import { applyClientSignOut } from "@/components/shared/auth-listener"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Logo } from "@/components/shared/logo"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { signOutAdmin } from "@/features/auth/actions"
+import { useToastAfter } from "@/hooks/use-toast-after"
+import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
 type NavLink = { href: string; label: string; icon: LucideIcon; exact?: boolean; badge?: "orders" }
@@ -94,6 +99,9 @@ function NavItemsWithPath(props: { onNavigate?: () => void; ordersBadge?: ReactN
 function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ordersBadge?: ReactNode }) {
   const [askSignOut, setAskSignOut] = useState(false)
   const [signingOut, startSignOut] = useTransition()
+  useBlockWhile(signingOut)
+  const showSuccess = useBusySuccess()
+  const later = useToastAfter(signingOut)
   return (
     <div data-ui="admin/SidebarBody" className="flex h-full flex-col gap-6 p-4">
       {/* Same height as the top bar, so the two divider lines meet. */}
@@ -128,7 +136,16 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
           confirmLabel="Sign out"
           destructive
           pending={signingOut}
-          onConfirm={() => startSignOut(() => signOutAdmin())}
+          onConfirm={() => {
+            setAskSignOut(false)
+            startSignOut(async () => {
+              applyClientSignOut()
+              await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+              await signOutAdmin()
+              showSuccess("Signed out")
+              later(() => toast.success("Signed out"))
+            })
+          }}
         />
       </div>
     </div>

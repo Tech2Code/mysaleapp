@@ -335,7 +335,7 @@ export function ReturnRequestsPanel({
             <DialogTitle>Withdraw this return request?</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+            <DialogDescription className="text-sm/relaxed text-muted-foreground">
               We will not review it any further. You can send a new request while the return window is open.
             </DialogDescription>
             {isGuest && (

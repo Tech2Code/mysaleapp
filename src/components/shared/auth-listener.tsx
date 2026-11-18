@@ -1,12 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
+import { Suspense, useEffect } from "react"
+import { getMyProfile } from "@/features/account/actions"
 import { syncWishlist } from "@/features/wishlist/actions"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { safeAvatarUrl } from "@/lib/supabase/config"
 import { useAuth, type SessionUser } from "@/store/auth"
+import { useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
 import type { User } from "@supabase/supabase-js"
+
+let lastSyncedUserId: string | null = null
+const profileOverrides = new Map<string, { name?: string; email?: string; avatarUrl?: string | null }>()
 
 function clearOrderSession() {
   try {
@@ -16,12 +22,148 @@ function clearOrderSession() {
 
 function toSessionUser(user: User): SessionUser {
   const meta = user.user_metadata ?? {}
+  const override = profileOverrides.get(user.id)
   return {
     id: user.id,
-    email: user.email ?? "",
-    name: (meta.full_name as string) || (meta.name as string) || user.email?.split("@")[0] || "You",
-    avatarUrl: safeAvatarUrl(meta.avatar_url),
+    email: override?.email || user.email || "",
+    name: override?.name || (meta.full_name as string) || (meta.name as string) || user.email?.split("@")[0] || "You",
+    avatarUrl: override?.avatarUrl !== undefined ? override.avatarUrl : safeAvatarUrl(meta.avatar_url),
   }
+}
+
+/**
+ * Updates the authoritative customer profile fields in `useAuth` and prevents stale
+ * JWT `user_metadata` from overwriting them on subsequent route checks.
+ */
+export function applyClientProfileUpdate(patch: { name?: string; email?: string; avatarUrl?: string | null }) {
+  const current = useAuth.getState().user
+  if (!current) return
+  const prev = profileOverrides.get(current.id) ?? {}
+  const nextOverride = {
+    name: patch.name?.trim() || prev.name,
+    email: patch.email?.trim() || prev.email,
+    avatarUrl: patch.avatarUrl !== undefined ? patch.avatarUrl : prev.avatarUrl,
+  }
+  profileOverrides.set(current.id, nextOverride)
+  useAuth.getState().setUser({
+    ...current,
+    name: nextOverride.name || current.name,
+    email: nextOverride.email || current.email,
+    avatarUrl: nextOverride.avatarUrl !== undefined ? nextOverride.avatarUrl : current.avatarUrl,
+  })
+}
+
+function runBackgroundAccountSync(userId: string, skipWishlist = false) {
+  const { ids: storedIds, ownerId } = useWishlist.getState()
+  // Only merge local items when they belonged to a guest (`null`) or the same account — never another user.
+  const localIds = ownerId === null || ownerId === userId ? storedIds : []
+  if (!skipWishlist) {
+    if (ownerId !== null && ownerId !== userId) {
+      useWishlist.getState().replaceAll([], userId)
+      clearOrderSession()
+    } else {
+      useWishlist.getState().setOwner(userId)
+    }
+  }
+  const snapshot = new Set(localIds)
+  setTimeout(async () => {
+    const [wishRes, profile] = await Promise.all([
+      skipWishlist ? Promise.resolve(null) : syncWishlist(localIds),
+      getMyProfile().catch(() => null),
+    ])
+    if (useAuth.getState().user?.id !== userId) return
+    if (profile) {
+      applyClientProfileUpdate({
+        name: profile.fullName || undefined,
+        email: profile.email || undefined,
+        avatarUrl: profile.avatarUrl ?? undefined,
+      })
+    }
+    if (wishRes && wishRes.ok) {
+      const nowIds = useWishlist.getState().ids
+      const addedDuringSync = nowIds.filter((id) => !snapshot.has(id))
+      const removedDuringSync = [...snapshot].filter((id) => !nowIds.includes(id))
+      const merged = [...addedDuringSync, ...wishRes.data.filter((id) => !removedDuringSync.includes(id))]
+      useWishlist.getState().replaceAll(merged, userId)
+    }
+  }, 0)
+}
+
+/**
+ * Immediately applies a signed-in user and their merged wishlist to client stores
+ * (used right after signInCustomer / signUpCustomer / signInAdmin Server Actions).
+ */
+export function applyClientSignIn(user: SessionUser, wishlistIds?: string[]) {
+  const prevOwnerId = useWishlist.getState().ownerId
+  if (prevOwnerId !== null && prevOwnerId !== user.id) {
+    clearOrderSession()
+  }
+  lastSyncedUserId = user.id
+  profileOverrides.set(user.id, { name: user.name, email: user.email, avatarUrl: user.avatarUrl })
+  useAuth.getState().setUser(user)
+  if (wishlistIds) {
+    useWishlist.getState().replaceAll(wishlistIds, user.id)
+  } else {
+    runBackgroundAccountSync(user.id)
+  }
+}
+
+/**
+ * Immediately clears client auth and account-bound wishlist state on sign-out.
+ */
+export function applyClientSignOut() {
+  lastSyncedUserId = null
+  profileOverrides.clear()
+  useAuth.getState().setUser(null)
+  useWishlist.getState().clear()
+  clearOrderSession()
+}
+
+function handleSessionChange(user: User | null, isSignedOutEvent = false) {
+  const currentUser = useAuth.getState().user
+  if (!user) {
+    useAuth.getState().setUser(null)
+    if (isSignedOutEvent || currentUser !== null || useWishlist.getState().ownerId !== null) {
+      lastSyncedUserId = null
+      profileOverrides.clear()
+      useWishlist.getState().clear()
+      clearOrderSession()
+    }
+    return
+  }
+
+  const nextUser = toSessionUser(user)
+  useAuth.getState().setUser(nextUser)
+
+  if (user.id !== lastSyncedUserId) {
+    lastSyncedUserId = user.id
+    runBackgroundAccountSync(user.id)
+  }
+}
+
+/**
+ * Reads the current browser cookie session and updates `useAuth` + `useWishlist`.
+ * Needed after Server Actions or route redirects that mutate auth cookies via HTTP Set-Cookie.
+ */
+export async function syncAuthSession() {
+  const supabase = getBrowserSupabase()
+  if (!supabase) {
+    useAuth.getState().setUser(null)
+    return
+  }
+  const { data } = await supabase.auth.getSession()
+  handleSessionChange(data.session?.user ?? null)
+}
+
+function AuthRouteSync() {
+  const pathname = usePathname()
+  const search = useSearchParams().toString()
+
+  useEffect(() => {
+    void syncAuthSession()
+  }, [pathname, search])
+
+  return null
 }
 
 /**
@@ -38,46 +180,31 @@ export function AuthListener() {
       return
     }
 
-    let lastSyncedUserId: string | null = null
-
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      const user = session?.user ?? null
-      setUser(user ? toSessionUser(user) : null)
-
-      if (event === "SIGNED_OUT" || (!user && useWishlist.getState().ownerId !== null)) {
-        lastSyncedUserId = null
-        useWishlist.getState().clear()
-        clearOrderSession()
-        return
-      }
-
-      if (user && user.id !== lastSyncedUserId) {
-        lastSyncedUserId = user.id
-        const { ids: storedIds, ownerId } = useWishlist.getState()
-        // Only merge local items when they belonged to a guest (`null`) or the same account — never another user.
-        const localIds = ownerId === null || ownerId === user.id ? storedIds : []
-        if (ownerId !== null && ownerId !== user.id) {
-          useWishlist.getState().replaceAll([], user.id)
-          clearOrderSession()
-        } else {
-          useWishlist.getState().setOwner(user.id)
-        }
-        const snapshot = new Set(localIds)
-        // Defer: Supabase recommends not awaiting other calls inside this callback.
-        setTimeout(async () => {
-          const res = await syncWishlist(localIds)
-          if (!res.ok || useAuth.getState().user?.id !== user.id) return
-          const nowIds = useWishlist.getState().ids
-          const addedDuringSync = nowIds.filter((id) => !snapshot.has(id))
-          const removedDuringSync = [...snapshot].filter((id) => !nowIds.includes(id))
-          const merged = [...addedDuringSync, ...res.data.filter((id) => !removedDuringSync.includes(id))]
-          useWishlist.getState().replaceAll(merged, user.id)
-        }, 0)
-      }
+      handleSessionChange(session?.user ?? null, event === "SIGNED_OUT")
     })
 
-    return () => data.subscription.unsubscribe()
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "kk-cart") void useCart.persist.rehydrate()
+      if (e.key === "kk-wishlist") void useWishlist.persist.rehydrate()
+    }
+    const onFocus = () => {
+      void syncAuthSession()
+    }
+
+    window.addEventListener("storage", onStorage)
+    window.addEventListener("focus", onFocus)
+
+    return () => {
+      data.subscription.unsubscribe()
+      window.removeEventListener("storage", onStorage)
+      window.removeEventListener("focus", onFocus)
+    }
   }, [setUser])
 
-  return null
+  return (
+    <Suspense fallback={null}>
+      <AuthRouteSync />
+    </Suspense>
+  )
 }

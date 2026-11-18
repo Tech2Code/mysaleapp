@@ -3,9 +3,10 @@ import { z } from "zod"
 import { normalizeIndianPhone } from "@/lib/format"
 import { v } from "@/lib/validation"
 
-/** Name and phone only. Delivery addresses live in the address book (features/addresses). */
+/** Name, email and phone. Delivery addresses live in the address book (features/addresses). */
 export const profileSchema = z.object({
   fullName: v.personName("name"),
+  email: v.email().optional(),
   phone: z
     .string()
     .trim()
