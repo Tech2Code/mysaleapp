@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 type AuditEntry = {
   actorId: string
   action: string
-  targetType: "order" | "product" | "category" | "settings" | "store"
+  targetType: "order" | "product" | "category" | "settings" | "store" | "promo_code"
   targetId?: string | null
   metadata?: Record<string, unknown>
 }

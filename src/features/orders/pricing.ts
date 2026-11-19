@@ -19,12 +19,65 @@ export type Charges = {
   shippingFeeOriginal: number
   /** Smart order-level surcharges (special handling tier + heavy parcel weight slab). */
   extraFees: OrderFee[]
+  /** Optional promo code applied at checkout. */
+  promoCode?: string | null
+  /** Optional discount amount subtracted from subtotal. */
+  discountAmount?: number
   total: number
   /** ₹ still needed to unlock free standard delivery; 0 when already free or not offered. */
   amountToFreeDelivery: number
 }
 
+export type ValidatedPromo = {
+  code: string
+  description: string | null
+  discountType: "percent" | "flat"
+  discountValue: number
+  minOrderAmount: number
+  maxDiscountAmount: number | null
+  discountAmount: number
+}
+
 const round2 = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * Mirrors PostgreSQL `public.compute_promo_discount`:
+ * - Returns 0 if `subtotal < promo.minOrderAmount` or `subtotal <= 1`.
+ * - Caps discount so items subtotal after discount is at least ₹1 (ensures positive UPI payable total).
+ */
+export function computePromoDiscount(
+  promo: Omit<ValidatedPromo, "discountAmount"> | null | undefined,
+  subtotal: number
+): number {
+  if (!promo) return 0
+  const sub = Math.max(round2(subtotal), 0)
+  if (sub <= 1 || sub < promo.minOrderAmount) return 0
+  let raw = 0
+  if (promo.discountType === "percent") {
+    raw = round2((sub * promo.discountValue) / 100)
+    if (promo.maxDiscountAmount != null && raw > promo.maxDiscountAmount) {
+      raw = round2(promo.maxDiscountAmount)
+    }
+  } else {
+    raw = round2(promo.discountValue)
+  }
+  return Math.max(Math.min(raw, round2(sub - 1)), 0)
+}
+
+export function applyPromoToCharges(
+  charges: Charges,
+  promo: Omit<ValidatedPromo, "discountAmount"> | null | undefined
+): Charges {
+  if (!promo || charges.subtotal <= 0) return charges
+  const discountAmount = computePromoDiscount(promo, charges.subtotal)
+  if (discountAmount <= 0) return charges
+  return {
+    ...charges,
+    promoCode: promo.code,
+    discountAmount,
+    total: Math.max(round2(charges.total - discountAmount), 1),
+  }
+}
 
 /**
  * Deterministic human-readable weight formatter shared with PostgreSQL `create_order`:

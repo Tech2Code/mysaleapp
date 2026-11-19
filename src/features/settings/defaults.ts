@@ -1,4 +1,21 @@
-import type { StoreSettings } from "./types"
+import type { PromoCode, StoreSettings } from "./types"
+
+export const DEFAULT_PROMO_CODES: PromoCode[] = [
+  {
+    id: "00000000-0000-0000-0000-000000000001",
+    code: "WELCOME10",
+    description: "10% off on your first order",
+    discountType: "percent",
+    discountValue: 10,
+    minOrderAmount: 499,
+    maxDiscountAmount: 200,
+    maxUses: 100,
+    usedCount: 12,
+    isActive: true,
+    expiresAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  },
+]
 
 /**
  * Starting values, used until the owner saves them in Admin → Settings (and in demo mode).

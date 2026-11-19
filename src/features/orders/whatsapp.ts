@@ -41,6 +41,9 @@ export function buildOrderMessage(
 
   const charges = [
     `Items: ${formatPrice(p.subtotal)}`,
+    ...(p.discountAmount && p.discountAmount > 0
+      ? [`Promo discount${p.promoCode ? ` (${p.promoCode})` : ""}: -${formatPrice(p.discountAmount)}`]
+      : []),
     ...p.extraFees.map((f) => `${f.label}${f.productName ? ` (${f.productName})` : ""}: ${formatPrice(f.amount)}`),
     p.shippingFee > 0 ? `Delivery: ${formatPrice(p.shippingFee)}` : `Delivery: FREE`,
   ]

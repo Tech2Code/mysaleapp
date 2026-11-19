@@ -4,10 +4,12 @@ import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
 import { logAdminAction } from "@/features/security/audit"
+import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { CACHE_TAGS } from "./queries"
-import { categorySchema, productSchema, type ProductValues } from "./schema"
+import { categorySchema, productReviewSchema, productSchema, type ProductValues } from "./schema"
+import type { ProductReview } from "./types"
 
 function toRow(p: ProductValues) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- stock is applied separately, as a delta
@@ -256,6 +258,119 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     targetType: "category",
     targetId: id,
   })
+  refreshCatalogue()
+  return { ok: true }
+}
+
+export async function getMyProductReviewState(
+  productId: string
+): Promise<{ canReview: boolean; isAdmin: boolean; myReview: ProductReview | null }> {
+  if (!z.uuid().safeParse(productId).success) {
+    return { canReview: false, isAdmin: false, myReview: null }
+  }
+  const supabase = await getServerSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { canReview: false, isAdmin: false, myReview: null }
+
+  const [canRes, isAdminRes, myRowRes] = await Promise.all([
+    supabase.rpc("can_review_product", { p_product_id: productId }),
+    supabase.rpc("is_admin"),
+    supabase
+      .from("product_reviews")
+      .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
+      .eq("product_id", productId)
+      .eq("user_id", user.id)
+      .maybeSingle<{
+        id: string
+        product_id: string
+        user_id: string
+        reviewer_name: string
+        rating: number
+        title: string | null
+        comment: string
+        is_verified_purchase: boolean
+        created_at: string
+        updated_at: string
+      }>(),
+  ])
+
+  const r = myRowRes.data
+  return {
+    canReview: Boolean(canRes.data),
+    isAdmin: Boolean(isAdminRes.data),
+    myReview: r
+      ? {
+          id: r.id,
+          productId: r.product_id,
+          userId: r.user_id,
+          reviewerName: r.reviewer_name,
+          rating: Number(r.rating),
+          title: r.title,
+          comment: r.comment,
+          isVerifiedPurchase: Boolean(r.is_verified_purchase),
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        }
+      : null,
+  }
+}
+
+export async function submitProductReview(input: unknown): Promise<ActionResult<{ id: string }>> {
+  const parsed = productReviewSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Please check the highlighted review fields.", z.flattenError(parsed.error).fieldErrors)
+  }
+
+  const supabase = await getServerSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return fail("Please sign in to write a review.")
+  if (await limited("place-order", `review:${user.id}`)) return fail(RATE_LIMIT_MESSAGE)
+
+  const { data, error } = await supabase.rpc("upsert_product_review", {
+    p_product_id: parsed.data.productId,
+    p_rating: parsed.data.rating,
+    p_title: parsed.data.title ?? null,
+    p_comment: parsed.data.comment,
+  })
+
+  if (error) {
+    if (error.message.includes("NOT_VERIFIED_BUYER")) {
+      return fail("Only customers with a delivered order for this item can submit a review.")
+    }
+    if (error.message.includes("NOT_SIGNED_IN")) {
+      return fail("Please sign in to write a review.")
+    }
+    return fail("Could not save your review. Please try again.")
+  }
+
+  refreshCatalogue()
+  const res = data as { id?: string } | null
+  return { ok: true, data: { id: res?.id ?? "" } }
+}
+
+export async function deleteProductReview(input: { reviewId: string; productId: string }): Promise<ActionResult> {
+  if (!z.uuid().safeParse(input.reviewId).success || !z.uuid().safeParse(input.productId).success) {
+    return fail("Invalid review.")
+  }
+
+  const supabase = await getServerSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return fail("Please sign in.")
+
+  const { error } = await supabase
+    .from("product_reviews")
+    .delete()
+    .eq("id", input.reviewId)
+    .eq("product_id", input.productId)
+
+  if (error) return fail("Could not delete review.")
+
   refreshCatalogue()
   return { ok: true }
 }

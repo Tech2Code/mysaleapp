@@ -20,6 +20,19 @@ export function isShippingClass(value: unknown): value is ShippingClass {
 
 export type ProductSpec = { label: string; value: string }
 
+export type ProductReview = {
+  id: string
+  productId: string
+  userId: string | null
+  reviewerName: string
+  rating: number
+  title: string | null
+  comment: string
+  isVerifiedPurchase: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export type Product = {
   id: string
   name: string
@@ -46,6 +59,10 @@ export type Product = {
   isFeatured: boolean
   seoTitle: string | null
   seoDescription: string | null
+  /** Average verified star rating (0 when no reviews yet). */
+  ratingAvg?: number
+  /** Total verified customer reviews count. */
+  reviewCount?: number
   createdAt: string
   updatedAt: string
 }
@@ -73,6 +90,8 @@ export type ProductRow = {
   is_featured: boolean
   seo_title: string | null
   seo_description: string | null
+  rating_avg?: number | string | null
+  review_count?: number | null
   created_at: string
   updated_at: string
 }
@@ -111,6 +130,8 @@ export function mapProduct(row: ProductRow): Product {
     isFeatured: row.is_featured,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,
+    ratingAvg: Number(row.rating_avg ?? 0),
+    reviewCount: Number(row.review_count ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -130,7 +151,7 @@ export function mapCategory(row: CategoryRow): Category {
 /** Everything a product card needs. Keep client props this small: they are serialized into the page. */
 export type ProductCardData = Pick<
   Product,
-  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category"
+  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category" | "ratingAvg" | "reviewCount"
 >
 
 /** What the client-side shop browser needs: card fields + sort keys + a precomputed lowercase search string. */
@@ -151,6 +172,8 @@ export function toCardData(p: ProductCardData): ProductCardData {
     images: p.images,
     stock: p.stock,
     category: p.category,
+    ...(p.ratingAvg !== undefined ? { ratingAvg: p.ratingAvg } : {}),
+    ...(p.reviewCount !== undefined ? { reviewCount: p.reviewCount } : {}),
   }
 }
 

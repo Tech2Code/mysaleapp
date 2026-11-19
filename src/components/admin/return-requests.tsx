@@ -1,6 +1,6 @@
 "use client"
 
-import { BanIcon, CheckIcon, Loader2Icon, PackageOpenIcon, XIcon } from "lucide-react"
+import { ArrowLeftRightIcon, BanIcon, CheckIcon, Loader2Icon, PackageOpenIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -105,7 +105,15 @@ export function DecideDialog({
       </DialogTrigger>
       <DialogContent data-ui="admin/DecideDialog/DialogContent" className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{approve ? "Approve this return?" : "Reject this return?"}</DialogTitle>
+          <DialogTitle>
+            {approve
+              ? request.resolutionType === "exchange"
+                ? "Approve this exchange?"
+                : "Approve this return?"
+              : request.resolutionType === "exchange"
+                ? "Reject this exchange?"
+                : "Reject this return?"}
+          </DialogTitle>
           <DialogDescription>
             {approve
               ? "Choose the day the items will be picked up. The customer sees the date and your note on their order page."
@@ -113,6 +121,19 @@ export function DecideDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
+          {request.resolutionType === "exchange" && (
+            <div data-ui="admin/DecideDialog/div" className="rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-3 text-xs text-indigo-900 dark:text-indigo-200">
+              <p data-ui="admin/DecideDialog/p-flex" className="flex items-center gap-1.5 font-semibold">
+                <ArrowLeftRightIcon className="size-3.5" aria-hidden /> Customer requested an Exchange / Replacement
+              </p>
+              {request.exchangePreference && (
+                <p data-ui="admin/DecideDialog/p" className="mt-1 text-indigo-800 dark:text-indigo-300">
+                  <span data-ui="admin/DecideDialog/span" className="font-semibold">Preference: </span>
+                  {request.exchangePreference}
+                </p>
+              )}
+            </div>
+          )}
           {approve && (
             <DateField
               label="Pickup date *"
@@ -281,11 +302,31 @@ export function AdminReturnRequests({
       <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
         {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "admin")
+          const isExchange = r.resolutionType === "exchange"
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
               <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
-                <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
-                <span data-ui="admin/AdminReturnRequests/span-2" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
+                <div data-ui="admin/AdminReturnRequests/div-flex-3" className="flex flex-wrap items-center gap-1.5">
+                  <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
+                  <span
+                    data-ui="admin/AdminReturnRequests/span-2"
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+                      isExchange
+                        ? "bg-indigo-500/12 text-indigo-700 dark:text-indigo-300"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {isExchange ? (
+                      <>
+                        <ArrowLeftRightIcon className="size-3" aria-hidden /> Exchange / Replacement
+                      </>
+                    ) : (
+                      "Refund"
+                    )}
+                  </span>
+                </div>
+                <span data-ui="admin/AdminReturnRequests/span-3" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
               </div>
               <ul data-ui="admin/AdminReturnRequests/ul-2" className="space-y-0.5 text-sm font-medium">
                 {r.items.map((i) => (
@@ -294,20 +335,26 @@ export function AdminReturnRequests({
                   </li>
                 ))}
               </ul>
-              <p data-ui="admin/AdminReturnRequests/p" className="text-sm">
-                <span data-ui="admin/AdminReturnRequests/span-3" className="text-muted-foreground">Reason: </span>
+              {isExchange && r.exchangePreference && (
+                <p data-ui="admin/AdminReturnRequests/p" className="rounded-lg border border-indigo-500/20 bg-indigo-500/8 px-3 py-2 text-xs text-indigo-900 dark:text-indigo-200">
+                  <span data-ui="admin/AdminReturnRequests/span-4" className="font-semibold">Requested exchange: </span>
+                  {r.exchangePreference}
+                </p>
+              )}
+              <p data-ui="admin/AdminReturnRequests/p-2" className="text-sm">
+                <span data-ui="admin/AdminReturnRequests/span-5" className="text-muted-foreground">Reason: </span>
                 {r.reason}
-                {r.details && <span data-ui="admin/AdminReturnRequests/span-4" className="text-muted-foreground"> — {r.details}</span>}
+                {r.details && <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground"> — {r.details}</span>}
               </p>
               {r.adminNote && (
-                <p data-ui="admin/AdminReturnRequests/p-2" className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-5" className="font-semibold">Your note: </span>
+                <p data-ui="admin/AdminReturnRequests/p-3" className="rounded-lg bg-muted/60 p-3 text-sm">
+                  <span data-ui="admin/AdminReturnRequests/span-7" className="font-semibold">Your note: </span>
                   {r.adminNote}
                 </p>
               )}
               {r.status === "approved" && (
-                <p data-ui="admin/AdminReturnRequests/p-3" className="text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground">Pickup: </span>
+                <p data-ui="admin/AdminReturnRequests/p-4" className="text-sm">
+                  <span data-ui="admin/AdminReturnRequests/span-8" className="text-muted-foreground">Pickup: </span>
                   {r.pickedUpAt ? `successful on ${formatDateTime(r.pickedUpAt)}` : r.pickupDate ? `scheduled for ${formatDate(r.pickupDate)}` : "date not set"}
                 </p>
               )}

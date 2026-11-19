@@ -5,7 +5,7 @@ import { Skeletonize } from "@/components/shared/skeletonize"
 import { ProductDetailView, productCrumbs } from "@/components/store/product-detail-view"
 import { JsonLd } from "@/components/shared/json-ld"
 import { placeholderCards, placeholderProduct } from "@/features/products/placeholders"
-import { getActiveProducts, getProductBySlug, getRelatedProducts } from "@/features/products/queries"
+import { getActiveProducts, getProductBySlug, getProductReviews, getRelatedProducts } from "@/features/products/queries"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 import { getStoreSettings } from "@/features/settings/queries"
 import { formatPrice } from "@/lib/format"
@@ -53,12 +53,16 @@ async function ProductDetails({ params }: Pick<PageProps<"/products/[slug]">, "p
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [related, settings] = await Promise.all([getRelatedProducts(product), getStoreSettings()])
+  const [related, settings, reviews] = await Promise.all([
+    getRelatedProducts(product),
+    getStoreSettings(),
+    getProductReviews(product.id),
+  ])
   const crumbs = productCrumbs(product)
 
   return (
     <>
-      <ProductDetailView product={product} related={related} settings={settings} />
+      <ProductDetailView product={product} related={related} settings={settings} reviews={reviews} />
       <JsonLd
         data={[
           productJsonLd(product, settings),

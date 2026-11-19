@@ -1,22 +1,42 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
+import { CopyIcon, Loader2Icon, PlusIcon, TicketPercentIcon, Trash2Icon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useLayoutEffect, useState, useTransition, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
+import { DateField, FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
+import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { siteConfig } from "@/config/site"
 import { matchState, STATE_OPTIONS } from "@/features/location/states"
-import { saveStoreSettings } from "@/features/settings/actions"
+import { createPromoCode, deletePromoCode, saveStoreSettings, togglePromoCode } from "@/features/settings/actions"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
-import { storeSettingsSchema, type StoreSettingsInput, type StoreSettingsValues } from "@/features/settings/schema"
-import type { StoreSettings } from "@/features/settings/types"
+import {
+  createPromoCodeSchema,
+  storeSettingsSchema,
+  type CreatePromoCodeInput,
+  type CreatePromoCodeValues,
+  type StoreSettingsInput,
+  type StoreSettingsValues,
+} from "@/features/settings/schema"
+import type { PromoCode, StoreSettings } from "@/features/settings/types"
 import { formatWeightGrams } from "@/features/orders/pricing"
-import { formatPrice } from "@/lib/format"
+import { formatDate, formatPrice } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { StickySaveBar } from "./sticky-save-bar"
-import { LIMITS } from "@/lib/validation"
+import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
@@ -556,5 +576,390 @@ function StoreSettingsFormInner({
 
       <StickySaveBar dirty={isDirty} pending={pending} saveLabel="Save settings" />
     </form>
+  )
+}
+
+const DISCOUNT_TYPE_OPTIONS = [
+  { value: "percent", label: "Percentage off (%)" },
+  { value: "flat", label: "Flat discount (₹)" },
+]
+
+export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
+  const router = useRouter()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<PromoCode | null>(null)
+  const [pending, startTransition] = useTransition()
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [today, setToday] = useState<string | undefined>(undefined)
+  useBlockWhile(pending)
+  const later = useToastAfter(pending)
+
+  useEffect(() => {
+    const nowDay = todayIST()
+    queueMicrotask(() => setToday(nowDay))
+  }, [])
+
+  const form = useForm<CreatePromoCodeInput, unknown, CreatePromoCodeValues>({
+    resolver: zodResolver(createPromoCodeSchema),
+    defaultValues: {
+      code: "",
+      description: "",
+      discountType: "percent",
+      discountValue: 10,
+      minOrderAmount: 0,
+      maxDiscountAmount: null,
+      maxUses: null,
+      expiresAt: null,
+    },
+  })
+  const { errors } = form.formState
+  const discountType = useWatch({ control: form.control, name: "discountType" })
+  const expiresAtVal = useWatch({ control: form.control, name: "expiresAt" })
+
+  const onCreateSubmit = form.handleSubmit((values) => {
+    startTransition(async () => {
+      const res = await createPromoCode(values)
+      if (!res.ok) {
+        toast.error(res.error)
+        for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+          if (messages?.[0] && field in values) {
+            form.setError(field as keyof CreatePromoCodeInput, { message: messages[0] })
+          }
+        }
+        return
+      }
+      later(() => {
+        setCreateOpen(false)
+        form.reset({
+          code: "",
+          description: "",
+          discountType: "percent",
+          discountValue: 10,
+          minOrderAmount: 0,
+          maxDiscountAmount: null,
+          maxUses: null,
+          expiresAt: null,
+        })
+        toast.success(`Promo code ${values.code} created.`)
+      })
+      router.refresh()
+    })
+  })
+
+  const handleToggle = (promo: PromoCode, nextActive: boolean) => {
+    setTogglingId(promo.id)
+    startTransition(async () => {
+      const res = await togglePromoCode({ id: promo.id, isActive: nextActive })
+      setTogglingId(null)
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      later(() => toast.success(`${promo.code} ${nextActive ? "enabled" : "disabled"}.`))
+      router.refresh()
+    })
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    startTransition(async () => {
+      const res = await deletePromoCode({ id: target.id })
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      later(() => {
+        setDeleteTarget(null)
+        toast.success(`Promo code ${target.code} deleted.`)
+      })
+      router.refresh()
+    })
+  }
+
+  return (
+    <section data-ui="admin/PromoCodeManager" className="mb-6 space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
+      <div data-ui="admin/PromoCodeManager/div-flex" className="flex flex-wrap items-start justify-between gap-3">
+        <div data-ui="admin/PromoCodeManager/div">
+          <h2 data-ui="admin/PromoCodeManager/h2-promo-codes-amp-discou" className="flex items-center gap-2 font-sans text-lg font-semibold">
+            <TicketPercentIcon className="size-5 text-primary" aria-hidden />
+            Promo codes &amp; discount coupons
+          </h2>
+          <p data-ui="admin/PromoCodeManager/p" className="mt-0.5 text-sm text-muted-foreground">
+            Create discount codes for sales or festive offers. Toggle codes on or off anytime without deleting them.
+          </p>
+        </div>
+        <Button
+          data-ui="admin/PromoCodeManager/Button-new-promo-code"
+          type="button"
+          size="sm"
+          onClick={() => setCreateOpen(true)}
+          className="rounded-full px-4"
+        >
+          <PlusIcon className="size-4" /> New promo code
+        </Button>
+      </div>
+
+      {promoCodes.length === 0 ? (
+        <div data-ui="admin/PromoCodeManager/div-flex-2" className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center">
+          <p data-ui="admin/PromoCodeManager/p-2" className="text-sm font-medium text-foreground/80">No promo codes yet</p>
+          <p data-ui="admin/PromoCodeManager/p-3" className="max-w-md text-xs text-muted-foreground">
+            Create a code like <span data-ui="admin/PromoCodeManager/span" className="font-mono font-semibold text-foreground">WELCOME10</span> or <span data-ui="admin/PromoCodeManager/span-2" className="font-mono font-semibold text-foreground">DIWALI100</span> so customers can apply it at checkout.
+          </p>
+        </div>
+      ) : (
+        <div data-ui="admin/PromoCodeManager/div-grid" className="grid gap-3 md:grid-cols-2">
+          {promoCodes.map((promo) => {
+            const isExpired = Boolean(today && promo.expiresAt && promo.expiresAt < today)
+            const isLimitReached = Boolean(promo.maxUses !== null && promo.usedCount >= promo.maxUses)
+            const effectiveStatus = !promo.isActive
+              ? { label: "Disabled", tone: "bg-muted text-muted-foreground" }
+              : isExpired
+                ? { label: "Expired", tone: "bg-destructive/12 text-destructive" }
+                : isLimitReached
+                  ? { label: "Limit reached", tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
+                  : { label: "Active", tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
+
+            const discountSummary =
+              promo.discountType === "percent"
+                ? `${promo.discountValue}% OFF${promo.maxDiscountAmount ? ` (up to ${formatPrice(promo.maxDiscountAmount)})` : ""}`
+                : `${formatPrice(promo.discountValue)} OFF`
+
+            return (
+              <div
+                data-ui="admin/PromoCodeManager/div-2"
+                key={promo.id}
+                className={cn(
+                  "flex flex-col justify-between gap-3 rounded-xl border p-4 transition-colors",
+                  promo.isActive && !isExpired && !isLimitReached ? "bg-background" : "bg-muted/30 opacity-85"
+                )}
+              >
+                <div data-ui="admin/PromoCodeManager/div-flex-3" className="flex items-start justify-between gap-2">
+                  <div data-ui="admin/PromoCodeManager/div-3" className="min-w-0 space-y-1">
+                    <div data-ui="admin/PromoCodeManager/div-flex-4" className="flex flex-wrap items-center gap-2">
+                      <span data-ui="admin/PromoCodeManager/span-3" className="rounded-lg border border-primary/30 bg-primary/8 px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-primary">
+                        {promo.code}
+                      </span>
+                      <button
+                        data-ui="admin/PromoCodeManager/button-grid"
+                        type="button"
+                        aria-label={`Copy promo code ${promo.code}`}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(promo.code)
+                            toast.success(`Copied ${promo.code}`)
+                          } catch {
+                            toast.error("Could not copy code")
+                          }
+                        }}
+                        className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <CopyIcon className="size-3.5" />
+                      </button>
+                      <span
+                        data-ui="admin/PromoCodeManager/span-4"
+                        className={cn(" rounded-full px-2.5 py-0.5 text-xs font-semibold", effectiveStatus.tone)}
+                      >
+                        {effectiveStatus.label}
+                      </span>
+                    </div>
+                    <p data-ui="admin/PromoCodeManager/p-4" className="text-sm font-semibold text-foreground">
+                      {discountSummary}
+                      {promo.minOrderAmount > 0 ? ` · Min order ${formatPrice(promo.minOrderAmount)}` : " · No min order"}
+                    </p>
+                    {promo.description && (
+                      <p data-ui="admin/PromoCodeManager/p-5" className="text-xs text-muted-foreground">{promo.description}</p>
+                    )}
+                  </div>
+
+                  <button
+                    data-ui="admin/PromoCodeManager/button-grid-2"
+                    type="button"
+                    aria-label={`Delete promo code ${promo.code}`}
+                    disabled={pending}
+                    onClick={() => setDeleteTarget(promo)}
+                    className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2Icon className="size-4" />
+                  </button>
+                </div>
+
+                <div data-ui="admin/PromoCodeManager/div-flex-5" className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
+                  <div data-ui="admin/PromoCodeManager/div-flex-6" className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span data-ui="admin/PromoCodeManager/span-5" className="font-medium text-foreground/80">
+                      Used: {promo.usedCount}
+                      {promo.maxUses !== null ? ` / ${promo.maxUses}` : " (unlimited)"}
+                    </span>
+                    {promo.expiresAt && (
+                      <span data-ui="admin/PromoCodeManager/span-6">
+                        {isExpired ? "Expired" : "Expires"} {formatDate(`${promo.expiresAt}T00:00:00`)}
+                      </span>
+                    )}
+                  </div>
+
+                  <div data-ui="admin/PromoCodeManager/div-flex-7" className="flex items-center gap-2">
+                    <Button
+                      data-ui="admin/PromoCodeManager/Button"
+                      type="button"
+                      variant={promo.isActive ? "outline" : "default"}
+                      size="xs"
+                      disabled={pending}
+                      onClick={() => handleToggle(promo, !promo.isActive)}
+                      className="rounded-full px-3"
+                    >
+                      {togglingId === promo.id && <Loader2Icon className="size-3 animate-spin" />}
+                      {promo.isActive ? "Disable" : "Enable"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <Dialog open={createOpen} onOpenChange={(next) => !pending && setCreateOpen(next)}>
+        <DialogContent data-ui="admin/PromoCodeManager/DialogContent" className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create promo code</DialogTitle>
+            <DialogDescription>
+              Customers can apply this code at checkout. You can disable or delete it anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <form data-ui="admin/PromoCodeManager/form" onSubmit={onCreateSubmit} noValidate>
+            <DialogBody className="space-y-4">
+              <div data-ui="admin/PromoCodeManager/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                <TextField
+                  label="Promo code"
+                  fieldSize="md"
+                  placeholder="e.g. WELCOME10"
+                  maxLength={24}
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  className="font-mono uppercase"
+                  hint="3–24 letters, numbers, - or _"
+                  error={errors.code?.message}
+                  {...form.register("code")}
+                />
+                <FormSelectField
+                  control={form.control}
+                  name="discountType"
+                  label="Discount type"
+                  fieldSize="md"
+                  options={DISCOUNT_TYPE_OPTIONS}
+                />
+              </div>
+
+              <div data-ui="admin/PromoCodeManager/div-grid-3" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                <TextField
+                  label={discountType === "percent" ? "Discount percentage (%)" : "Flat discount amount (₹)"}
+                  kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading={discountType === "flat" ? "₹" : undefined}
+                  placeholder={discountType === "percent" ? "10" : "100"}
+                  hint={discountType === "percent" ? "Between 1% and 90%" : "Amount subtracted from items total"}
+                  error={errors.discountValue?.message}
+                  {...form.register("discountValue")}
+                />
+                <TextField
+                  label="Minimum order amount (₹)"
+                  kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  placeholder="499"
+                  hint="0 = works on any order amount"
+                  error={errors.minOrderAmount?.message}
+                  {...form.register("minOrderAmount")}
+                />
+              </div>
+
+              <div data-ui="admin/PromoCodeManager/div-grid-4" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                {discountType === "percent" && (
+                  <TextField
+                    label="Max discount cap (optional)"
+                    kind="money"
+                    fieldSize="md"
+                    inputMode="decimal"
+                    leading="₹"
+                    placeholder="e.g. 250"
+                    hint="Leave blank for no cap"
+                    error={errors.maxDiscountAmount?.message}
+                    {...form.register("maxDiscountAmount")}
+                  />
+                )}
+                <TextField
+                  label="Total usage limit (optional)"
+                  kind="digits"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  placeholder="e.g. 100"
+                  hint="Leave blank for unlimited uses"
+                  error={errors.maxUses?.message}
+                  {...form.register("maxUses")}
+                />
+                <DateField
+                  label="Expiry date (optional)"
+                  fieldSize="md"
+                  min={today}
+                  value={typeof expiresAtVal === "string" ? expiresAtVal : ""}
+                  onChange={(next) => form.setValue("expiresAt", next || null, { shouldValidate: true, shouldDirty: true })}
+                  hint="Valid through the end of this date"
+                  error={errors.expiresAt?.message}
+                />
+              </div>
+
+              <TextField
+                label="Short offer description (optional)"
+                fieldSize="md"
+                maxLength={140}
+                placeholder="e.g. Festive special — 10% off on handmade gifts"
+                hint="Shown to the customer when they apply the code at checkout"
+                error={errors.description?.message}
+                {...form.register("description")}
+              />
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                data-ui="admin/PromoCodeManager/Button-cancel"
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => setCreateOpen(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                data-ui="admin/PromoCodeManager/Button-create-promo-code"
+                type="submit"
+                disabled={pending}
+                className="rounded-full px-5"
+              >
+                {pending && <Loader2Icon className="animate-spin" />}
+                Create promo code
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(next) => !next && setDeleteTarget(null)}
+        title={`Delete promo code ${deleteTarget?.code ?? ""}?`}
+        description={
+          <>
+            Customers will no longer be able to use <strong data-ui="admin/PromoCodeManager/strong" className="font-mono font-semibold text-foreground">{deleteTarget?.code}</strong>. Past orders that used this code keep their discount history.
+          </>
+        }
+        confirmLabel="Delete promo code"
+        cancelLabel="Cancel"
+        destructive
+        pending={pending}
+        onConfirm={handleConfirmDelete}
+      />
+    </section>
   )
 }

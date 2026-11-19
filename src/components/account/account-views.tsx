@@ -332,7 +332,7 @@ export function ProfileView({ profile, addresses }: { profile: Profile; addresse
       profileContent={
         <section data-ui="account/ProfileView/section">
           <h2 data-ui="account/ProfileView/h2-profile" className="text-3xl font-semibold">Profile</h2>
-          <p data-ui="account/ProfileView/p" className="mt-1 mb-8 text-muted-foreground">Manage your personal details and contact number.</p>
+          <p data-ui="account/ProfileView/p" className="mt-1 mb-8 text-muted-foreground">Manage your personal details, contact number, and login password.</p>
           <ProfileForm profile={profile} />
         </section>
       }

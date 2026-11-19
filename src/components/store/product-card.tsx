@@ -1,6 +1,6 @@
 "use client"
 
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
 import { memo } from "react"
 import type { ProductCardData } from "@/features/products/types"
@@ -15,6 +15,10 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
   const add = useCart((s) => s.add)
   const off = discountPercent(product.price, product.compareAtPrice)
   const soldOut = product.stock <= 0
+  const reviewCount = product.reviewCount ?? 0
+  const ratingAvg = Number(product.ratingAvg ?? 0)
+  const hasRating = reviewCount > 0 && ratingAvg > 0
+  const ratingLabel = `Rated ${ratingAvg.toFixed(1)} out of 5 from ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`
 
   return (
     <article
@@ -45,6 +49,19 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             </span>
           )}
         </div>
+
+        {hasRating && (
+          <div
+            data-ui="store/ProductCard/div-rating-badge"
+            className="pointer-events-none absolute bottom-2 left-2 inline-flex max-w-[calc(100%-3.25rem)] items-center gap-1 truncate rounded-full bg-background/92 px-2 py-0.5 text-[0.68rem] font-semibold text-foreground shadow-sm ring-1 ring-border/60 backdrop-blur-md tabular-nums sm:bottom-3 sm:left-3 sm:max-w-[calc(100%-4rem)] sm:px-2.5 sm:py-1 sm:text-xs"
+            aria-label={ratingLabel}
+          >
+            <span>{ratingAvg.toFixed(1)}</span>
+            <StarIcon className="size-3 fill-amber-400 text-amber-400" aria-hidden />
+            <span className="text-muted-foreground/50" aria-hidden>|</span>
+            <span className="font-medium text-muted-foreground">{reviewCount}</span>
+          </div>
+        )}
 
         <WishlistButton productId={product.id} productName={product.name} className="absolute top-2 right-2 max-sm:size-8 sm:top-3 sm:right-3" />
 
@@ -89,6 +106,28 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             {product.name}
           </Link>
         </h3>
+        {hasRating && (
+          <div
+            data-ui="store/ProductCard/div-stars"
+            className="flex items-center gap-1 pt-0.5 text-xs tabular-nums"
+            aria-label={ratingLabel}
+          >
+            <span className="inline-flex items-center gap-0.5" aria-hidden>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <StarIcon
+                  key={star}
+                  className={
+                    star <= Math.round(ratingAvg)
+                      ? "size-3 fill-amber-400 text-amber-400 sm:size-3.5"
+                      : "size-3 fill-muted text-muted-foreground/30 sm:size-3.5"
+                  }
+                />
+              ))}
+            </span>
+            <span className="text-[0.72rem] font-semibold text-foreground sm:text-xs">{ratingAvg.toFixed(1)}</span>
+            <span className="text-[0.7rem] text-muted-foreground sm:text-xs">({reviewCount})</span>
+          </div>
+        )}
         <div data-ui="store/ProductCard/div-flex-3" className="mt-auto flex items-baseline gap-1.5 pt-1 sm:gap-2">
           <span data-ui="store/ProductCard/span-4" className="text-sm font-bold sm:text-base">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (

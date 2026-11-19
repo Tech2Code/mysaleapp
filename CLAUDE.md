@@ -24,6 +24,7 @@ Rules:
 ## UI patterns to reuse (don't re-invent per page)
 
 - **Admin forms save with `StickySaveBar`** (`components/admin/sticky-save-bar.tsx`): last child of the `<form>`, spans the whole page, shows "unsaved changes". Never put Save/Cancel inside one side column.
+- **Dialog / Popup actions with `router.refresh()` must use `useToastAfter(pending)`** (`hooks/use-toast-after.ts`): When a dialog or confirmation modal submits a server action inside `startTransition(async () => { ... })` alongside `useBlockWhile(pending)` and `router.refresh()`, **never** call `toast.success(...)` directly inside the transition (because `sonner` fires outside React's transition while `pending` stays `true` until `router.refresh()` finishes, causing the toast to appear BEFORE the popup closes). Always wire `const later = useToastAfter(pending)` and wrap both the dialog close state update and the toast inside `later(() => { setOpen(false); toast.success("..."); })` right before `router.refresh()`.
 - **Loading feedback = `RouteProgress`** (`components/shared/route-progress.tsx`): a thin top bar that starts on any in-app link click automatically. For `useTransition` work (filters, tabs, search) call `useProgressWhile(pending)`. Never fade/dim the page (`opacity-*`) while loading.
 - **Loading skeletons are derived, never hand-built.** A skeleton is the REAL page rendered with placeholder data inside `<Skeletonize>` (`components/shared/skeletonize.tsx`; CSS in `globals.css` turns every text run, icon, image and control into a muted block of the same size), so it can't drift from the UI. To give a page a skeleton:
   1. Put the page's markup in a view component that takes props (`components/{admin,store,account}/…-view.tsx`); the page only fetches and renders `<XView data={…} />`. A new UI element goes inside the view and gets its skeleton for free.
@@ -211,7 +212,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 - The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
 - Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
-- Migrations 0001–0052 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- Migrations 0001–0057 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
 - SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
 
 ## Verifying against production (no staging)
@@ -222,7 +223,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 780 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 789 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
 - **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 

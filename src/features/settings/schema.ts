@@ -103,3 +103,77 @@ export type StoreSettingsValues = z.output<typeof storeSettingsSchema>
 // kept for existing imports
 export const UPI_ID_PATTERN = /^[A-Za-z0-9._-]{2,64}@[A-Za-z0-9]{2,32}$/
 void requiredNumber
+
+export const PROMO_CODE_PATTERN = /^[A-Z0-9_-]{3,24}$/
+
+const optionalPositiveMoney = (max: number, label: string) =>
+  z.preprocess(
+    (x) => (x === "" || x == null ? null : typeof x === "string" ? Number(x.trim()) : x),
+    z
+      .number({ error: label })
+      .positive(label)
+      .max(max, `At most ₹${max.toLocaleString("en-IN")}`)
+      .refine((n) => Math.round(n * 100) === n * 100, "Up to 2 decimal places")
+      .nullable()
+  )
+
+const optionalPositiveInt = (max: number, label: string) =>
+  z.preprocess(
+    (x) => (x === "" || x == null ? null : typeof x === "string" ? Number(x.trim()) : x),
+    z
+      .number({ error: label })
+      .int("Enter a whole number")
+      .positive(label)
+      .max(max, `At most ${max.toLocaleString("en-IN")}`)
+      .nullable()
+  )
+
+export const createPromoCodeSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(PROMO_CODE_PATTERN, "Use 3–24 letters, numbers, hyphens or underscores (e.g. WELCOME10)"),
+    description: v.optionalText(140),
+    discountType: z.enum(["percent", "flat"]),
+    discountValue: v.money(50000, "Enter the discount value"),
+    minOrderAmount: v.money(LIMITS.money.max, "Enter the minimum order amount (0 = none)"),
+    maxDiscountAmount: optionalPositiveMoney(50000, "Enter a positive maximum discount cap"),
+    maxUses: optionalPositiveInt(100000, "Enter a positive usage limit"),
+    expiresAt: z.preprocess(
+      (x) => (typeof x === "string" && x.trim() === "" ? null : x),
+      v.isoDate().nullable()
+    ),
+  })
+  .superRefine((val, ctx) => {
+    if (val.discountValue <= 0) {
+      ctx.addIssue({ code: "custom", path: ["discountValue"], message: "Discount must be greater than 0" })
+    }
+    if (val.discountType === "percent" && (val.discountValue < 1 || val.discountValue > 90)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountValue"],
+        message: "Percentage discount must be between 1% and 90%",
+      })
+    }
+    if (val.discountType === "flat" && val.minOrderAmount > 0 && val.minOrderAmount <= val.discountValue) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minOrderAmount"],
+        message: "Minimum order must be greater than the flat ₹ discount",
+      })
+    }
+  })
+
+export type CreatePromoCodeInput = z.input<typeof createPromoCodeSchema>
+export type CreatePromoCodeValues = z.output<typeof createPromoCodeSchema>
+
+export const togglePromoCodeSchema = z.object({
+  id: z.uuid(),
+  isActive: z.boolean(),
+})
+
+export const deletePromoCodeSchema = z.object({
+  id: z.uuid(),
+})

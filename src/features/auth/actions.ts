@@ -62,7 +62,7 @@ async function customerOrigin(): Promise<string | undefined> {
 /** Customer email/password sign-in. */
 export async function signInCustomer(
   input: unknown
-): Promise<ActionResult<{ user: SessionUser; wishlistIds: string[] }>> {
+): Promise<ActionResult<{ user: SessionUser; wishlistIds: string[]; reactivated?: boolean }>> {
   if (!isSupabaseConfigured) return fail("Login is unavailable in demo mode. Connect Supabase first (see README).")
 
   const parsed = loginSchema.safeParse(input)
@@ -85,11 +85,15 @@ export async function signInCustomer(
   const user = data.user
   const metaName = cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name)
   const metaPhone = typeof user.user_metadata?.phone === "string" ? normalizeIndianPhone(user.user_metadata.phone) : null
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("full_name, phone, avatar_url")
-    .eq("id", user.id)
-    .maybeSingle<{ full_name: string | null; phone: string | null; avatar_url: string | null }>()
+  const [{ data: existing }, { data: restored }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, phone, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null; phone: string | null; avatar_url: string | null }>(),
+    supabase.rpc("reactivate_my_account"),
+  ])
+  const reactivated = Boolean(restored)
 
   const resolvedName = cleanMetaName(existing?.full_name) || metaName || null
   const resolvedPhone = existing?.phone || metaPhone || null
@@ -105,6 +109,9 @@ export async function signInCustomer(
   const wishRes = await syncWishlistForUser(user.id, parsed.data.wishlistIds)
   const wishlistIds = wishRes.ok ? wishRes.data : (parsed.data.wishlistIds ?? [])
 
+  const cookieStore = await cookies()
+  cookieStore.delete("kk_cust_pw_reset")
+
   revalidatePath("/", "layout")
 
   return {
@@ -112,6 +119,7 @@ export async function signInCustomer(
     data: {
       user: buildSessionUser(user, resolvedName, existing?.avatar_url),
       wishlistIds,
+      ...(reactivated ? { reactivated: true } : {}),
     },
   }
 }
@@ -197,8 +205,96 @@ export async function signOutCustomer(): Promise<ActionResult> {
     const supabase = await getServerSupabase()
     await supabase.auth.signOut()
   }
+  const cookieStore = await cookies()
+  cookieStore.delete("kk_cust_pw_reset")
   revalidatePath("/", "layout")
   return { ok: true }
+}
+
+const customerForgotSchema = z.object({
+  email: v.email(),
+  next: z.string().optional(),
+})
+
+const customerResetSchema = z
+  .object({
+    next: v.newPassword(),
+    confirm: z.string(),
+  })
+  .refine((d) => d.next === d.confirm, {
+    message: "Passwords don't match",
+    path: ["confirm"],
+  })
+
+/** Customer "Forgot password?": sends a one-time password recovery email link. */
+export async function requestCustomerPasswordReset(input: unknown): Promise<ActionResult> {
+  if (!isSupabaseConfigured) return fail("Password reset is unavailable in demo mode. Connect Supabase first (see README).")
+  const parsed = customerForgotSchema.safeParse(input)
+  if (!parsed.success) return fail("Enter a valid email address.", z.flattenError(parsed.error).fieldErrors)
+
+  if (await limited("password-reset", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
+
+  const origin = await customerOrigin()
+  const nextPath = safeNextPath(parsed.data.next ?? null, "/")
+  const resetTarget = `/login?mode=reset-password&next=${encodeURIComponent(nextPath)}`
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent(resetTarget)}` : undefined,
+  })
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("rate limit") || error.code === "over_email_send_rate_limit") {
+      return fail(
+        "Email limit reached on Supabase's free mail sender. Please wait a few minutes and try again."
+      )
+    }
+  }
+  return { ok: true }
+}
+
+/** Step 2 of customer "Forgot password?": sets the new password after clicking the emailed reset link. */
+export async function resetCustomerPassword(
+  input: unknown
+): Promise<ActionResult<{ user: SessionUser }>> {
+  if (!isSupabaseConfigured) return fail("Connect Supabase first (see README).")
+  const cookieStore = await cookies()
+  if (cookieStore.get("kk_cust_pw_reset")?.value !== "1") {
+    return fail("This reset link has expired. Please request a new one.")
+  }
+  const parsed = customerResetSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
+  }
+
+  const supabase = await getServerSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return fail("This reset link has expired. Please request a new one.")
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.next,
+    data: { has_password: true },
+  })
+  if (error) {
+    return fail("Could not set the new password. Please request a new reset link.")
+  }
+
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .maybeSingle<{ full_name: string | null; avatar_url: string | null }>()
+
+  cookieStore.delete("kk_cust_pw_reset")
+  revalidatePath("/account", "layout")
+  revalidatePath("/", "layout")
+  return {
+    ok: true,
+    data: {
+      user: buildSessionUser(user, existing?.full_name, existing?.avatar_url),
+    },
+  }
 }
 
 /** Email/password login for the shop owner. Non-admin accounts are rejected. */
@@ -222,7 +318,8 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
   const { data: isAdmin } = await supabase.rpc("is_admin")
   if (isAdmin !== true) {
     await supabase.auth.signOut()
-    return fail("This account doesn't have admin access.")
+    // Return the exact same message as wrong credentials so we never reveal that a non-admin account exists.
+    return fail("Incorrect email or password.")
   }
 
   const user = data.user

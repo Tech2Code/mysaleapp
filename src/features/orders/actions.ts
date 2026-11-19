@@ -13,10 +13,12 @@ import { getStoreSettings } from "@/features/settings/queries"
 import { joinCityState } from "@/features/location/states"
 import { cancelReasonText } from "./reasons"
 import { mapRpcError } from "./rpc-errors"
-import { cancelOrderSchema, checkoutSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema } from "./schema"
+import { cancelOrderSchema, checkoutSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema, validatePromoSchema } from "./schema"
 import { returnWindow } from "./returns"
 import { buildOrderMessage, shopWhatsappLink } from "./whatsapp"
+import type { ValidatedPromo } from "./pricing"
 import { mapFees, normalizePricing, type OrderPricing, type TrackedOrder } from "./types"
+import { formatPrice } from "@/lib/format"
 
 /**
  * Guest lookups (code + last 4 digits) answer {"ok":false,"error":"…"} instead of raising, so that
@@ -42,7 +44,59 @@ type CreateOrderRow = {
   shipping_fee: number | string
   shipping_fee_original: number | string
   extra_fees: { label: string; amount: number | string }[] | null
+  discount_amount?: number | string | null
+  promo_code?: string | null
   total: number | string
+}
+
+export async function validatePromoCode(input: unknown): Promise<ActionResult<ValidatedPromo>> {
+  const parsed = validatePromoSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Enter a valid promo code.", z.flattenError(parsed.error).fieldErrors)
+  }
+  if (!isSupabaseConfigured) {
+    return fail("Promo codes are unavailable in demo mode.")
+  }
+  if (await limited("track-order", "promo")) return fail(RATE_LIMIT_MESSAGE)
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("validate_promo_code", {
+    p_code: parsed.data.code,
+    p_subtotal: parsed.data.subtotal,
+  })
+  if (error) return fail("Could not verify promo code. Please try again.")
+
+  const raw = data as {
+    ok?: boolean
+    error?: string
+    minOrderAmount?: number | string
+    code?: string
+    description?: string | null
+    discountType?: "percent" | "flat"
+    discountValue?: number | string
+    maxDiscountAmount?: number | string | null
+    discountAmount?: number | string
+  } | null
+
+  if (!raw || !raw.ok || !raw.code || !raw.discountType) {
+    if (raw?.error === "PROMO_MIN_ORDER" && raw.minOrderAmount != null) {
+      return fail(`Add items worth at least ${formatPrice(Number(raw.minOrderAmount))} to use this promo code.`)
+    }
+    return fail(mapRpcError(raw?.error ?? "", "That promo code is invalid or no longer active."))
+  }
+
+  return {
+    ok: true,
+    data: {
+      code: raw.code,
+      description: raw.description ?? null,
+      discountType: raw.discountType,
+      discountValue: Number(raw.discountValue ?? 0),
+      minOrderAmount: Number(raw.minOrderAmount ?? 0),
+      maxDiscountAmount: raw.maxDiscountAmount == null ? null : Number(raw.maxDiscountAmount),
+      discountAmount: Number(raw.discountAmount ?? 0),
+    },
+  }
 }
 
 /**
@@ -59,7 +113,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
   }
   if (await limited("place-order")) return fail(RATE_LIMIT_MESSAGE)
 
-  const { items, paymentReference, saveAddress } = parsed.data
+  const { items, paymentReference, promoCode, saveAddress } = parsed.data
   const customer = storedCustomer(parsed.data.customer)
   const phone = normalizeIndianPhone(customer.phone)!
   const supabase = await getServerSupabase()
@@ -70,6 +124,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
       p_customer: { ...customer, phone },
       p_items: items,
       p_prefix: shop.orderCodePrefix,
+      p_promo_code: promoCode ?? null,
     })
     .single<CreateOrderRow>()
 
@@ -105,6 +160,8 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
     shippingFee: Number(data.shipping_fee),
     shippingFeeOriginal: Number(data.shipping_fee_original),
     extraFees: mapFees(data.extra_fees),
+    promoCode: data.promo_code ?? null,
+    discountAmount: Number(data.discount_amount ?? 0),
     total: Number(data.total),
   }
 
@@ -300,6 +357,8 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
     p_details: parsed.data.details ?? null,
     // guests must give the full number (migration 0050); signed-in owners are recognised by their account
     p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
+    p_resolution_type: parsed.data.resolutionType,
+    p_exchange_preference: parsed.data.resolutionType === "exchange" ? (parsed.data.exchangePreference ?? null) : null,
   })
   if (error) {
     return fail(mapRpcError(error.message, "Could not send your return request. Please try again."))

@@ -14,9 +14,10 @@ let committedKey: string | null = null
 let previousPath: string | null = null
 let lastScrollY = 0
 let viaHistory = false
+let pendingHash = ""
 let isTransitioning = false
 let isHolding = false
-let activeNav: { key: string; prevPath: string; viaHistory: boolean } | null = null
+let activeNav: { key: string; prevPath: string; viaHistory: boolean; hash: string } | null = null
 
 function getStorageKey(url: string) {
   return `agy:scroll:${url}`
@@ -137,14 +138,28 @@ export function ScrollReset() {
 
         if (url.pathname !== window.location.pathname) {
           isTransitioning = true
-          if (anchor.hasAttribute("data-back-link") || isParentOrBackPath(url.pathname, currentPath, previousPath)) {
+          pendingHash = url.hash
+          if (url.hash) {
+            viaHistory = false
+          } else if (anchor.hasAttribute("data-back-link") || isParentOrBackPath(url.pathname, currentPath, previousPath)) {
             viaHistory = true
           } else {
             viaHistory = false
           }
         } else if (url.search !== window.location.search) {
           // Same pathname filter/query change: keep scroll position and do not lock isTransitioning
+          pendingHash = url.hash
           viaHistory = false
+        } else if (url.hash) {
+          pendingHash = ""
+          viaHistory = false
+          const targetId = decodeURIComponent(url.hash.replace(/^#/, ""))
+          const targetEl = targetId ? document.getElementById(targetId) : null
+          if (targetEl) {
+            window.requestAnimationFrame(() => {
+              targetEl.scrollIntoView({ behavior: "smooth", block: "start" })
+            })
+          }
         }
       } catch {
         // ignore invalid href
@@ -216,14 +231,17 @@ function ScrollResetCommitWatcher() {
 
     let wasHistory: boolean
     let prevPath: string
+    let targetHash: string
 
     if (activeNav && activeNav.key === targetKey && committedPath === pathname) {
       // React Strict Mode or effect re-run for the same target route: preserve the original navigation intent
       wasHistory = activeNav.viaHistory
       prevPath = activeNav.prevPath
+      targetHash = activeNav.hash || window.location.hash
     } else {
       wasHistory = viaHistory
       prevPath = committedPath
+      targetHash = window.location.hash || pendingHash
 
       // Save the leaving route using its last genuine scroll position (never window.scrollY which Next.js may have reset to 0)
       if (committedKey && committedKey !== targetKey) {
@@ -233,17 +251,18 @@ function ScrollResetCommitWatcher() {
         previousPath = committedPath
       }
 
-      activeNav = { key: targetKey, prevPath, viaHistory: wasHistory }
+      activeNav = { key: targetKey, prevPath, viaHistory: wasHistory, hash: targetHash }
       committedPath = pathname
       committedKey = targetKey
       viaHistory = false
+      pendingHash = ""
     }
 
     const decision = {
       previousPath: prevPath,
       nextPath: pathname,
       viaHistory: wasHistory,
-      hash: window.location.hash,
+      hash: targetHash,
     }
 
     if (wasHistory) {
@@ -263,6 +282,10 @@ function ScrollResetCommitWatcher() {
       }
       isTransitioning = true
       return holdAtPosition(savedY)
+    }
+
+    if (targetHash) {
+      return holdAtHash(targetHash)
     }
 
     if (!shouldResetScroll(decision)) {
@@ -384,6 +407,102 @@ function holdAtPosition(targetY: number): () => void {
     }
     isTransitioning = false
   }
+  window.addEventListener("wheel", onUserScroll, { passive: true })
+  window.addEventListener("touchmove", onUserScroll, { passive: true })
+  window.addEventListener("keydown", onKeyDown, { passive: true })
+  return () => stop()
+}
+
+/**
+ * Scroll to an anchor `#hash` target and re-apply while `<Suspense>` streaming swaps skeleton fallbacks
+ * (`[data-skeleton]`) for the real DOM content.
+ */
+function holdAtHash(hash: string): () => void {
+  const targetId = decodeURIComponent(hash.replace(/^#/, ""))
+  if (!targetId) {
+    isTransitioning = false
+    return () => {}
+  }
+
+  let stopped = false
+  let reachedRealTarget = false
+  isHolding = true
+  isTransitioning = true
+  const startedAt = performance.now()
+  let lastHeightChangeAt = startedAt
+  let height = document.documentElement.scrollHeight
+
+  const applyHashScroll = () => {
+    if (stopped) return
+    const el = document.getElementById(targetId)
+    if (!el) return
+    const isSkeleton = el.closest("[data-skeleton]") !== null
+    const scrollMarginTop = Number.parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0
+    const rect = el.getBoundingClientRect()
+    const desiredTop = Math.max(0, window.scrollY + rect.top - scrollMarginTop)
+    if (Math.abs(window.scrollY - desiredTop) > 2) {
+      window.scrollTo({ top: desiredTop, left: 0, behavior: "instant" })
+    }
+    lastScrollY = window.scrollY
+    if (!isSkeleton && Math.abs(window.scrollY - desiredTop) <= 4) {
+      reachedRealTarget = true
+      if (performance.now() - startedAt >= 120) {
+        isTransitioning = false
+      }
+    }
+  }
+
+  applyHashScroll()
+  const rafId = window.requestAnimationFrame(applyHashScroll)
+
+  const checkAndAlign = () => {
+    if (stopped) return
+    const now = performance.now()
+    const next = document.documentElement.scrollHeight
+    if (next !== height) {
+      height = next
+      lastHeightChangeAt = now
+    }
+    applyHashScroll()
+    if (reachedRealTarget && now - lastHeightChangeAt >= 250 && now - startedAt >= 180) {
+      stop()
+    } else if (now - startedAt >= 2500) {
+      stop()
+    }
+  }
+
+  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(checkAndAlign) : null
+  ro?.observe(document.body)
+  ro?.observe(document.documentElement)
+
+  const pollTimer = window.setInterval(checkAndAlign, 40)
+
+  const onUserScroll = () => {
+    const elapsed = performance.now() - startedAt
+    if (!reachedRealTarget && elapsed < 450) return
+    stop()
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", " ", "Home", "End"].includes(e.key)) {
+      onUserScroll()
+    }
+  }
+
+  const stop = () => {
+    if (stopped) return
+    stopped = true
+    isHolding = false
+    window.cancelAnimationFrame(rafId)
+    window.clearInterval(pollTimer)
+    ro?.disconnect()
+    window.removeEventListener("wheel", onUserScroll)
+    window.removeEventListener("touchmove", onUserScroll)
+    window.removeEventListener("keydown", onKeyDown)
+    lastScrollY = window.scrollY
+    isTransitioning = false
+  }
+
   window.addEventListener("wheel", onUserScroll, { passive: true })
   window.addEventListener("touchmove", onUserScroll, { passive: true })
   window.addEventListener("keydown", onKeyDown, { passive: true })

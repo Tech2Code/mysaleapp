@@ -76,7 +76,40 @@ export async function requestAdminEmailChange(input: unknown): Promise<ActionRes
     origin ? { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/admin/account?email_changed=1")}` } : undefined
   )
   if (error) {
-    return fail(error.message.toLowerCase().includes("already") ? "That email is already used by another account." : "Could not change the email. Please try again.")
+    const msg = error.message.toLowerCase()
+    const code = error.code ?? ""
+    if (msg.includes("already") || msg.includes("registered") || code === "email_exists") {
+      return fail("That email is already used by another account.", {
+        email: ["That email is already used by another account."],
+      })
+    }
+    if (
+      msg.includes("rate limit") ||
+      msg.includes("once every") ||
+      msg.includes("security purposes") ||
+      code === "over_email_send_rate_limit" ||
+      code === "over_request_rate_limit"
+    ) {
+      return fail(
+        "Email limit reached on Supabase's free mail sender (or 60-second cooldown). Please wait a few minutes before changing your email again."
+      )
+    }
+    if (code === "email_address_invalid" || (msg.includes("invalid") && msg.includes("email"))) {
+      return fail("Please enter a valid, real email address (test domains like @example.com are blocked by Supabase).", {
+        email: ["Enter a valid, deliverable email address."],
+      })
+    }
+    if (code === "email_address_not_authorized" || msg.includes("not authorized")) {
+      return fail(
+        "This email address isn't authorised on Supabase's default mail sender yet. Configure Custom SMTP in Supabase → Authentication → Emails, or use an authorised email."
+      )
+    }
+    if (msg.includes("error sending") || msg.includes("smtp") || code === "unexpected_failure") {
+      return fail(
+        "Supabase could not send the confirmation email (free mail sender quota or SMTP issue). Please try again later."
+      )
+    }
+    return fail("Could not change the email. Please try again.")
   }
   return { ok: true }
 }

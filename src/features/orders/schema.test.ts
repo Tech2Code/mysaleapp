@@ -58,4 +58,19 @@ describe("reason and quantity limits", () => {
     expect(requestReturnSchema.safeParse({ ...ok, details: "x".repeat(301), items: [item(1)] }).success).toBe(false)
     expect(requestReturnSchema.safeParse({ ...ok, items: [item(1), item(1)] }).success).toBe(false)
   })
+  it("supports return-to-exchange resolution and requires exchangePreference when exchange is selected", () => {
+    const item = { productId: "3f2504e0-4f89-41d3-9a0c-0305e82c3301", quantity: 1 }
+    const baseReq = { code, reason: "Wrong item received", details: "Need another size please", items: [item] }
+    const refundParsed = requestReturnSchema.parse(baseReq)
+    expect(refundParsed.resolutionType).toBe("refund")
+    expect(requestReturnSchema.safeParse({ ...baseReq, resolutionType: "exchange" }).success).toBe(false)
+    expect(requestReturnSchema.safeParse({ ...baseReq, resolutionType: "exchange", exchangePreference: "A" }).success).toBe(false)
+    expect(
+      requestReturnSchema.safeParse({
+        ...baseReq,
+        resolutionType: "exchange",
+        exchangePreference: "Exchange with Size M in Terracotta",
+      }).success
+    ).toBe(true)
+  })
 })

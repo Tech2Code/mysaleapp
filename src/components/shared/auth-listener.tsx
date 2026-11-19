@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, useEffect } from "react"
+import { toast } from "sonner"
 import { getMyProfile } from "@/features/account/actions"
 import { syncWishlist } from "@/features/wishlist/actions"
 import { getBrowserSupabase } from "@/lib/supabase/client"
@@ -78,6 +79,9 @@ function runBackgroundAccountSync(userId: string, skipWishlist = false) {
         email: profile.email || undefined,
         avatarUrl: profile.avatarUrl ?? undefined,
       })
+      if (profile.reactivated) {
+        toast.success("Welcome back! Your deactivated account has been restored.")
+      }
     }
     if (wishRes && wishRes.ok) {
       const nowIds = useWishlist.getState().ids

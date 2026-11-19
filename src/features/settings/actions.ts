@@ -7,7 +7,7 @@ import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { SETTINGS_TAG } from "./queries"
-import { storeSettingsSchema } from "./schema"
+import { createPromoCodeSchema, deletePromoCodeSchema, storeSettingsSchema, togglePromoCodeSchema } from "./schema"
 
 export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   const auth = await assertAdmin()
@@ -77,5 +77,117 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   // The name, contact details etc. appear on every page, so refresh the whole site.
   updateTag(SETTINGS_TAG)
   revalidatePath("/", "layout")
+  return { ok: true }
+}
+
+export async function createPromoCode(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = createPromoCodeSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Please fix the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
+  }
+  const p = parsed.data
+
+  const supabase = await getServerSupabase()
+  const { data: created, error } = await supabase
+    .from("promo_codes")
+    .insert({
+      code: p.code,
+      description: p.description,
+      discount_type: p.discountType,
+      discount_value: p.discountValue,
+      min_order_amount: p.minOrderAmount,
+      max_discount_amount: p.discountType === "percent" ? p.maxDiscountAmount : null,
+      max_uses: p.maxUses,
+      expires_at: p.expiresAt,
+      is_active: true,
+    })
+    .select("id, code")
+    .maybeSingle<{ id: string; code: string }>()
+
+  if (error) {
+    if (error.code === "23505" || error.message.toLowerCase().includes("duplicate") || error.message.toLowerCase().includes("unique")) {
+      return fail("That promo code already exists.", { code: ["A promo code with this code already exists"] })
+    }
+    return fail("Could not create promo code. Please try again.")
+  }
+
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "promo_code.create",
+    targetType: "settings",
+    targetId: created?.id ?? p.code,
+    metadata: {
+      code: p.code,
+      discountType: p.discountType,
+      discountValue: p.discountValue,
+      minOrderAmount: p.minOrderAmount,
+    },
+  })
+
+  revalidatePath("/admin/settings")
+  revalidatePath("/checkout")
+  return { ok: true }
+}
+
+export async function togglePromoCode(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = togglePromoCodeSchema.safeParse(input)
+  if (!parsed.success) return fail("Invalid promo code request.")
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase
+    .from("promo_codes")
+    .update({ is_active: parsed.data.isActive, updated_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .select("id, code")
+    .maybeSingle<{ id: string; code: string }>()
+
+  if (error || !data) return fail("Could not update promo code status.")
+
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: parsed.data.isActive ? "promo_code.enable" : "promo_code.disable",
+    targetType: "settings",
+    targetId: data.id,
+    metadata: { code: data.code, isActive: parsed.data.isActive },
+  })
+
+  revalidatePath("/admin/settings")
+  revalidatePath("/checkout")
+  return { ok: true }
+}
+
+export async function deletePromoCode(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+
+  const parsed = deletePromoCodeSchema.safeParse(input)
+  if (!parsed.success) return fail("Invalid promo code request.")
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase
+    .from("promo_codes")
+    .delete()
+    .eq("id", parsed.data.id)
+    .select("id, code")
+    .maybeSingle<{ id: string; code: string }>()
+
+  if (error || !data) return fail("Could not delete promo code.")
+
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "promo_code.delete",
+    targetType: "settings",
+    targetId: data.id,
+    metadata: { code: data.code },
+  })
+
+  revalidatePath("/admin/settings")
+  revalidatePath("/checkout")
   return { ok: true }
 }

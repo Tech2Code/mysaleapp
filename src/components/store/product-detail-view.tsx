@@ -1,14 +1,14 @@
-import { CheckCircle2Icon, HandHeartIcon, InfoIcon, ShieldCheckIcon, TruckIcon } from "lucide-react"
+import { CheckCircle2Icon, HandHeartIcon, InfoIcon, ShieldCheckIcon, StarIcon, TruckIcon } from "lucide-react"
 import { Accordion, AccordionItem } from "@/components/shared/accordion"
 import { FadeIn } from "@/components/shared/motion"
 import { ReadMore } from "@/components/shared/read-more"
 import { Breadcrumbs } from "@/components/store/page-header"
-import { ProductActions } from "@/components/store/product-actions"
+import { ProductActions, ProductReviewsSection } from "@/components/store/product-actions"
 import { ProductGallery } from "@/components/store/product-gallery"
 import { ProductGrid } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
 import { describeProductSurcharges } from "@/features/orders/pricing"
-import type { Product, ProductCardData } from "@/features/products/types"
+import type { Product, ProductCardData, ProductReview } from "@/features/products/types"
 import { priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
 import { discountPercent, formatPrice } from "@/lib/format"
@@ -29,7 +29,17 @@ export function productCrumbs(product: Pick<Product, "name" | "category">): { na
  * the right scrolls — buy box, perks, about, specs, FAQ. Because the photos follow the reader, the left side
  * never shows a gap, whatever the text length. On phones it is a single column.
  */
-export function ProductDetailView({ product, related, settings }: { product: Product; related: ProductCardData[]; settings: StoreSettings }) {
+export function ProductDetailView({
+  product,
+  related,
+  settings,
+  reviews = [],
+}: {
+  product: Product
+  related: ProductCardData[]
+  settings: StoreSettings
+  reviews?: ProductReview[]
+}) {
   const off = discountPercent(product.price, product.compareAtPrice)
   const taxNote = priceNote(settings)
   const surcharges = describeProductSurcharges(product, settings)
@@ -79,6 +89,17 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
             {off && (
               <span data-ui="store/ProductDetailView/span-3" className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">Save {off}%</span>
             )}
+            {(product.reviewCount ?? 0) > 0 && (
+              <a
+                data-ui="store/ProductDetailView/a-inline-flex"
+                href="#customer-reviews"
+                className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs font-semibold text-foreground transition-colors hover:border-primary/40"
+              >
+                <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                <span data-ui="store/ProductDetailView/span-4" className="tabular-nums">{Number(product.ratingAvg ?? 0).toFixed(1)}</span>
+                <span data-ui="store/ProductDetailView/span-5" className="text-muted-foreground">({product.reviewCount})</span>
+              </a>
+            )}
           </div>
           {taxNote && <p data-ui="store/ProductDetailView/p-2" className="mt-1 text-xs text-muted-foreground">{taxNote}</p>}
 
@@ -103,10 +124,10 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
               <ul data-ui="store/ProductDetailView/ul" className="mt-2 space-y-2">
                 {surcharges.map((f, idx) => (
                   <li data-ui="store/ProductDetailView/li" key={`${idx}-${f.label}`}>
-                    <span data-ui="store/ProductDetailView/span-4" className="font-medium">
+                    <span data-ui="store/ProductDetailView/span-6" className="font-medium">
                       {f.label}: {formatPrice(f.amount)}
                     </span>
-                    <span data-ui="store/ProductDetailView/span-5" className="block text-muted-foreground">{f.reason}</span>
+                    <span data-ui="store/ProductDetailView/span-7" className="block text-muted-foreground">{f.reason}</span>
                   </li>
                 ))}
               </ul>
@@ -169,6 +190,8 @@ export function ProductDetailView({ product, related, settings }: { product: Pro
           </div>
         </FadeIn>
       </div>
+
+      <ProductReviewsSection product={product} initialReviews={reviews} />
 
       {related.length > 0 && (
         <section data-ui="store/ProductDetailView/section-3" className="container-page mt-12 sm:mt-24" aria-labelledby="related-title">

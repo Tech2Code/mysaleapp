@@ -71,3 +71,21 @@ export type StoreSettings = {
   /** Name shown in the customer's UPI app when paying. */
   upiPayeeName: string | null
 }
+
+export type PromoDiscountType = "percent" | "flat"
+
+export type PromoCode = {
+  id: string
+  code: string
+  description: string | null
+  discountType: PromoDiscountType
+  discountValue: number
+  minOrderAmount: number
+  maxDiscountAmount: number | null
+  maxUses: number | null
+  usedCount: number
+  isActive: boolean
+  /** ISO date YYYY-MM-DD in IST, or null for no expiry. */
+  expiresAt: string | null
+  createdAt: string
+}

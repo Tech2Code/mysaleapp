@@ -164,7 +164,7 @@ export function ProductBrowser({
 
   return (
     <div data-ui="store/ProductBrowser">
-      <div ref={barRef} data-ui="store/ProductBrowser/div" className="sticky-store-flush z-20 -mx-4 mb-8 space-y-3 px-4 py-3 glass sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div ref={barRef} data-ui="store/ProductBrowser/div" className="sticky-store-flush z-20 mx-[calc(50%-50vw)] mb-8 space-y-3 border-b border-border/60 px-[calc(50vw-50%)] py-3 glass [body:has(&)]:overflow-x-clip">
         <div data-ui="store/ProductBrowser/div-flex" className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <SearchField
             label="Search products"

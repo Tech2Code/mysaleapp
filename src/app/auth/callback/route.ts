@@ -26,15 +26,29 @@ export async function GET(request: NextRequest) {
   const next = safeNextPath(searchParams.get("next"), "/")
   const nextPathname = next.split("?")[0]
   const isAdminNext = nextPathname === "/admin" || nextPathname.startsWith("/admin/")
+  const isCustomerRecovery = !isAdminNext && (next.includes("mode=reset-password") || otpType === "recovery")
 
-  const finishSuccess = (target: string, isRecovery: boolean) => {
+  const finishSuccess = (target: string, isAdminRecovery: boolean) => {
     const targetUrl = new URL(target, base)
     if (otpType === "email_change" && (targetUrl.pathname === "/admin/account" || targetUrl.pathname === "/account/profile")) {
       targetUrl.searchParams.set("email_changed", "1")
     }
+    if (isCustomerRecovery && targetUrl.pathname !== "/login") {
+      targetUrl.pathname = "/login"
+      targetUrl.searchParams.set("mode", "reset-password")
+    }
     const response = NextResponse.redirect(targetUrl)
-    if (isRecovery) {
+    if (isAdminRecovery) {
       response.cookies.set("kk_pw_reset", "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 900,
+        path: "/",
+      })
+    }
+    if (isCustomerRecovery) {
+      response.cookies.set("kk_cust_pw_reset", "1", {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -73,14 +87,14 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       await syncProfileFromMetadata(supabase)
-      return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+      return finishSuccess(next, isAdminNext && (nextPathname === "/admin/reset-password" || otpType === "recovery"))
     }
   } else if (tokenHash && isOtpType(otpType)) {
     const supabase = await getServerSupabase()
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType })
     if (!error) {
       await syncProfileFromMetadata(supabase)
-      return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+      return finishSuccess(next, isAdminNext && (nextPathname === "/admin/reset-password" || otpType === "recovery"))
     }
   }
 
@@ -97,6 +111,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/forgot-password?error=expired", base))
     }
     return NextResponse.redirect(new URL("/admin/login", base))
+  }
+
+  if (isCustomerRecovery) {
+    return NextResponse.redirect(new URL("/login?mode=forgot&error=expired", base))
   }
 
   if (oauthError) {

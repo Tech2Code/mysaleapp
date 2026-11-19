@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { demoProducts } from "./demo-data"
-import { productSchema } from "./schema"
+import { productReviewSchema, productSchema } from "./schema"
 import { buildSearchText, parseSearchQuery, scoreProductSearch } from "./types"
 
 const base = {
@@ -126,5 +126,36 @@ describe("smart product search (parseSearchQuery & scoreProductSearch)", () => {
     const parsed = parseSearchQuery("iphone 16 charger")
     const hits = indexed.filter((p) => scoreProductSearch(p, parsed) !== null)
     expect(hits).toHaveLength(0)
+  })
+})
+
+describe("productReviewSchema", () => {
+  it("validates 1..5 integer star ratings and comment length", () => {
+    const valid = productReviewSchema.safeParse({
+      productId: "00000000-0000-4000-8000-000000000001",
+      rating: 5,
+      title: "  Lovely finish ",
+      comment: "Great handmade quality and arrived well packed!",
+    })
+    expect(valid.success).toBe(true)
+    if (valid.success) {
+      expect(valid.data.title).toBe("Lovely finish")
+    }
+
+    expect(
+      productReviewSchema.safeParse({
+        productId: "00000000-0000-4000-8000-000000000001",
+        rating: 6,
+        comment: "Valid comment",
+      }).success
+    ).toBe(false)
+
+    expect(
+      productReviewSchema.safeParse({
+        productId: "00000000-0000-4000-8000-000000000001",
+        rating: 4,
+        comment: "Hi",
+      }).success
+    ).toBe(false)
   })
 })

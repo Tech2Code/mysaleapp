@@ -28,11 +28,9 @@ export function AdminLoginForm() {
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
   const [error, setError] = useState<string | null>(
-    params.get("error") === "not-admin"
-      ? "This account doesn't have admin access."
-      : params.get("reason") === "session-expired"
-        ? "Your 7-day admin session has expired. Please sign in again."
-        : null
+    params.get("reason") === "session-expired"
+      ? "Your 7-day admin session has expired. Please sign in again."
+      : null
   )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
 

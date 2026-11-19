@@ -687,6 +687,8 @@ const createRequestSchema = z.object({
     .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
   reason: v.reason(),
   details: v.note(LIMITS.returnDetail.max).optional(),
+  resolutionType: z.enum(["refund", "exchange"]).default("refund"),
+  exchangePreference: v.note(200).optional(),
 })
 
 /**
@@ -698,9 +700,12 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
   if (!auth.ok) return fail(auth.error)
   const parsed = createRequestSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
-  const { orderId, items, reason, details } = parsed.data
+  const { orderId, items, reason, details, resolutionType, exchangePreference } = parsed.data
   if (!details || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)) {
     return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
+  }
+  if (resolutionType === "exchange" && (!exchangePreference || exchangePreference.trim().length < 2)) {
+    return fail("Enter the customer's exchange preference.", { exchangePreference: ["Enter the preferred size, colour, or replacement note"] })
   }
 
   const supabase = await getServerSupabase()
@@ -709,6 +714,8 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
     p_items: items,
     p_reason: reason,
     p_details: details ?? null,
+    p_resolution_type: resolutionType,
+    p_exchange_preference: resolutionType === "exchange" ? (exchangePreference ?? null) : null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not create the return request"))
   await logAdminAction(supabase, {
@@ -716,7 +723,7 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
     action: "return_request.create_as_admin",
     targetType: "order",
     targetId: orderId,
-    metadata: { reason },
+    metadata: { reason, resolutionType },
   })
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()

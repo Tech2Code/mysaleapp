@@ -1,5 +1,6 @@
 import { CreditCardIcon } from "lucide-react"
 import Link from "next/link"
+import { OrderItemReviewWidget } from "@/components/store/product-actions"
 import { ProductImage } from "@/components/store/product-image"
 import { isAwaitingPayment, paymentDisplay, type OrderItem, type OrderPayment, type OrderPricing, type OrderStatus } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
@@ -51,23 +52,28 @@ export function OrderSummary({
 
       <ul data-ui="shared/OrderSummary/ul" className="mt-4 divide-y">
         {order.items.map((item) => (
-          <li data-ui="shared/OrderSummary/li-flex" key={item.productId} className="flex gap-3 py-3 first:pt-0">
-            <Link data-ui="shared/OrderSummary/Link-relative"
-              href={`/products/${item.slug}`}
-              {...linkProps}
-              className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted @container"
-            >
-              <ProductImage src={item.image} alt={item.name} sizes="64px" />
-            </Link>
-            <div data-ui="shared/OrderSummary/div" className="min-w-0 flex-1">
-              <Link data-ui="shared/OrderSummary/Link" href={`/products/${item.slug}`} {...linkProps} className="line-clamp-2 text-sm font-semibold hover:text-primary">
-                {item.name}
+          <li data-ui="shared/OrderSummary/li" key={item.productId} className="py-3 first:pt-0">
+            <div data-ui="shared/OrderSummary/div-flex" className="flex gap-3">
+              <Link data-ui="shared/OrderSummary/Link-relative"
+                href={`/products/${item.slug}`}
+                {...linkProps}
+                className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted @container"
+              >
+                <ProductImage src={item.image} alt={item.name} sizes="64px" />
               </Link>
-              <p data-ui="shared/OrderSummary/p" className="mt-0.5 text-xs text-muted-foreground">
-                {formatPrice(item.price)} × {item.quantity}
-              </p>
+              <div data-ui="shared/OrderSummary/div" className="min-w-0 flex-1">
+                <Link data-ui="shared/OrderSummary/Link" href={`/products/${item.slug}`} {...linkProps} className="line-clamp-2 text-sm font-semibold hover:text-primary">
+                  {item.name}
+                </Link>
+                <p data-ui="shared/OrderSummary/p" className="mt-0.5 text-xs text-muted-foreground">
+                  {formatPrice(item.price)} × {item.quantity}
+                </p>
+              </div>
+              <p data-ui="shared/OrderSummary/p-2" className="text-sm font-semibold">{formatPrice(item.price * item.quantity)}</p>
             </div>
-            <p data-ui="shared/OrderSummary/p-2" className="text-sm font-semibold">{formatPrice(item.price * item.quantity)}</p>
+            {audience === "customer" && order.status === "delivered" && !item.productId.startsWith("ph-") && (
+              <OrderItemReviewWidget item={item} />
+            )}
           </li>
         ))}
       </ul>
@@ -77,12 +83,14 @@ export function OrderSummary({
         shippingFee={order.shippingFee}
         shippingFeeOriginal={order.shippingFeeOriginal}
         extraFees={order.extraFees}
+        promoCode={order.promoCode}
+        discountAmount={order.discountAmount}
         total={order.total}
         totalLabel="Total paid / payable"
         className="mt-2 border-t pt-4"
       />
 
-      <div data-ui="shared/OrderSummary/div-flex" className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-muted/60 p-3 text-sm">
+      <div data-ui="shared/OrderSummary/div-flex-2" className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-muted/60 p-3 text-sm">
         <span data-ui="shared/OrderSummary/span-flex" className="flex items-center gap-2 text-muted-foreground">
           <CreditCardIcon className="size-4" aria-hidden /> Payment
         </span>

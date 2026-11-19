@@ -2,12 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
+  ArrowLeftIcon,
   HeartIcon,
+  KeyRoundIcon,
   Loader2Icon,
   LogInIcon,
   MailCheckIcon,
   MapPinIcon,
   PackageIcon,
+  SendIcon,
   SparklesIcon,
   TruckIcon,
   UserCheckIcon,
@@ -24,7 +27,12 @@ import { applyClientSignIn } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { LogoMark } from "@/components/shared/logo"
 import { Button } from "@/components/ui/button"
-import { signInCustomer, signUpCustomer } from "@/features/auth/actions"
+import {
+  requestCustomerPasswordReset,
+  resetCustomerPassword,
+  signInCustomer,
+  signUpCustomer,
+} from "@/features/auth/actions"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { safeNextPath } from "@/lib/safe-redirect"
@@ -53,6 +61,24 @@ const signUpSchema = z
 
 type SignInValues = z.infer<typeof signInSchema>
 type SignUpValues = z.input<typeof signUpSchema>
+
+const forgotSchema = z.object({
+  email: v.email(),
+})
+type ForgotValues = z.infer<typeof forgotSchema>
+
+const resetPasswordSchema = z
+  .object({
+    next: v.newPassword(),
+    confirm: z.string(),
+  })
+  .refine((d) => d.next === d.confirm, {
+    message: "Passwords don't match",
+    path: ["confirm"],
+  })
+type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
+
+type AuthMode = "signin" | "signup" | "forgot" | "reset-password"
 
 const SIGN_IN_PERKS = [
   { icon: PackageIcon, title: "Live order tracking", text: "Check real-time status and courier updates in one place." },
@@ -92,13 +118,17 @@ function GoogleIcon() {
 function SearchParamsSync({
   onParams,
 }: {
-  onParams: (nextPath: string, errorParam: string | null, initialMode: "signin" | "signup") => void
+  onParams: (nextPath: string, errorParam: string | null, initialMode: AuthMode) => void
 }) {
   const params = useSearchParams()
   useEffect(() => {
     const nextPath = safeNextPath(params.get("next"), "/")
     const errorParam = params.get("error")
-    const initialMode = params.get("mode") === "signup" ? "signup" : "signin"
+    const rawMode = params.get("mode")
+    const initialMode: AuthMode =
+      rawMode === "signup" || rawMode === "forgot" || rawMode === "reset-password"
+        ? rawMode
+        : "signin"
     onParams(nextPath, errorParam, initialMode)
   }, [params, onParams])
   return null
@@ -107,7 +137,7 @@ function SearchParamsSync({
 export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) {
   const router = useRouter()
   const { user, ready } = useAuth()
-  const [mode, setMode] = useState<"signin" | "signup">("signin")
+  const [mode, setMode] = useState<AuthMode>("signin")
   const [next, setNext] = useState("/")
   const [problem, setProblem] = useState<string | null>(null)
   const [loadingGoogle, setLoadingGoogle] = useState(false)
@@ -117,6 +147,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const later = useToastAfter(pending)
   const [formError, setFormError] = useState<string | null>(null)
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null)
+  const [resetLinkSentTo, setResetLinkSentTo] = useState<string | null>(null)
   const submittingRef = useRef(false)
 
   const signInForm = useForm<SignInValues>({
@@ -129,16 +160,30 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     defaultValues: { fullName: "", phone: "", email: "", password: "", confirmPassword: "" },
   })
 
+  const forgotForm = useForm<ForgotValues>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { email: "" },
+  })
+
+  const resetForm = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { next: "", confirm: "" },
+  })
+
   const resolveNext = useCallback(() => {
     if (typeof window === "undefined") return next
     return safeNextPath(new URLSearchParams(window.location.search).get("next"), next)
   }, [next])
 
   useEffect(() => {
-    if (ready && user && !pending && !submittingRef.current) {
+    if (typeof window !== "undefined") {
+      const urlMode = new URLSearchParams(window.location.search).get("mode")
+      if (urlMode === "reset-password") return
+    }
+    if (ready && user && mode !== "reset-password" && !pending && !submittingRef.current) {
       router.replace(resolveNext())
     }
-  }, [ready, user, pending, router, resolveNext])
+  }, [ready, user, mode, pending, router, resolveNext])
 
   // Pressing Back from Google's screen restores this page exactly as it was, spinner included. Reset it.
   useEffect(() => {
@@ -158,17 +203,28 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       submittingRef.current = false
       signInForm.reset({ email: "", password: "" })
       signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
+      forgotForm.reset({ email: "" })
+      resetForm.reset({ next: "", confirm: "" })
       setFormError(null)
       setConfirmationEmail(null)
+      setResetLinkSentTo(null)
       setLoadingGoogle(false)
       setMode("signin")
     }
-  }, [signInForm, signUpForm])
+  }, [signInForm, signUpForm, forgotForm, resetForm])
 
-  const switchMode = (nextMode: "signin" | "signup") => {
+  const switchMode = (nextMode: AuthMode) => {
+    if (nextMode === "forgot") {
+      const currentEmail = signInForm.getValues("email").trim()
+      if (currentEmail && !forgotForm.getValues("email")) {
+        forgotForm.setValue("email", currentEmail)
+      }
+    }
     setMode(nextMode)
     setFormError(null)
+    setProblem(null)
     setConfirmationEmail(null)
+    setResetLinkSentTo(null)
   }
 
   const onSignIn = (e: React.FormEvent<HTMLFormElement>) => {
@@ -192,7 +248,13 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
         signInForm.reset({ email: "", password: "" })
         applyClientSignIn(res.data.user, res.data.wishlistIds)
         showSuccess("Signed in")
-        later(() => toast.success("Signed in successfully"))
+        later(() =>
+          toast.success(
+            res.data.reactivated
+              ? "Welcome back! Your deactivated account has been restored."
+              : "Signed in successfully"
+          )
+        )
         router.replace(resolveNext())
       })
     })(e)
@@ -240,6 +302,54 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     })(e)
   }
 
+  const onForgotPassword = (e: React.FormEvent<HTMLFormElement>) => {
+    void forgotForm.handleSubmit((values) => {
+      startTransition(async () => {
+        setFormError(null)
+        const res = await requestCustomerPasswordReset({
+          email: values.email,
+          next: resolveNext(),
+        })
+        if (!res.ok) {
+          for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+            if (msgs?.[0] && field === "email") {
+              forgotForm.setError("email", { message: msgs[0] })
+            }
+          }
+          setFormError(res.error)
+          return
+        }
+        setResetLinkSentTo(values.email)
+        later(() => toast.success("Password reset link sent"))
+      })
+    })(e)
+  }
+
+  const onResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
+    void resetForm.handleSubmit((values) => {
+      submittingRef.current = true
+      startTransition(async () => {
+        setFormError(null)
+        const res = await resetCustomerPassword(values)
+        if (!res.ok) {
+          submittingRef.current = false
+          for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+            if (msgs?.[0] && (field === "next" || field === "confirm")) {
+              resetForm.setError(field, { message: msgs[0] })
+            }
+          }
+          setFormError(res.error)
+          return
+        }
+        resetForm.reset({ next: "", confirm: "" })
+        applyClientSignIn(res.data.user)
+        showSuccess("Password updated")
+        later(() => toast.success("Your password has been updated."))
+        router.replace(resolveNext())
+      })
+    })(e)
+  }
+
   const signInWithGoogle = async () => {
     const supabase = getBrowserSupabase()
     if (!supabase) {
@@ -270,7 +380,9 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           onParams={(nextPath, errorParam, initialMode) => {
             setNext(nextPath)
             setProblem(errorParam)
-            setMode((prev) => (initialMode === "signup" ? "signup" : prev))
+            if (initialMode !== "signin") {
+              setMode(initialMode)
+            }
           }}
         />
       </Suspense>
@@ -362,7 +474,9 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             <p data-ui="store/GoogleSignIn/p-5" role="alert" className="rounded-xl bg-muted p-3 text-sm">
               {problem === "cancelled"
                 ? "Sign-in was cancelled, so you're not signed in yet. You can try again whenever you like."
-                : "We couldn't sign you in this time. Please try again."}
+                : problem === "expired"
+                  ? "That password reset link has expired or was already used. Request a new one below."
+                  : "We couldn't sign you in this time. Please try again."}
             </p>
           )}
 
@@ -382,7 +496,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           )}
 
           {mode === "signin" ? (
-            <form data-ui="store/GoogleSignIn/form" onSubmit={onSignIn} noValidate className="space-y-2.5">
+            <form key="signin" data-ui="store/GoogleSignIn/form" onSubmit={onSignIn} noValidate className="space-y-2.5">
               <TextField
                 label="Email"
                 kind="email"
@@ -399,6 +513,16 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 error={signInForm.formState.errors.password?.message}
                 {...signInForm.register("password")}
               />
+              <div data-ui="store/GoogleSignIn/div-flex-3" className="flex justify-end pt-0.5 text-xs">
+                <button
+                  data-ui="store/GoogleSignIn/button-forgot-password"
+                  type="button"
+                  onClick={() => switchMode("forgot")}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Button
                 data-ui="store/GoogleSignIn/Button-sign-in"
                 type="submit"
@@ -410,8 +534,92 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 Sign in
               </Button>
             </form>
+          ) : mode === "forgot" ? (
+            resetLinkSentTo ? (
+              <div data-ui="store/GoogleSignIn/div-4" role="status" className="space-y-3 rounded-2xl bg-success/10 p-4 text-sm">
+                <p data-ui="store/GoogleSignIn/p-flex-2" className="flex items-center gap-2 font-semibold">
+                  <MailCheckIcon className="size-4 text-success" aria-hidden /> Check your inbox
+                </p>
+                <p data-ui="store/GoogleSignIn/p-7">
+                  If an account exists for <span data-ui="store/GoogleSignIn/span-4" className="font-semibold">{resetLinkSentTo}</span>, a password reset link is on its way. Open the link in your email to choose a new password.
+                </p>
+                <Button data-ui="store/GoogleSignIn/Button-back-to-sign-in"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => switchMode("signin")}
+                  className="rounded-full"
+                >
+                  <ArrowLeftIcon className="size-3.5" /> Back to sign in
+                </Button>
+              </div>
+            ) : (
+              <form key="forgot" data-ui="store/GoogleSignIn/form-2" onSubmit={onForgotPassword} noValidate className="space-y-2.5">
+                <p data-ui="store/GoogleSignIn/p-8" className="text-xs text-muted-foreground">
+                  Enter the email address for your account and we&apos;ll send you a link to reset your password.
+                </p>
+                <TextField
+                  label="Email"
+                  kind="email"
+                  type="email"
+                  autoComplete="email"
+                  error={forgotForm.formState.errors.email?.message}
+                  {...forgotForm.register("email")}
+                />
+                <Button
+                  data-ui="store/GoogleSignIn/Button-send-reset-link"
+                  type="submit"
+                  size="lg"
+                  disabled={pending || loadingGoogle}
+                  className="mt-1 h-11 w-full gap-2 rounded-full"
+                >
+                  {pending ? <Loader2Icon className="size-4 animate-spin" /> : <SendIcon className="size-4" />}
+                  Send reset link
+                </Button>
+                <button data-ui="store/GoogleSignIn/button-back-to-sign-in"
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="flex w-full items-center justify-center gap-1.5 pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeftIcon className="size-3.5" /> Back to sign in
+                </button>
+              </form>
+            )
+          ) : mode === "reset-password" ? (
+            <form key="reset-password" data-ui="store/GoogleSignIn/form-3" onSubmit={onResetPassword} noValidate className="space-y-2.5">
+              <p data-ui="store/GoogleSignIn/p-9" className="text-xs text-muted-foreground">
+                Choose a new password for your account. You&apos;ll be signed in right after.
+              </p>
+              <TextField
+                label="New password"
+                type="password"
+                maxLength={LIMITS.password.max}
+                autoComplete="new-password"
+                hint={`At least ${LIMITS.newPassword.min} characters, with a letter and a number.`}
+                error={resetForm.formState.errors.next?.message}
+                {...resetForm.register("next")}
+              />
+              <TextField
+                label="Confirm new password"
+                type="password"
+                maxLength={LIMITS.password.max}
+                autoComplete="new-password"
+                error={resetForm.formState.errors.confirm?.message}
+                {...resetForm.register("confirm")}
+              />
+              <Button
+                data-ui="store/GoogleSignIn/Button-save-new-password"
+                type="submit"
+                size="lg"
+                disabled={pending}
+                className="mt-1 h-11 w-full gap-2 rounded-full"
+              >
+                {pending ? <Loader2Icon className="size-4 animate-spin" /> : <KeyRoundIcon className="size-4" />}
+                Save new password
+              </Button>
+            </form>
           ) : (
-            <form data-ui="store/GoogleSignIn/form-2" onSubmit={onSignUp} noValidate className="space-y-2">
+            <form key="signup" data-ui="store/GoogleSignIn/form-4" onSubmit={onSignUp} noValidate className="space-y-2">
               <div data-ui="store/GoogleSignIn/div-grid" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
                 <TextField
                   label="Full name"
@@ -457,7 +665,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                   {...signUpForm.register("confirmPassword")}
                 />
               </div>
-              <p data-ui="store/GoogleSignIn/p-7" className="text-[0.72rem] text-muted-foreground">
+              <p data-ui="store/GoogleSignIn/p-10" className="text-[0.72rem] text-muted-foreground">
                 Use at least {LIMITS.newPassword.min} characters with a letter and a number.
               </p>
               <Button
@@ -473,10 +681,10 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             </form>
           )}
 
-          <div data-ui="store/GoogleSignIn/div-flex-3" className="relative flex items-center py-1">
-            <div data-ui="store/GoogleSignIn/div-4" className="grow border-t border-border/70" />
-            <span data-ui="store/GoogleSignIn/span-4" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
+          <div data-ui="store/GoogleSignIn/div-flex-4" className="relative flex items-center py-1">
             <div data-ui="store/GoogleSignIn/div-5" className="grow border-t border-border/70" />
+            <span data-ui="store/GoogleSignIn/span-5" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
+            <div data-ui="store/GoogleSignIn/div-6" className="grow border-t border-border/70" />
           </div>
 
           <Button
@@ -492,7 +700,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             {loadingGoogle ? "Opening Google…" : "Continue with Google"}
           </Button>
 
-          <p data-ui="store/GoogleSignIn/p-8" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
+          <p data-ui="store/GoogleSignIn/p-11" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
             Signing in is optional —{" "}
             <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a--2" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
               browse &amp; order as a guest

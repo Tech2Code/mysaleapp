@@ -1,9 +1,11 @@
 import "server-only"
 import { cacheLife, cacheTag } from "next/cache"
+import { requireAdmin } from "@/features/auth/guards"
 import { getPublicSupabase } from "@/lib/supabase/public"
+import { getServerSupabase } from "@/lib/supabase/server"
 import { formatPhoneDisplay } from "@/lib/format"
 import { DEFAULT_SETTINGS } from "./defaults"
-import type { StoreSettings } from "./types"
+import type { PromoCode, PromoDiscountType, StoreSettings } from "./types"
 
 export const SETTINGS_TAG = "settings"
 
@@ -106,4 +108,47 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     upiId: data.upi_id,
     upiPayeeName: data.upi_payee_name,
   }
+}
+
+type PromoCodeRow = {
+  id: string
+  code: string
+  description: string | null
+  discount_type: PromoDiscountType
+  discount_value: number | string
+  min_order_amount: number | string
+  max_discount_amount: number | string | null
+  max_uses: number | null
+  used_count: number
+  is_active: boolean
+  expires_at: string | null
+  created_at: string
+}
+
+export async function listPromoCodes(): Promise<PromoCode[]> {
+  const adminCheck = requireAdmin()
+  const supabase = await getServerSupabase()
+  const [, { data, error }] = await Promise.all([
+    adminCheck,
+    supabase
+      .from("promo_codes")
+      .select("id, code, description, discount_type, discount_value, min_order_amount, max_discount_amount, max_uses, used_count, is_active, expires_at, created_at")
+      .order("created_at", { ascending: false })
+      .returns<PromoCodeRow[]>(),
+  ])
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    code: r.code,
+    description: r.description,
+    discountType: r.discount_type,
+    discountValue: Number(r.discount_value),
+    minOrderAmount: Number(r.min_order_amount ?? 0),
+    maxDiscountAmount: r.max_discount_amount == null ? null : Number(r.max_discount_amount),
+    maxUses: r.max_uses,
+    usedCount: Number(r.used_count ?? 0),
+    isActive: Boolean(r.is_active),
+    expiresAt: r.expires_at,
+    createdAt: r.created_at,
+  }))
 }

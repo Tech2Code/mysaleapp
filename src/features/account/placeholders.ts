@@ -3,7 +3,13 @@ import type { Profile } from "./schema"
 
 /** Placeholder data for loading states (see components/shared/skeletonize.tsx). */
 
-export const placeholderProfile = (): Profile => ({ fullName: "Customer name", phone: "9876543210", avatarUrl: null, email: "customer@example.com" })
+export const placeholderProfile = (): Profile => ({
+  fullName: "Customer name",
+  phone: "9876543210",
+  avatarUrl: null,
+  email: "customer@example.com",
+  hasPassword: true,
+})
 
 export const placeholderAddresses = (n = 2): Address[] =>
   Array.from({ length: n }, (_, i) => ({

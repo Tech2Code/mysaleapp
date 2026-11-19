@@ -1,6 +1,6 @@
 # Kalakriti: handmade gifts store
 
-A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns, refunds, and store settings, email/password & Google login for customers, saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
+A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns/exchanges, refunds, promo codes/coupons, and store settings (with a 7-day admin session + 12-hour 4-digit Quick PIN lock), verified customer product reviews & star ratings, email/password & Google login for customers (with password change/reset and self-service account deactivation + automatic recovery on login), saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
 
 | | |
 |---|---|
@@ -29,7 +29,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0051_admin_audit_and_guards.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0056_account_deactivation.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -126,11 +126,15 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
    - **Admin cancel:** Admins can cancel while `pending`, `confirmed`, or `packed`.
    - **Auto-cancel (`pg_cron`):** Unpaid orders (`pending` / `failed`) older than `unpaid_order_expiry_hours` are automatically cancelled every 15 minutes by `expire_unpaid_orders()`.
    - **Automatic stock restore:** Cancelling an order automatically restores reserved stock via the `orders_restock_on_cancel` trigger. If the customer had already paid (or submitted a UTR before cancellation), the order appears under **Refund due** so the admin can verify/refund it.
-5. **Returns & Refunds (Myntra-style 4-step flow).**
-   - Within `return_window_days` of delivery, customers can request a return for specific items and quantities.
-   - **Step 1 (Requested) → Step 2 (Approved + Pickup date) → Step 2b (Pickup successful) → Step 3 (Goods received & restocked) → Step 4 (Refunded).**
-   - Returns refund **item value only** (delivery and handling charges are non-refundable and clearly itemised). Admins can also initiate a return on a customer's behalf or undo a return step if clicked by mistake.
-6. **Customer & Guest Tracking.** Signed-in customers manage orders under **My orders** (`/account/orders`) and download printable GST/non-GST invoices. Guests track orders at `/track` using their order code + last 4 phone digits (sensitive details like full address, phone, and UTR prefix are masked for privacy).
+5. **Returns, Exchanges & Refunds (Myntra-style 4-step flow).**
+   - Within `return_window_days` of delivery, customers can request a **Refund** or an **Exchange / Replacement** (specifying preferred size, colour, or replacement piece) for specific items and quantities.
+   - **Step 1 (Requested) → Step 2 (Approved + Pickup date) → Step 2b (Pickup successful) → Step 3 (Goods received & restocked) → Step 4 (Refunded / Replaced).**
+   - Returns refund **item value only** (delivery and handling charges are non-refundable and clearly itemised). Admins can also initiate a return/exchange on a customer's behalf or undo a return step if clicked by mistake.
+6. **Promo Codes, Verified Product Reviews & Account Controls.**
+   - **Promo Codes:** Admins create, enable/disable, or delete percentage or flat discount codes (with min order amount, max discount cap, usage limits, and expiry dates) in **Admin → Settings**; customers apply them at checkout and discounts appear on order summaries and GST invoices.
+   - **Verified Reviews:** Customers who have received a delivered order for a product can rate (1–5 stars) and review it on the product page (with a *Verified purchase* badge, rating distribution bars, and `AggregateRating` SEO schema).
+   - **Account Deactivation & Recovery:** Customers can deactivate their account from `/account/profile` once all active orders and returns are complete; signing back in anytime automatically restores the account.
+7. **Customer & Guest Tracking.** Signed-in customers manage orders under **My orders** (`/account/orders`) and download printable GST/non-GST invoices. Guests track orders at `/track` using their order code + last 4 phone digits (sensitive details like full address, phone, and UTR prefix are masked for privacy).
 
 Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
 
@@ -159,7 +163,7 @@ src/
   lib/                supabase clients, seo helpers, formatting, validation
   store/              Client state (cart, wishlist, auth) with Zustand
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0052) + seed
+supabase/             SQL migrations (0001..0057) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -173,7 +177,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 780 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 789 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

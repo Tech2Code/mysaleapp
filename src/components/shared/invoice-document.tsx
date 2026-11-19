@@ -85,24 +85,34 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
                 <td data-ui="shared/InvoiceDocument/td-4" className="py-3 pl-2 text-right tabular-nums">{formatMoney(i.price * i.quantity)}</td>
               </tr>
             ))}
+            {order.discountAmount && order.discountAmount > 0 ? (
+              <tr data-ui="shared/InvoiceDocument/tr-3" className="border-b text-emerald-700 dark:text-emerald-300 print:text-black">
+                <td data-ui="shared/InvoiceDocument/td-5" className="py-3 pr-2 font-medium" colSpan={3}>
+                  Promo discount{order.promoCode ? ` (${order.promoCode})` : ""}
+                </td>
+                <td data-ui="shared/InvoiceDocument/td-6" className="py-3 pl-2 text-right font-semibold tabular-nums">
+                  -{formatMoney(order.discountAmount)}
+                </td>
+              </tr>
+            ) : null}
             {order.extraFees.map((f, idx) => (
-              <tr data-ui="shared/InvoiceDocument/tr-3" key={`${f.productId ?? "fee"}-${idx}`} className="border-b">
-                <td data-ui="shared/InvoiceDocument/td-5" className="py-3 pr-2" colSpan={3}>
+              <tr data-ui="shared/InvoiceDocument/tr-4" key={`${f.productId ?? "fee"}-${idx}`} className="border-b">
+                <td data-ui="shared/InvoiceDocument/td-7" className="py-3 pr-2" colSpan={3}>
                   {f.label}
                   {f.productName ? ` (${f.productName})` : ""}
                 </td>
-                <td data-ui="shared/InvoiceDocument/td-6" className="py-3 pl-2 text-right tabular-nums">{formatMoney(f.amount)}</td>
+                <td data-ui="shared/InvoiceDocument/td-8" className="py-3 pl-2 text-right tabular-nums">{formatMoney(f.amount)}</td>
               </tr>
             ))}
-            <tr data-ui="shared/InvoiceDocument/tr-4" className="border-b">
-              <td data-ui="shared/InvoiceDocument/td-7" className="py-3 pr-2" colSpan={3}>Delivery</td>
-              <td data-ui="shared/InvoiceDocument/td-8" className="py-3 pl-2 text-right tabular-nums">{order.shippingFee > 0 ? formatMoney(order.shippingFee) : "Free"}</td>
+            <tr data-ui="shared/InvoiceDocument/tr-5" className="border-b">
+              <td data-ui="shared/InvoiceDocument/td-9" className="py-3 pr-2" colSpan={3}>Delivery</td>
+              <td data-ui="shared/InvoiceDocument/td-10" className="py-3 pl-2 text-right tabular-nums">{order.shippingFee > 0 ? formatMoney(order.shippingFee) : "Free"}</td>
             </tr>
           </tbody>
           <tfoot data-ui="shared/InvoiceDocument/tfoot">
-            <tr data-ui="shared/InvoiceDocument/tr-5">
+            <tr data-ui="shared/InvoiceDocument/tr-6">
               <th data-ui="shared/InvoiceDocument/th-total" scope="row" colSpan={3} className="pt-4 pr-2 text-right text-base font-semibold">Total</th>
-              <td data-ui="shared/InvoiceDocument/td-9" className="pt-4 pl-2 text-right text-base font-semibold tabular-nums">{formatMoney(order.total)}</td>
+              <td data-ui="shared/InvoiceDocument/td-11" className="pt-4 pl-2 text-right text-base font-semibold tabular-nums">{formatMoney(order.total)}</td>
             </tr>
           </tfoot>
         </table>

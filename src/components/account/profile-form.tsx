@@ -1,22 +1,32 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, MailCheckIcon } from "lucide-react"
+import { KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, UserXIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { TextField } from "@/components/form"
-import { applyClientProfileUpdate } from "@/components/shared/auth-listener"
+import { SelectField, TextAreaField, TextField } from "@/components/form"
+import { applyClientProfileUpdate, applyClientSignOut } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
-import { updateProfile } from "@/features/account/actions"
-import { profileSchema, type Profile, type ProfileInput } from "@/features/account/schema"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { changeCustomerPassword, deactivateMyAccount, updateProfile } from "@/features/account/actions"
+import {
+  customerPasswordSchema,
+  DEACTIVATION_REASONS,
+  profileSchema,
+  type CustomerPasswordInput,
+  type Profile,
+  type ProfileInput,
+} from "@/features/account/schema"
 import { normalizeIndianPhone } from "@/lib/format"
+import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [visitKey, setVisitKey] = useState(0)
+  const [hasPassword, setHasPassword] = useState(profile.hasPassword ?? true)
   const [saved, setSaved] = useState({
     fullName: profile.fullName,
     email: profile.email,
@@ -27,10 +37,12 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   if (
     profile.fullName !== prevProfile.fullName ||
     profile.email !== prevProfile.email ||
-    profile.phone !== prevProfile.phone
+    profile.phone !== prevProfile.phone ||
+    profile.hasPassword !== prevProfile.hasPassword
   ) {
     setPrevProfile(profile)
     setSaved({ fullName: profile.fullName, email: profile.email, phone: profile.phone })
+    if (profile.hasPassword !== undefined) setHasPassword(profile.hasPassword)
   }
 
   useEffect(() => {
@@ -39,7 +51,10 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       email: profile.email,
       avatarUrl: profile.avatarUrl,
     })
-  }, [profile.fullName, profile.email, profile.avatarUrl])
+    if (profile.reactivated) {
+      toast.success("Welcome back! Your deactivated account has been restored.")
+    }
+  }, [profile.fullName, profile.email, profile.avatarUrl, profile.reactivated])
 
   useLayoutEffect(() => {
     return () => {
@@ -47,7 +62,17 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     }
   }, [])
 
-  return <ProfileFormInner key={visitKey} saved={saved} onSaved={setSaved} />
+  return (
+    <div data-ui="account/ProfileForm" className="space-y-6">
+      <ProfileFormInner key={`details-${visitKey}`} saved={saved} onSaved={setSaved} />
+      <CustomerPasswordForm
+        key={`password-${visitKey}-${hasPassword ? "change" : "set"}`}
+        hasPassword={hasPassword}
+        onPasswordSet={() => setHasPassword(true)}
+      />
+      <DeactivateAccountCard key={`deactivate-${visitKey}`} />
+    </div>
+  )
 }
 
 function ProfileFormInner({
@@ -198,5 +223,261 @@ function ProfileFormInner({
         {pending && <Loader2Icon className="animate-spin" />} Save changes
       </Button>
     </form>
+  )
+}
+
+function CustomerPasswordForm({
+  hasPassword,
+  onPasswordSet,
+}: {
+  hasPassword: boolean
+  onPasswordSet: () => void
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [resetCount, setResetCount] = useState(0)
+  useBlockWhile(pending)
+  const later = useToastAfter(pending)
+
+  const form = useForm<CustomerPasswordInput>({
+    resolver: zodResolver(customerPasswordSchema),
+    defaultValues: {
+      hasPassword,
+      current: "",
+      next: "",
+      confirm: "",
+    },
+  })
+  const { errors } = form.formState
+  const [currentVal, nextVal, confirmVal] = useWatch({
+    control: form.control,
+    name: ["current", "next", "confirm"],
+  })
+
+  const canSubmit = hasPassword
+    ? Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
+    : Boolean(nextVal && confirmVal)
+
+  const onSubmit = form.handleSubmit((values) => {
+    startTransition(async () => {
+      const res = await changeCustomerPassword(values)
+      if (!res.ok) {
+        for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0] && (field === "current" || field === "next" || field === "confirm")) {
+            form.setError(field, { message: msgs[0] })
+          }
+        }
+        toast.error(res.error)
+        return
+      }
+      later(() => toast.success(hasPassword ? "Password updated" : "Password set"))
+      form.reset({ hasPassword: true, current: "", next: "", confirm: "" })
+      setResetCount((c) => c + 1)
+      onPasswordSet()
+      router.refresh()
+    })
+  })
+
+  return (
+    <form
+      key={resetCount}
+      data-ui="account/CustomerPasswordForm"
+      onSubmit={onSubmit}
+      noValidate
+      className="space-y-3 rounded-3xl border bg-card p-6 sm:p-8"
+    >
+      <div data-ui="account/CustomerPasswordForm/div">
+        <h3 data-ui="account/CustomerPasswordForm/h3-flex" className="flex items-center gap-2 font-sans text-lg font-semibold">
+          <KeyRoundIcon className="size-4 text-primary" aria-hidden />
+          {hasPassword ? "Change password" : "Set a password"}
+        </h3>
+        <p data-ui="account/CustomerPasswordForm/p" className="mt-0.5 text-sm text-muted-foreground">
+          {hasPassword
+            ? "Update the password you use to sign in with your email address."
+            : "Set a password so you can also sign in directly with your email and password."}
+        </p>
+      </div>
+
+      <div
+        data-ui="account/CustomerPasswordForm/div-2"
+        className={`grid gap-x-5 gap-y-1 ${hasPassword ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}
+      >
+        {hasPassword && (
+          <TextField
+            label="Current password"
+            type="password"
+            autoComplete="current-password"
+            maxLength={LIMITS.password.max}
+            error={errors.current?.message}
+            {...form.register("current")}
+          />
+        )}
+        <TextField
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          maxLength={LIMITS.password.max}
+          hint={`At least ${LIMITS.newPassword.min} characters, with a letter and a number.`}
+          error={errors.next?.message}
+          {...form.register("next")}
+        />
+        <TextField
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          maxLength={LIMITS.password.max}
+          error={errors.confirm?.message}
+          {...form.register("confirm")}
+        />
+      </div>
+
+      <Button
+        data-ui="account/CustomerPasswordForm/Button"
+        type="submit"
+        variant="outline"
+        size="lg"
+        disabled={pending || !canSubmit}
+        className="h-11 rounded-full px-5 sm:px-8"
+      >
+        {pending && <Loader2Icon className="animate-spin" />}
+        {hasPassword ? "Update password" : "Save password"}
+      </Button>
+    </form>
+  )
+}
+
+function DeactivateAccountCard() {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [reasonChoice, setReasonChoice] = useState("")
+  const [customNote, setCustomNote] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (pending) return
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setReasonChoice("")
+      setCustomNote("")
+      setError(null)
+    }
+  }
+
+  const handleDeactivate = () => {
+    setError(null)
+    const combinedReason = [reasonChoice, customNote.trim()].filter(Boolean).join(" — ").slice(0, 200)
+    startTransition(async () => {
+      const res = await deactivateMyAccount({ reason: combinedReason || undefined })
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      setOpen(false)
+      applyClientSignOut()
+      toast.success("Account deactivated. Sign back in anytime to restore your account.")
+      router.replace("/login")
+      router.refresh()
+    })
+  }
+
+  return (
+    <section
+      data-ui="account/DeactivateAccountCard"
+      aria-label="Deactivate account"
+      className="flex flex-col justify-between gap-4 rounded-3xl border border-destructive/25 bg-card p-6 sm:flex-row sm:items-center sm:p-8"
+    >
+      <div data-ui="account/DeactivateAccountCard/div" className="space-y-1">
+        <h3 data-ui="account/DeactivateAccountCard/h3-deactivate-account" className="flex items-center gap-2 font-sans text-lg font-semibold text-foreground">
+          <UserXIcon className="size-4 text-destructive" aria-hidden />
+          Deactivate account
+        </h3>
+        <p data-ui="account/DeactivateAccountCard/p" className="max-w-xl text-sm/relaxed text-muted-foreground">
+          Taking a break? You can deactivate your account once all active orders and returns are complete. If you change your mind or deactivate by mistake, simply sign back in anytime to automatically restore your account and order history.
+        </p>
+      </div>
+
+      <Button
+        data-ui="account/DeactivateAccountCard/Button-deactivate-account"
+        type="button"
+        variant="outline"
+        onClick={() => handleOpenChange(true)}
+        className="h-11 shrink-0 rounded-full border-destructive/40 px-5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      >
+        <UserXIcon className="size-4" /> Deactivate account
+      </Button>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent data-ui="account/DeactivateAccountCard/DialogContent" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Deactivate your account?</DialogTitle>
+            <DialogDescription>
+              You will be signed out immediately. Your past order records and tax invoices are safely retained per e-commerce and tax regulations.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="space-y-3">
+            <div data-ui="account/DeactivateAccountCard/div-2" className="rounded-xl border border-primary/20 bg-primary/8 p-3 text-xs/relaxed text-foreground">
+              <p data-ui="account/DeactivateAccountCard/p-flex" className="flex items-center gap-1.5 font-semibold text-primary">
+                <ShieldAlertIcon className="size-3.5 shrink-0" aria-hidden /> Easy recovery if deactivated by mistake
+              </p>
+              <p data-ui="account/DeactivateAccountCard/p-2" className="mt-1 text-muted-foreground">
+                Signing back in with your email/password or Google account at any time will automatically reactivate your profile, saved addresses, and order history.
+              </p>
+            </div>
+
+            <SelectField
+              label="Why are you deactivating? (optional)"
+              placeholder="Select a reason"
+              fieldSize="md"
+              value={reasonChoice}
+              onValueChange={setReasonChoice}
+              options={DEACTIVATION_REASONS.map((r) => ({ value: r, label: r }))}
+            />
+
+            {reasonChoice === "Other" && (
+              <TextAreaField
+                label="Additional feedback (optional)"
+                rows={2}
+                maxLength={140}
+                placeholder="Tell us how we can improve"
+                value={customNote}
+                onChange={(e) => setCustomNote(e.target.value)}
+              />
+            )}
+
+            {error && (
+              <p data-ui="account/DeactivateAccountCard/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                {error}
+              </p>
+            )}
+          </DialogBody>
+
+          <DialogFooter>
+            <Button
+              data-ui="account/DeactivateAccountCard/Button-keep-account-active"
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => handleOpenChange(false)}
+              className="gap-1.5 rounded-full"
+            >
+              <XIcon className="size-4" /> Keep account active
+            </Button>
+            <Button
+              data-ui="account/DeactivateAccountCard/Button-deactivate-account-2"
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={handleDeactivate}
+              className="gap-1.5 rounded-full"
+            >
+              {pending ? <Loader2Icon className="animate-spin" /> : <UserXIcon className="size-4" />} Deactivate account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
   )
 }

@@ -33,8 +33,24 @@ export const placeOrderSchema = z.object({
   items: z.array(cartLineSchema).min(1, "Your cart is empty").max(LIMITS.orderLines.max),
   /** UPI UTR / reference number entered by the customer during checkout payment step. */
   paymentReference: paymentReferenceSchema,
+  /** Optional promo code applied at checkout. */
+  promoCode: z
+    .preprocess(
+      (x) => (typeof x === "string" && x.trim() === "" ? undefined : x),
+      z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/, "Invalid promo code").optional()
+    ),
   /** Signed-in customers: also save this delivery address to their address book. */
   saveAddress: z.boolean().optional(),
+})
+
+export const validatePromoSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(1, "Enter a promo code")
+    .regex(/^[A-Z0-9_-]{3,24}$/, "Enter a valid promo code"),
+  subtotal: z.number().nonnegative(),
 })
 
 export type PlaceOrderInput = z.infer<typeof placeOrderSchema>
@@ -114,11 +130,20 @@ export const requestReturnSchema = z
       .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
     reason: v.reason(),
     details: v.note(LIMITS.returnDetail.max).optional(),
+    resolutionType: z.enum(["refund", "exchange"]).default("refund"),
+    exchangePreference: v.note(200).optional(),
   })
   .refine((v) => Boolean(v.details && v.details.trim().length >= OTHER_DETAIL_MIN) && !otherNeedsDetail(v.reason, v.details), {
     path: ["details"],
     error: OTHER_DETAIL_MESSAGE,
   })
+  .refine(
+    (v) => v.resolutionType !== "exchange" || Boolean(v.exchangePreference && v.exchangePreference.trim().length >= 2),
+    {
+      path: ["exchangePreference"],
+      error: "Please enter what you would like in exchange (size, colour, or replacement details).",
+    }
+  )
 
 export const withdrawReturnSchema = z.object({
   code: trackOrderSchema.shape.code,

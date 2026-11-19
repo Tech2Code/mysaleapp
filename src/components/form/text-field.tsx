@@ -1,7 +1,7 @@
 "use client"
 
-import { PlusIcon } from "lucide-react"
-import { useId, type ChangeEvent, type ComponentProps, type ReactNode } from "react"
+import { EyeIcon, EyeOffIcon, PlusIcon } from "lucide-react"
+import { useId, useState, type ChangeEvent, type ComponentProps, type ReactNode } from "react"
 import { Input } from "@/components/ui/input"
 import { FIELD_KINDS, type FieldKind } from "@/lib/validation/fields"
 import { cn } from "@/lib/utils"
@@ -71,6 +71,9 @@ export function TextField({
   const listId = suggestions?.length ? `${id}-list` : undefined
   const wideLeading = typeof leading === "string" && leading.length > 1
   const spec = kind ? FIELD_KINDS[kind] : undefined
+  const baseType = props.type ?? spec?.type
+  const isPassword = baseType === "password"
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (spec?.sanitize) {
@@ -90,16 +93,34 @@ export function TextField({
           list={listId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, error, hint)}
-          type={props.type ?? spec?.type}
           inputMode={props.inputMode ?? spec?.inputMode}
           maxLength={props.maxLength ?? spec?.maxLength}
           autoComplete={props.autoComplete ?? spec?.autoComplete}
           autoCapitalize={props.autoCapitalize ?? spec?.autoCapitalize}
           spellCheck={props.spellCheck ?? spec?.spellCheck}
-          className={cn(pill ? PILL : FIELD_HEIGHT[fieldSize], leading && (wideLeading ? "pl-12" : "pl-9"), className)}
+          className={cn(
+            pill ? PILL : FIELD_HEIGHT[fieldSize],
+            leading && (wideLeading ? "pl-12" : "pl-9"),
+            isPassword && "pr-10 [&::-ms-clear]:hidden [&::-ms-reveal]:hidden",
+            className
+          )}
           {...props}
+          type={isPassword ? (showPassword ? "text" : "password") : baseType}
           onChange={handleChange}
         />
+        {isPassword && (
+          <button
+            data-ui="form/TextField/button-grid"
+            type="button"
+            disabled={props.disabled}
+            aria-label={showPassword ? `Hide ${label}` : `Show ${label}`}
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground disabled:pointer-events-none disabled:opacity-50 in-data-skeleton:hidden"
+          >
+            {showPassword ? <EyeOffIcon className="size-4" aria-hidden /> : <EyeIcon className="size-4" aria-hidden />}
+          </button>
+        )}
         {listId && (
           <datalist data-ui="form/TextField/datalist" id={listId}>
             {suggestions!.map((s) => (

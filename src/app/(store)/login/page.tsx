@@ -10,11 +10,11 @@ export const metadata: Metadata = { title: "Sign in", robots: { index: false } }
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>
+  searchParams: Promise<{ next?: string; mode?: string }>
 }) {
   const user = await getCurrentUser()
   const params = await searchParams
-  if (user) {
+  if (user && params.mode !== "reset-password") {
     redirect(safeNextPath(params.next, "/"))
   }
 

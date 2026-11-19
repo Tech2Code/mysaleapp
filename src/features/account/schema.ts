@@ -22,4 +22,40 @@ export type Profile = {
   phone: string
   avatarUrl: string | null
   email: string
+  hasPassword?: boolean
+  reactivated?: boolean
 }
+
+export const DEACTIVATION_REASONS = [
+  "I don't shop here often",
+  "I have another account",
+  "Privacy or security concerns",
+  "Taking a break from shopping",
+  "Other",
+] as const
+
+export const deactivateAccountSchema = z.object({
+  reason: v.note(200).optional(),
+})
+
+export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>
+
+export const customerPasswordSchema = z
+  .object({
+    hasPassword: z.boolean(),
+    current: z.string().optional(),
+    next: v.newPassword(),
+    confirm: z.string(),
+  })
+  .refine((d) => d.next === d.confirm, { message: "Passwords don't match", path: ["confirm"] })
+  .superRefine((d, ctx) => {
+    if (d.hasPassword) {
+      if (!d.current || d.current.length < 6) {
+        ctx.addIssue({ code: "custom", message: "Enter your current password", path: ["current"] })
+      } else if (d.current === d.next) {
+        ctx.addIssue({ code: "custom", message: "Use a new password, not your current one", path: ["next"] })
+      }
+    }
+  })
+
+export type CustomerPasswordInput = z.infer<typeof customerPasswordSchema>

@@ -70,7 +70,7 @@ const Toaster = ({
           title: "!text-sm !font-semibold !leading-snug",
           description: "!text-xs !opacity-85",
           closeButton:
-            "!bg-neutral-800 !text-white !border-white/20 hover:!bg-neutral-700",
+            "!bg-neutral-800 !text-white !border-white/20 hover:!bg-neutral-700 max-sm:!left-auto max-sm:!right-0 max-sm:![--toast-close-button-start:unset] max-sm:![--toast-close-button-end:0] max-sm:![--toast-close-button-transform:translate(35%,-35%)]",
         },
       }}
       {...props}

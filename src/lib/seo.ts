@@ -91,6 +91,17 @@ export function productJsonLd(product: Product, s: Pick<StoreSettings, "shopName
     image: product.images.length ? product.images : [absoluteUrl("/opengraph-image")],
     brand: { "@type": "Brand", name: s.shopName },
     ...(product.category ? { category: product.category.name } : {}),
+    ...((product.reviewCount ?? 0) > 0 && (product.ratingAvg ?? 0) > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(product.ratingAvg).toFixed(2),
+            reviewCount: product.reviewCount,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }
+      : {}),
     offers: {
       "@type": "Offer",
       url: absoluteUrl(`/products/${product.slug}`),

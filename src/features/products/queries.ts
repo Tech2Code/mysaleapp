@@ -10,6 +10,7 @@ import {
   type CategoryRow,
   type Product,
   type ProductListItem,
+  type ProductReview,
   type ProductRow,
   toListItem,
 } from "./types"
@@ -125,4 +126,48 @@ export async function getProductListItems(): Promise<ProductListItem[]> {
 
   const products = await getActiveProducts()
   return products.map(toListItem)
+}
+
+type ProductReviewRow = {
+  id: string
+  product_id: string
+  user_id: string | null
+  reviewer_name: string
+  rating: number
+  title: string | null
+  comment: string
+  is_verified_purchase: boolean
+  created_at: string
+  updated_at: string
+}
+
+export async function getProductReviews(productId: string): Promise<ProductReview[]> {
+  "use cache"
+  cacheLife({ stale: 300, revalidate: 300, expire: 86400 })
+  cacheTag(CACHE_TAGS.products)
+
+  const supabase = getPublicSupabase()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from("product_reviews")
+    .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: false })
+    .limit(50)
+    .returns<ProductReviewRow[]>()
+
+  if (error) return []
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    productId: r.product_id,
+    userId: r.user_id,
+    reviewerName: r.reviewer_name,
+    rating: Number(r.rating),
+    title: r.title,
+    comment: r.comment,
+    isVerifiedPurchase: Boolean(r.is_verified_purchase),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }))
 }

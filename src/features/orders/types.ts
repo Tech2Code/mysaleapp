@@ -153,7 +153,11 @@ export type OrderPricing = {
   /** Delivery charge before the free-delivery waiver. */
   shippingFeeOriginal: number
   extraFees: OrderFee[]
-  /** What the customer pays: subtotal + delivery + extra charges. */
+  /** Promo code applied at checkout, if any. */
+  promoCode?: string | null
+  /** Discount subtracted from subtotal when a promo code was used. */
+  discountAmount?: number
+  /** What the customer pays: subtotal - discountAmount + delivery + extra charges. */
   total: number
 }
 
@@ -206,6 +210,9 @@ export type OrderReturn = {
 export const RETURN_REQUEST_STATUSES = ["requested", "approved", "rejected", "withdrawn", "received"] as const
 export type ReturnRequestStatus = (typeof RETURN_REQUEST_STATUSES)[number]
 
+export const RETURN_RESOLUTION_TYPES = ["refund", "exchange"] as const
+export type ReturnResolutionType = (typeof RETURN_RESOLUTION_TYPES)[number]
+
 /** A customer's request to send items back. The admin approves or rejects it. */
 export type ReturnRequest = {
   id: string
@@ -221,6 +228,10 @@ export type ReturnRequest = {
   pickupDate: string | null
   /** When the pickup actually happened (null until the admin marks it). */
   pickedUpAt: string | null
+  /** Whether the customer requested a refund ('refund') or a size/variant/item replacement ('exchange'). */
+  resolutionType?: ReturnResolutionType
+  /** Customer's preferred replacement note when resolutionType === 'exchange' (e.g. size, colour, or piece). */
+  exchangePreference?: string | null
 }
 
 /** Immutable seller & GST details captured when the order was created, so past invoices never drift when settings change. */
@@ -309,6 +320,8 @@ export type OrderRow = {
   shipping_fee: number | string | null
   shipping_fee_original: number | string | null
   extra_fees: RawFees
+  promo_code?: string | null
+  discount_amount?: number | string | null
   total: number | string | null
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
@@ -353,6 +366,8 @@ export type OrderRow = {
     decided_at: string | null
     pickup_date?: string | null
     picked_up_at?: string | null
+    resolution_type?: ReturnResolutionType | null
+    exchange_preference?: string | null
   }[]
 }
 
@@ -376,6 +391,8 @@ type RawPricing = {
   shippingFee?: number | string | null
   shippingFeeOriginal?: number | string | null
   extraFees?: RawFees
+  promoCode?: string | null
+  discountAmount?: number | string | null
   total?: number | string | null
   paymentStatus?: PaymentStatus | null
   paymentMethod?: PaymentMethod | null
@@ -390,11 +407,14 @@ type RawPricing = {
 /** Turns raw pricing/payment fields (camelCase, e.g. from the track_order RPC) into typed numbers with defaults. */
 export function normalizePricing(raw: RawPricing): OrderPricing & OrderPayment {
   const subtotal = Number(raw.subtotal)
+  const discountAmount = Number(raw.discountAmount ?? 0)
   return {
     subtotal,
     shippingFee: Number(raw.shippingFee ?? 0),
     shippingFeeOriginal: Number(raw.shippingFeeOriginal ?? 0),
     extraFees: mapFees(raw.extraFees),
+    ...(raw.promoCode ? { promoCode: raw.promoCode } : {}),
+    ...(discountAmount > 0 ? { discountAmount } : {}),
     total: Number(raw.total ?? subtotal),
     paymentStatus: raw.paymentStatus ?? "pending",
     paymentMethod: raw.paymentMethod ?? null,
@@ -413,6 +433,8 @@ function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
     shippingFee: row.shipping_fee,
     shippingFeeOriginal: row.shipping_fee_original,
     extraFees: row.extra_fees,
+    promoCode: row.promo_code,
+    discountAmount: row.discount_amount,
     total: row.total,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
@@ -518,6 +540,8 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
         decidedAt: r.decided_at,
         pickupDate: r.pickup_date ?? null,
         pickedUpAt: r.picked_up_at ?? null,
+        ...(r.resolution_type ? { resolutionType: r.resolution_type } : {}),
+        ...(r.exchange_preference !== undefined ? { exchangePreference: r.exchange_preference } : {}),
       }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     returns: (row.returns ?? [])

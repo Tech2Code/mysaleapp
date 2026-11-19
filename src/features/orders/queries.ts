@@ -4,7 +4,7 @@ import { getServerSupabase } from "@/lib/supabase/server"
 import { resolveOrderPeriod } from "./dashboard-range"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
 
-const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at)"
+const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
 
 export type CustomerOrderStatusCounts = {
   active: number

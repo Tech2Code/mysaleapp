@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { StoreSettings } from "@/features/settings/types"
-import { calculateCharges, describeProductSurcharges, formatWeightGrams } from "./pricing"
+import { applyPromoToCharges, calculateCharges, computePromoDiscount, describeProductSurcharges, formatWeightGrams } from "./pricing"
 
 const settings = (
   deliveryFee: number,
@@ -192,5 +192,38 @@ describe("describeProductSurcharges", () => {
     expect(describeProductSurcharges({ shippingClass: "standard", weightGrams: 300 }, s)).toEqual([])
     expect(describeProductSurcharges({ shippingClass: "fragile", weightGrams: 350 }, s)).toHaveLength(1)
     expect(describeProductSurcharges({ shippingClass: "oversized", weightGrams: 1800 }, s)).toHaveLength(2)
+  })
+})
+
+describe("computePromoDiscount & applyPromoToCharges", () => {
+  it("calculates percentage discount with optional max cap and respects minOrderAmount", () => {
+    const promo = {
+      code: "WELCOME10",
+      description: "10% off",
+      discountType: "percent" as const,
+      discountValue: 10,
+      minOrderAmount: 500,
+      maxDiscountAmount: 150,
+    }
+    expect(computePromoDiscount(promo, 400)).toBe(0)
+    expect(computePromoDiscount(promo, 1000)).toBe(100)
+    expect(computePromoDiscount(promo, 2000)).toBe(150)
+  })
+
+  it("calculates flat discount and caps so payable total stays at least ₹1", () => {
+    const flatPromo = {
+      code: "FLAT200",
+      description: null,
+      discountType: "flat" as const,
+      discountValue: 200,
+      minOrderAmount: 0,
+      maxDiscountAmount: null,
+    }
+    expect(computePromoDiscount(flatPromo, 150)).toBe(149)
+    const base = calculateCharges([{ price: 500, quantity: 1 }], settings(60, 999))
+    const applied = applyPromoToCharges(base, flatPromo)
+    expect(applied.promoCode).toBe("FLAT200")
+    expect(applied.discountAmount).toBe(200)
+    expect(applied.total).toBe(360)
   })
 })

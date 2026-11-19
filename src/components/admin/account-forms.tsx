@@ -212,6 +212,7 @@ function EmailForm({ email }: { email: string }) {
 }
 
 function PasswordForm() {
+  const [resetCount, setResetCount] = useState(0)
   const form = useForm<z.input<typeof changePasswordSchema>>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: { current: "", next: "", confirm: "" },
@@ -223,6 +224,7 @@ function PasswordForm() {
 
   return (
     <form
+      key={resetCount}
       data-ui="admin/PasswordForm"
       noValidate
       className="space-y-2"
@@ -232,6 +234,7 @@ function PasswordForm() {
           () => {
             later(() => toast.success("Password changed"))
             form.reset()
+            setResetCount((c) => c + 1)
           }
         )
       )}
@@ -316,6 +319,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   const [setPinVal, setConfirmVal] = useWatch({ control: setForm.control, name: ["pin", "confirm"] })
 
   // State when mode === "enabled" (changing or turning off PIN)
+  const [pinResetCount, setPinResetCount] = useState(0)
   const [authMethod, setAuthMethod] = useState<"pin" | "password">("pin")
   const [verifySecret, setVerifySecret] = useState("")
   const [nextPin, setNextPin] = useState("")
@@ -398,6 +402,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
       setVerifySecret("")
       setNextPin("")
       setConfirmNextPin("")
+      setPinResetCount((c) => c + 1)
       later(() => toast.success("4-digit PIN updated"))
       router.refresh()
     })
@@ -535,7 +540,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
           </div>
         </form>
       ) : (
-        <form data-ui="admin/PinLockForm/form-2" noValidate onSubmit={handleChangePin} className="space-y-3">
+        <form key={`pin-change-${pinResetCount}`} data-ui="admin/PinLockForm/form-2" noValidate onSubmit={handleChangePin} className="space-y-3">
           <div data-ui="admin/PinLockForm/div-flex-4" className="flex flex-wrap items-center justify-between gap-2">
             <span data-ui="admin/PinLockForm/span-2" className="text-xs font-medium text-muted-foreground">
               Verify with your {authMethod === "pin" ? "current PIN" : "account password"} to change or turn off PIN:
@@ -555,6 +560,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
 
           {authMethod === "pin" ? (
             <TextField
+              key="verify-pin"
               label="Current 4-digit PIN"
               kind="adminPin"
               fieldSize="md"
@@ -567,6 +573,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
             />
           ) : (
             <TextField
+              key="verify-password"
               label="Account password"
               type="password"
               fieldSize="md"

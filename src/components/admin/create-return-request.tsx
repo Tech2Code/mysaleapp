@@ -12,7 +12,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, otherNeedsDetail } from "@/features/orders/reasons"
 import { RETURN_REASONS, returnableQuantities } from "@/features/orders/returns"
-import type { OrderItem, OrderReturn } from "@/features/orders/types"
+import type { OrderItem, OrderReturn, ReturnResolutionType } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
 
 /**
@@ -23,6 +23,8 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [qty, setQty] = useState<Record<string, string>>({})
+  const [resolutionType, setResolutionType] = useState<ReturnResolutionType>("refund")
+  const [exchangePreference, setExchangePreference] = useState("")
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +42,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const payload = lines.map((i) => ({ productId: i.productId, name: i.name, quantity: Number(qty[i.productId]) || 0 })).filter((i) => i.quantity > 0)
   const over = (id: string) => Number(qty[id]) > (left.get(id) ?? 0)
   const detailsMissing = details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
+  const exchangePrefMissing = resolutionType === "exchange" && exchangePreference.trim().length < 2
 
   const submit = () =>
     startTransition(async () => {
@@ -49,11 +52,22 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
         setError("Please select a return reason.")
         return
       }
+      if (exchangePrefMissing) {
+        setError("Please enter the customer's exchange preference.")
+        return
+      }
       if (detailsMissing) {
         setDetailsError(OTHER_DETAIL_MESSAGE)
         return
       }
-      const res = await createReturnRequestAsAdmin({ orderId, items: payload, reason, details: details.trim() })
+      const res = await createReturnRequestAsAdmin({
+        orderId,
+        items: payload,
+        reason,
+        details: details.trim(),
+        resolutionType,
+        exchangePreference: resolutionType === "exchange" ? exchangePreference.trim() : undefined,
+      })
       if (!res.ok) {
         setDetailsError(res.fieldErrors?.details?.[0] ?? null)
         setError(res.error)
@@ -62,6 +76,8 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       later(() => {
         setOpen(false)
         setQty({})
+        setResolutionType("refund")
+        setExchangePreference("")
         setReason("")
         setDetails("")
         toast.success("Return request created. Approve it from the status dropdown.")
@@ -74,6 +90,8 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
     setOpen(nextOpen)
     if (!nextOpen) {
       setQty({})
+      setResolutionType("refund")
+      setExchangePreference("")
       setReason("")
       setDetails("")
       setError(null)
@@ -109,6 +127,27 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
               </li>
             ))}
           </ul>
+          <SelectField
+            label="Resolution *"
+            fieldSize="md"
+            options={[
+              { value: "refund", label: "Refund" },
+              { value: "exchange", label: "Exchange / Replacement" },
+            ]}
+            value={resolutionType}
+            onValueChange={(v) => setResolutionType(v as ReturnResolutionType)}
+          />
+          {resolutionType === "exchange" && (
+            <TextField
+              label="Exchange preference *"
+              required
+              fieldSize="md"
+              maxLength={200}
+              placeholder="e.g. Size M instead of S, or replacement in Terracotta"
+              value={exchangePreference}
+              onChange={(e) => setExchangePreference(e.target.value)}
+            />
+          )}
           <SelectField label="Reason *" placeholder="Select a reason" fieldSize="md" options={RETURN_REASONS.map((r) => ({ value: r, label: r }))} value={reason} onValueChange={setReason} />
           <TextAreaField
             label="Details (required)"
@@ -128,7 +167,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
           <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId)) || !reason || detailsMissing} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/CreateReturnRequest/Button-create-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || lines.some((i) => over(i.productId)) || !reason || detailsMissing || exchangePrefMissing} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Create request
           </Button>
         </DialogFooter>

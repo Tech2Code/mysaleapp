@@ -105,3 +105,24 @@ export const categorySchema = z.object({
 
 export type CategoryInput = z.input<typeof categorySchema>
 export type CategoryValues = z.output<typeof categorySchema>
+
+export const productReviewSchema = z.object({
+  productId: z.uuid(),
+  rating: z
+    .number({ error: "Select a star rating from 1 to 5" })
+    .int("Select a whole star rating")
+    .min(1, "Select a star rating from 1 to 5")
+    .max(5, "Select a star rating from 1 to 5"),
+  title: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z.string().trim().max(100, "Keep the headline under 100 characters").nullable().optional()
+  ),
+  comment: z
+    .string()
+    .trim()
+    .min(5, "Write at least 5 characters about this product")
+    .max(800, "Keep your review under 800 characters"),
+})
+
+export type ProductReviewInput = z.input<typeof productReviewSchema>
+export type ProductReviewValues = z.output<typeof productReviewSchema>

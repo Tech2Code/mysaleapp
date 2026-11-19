@@ -102,8 +102,7 @@ async function isAdminPinLocked(): Promise<boolean> {
 
 export async function requireAdmin(): Promise<User> {
   const [user, admin, cookieStore] = await Promise.all([getCurrentUser(), isAdminUser(), cookies()])
-  if (!user) redirect("/admin/login")
-  if (!admin) redirect("/admin/login?error=not-admin")
+  if (!user || !admin) redirect("/admin/login")
   if (cookieStore.get("kk_pw_reset")?.value === "1") {
     redirect("/admin/reset-password")
   }
