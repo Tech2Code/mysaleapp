@@ -73,7 +73,7 @@ function EmptyState({ signedIn }: { signedIn: boolean }) {
         ) : (
           <>
             Have an account?{" "}
-            <Link data-ui="store/EmptyState/Link-see-all-your-orders" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+            <Link data-ui="store/EmptyState/Link-sign-in-to-see-all-you" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
               Sign in to see all your orders
             </Link>
           </>
@@ -157,7 +157,7 @@ function TrackResult({
         <div data-ui="store/TrackResult/div-flex-4" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
           <RequestReturn
             orderCode={result.orderCode}
-            phoneLast4={query.phoneLast4}
+            phoneLast4={isOwner ? undefined : query.phoneLast4}
             status={result.status}
             items={result.items}
             returns={result.returns}
@@ -194,14 +194,14 @@ function TrackResult({
           {isOwner ? (
             <>
               Need the invoice or full order details?{" "}
-              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href={`/account/orders/${encodeURIComponent(result.orderCode)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/TrackResult/Link-open-in-my-orders" href={`/account/orders/${encodeURIComponent(result.orderCode)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
                 Open in My orders
               </Link>
             </>
           ) : signedIn ? (
             <>
               Looking for orders placed with your account?{" "}
-              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link data-ui="store/TrackResult/Link-open-my-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
                 Open My orders
               </Link>
             </>

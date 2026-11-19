@@ -33,8 +33,15 @@ async function clientIp(): Promise<string | null> {
   const h = await headers()
   const vercelIp = process.env.VERCEL === "1" ? h.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() : undefined
   if (vercelIp) return vercelIp
-  const realIp = h.get("cf-connecting-ip")?.trim() || h.get("x-real-ip")?.trim()
-  if (realIp) return realIp
+  // Only trust proxy-specific headers when explicitly deployed behind that proxy; otherwise a client can spoof them.
+  if (process.env.TRUST_CF_IP === "1") {
+    const cfIp = h.get("cf-connecting-ip")?.trim()
+    if (cfIp) return cfIp
+  }
+  if (process.env.VERCEL === "1" || process.env.TRUST_PROXY_IP === "1") {
+    const realIp = h.get("x-real-ip")?.trim()
+    if (realIp) return realIp
+  }
   // Standard reverse proxies append the connecting client IP to X-Forwarded-For; the leftmost entry is client-controlled.
   const xff = h.get("x-forwarded-for")
   if (!xff) return null

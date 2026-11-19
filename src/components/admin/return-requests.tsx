@@ -276,10 +276,10 @@ export function AdminReturnRequests({
         <ReturnStageBadge stage={returnStage} audience="admin" alwaysShow />
       </div>
       {/* Newest stage first: goods received back (the later stage) above the requests. */}
-      <ReturnsList bare returns={[...returns].reverse()} audience="admin" admin={admin} />
+      <ReturnsList bare returns={returns.toReversed()} audience="admin" admin={admin} />
       {requests.length > 0 && <h4 data-ui="admin/AdminReturnRequests/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>}
       <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
-        {[...requests].reverse().map((r) => {
+        {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "admin")
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">

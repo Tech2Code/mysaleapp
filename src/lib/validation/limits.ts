@@ -24,6 +24,7 @@ export const LIMITS = {
   email: { max: 120 },
   password: { min: 6, max: 200 },
   newPassword: { min: 8 },
+  adminPin: 4,
   url: { max: 300 },
 
   // free text
@@ -120,4 +121,5 @@ export const PATTERNS = {
   /** Courier AWB after upper-casing: letters, digits, - / _ (starts with a letter or digit, no spaces). */
   trackingNumber: /^[A-Z0-9][A-Z0-9/_-]*$/,
   isoDate: /^\d{4}-\d{2}-\d{2}$/,
+  adminPin: /^\d{4}$/,
 } as const

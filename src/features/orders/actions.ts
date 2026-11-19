@@ -298,6 +298,8 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
     p_items: parsed.data.items,
     p_reason: parsed.data.reason,
     p_details: parsed.data.details ?? null,
+    // guests must give the full number (migration 0050); signed-in owners are recognised by their account
+    p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
   if (error) {
     return fail(mapRpcError(error.message, "Could not send your return request. Please try again."))

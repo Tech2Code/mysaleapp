@@ -1,17 +1,32 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2Icon, MailCheckIcon } from "lucide-react"
+import { KeyRoundIcon, Loader2Icon, LockIcon, MailCheckIcon, ShieldOffIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
+import { notifyAdminPinChanged } from "@/components/admin/admin-account-menu"
 import { TextField } from "@/components/form"
 import { applyClientProfileUpdate } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
-import { changeAdminPassword, requestAdminEmailChange, updateAdminProfile } from "@/features/auth/account-actions"
-import { changePasswordSchema, emailSchema, profileSchema } from "@/features/auth/account-schema"
+import {
+  changeAdminPassword,
+  changeAdminPin,
+  disableAdminPin,
+  lockAdminScreen,
+  requestAdminEmailChange,
+  setAdminPin,
+  updateAdminProfile,
+} from "@/features/auth/account-actions"
+import {
+  changePasswordSchema,
+  emailSchema,
+  profileSchema,
+  setPinSchema,
+  type AdminPinStatus,
+} from "@/features/auth/account-schema"
 import type { ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
@@ -169,22 +184,22 @@ function EmailForm({ email }: { email: string }) {
       <TextField label="New email address" kind="email" fieldSize="md" error={errors.email?.message} {...form.register("email")} />
       {callbackBanner && (
         <p
-          data-ui="admin/EmailForm/p-callback"
+          data-ui="admin/EmailForm/p-2"
           role="status"
           className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
             callbackBanner.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-success/10"
           }`}
         >
           <MailCheckIcon className={`mt-0.5 size-4 shrink-0 ${callbackBanner.tone === "error" ? "text-destructive" : "text-success"}`} aria-hidden />
-          <span data-ui="admin/EmailForm/span-callback">{callbackBanner.text}</span>
+          <span data-ui="admin/EmailForm/span-2">{callbackBanner.text}</span>
         </p>
       )}
       {sentTo && (
         <p data-ui="admin/EmailForm/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
           <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          <span data-ui="admin/EmailForm/span-2">
-            We sent a confirmation link to <span data-ui="admin/EmailForm/span-3" className="font-semibold">{sentTo}</span> (and to{" "}
-            <span className="font-semibold">{email}</span> if double confirmation is enabled). Open the link(s) to finish. Until then you keep signing in with{" "}
+          <span data-ui="admin/EmailForm/span-3">
+            We sent a confirmation link to <span data-ui="admin/EmailForm/span-4" className="font-semibold">{sentTo}</span> (and to{" "}
+            <span data-ui="admin/EmailForm/span-5" className="font-semibold">{email}</span> if double confirmation is enabled). Open the link(s) to finish. Until then you keep signing in with{" "}
             {email}.
           </span>
         </p>
@@ -258,8 +273,430 @@ function PasswordForm() {
   )
 }
 
-/** Everything about the signed-in admin: details, login email and password. */
-export function AccountSettings({ name, phone, email }: { name: string; phone: string; email: string }) {
+/** Quick 4-digit PIN lock management: set, change/reset (via PIN or password), lock screen now, or disable ("Don't use PIN"). */
+function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
+  const router = useRouter()
+  const [status, setStatus] = useState<AdminPinStatus>(
+    () =>
+      initialStatus ?? {
+        mode: "unset",
+        hasPin: false,
+        updatedAt: null,
+        lockedUntil: null,
+        unlockedAt: 0,
+        manualLock: false,
+      }
+  )
+  const [prevInitial, setPrevInitial] = useState(initialStatus)
+  if (initialStatus && initialStatus !== prevInitial) {
+    setPrevInitial(initialStatus)
+    setStatus(initialStatus)
+  }
+
+  // Keep in sync if PIN state changes from the top-right modal
+  useEffect(() => {
+    const onPinSync = (e: Event) => {
+      const detail = (e as CustomEvent<Partial<AdminPinStatus>>).detail
+      if (!detail) return
+      setStatus((prev) => ({ ...prev, ...detail }))
+    }
+    window.addEventListener("kk-admin-pin-changed", onPinSync)
+    return () => window.removeEventListener("kk-admin-pin-changed", onPinSync)
+  }, [])
+
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+  const later = useToastAfter(pending)
+
+  // State when mode !== "enabled" (setting a new PIN)
+  const setForm = useForm<z.input<typeof setPinSchema>>({
+    resolver: zodResolver(setPinSchema),
+    defaultValues: { pin: "", confirm: "" },
+  })
+  const [setPinVal, setConfirmVal] = useWatch({ control: setForm.control, name: ["pin", "confirm"] })
+
+  // State when mode === "enabled" (changing or turning off PIN)
+  const [authMethod, setAuthMethod] = useState<"pin" | "password">("pin")
+  const [verifySecret, setVerifySecret] = useState("")
+  const [nextPin, setNextPin] = useState("")
+  const [confirmNextPin, setConfirmNextPin] = useState("")
+  const [manageError, setManageError] = useState<string | null>(null)
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false)
+
+  const isEnabled = status.mode === "enabled" && status.hasPin
+
+  const handleSetPin = setForm.handleSubmit((values) => {
+    startTransition(async () => {
+      const res = await setAdminPin(values)
+      if (!res.ok) {
+        for (const [f, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0]) setForm.setError(f as "pin" | "confirm", { message: msgs[0] })
+        }
+        toast.error(res.error)
+        return
+      }
+      const next: Partial<AdminPinStatus> = {
+        mode: "enabled",
+        hasPin: true,
+        unlockedAt: res.data.unlockedAt,
+        manualLock: false,
+      }
+      setStatus((prev) => ({ ...prev, ...next }))
+      notifyAdminPinChanged(next)
+      setForm.reset()
+      later(() => toast.success("4-digit PIN enabled"))
+      router.refresh()
+    })
+  })
+
+  const handleChangePin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (authMethod === "pin" && !/^\d{4}$/.test(verifySecret)) {
+      setManageError("Enter your current 4-digit PIN")
+      return
+    }
+    if (authMethod === "password" && verifySecret.length < 6) {
+      setManageError("Enter your account password")
+      return
+    }
+    if (!/^\d{4}$/.test(nextPin)) {
+      setManageError("Enter a new 4-digit PIN")
+      return
+    }
+    if (nextPin !== confirmNextPin) {
+      setManageError("New PINs don't match")
+      return
+    }
+    setManageError(null)
+    startTransition(async () => {
+      const res = await changeAdminPin({
+        authMethod,
+        currentPin: authMethod === "pin" ? verifySecret : undefined,
+        password: authMethod === "password" ? verifySecret : undefined,
+        next: nextPin,
+        confirm: confirmNextPin,
+      })
+      if (!res.ok) {
+        const msg =
+          res.fieldErrors?.currentPin?.[0] ??
+          res.fieldErrors?.password?.[0] ??
+          res.fieldErrors?.next?.[0] ??
+          res.fieldErrors?.confirm?.[0] ??
+          res.error
+        setManageError(msg)
+        toast.error(msg)
+        return
+      }
+      const next: Partial<AdminPinStatus> = {
+        mode: "enabled",
+        hasPin: true,
+        unlockedAt: res.data.unlockedAt,
+        manualLock: false,
+      }
+      setStatus((prev) => ({ ...prev, ...next }))
+      notifyAdminPinChanged(next)
+      setVerifySecret("")
+      setNextPin("")
+      setConfirmNextPin("")
+      later(() => toast.success("4-digit PIN updated"))
+      router.refresh()
+    })
+  }
+
+  const handleDisablePin = () => {
+    if (isEnabled) {
+      if (authMethod === "pin" && !/^\d{4}$/.test(verifySecret)) {
+        setManageError("Enter your current 4-digit PIN first to turn off PIN lock")
+        return
+      }
+      if (authMethod === "password" && verifySecret.length < 6) {
+        setManageError("Enter your account password first to turn off PIN lock")
+        return
+      }
+    }
+    setManageError(null)
+    startTransition(async () => {
+      const res = await disableAdminPin(
+        isEnabled
+          ? {
+              currentPin: authMethod === "pin" ? verifySecret : undefined,
+              password: authMethod === "password" ? verifySecret : undefined,
+            }
+          : undefined
+      )
+      if (!res.ok) {
+        const msg =
+          res.fieldErrors?.currentPin?.[0] ??
+          res.fieldErrors?.password?.[0] ??
+          res.error
+        setManageError(msg)
+        toast.error(msg)
+        return
+      }
+      const next: Partial<AdminPinStatus> = {
+        mode: "disabled",
+        hasPin: false,
+        unlockedAt: res.data.unlockedAt,
+        manualLock: false,
+      }
+      setStatus((prev) => ({ ...prev, ...next }))
+      notifyAdminPinChanged(next)
+      setVerifySecret("")
+      setNextPin("")
+      setConfirmNextPin("")
+      setShowDisableConfirm(false)
+      later(() => toast.success("PIN lock turned off"))
+      router.refresh()
+    })
+  }
+
+  const handleLockNow = () => {
+    startTransition(async () => {
+      const res = await lockAdminScreen()
+      if (!res.ok) {
+        toast.error(res.error)
+        return
+      }
+      notifyAdminPinChanged({ manualLock: true, unlockedAt: 0 })
+      toast.info("Admin screen locked")
+    })
+  }
+
+  return (
+    <div data-ui="admin/PinLockForm" className="space-y-4">
+      <div data-ui="admin/PinLockForm/div-flex" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3.5 py-2.5 text-sm">
+        <div data-ui="admin/PinLockForm/div-flex-2" className="flex items-center gap-2">
+          {isEnabled ? (
+            <KeyRoundIcon className="size-4 shrink-0 text-primary" aria-hidden />
+          ) : (
+            <ShieldOffIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          )}
+          <span data-ui="admin/PinLockForm/span" className="font-medium">
+            {isEnabled
+              ? "Active — locks screen every 12 hours"
+              : status.mode === "disabled"
+                ? "Turned off — won't ask for a PIN"
+                : "Not set — we'll ask once after 12 hours"}
+          </span>
+        </div>
+        {isEnabled && (
+          <Button data-ui="admin/PinLockForm/Button-lock-screen-now"
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={handleLockNow}
+            className="rounded-full"
+          >
+            <LockIcon /> Lock screen now
+          </Button>
+        )}
+      </div>
+
+      {!isEnabled ? (
+        <form data-ui="admin/PinLockForm/form" noValidate onSubmit={handleSetPin} className="space-y-3">
+          <div data-ui="admin/PinLockForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+            <TextField
+              label="New 4-digit PIN"
+              kind="adminPin"
+              fieldSize="md"
+              placeholder="••••"
+              error={setForm.formState.errors.pin?.message}
+              {...setForm.register("pin")}
+            />
+            <TextField
+              label="Confirm 4-digit PIN"
+              kind="adminPin"
+              fieldSize="md"
+              placeholder="••••"
+              error={setForm.formState.errors.confirm?.message}
+              {...setForm.register("confirm")}
+            />
+          </div>
+          <div data-ui="admin/PinLockForm/div-flex-3" className="flex flex-wrap items-center gap-2">
+            <Button data-ui="admin/PinLockForm/Button-enable-4-digit-pin"
+              type="submit"
+              disabled={pending || (setPinVal ?? "").length !== 4 || (setConfirmVal ?? "").length !== 4}
+              className="rounded-full"
+            >
+              {pending && <Loader2Icon className="animate-spin" />} Enable 4-digit PIN
+            </Button>
+            {status.mode === "unset" && (
+              <Button data-ui="admin/PinLockForm/Button-don-apos-t-use-pin"
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={handleDisablePin}
+                className="rounded-full"
+              >
+                Don&apos;t use PIN
+              </Button>
+            )}
+          </div>
+        </form>
+      ) : (
+        <form data-ui="admin/PinLockForm/form-2" noValidate onSubmit={handleChangePin} className="space-y-3">
+          <div data-ui="admin/PinLockForm/div-flex-4" className="flex flex-wrap items-center justify-between gap-2">
+            <span data-ui="admin/PinLockForm/span-2" className="text-xs font-medium text-muted-foreground">
+              Verify with your {authMethod === "pin" ? "current PIN" : "account password"} to change or turn off PIN:
+            </span>
+            <button data-ui="admin/PinLockForm/button"
+              type="button"
+              onClick={() => {
+                setAuthMethod((m) => (m === "pin" ? "password" : "pin"))
+                setVerifySecret("")
+                setManageError(null)
+              }}
+              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {authMethod === "pin" ? "Forgot PIN? Use account password" : "Use current 4-digit PIN instead"}
+            </button>
+          </div>
+
+          {authMethod === "pin" ? (
+            <TextField
+              label="Current 4-digit PIN"
+              kind="adminPin"
+              fieldSize="md"
+              placeholder="••••"
+              value={verifySecret}
+              onChange={(e) => {
+                setVerifySecret(e.target.value)
+                setManageError(null)
+              }}
+            />
+          ) : (
+            <TextField
+              label="Account password"
+              type="password"
+              fieldSize="md"
+              autoComplete="current-password"
+              maxLength={LIMITS.password.max}
+              value={verifySecret}
+              onChange={(e) => {
+                setVerifySecret(e.target.value)
+                setManageError(null)
+              }}
+            />
+          )}
+
+          {!showDisableConfirm ? (
+            <>
+              <div data-ui="admin/PinLockForm/div-grid-2" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                <TextField
+                  label="New 4-digit PIN"
+                  kind="adminPin"
+                  fieldSize="md"
+                  placeholder="••••"
+                  value={nextPin}
+                  onChange={(e) => {
+                    setNextPin(e.target.value)
+                    setManageError(null)
+                  }}
+                />
+                <TextField
+                  label="Confirm new PIN"
+                  kind="adminPin"
+                  fieldSize="md"
+                  placeholder="••••"
+                  value={confirmNextPin}
+                  onChange={(e) => {
+                    setConfirmNextPin(e.target.value)
+                    setManageError(null)
+                  }}
+                />
+              </div>
+              {manageError && (
+                <p data-ui="admin/PinLockForm/p" role="alert" className="text-xs font-medium text-destructive">
+                  {manageError}
+                </p>
+              )}
+              <div data-ui="admin/PinLockForm/div-flex-5" className="flex flex-wrap items-center gap-2">
+                <Button data-ui="admin/PinLockForm/Button-change-pin"
+                  type="submit"
+                  variant="outline"
+                  disabled={
+                    pending ||
+                    !verifySecret ||
+                    nextPin.length !== 4 ||
+                    confirmNextPin.length !== 4
+                  }
+                  className="rounded-full"
+                >
+                  {pending && <Loader2Icon className="animate-spin" />} Change PIN
+                </Button>
+                <Button data-ui="admin/PinLockForm/Button-don-apos-t-use-pin-tur"
+                  type="button"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    setShowDisableConfirm(true)
+                    setManageError(null)
+                  }}
+                  className="rounded-full text-destructive hover:text-destructive"
+                >
+                  Don&apos;t use PIN (Turn off)
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div data-ui="admin/PinLockForm/div" className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3.5">
+              <p data-ui="admin/PinLockForm/p-2" className="text-xs text-muted-foreground">
+                Turning off Quick PIN means the admin panel will stay unlocked for your full 7-day login session without asking for a 4-digit PIN every 12 hours.{" "}
+                {!verifySecret && (
+                  <span data-ui="admin/PinLockForm/span-3" className="font-medium text-foreground">
+                    Enter your {authMethod === "pin" ? "current 4-digit PIN" : "account password"} in the field above to confirm.
+                  </span>
+                )}
+              </p>
+              {manageError && (
+                <p data-ui="admin/PinLockForm/p-3" role="alert" className="text-xs font-medium text-destructive">
+                  {manageError}
+                </p>
+              )}
+              <div data-ui="admin/PinLockForm/div-flex-6" className="flex flex-wrap items-center gap-2">
+                <Button data-ui="admin/PinLockForm/Button-confirm-don-apos-t-use"
+                  type="button"
+                  variant="destructive"
+                  disabled={pending || !verifySecret}
+                  onClick={handleDisablePin}
+                  className="rounded-full"
+                >
+                  {pending && <Loader2Icon className="animate-spin" />} Confirm: Don&apos;t use PIN
+                </Button>
+                <Button data-ui="admin/PinLockForm/Button-cancel"
+                  type="button"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    setShowDisableConfirm(false)
+                    setManageError(null)
+                  }}
+                  className="rounded-full"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </form>
+      )}
+    </div>
+  )
+}
+
+/** Everything about the signed-in admin: details, login email, password, and 12-hour Quick PIN lock. */
+export function AccountSettings({
+  name,
+  phone,
+  email,
+  pinStatus,
+}: {
+  name: string
+  phone: string
+  email: string
+  pinStatus?: AdminPinStatus
+}) {
   const [visitKey, setVisitKey] = useState(0)
   const [savedProfile, setSavedProfile] = useState({ name, phone })
   const [prevProps, setPrevProps] = useState({ name, phone })
@@ -283,6 +720,12 @@ export function AccountSettings({ name, phone, email }: { name: string; phone: s
     <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-6">
       <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
         <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
+      </Card>
+      <Card
+        title="Quick PIN lock"
+        description="Your full admin sign-in lasts 7 days. Set an optional 4-digit PIN to lock the screen every 12 hours instead of signing in again."
+      >
+        <PinLockForm key={`pin-${visitKey}`} initialStatus={pinStatus} />
       </Card>
       <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
         <EmailForm key={`email-${visitKey}`} email={email} />

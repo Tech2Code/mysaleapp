@@ -99,8 +99,8 @@ export async function searchProducts(input: unknown): Promise<SearchResult> {
     }
 
     // Tier 3: Popular picks (sorted by price proximity if a price filter was given, then featured)
-    const suggestions = [...allProducts]
-      .sort(
+    const suggestions = allProducts
+      .toSorted(
         (a, b) =>
           Number(b.stock > 0) - Number(a.stock > 0) ||
           priceDistanceToQuery(a.price, parsed) - priceDistanceToQuery(b.price, parsed) ||
@@ -130,7 +130,7 @@ export async function getSearchDiscovery(): Promise<SearchDiscovery> {
   const inStock = products.filter((p) => p.stock > 0)
   const pool = inStock.length > 0 ? inStock : products
 
-  const sorted = [...pool].sort((a, b) => {
+  const sorted = pool.toSorted((a, b) => {
     const aFeat = Number(Boolean(a.isFeatured))
     const bFeat = Number(Boolean(b.isFeatured))
     if (bFeat !== aFeat) return bFeat - aFeat

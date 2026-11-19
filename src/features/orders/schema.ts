@@ -105,6 +105,8 @@ export const requestReturnSchema = z
     code: trackOrderSchema.shape.code,
     /** Needed for guests; signed-in customers are recognised by their account. */
     phoneLast4: trackOrderSchema.shape.phoneLast4.optional(),
+    /** Full mobile number required for guests (migration 0050); signed-in owners are recognised by their session. */
+    phone: v.phoneIN().optional(),
     items: z
       .array(z.object({ productId: z.uuid(), quantity: v.quantity(LIMITS.returnQuantity.max) }))
       .min(1, "Choose at least one item to return")

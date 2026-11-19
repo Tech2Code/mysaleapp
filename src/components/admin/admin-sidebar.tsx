@@ -117,6 +117,7 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
         <Link data-ui="admin/SidebarBody/Link-view-store"
           href="/"
           target="_blank"
+          rel="noopener noreferrer"
           className="flex h-10 items-center gap-3 rounded-xl px-3 text-sm leading-none font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent"
         >
           <ExternalLinkIcon className="size-4" aria-hidden /> View store
@@ -188,6 +189,7 @@ export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode;
         <Link data-ui="admin/AdminTopbar/Link-view-store"
           href="/"
           target="_blank"
+          rel="noopener noreferrer"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden rounded-full sm:inline-flex")}
         >
           <ExternalLinkIcon /> View store

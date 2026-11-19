@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
 import { CACHE_TAGS } from "@/features/products/queries"
+import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { resetSchema, type LaunchCounts } from "./launch"
@@ -69,6 +70,13 @@ export async function resetStoreData(input: unknown): Promise<ActionResult<Launc
 
   revalidatePath("/", "layout")
   const r = data as Partial<LaunchCounts>
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "store.reset_data",
+    targetType: "store",
+    targetId: "reset",
+    metadata: { scopes, counts: r, imagesRemoved: images },
+  })
   return {
     ok: true,
     data: {

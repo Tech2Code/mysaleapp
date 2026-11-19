@@ -77,6 +77,9 @@ export const v = {
       .regex(/[A-Za-z]/, "Include at least one letter")
       .regex(/\d/, "Include at least one number"),
 
+  /** 4-digit numeric PIN for quick admin screen lock/unlock. */
+  adminPin: () => z.string().trim().regex(PATTERNS.adminPin, "Enter a 4-digit PIN"),
+
   /** http(s) link only (blocks javascript: and other schemes). */
   url: (what = "link") =>
     z

@@ -1,8 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { ADMIN_SESSION_MAX_AGE_MS } from "@/features/auth/account-schema"
 import { isSupabaseConfigured, supabaseConfig } from "./config"
-
-const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000
 
 /**
  * Refreshes the Supabase auth cookie on every matched request so Server
@@ -47,6 +46,16 @@ export async function updateSession(request: NextRequest) {
   const needsLogin = (isAdmin && !isAdminPublic) || isAccount
 
   if (user && isAdmin && !isAdminPublic) {
+    if (request.cookies.get("kk_pw_reset")?.value === "1") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/admin/reset-password"
+      url.search = ""
+      const redirectResponse = NextResponse.redirect(url)
+      for (const cookie of response.cookies.getAll()) {
+        redirectResponse.cookies.set(cookie)
+      }
+      return redirectResponse
+    }
     const signedInAt = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : NaN
     if (!Number.isNaN(signedInAt) && Date.now() - signedInAt >= ADMIN_SESSION_MAX_AGE_MS) {
       await supabase.auth.signOut()
@@ -57,6 +66,7 @@ export async function updateSession(request: NextRequest) {
       for (const cookie of response.cookies.getAll()) {
         redirectResponse.cookies.set(cookie)
       }
+      redirectResponse.cookies.delete("kk_admin_pin_at")
       return redirectResponse
     }
   }

@@ -131,7 +131,7 @@ export async function run(ctx) {
   rec(S, "cancelled -> delivered is blocked too", !!u.error, msg(u))
 
   o = await newOrder([{ productId: PC.id, quantity: 1 }])
-  await admin.from("orders").update({ status: "shipped" }).eq("id", o.id)
+  await ctx.pay(o, "shipped")
   r = await anon.rpc("cancel_order", { p_code: o.code, p_phone_last4: o.last4, p_phone: o.ph, p_reason: "AUDIT TEST" })
   rec(S, "guest cannot cancel a shipped order", !!r.error, msg(r))
   r = await anon.rpc("cancel_order", { p_code: o.code, p_phone_last4: "0000", p_reason: "x" })

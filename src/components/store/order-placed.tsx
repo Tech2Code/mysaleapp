@@ -156,11 +156,11 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               {signedIn ? (
                 <>
                   To check your order status and payment verification, open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-my-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
                     My orders
                   </Link>{" "}
                   or{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-guest" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-track-order" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
                     Track order
                   </Link>
                   .
@@ -168,7 +168,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               ) : (
                 <>
                   To check your order status and payment verification, open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
                     Track order
                   </Link>{" "}
                   and enter your order code with the last 4 digits of your phone.
@@ -190,11 +190,11 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               {signedIn ? (
                 <>
                   We couldn&apos;t load your order details just now. Open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-my-orders-2" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
                     My orders
                   </Link>{" "}
                   or{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-2-guest" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-track-order-3" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
                     Track order
                   </Link>{" "}
                   to check your order status.
@@ -202,7 +202,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               ) : (
                 <>
                   We couldn&apos;t load your order details just now. Open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link data-ui="store/OrderPlaced/Link-track-order-4" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
                     Track order
                   </Link>{" "}
                   and enter your order code with the last 4 digits of your phone to check your order status.
@@ -224,7 +224,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
         </div>
 
         <div data-ui="store/OrderPlaced/div-flex" className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link data-ui="store/OrderPlaced/Link-track-this-order" href={isOwner ? orderDetailHref : trackHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
+          <Link data-ui="store/OrderPlaced/Link" href={isOwner ? orderDetailHref : trackHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
             {isOwner ? "View in My orders" : "Track this order"}
           </Link>
           <Link data-ui="store/OrderPlaced/Link-continue-shopping" href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>

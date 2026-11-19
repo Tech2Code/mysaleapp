@@ -24,6 +24,7 @@ export type FieldKind =
   | "upiId"
   | "slug"
   | "orderPrefix"
+  | "adminPin"
 
 type InputAttrs = {
   type?: "text" | "tel" | "email" | "url" | "password"
@@ -114,6 +115,14 @@ export const FIELD_KINDS: Record<FieldKind, FieldKindSpec> = {
     sanitize: (v) => v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, LIMITS.orderPrefix.max),
     maxLength: LIMITS.orderPrefix.max,
     autoCapitalize: "characters",
+    spellCheck: false,
+  },
+  adminPin: {
+    sanitize: (v) => digitsOnly(v).slice(0, LIMITS.adminPin),
+    type: "password",
+    inputMode: "numeric",
+    maxLength: LIMITS.adminPin,
+    autoComplete: "off",
     spellCheck: false,
   },
 }

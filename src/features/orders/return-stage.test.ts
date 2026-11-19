@@ -47,6 +47,14 @@ describe("returnStage", () => {
     expect(s?.key).toBe("requested")
     // string order would pick "…Z" over "…+00:00"; instants must decide
     expect(returnStage({ ...base, requests: [req("rejected", "2026-02-01T00:00:00+00:00"), req("withdrawn", "2026-01-31T23:59:59Z")] })?.key).toBe("rejected")
+    // a newer rejected request after an earlier partial return surfaces the latest rejection
+    expect(
+      returnStage({
+        ...base,
+        requests: [req("received", "2026-01-01T00:00:00Z"), req("rejected", "2026-01-20T00:00:00Z", { decidedAt: "2026-01-21T00:00:00Z", adminNote: "Outside window" })],
+        returns: [ret(false, "2026-01-05T10:00:00Z")],
+      })?.key
+    ).toBe("rejected")
   })
 
   it("customer wording never contains an amount; admin wording may", () => {

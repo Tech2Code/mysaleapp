@@ -94,10 +94,23 @@ export function createContext(env) {
       return { row, o, id: o.id, code: row.order_code, ph, last4: ph.slice(-4) }
     },
     async pay(o, status) {
-      const upd = { payment_status: "paid", payment_method: "upi", payment_amount: o.o?.total ?? o.total, payment_paid_at: new Date().toISOString() }
-      if (status) upd.status = status
+      const upd = {
+        payment_status: "paid",
+        payment_method: "upi",
+        payment_amount: o.o?.total ?? o.total,
+        payment_paid_at: new Date().toISOString(),
+        ...(status ? { status: "confirmed" } : {}),
+      }
       const u = await admin.from("orders").update(upd).eq("id", o.id)
       if (u.error) throw new Error("mark paid: " + u.error.message)
+      if (status === "shipped" || status === "delivered") {
+        const s = await admin.from("orders").update({ status: "shipped", shipping_carrier: "AuditPost" }).eq("id", o.id)
+        if (s.error) throw new Error("mark shipped: " + s.error.message)
+      }
+      if (status === "delivered") {
+        const d = await admin.from("orders").update({ status: "delivered" }).eq("id", o.id)
+        if (d.error) throw new Error("mark delivered: " + d.error.message)
+      }
       return Number((await ctx.getOrder(o.id)).payment_amount)
     },
     refund: (c, id, amt, exp = null, ref = null, note = null) => c.rpc("refund_order", { p_order_id: id, p_amount: amt, p_expected_status: exp, p_reference: ref, p_note: note }),

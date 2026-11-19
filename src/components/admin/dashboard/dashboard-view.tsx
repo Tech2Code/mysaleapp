@@ -24,7 +24,7 @@ export function DashboardView({ d, range, today }: { d: DashboardData; range: Pi
           </p>
         </div>
         <div data-ui="admin/DashboardView/div-flex" className="flex flex-wrap gap-2">
-          <Link data-ui="admin/DashboardView/Link-view-store" href="/" target="_blank" className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}>
+          <Link data-ui="admin/DashboardView/Link-view-store" href="/" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}>
             <ExternalLinkIcon /> View store
           </Link>
           <Link data-ui="admin/DashboardView/Link-add-product" href="/admin/products/new" className={cn(buttonVariants(), "rounded-full px-5")}>

@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
+import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { SETTINGS_TAG } from "./queries"
@@ -64,6 +65,14 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   }
 
   if (!saved?.length) return fail("Settings row not found.")
+
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "settings.update",
+    targetType: "settings",
+    targetId: "store_settings",
+    metadata: { shopName: s.shopName, upiId: s.upiId, deliveryFee: s.deliveryFee },
+  })
 
   // The name, contact details etc. appear on every page, so refresh the whole site.
   updateTag(SETTINGS_TAG)

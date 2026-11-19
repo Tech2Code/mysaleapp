@@ -21,7 +21,7 @@ export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === 
 /** When the order was delivered: the latest "delivered" entry in its history, provided no later entry moved it back. */
 export function deliveredAt(history: StatusHistoryEntry[]): string | null {
   if (history.length === 0) return null
-  const sorted = [...history].sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt))
+  const sorted = history.toSorted((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt))
   const latest = sorted.at(-1)
   if (latest?.status !== "delivered") return null
   return latest.changedAt
@@ -187,8 +187,25 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
     return stage("approved", on ? { detail: `Pickup scheduled for ${on}`, customerDetail: `Pickup scheduled for ${on}. Keep the items ready` } : {})
   }
 
+  const refund = hasReturns ? refundState(input) : "none"
+  const latestReturnAt = input.returns.reduce((max, r) => Math.max(max, asTime(r.createdAt)), 0)
+  const rejectedAfterReturns =
+    request?.status === "rejected" &&
+    refund !== "full" &&
+    (!hasReturns || asTime(request.decidedAt ?? request.createdAt) > latestReturnAt)
+
+  if (rejectedAfterReturns) {
+    const why = request.adminNote?.trim()
+    const decided = asTime(request.decidedAt ?? request.createdAt)
+    const stale = input.now ? input.now.getTime() - decided > REJECTED_BADGE_DAYS * 86_400_000 : false
+    return stage("rejected", {
+      detail: why ? `Reason: ${why}` : STAGE_COPY.rejected.detail,
+      customerDetail: why ? `Reason: ${why}` : STAGE_COPY.rejected.customerDetail,
+      badge: !stale,
+    })
+  }
+
   if (hasReturns) {
-    const refund = refundState(input)
     if (refund === "full") return stage("refunded")
     if (refund === "partly") {
       const money =
@@ -200,16 +217,6 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
     return stage("received")
   }
 
-  if (request?.status === "rejected") {
-    const why = request.adminNote?.trim()
-    const decided = asTime(request.decidedAt ?? request.createdAt)
-    const stale = input.now ? input.now.getTime() - decided > REJECTED_BADGE_DAYS * 86_400_000 : false
-    return stage("rejected", {
-      detail: why ? `Reason: ${why}` : STAGE_COPY.rejected.detail,
-      customerDetail: why ? `Reason: ${why}` : STAGE_COPY.rejected.customerDetail,
-      badge: !stale,
-    })
-  }
   if (request?.status === "withdrawn") return stage("withdrawn")
   return null
 }
@@ -263,7 +270,7 @@ export type ReturnTimelineEntry = {
 /** Per-return refund state for the admin ("Refunded ₹X" / "No refund recorded"), oldest return first. */
 export function returnRefundSummary(returns: ReturnStageInput["returns"]): string | null {
   if (returns.length === 0) return null
-  const sorted = [...returns].sort((a, b) => asTime(a.createdAt) - asTime(b.createdAt))
+  const sorted = returns.toSorted((a, b) => asTime(a.createdAt) - asTime(b.createdAt))
   return sorted
     .map((r, i) => {
       const what = r.refunded ? (r.refundAmount ? `Refunded ${formatPrice(r.refundAmount)}` : "Refunded") : "No refund recorded"

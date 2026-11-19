@@ -175,22 +175,22 @@ function ProfileFormInner({
       </div>
       {callbackBanner && (
         <p
-          data-ui="account/ProfileFormInner/p-callback"
+          data-ui="account/ProfileFormInner/p"
           role="status"
           className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
             callbackBanner.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-success/10"
           }`}
         >
           <MailCheckIcon className={`mt-0.5 size-4 shrink-0 ${callbackBanner.tone === "error" ? "text-destructive" : "text-success"}`} aria-hidden />
-          <span>{callbackBanner.text}</span>
+          <span data-ui="account/ProfileFormInner/span">{callbackBanner.text}</span>
         </p>
       )}
       {sentTo && (
-        <p data-ui="account/ProfileFormInner/p-email-confirm" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
+        <p data-ui="account/ProfileFormInner/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
           <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          <span>
-            We sent a confirmation link to <span className="font-semibold">{sentTo}</span> (and to{" "}
-            <span className="font-semibold">{saved.email}</span> if double confirmation is enabled). Open the link(s) to finish changing your login email.
+          <span data-ui="account/ProfileFormInner/span-2">
+            We sent a confirmation link to <span data-ui="account/ProfileFormInner/span-3" className="font-semibold">{sentTo}</span> (and to{" "}
+            <span data-ui="account/ProfileFormInner/span-4" className="font-semibold">{saved.email}</span> if double confirmation is enabled). Open the link(s) to finish changing your login email.
           </span>
         </p>
       )}

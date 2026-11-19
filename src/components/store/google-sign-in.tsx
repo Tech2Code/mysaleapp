@@ -277,13 +277,13 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
       {/* Left Column: Dynamic Welcome & Perks Panel (Desktop only) */}
       <div
-        data-ui="store/GoogleSignIn/div-welcome"
+        data-ui="store/GoogleSignIn/div-hidden"
         className="hidden flex-col justify-between border-r border-border/60 bg-secondary/40 p-7 lg:flex"
       >
-        <div>
-          <div className="flex items-center gap-3">
+        <div data-ui="store/GoogleSignIn/div">
+          <div data-ui="store/GoogleSignIn/div-flex" className="flex items-center gap-3">
             <LogoMark className="size-11 text-xl" />
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <span data-ui="store/GoogleSignIn/span" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {mode === "signin" ? "Welcome back" : "New customer"}
             </span>
           </div>
@@ -291,30 +291,30 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           <h1 data-ui="store/GoogleSignIn/h1" className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
             {mode === "signin" ? `Welcome to ${shopName}` : `Join ${shopName}`}
           </h1>
-          <p data-ui="store/GoogleSignIn/p-subtitle" className="mt-2 text-sm/relaxed text-muted-foreground">
+          <p data-ui="store/GoogleSignIn/p" className="mt-2 text-sm/relaxed text-muted-foreground">
             {mode === "signin"
               ? "Sign in with your email and password or one-tap Google login to manage your orders and saved items."
               : "Create your account with your basic details once so every future order is faster and easier."}
           </p>
 
-          <ul data-ui="store/GoogleSignIn/ul-perks" className="mt-7 space-y-4">
+          <ul data-ui="store/GoogleSignIn/ul" className="mt-7 space-y-4">
             {perks.map((p) => (
-              <li data-ui="store/GoogleSignIn/li-perk" key={p.title} className="flex items-start gap-3.5">
-                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-2xl bg-card text-primary shadow-xs ring-1 ring-border/60">
-                  <p.icon className="size-4" aria-hidden />
+              <li data-ui="store/GoogleSignIn/li-flex" key={p.title} className="flex items-start gap-3.5">
+                <span data-ui="store/GoogleSignIn/span-grid" className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-2xl bg-card text-primary shadow-xs ring-1 ring-border/60">
+                  <p.icon data-ui="store/GoogleSignIn/p.icon" className="size-4" aria-hidden />
                 </span>
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold text-foreground">{p.title}</p>
-                  <p className="text-xs/relaxed text-muted-foreground">{p.text}</p>
+                <div data-ui="store/GoogleSignIn/div-2" className="space-y-0.5">
+                  <p data-ui="store/GoogleSignIn/p-2" className="text-sm font-semibold text-foreground">{p.title}</p>
+                  <p data-ui="store/GoogleSignIn/p-3" className="text-xs/relaxed text-muted-foreground">{p.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p data-ui="store/GoogleSignIn/p-guest" className="mt-8 border-t border-border/60 pt-5 text-xs text-muted-foreground">
+        <p data-ui="store/GoogleSignIn/p-4" className="mt-8 border-t border-border/60 pt-5 text-xs text-muted-foreground">
           Signing in is optional — you can also{" "}
-          <Link data-ui="store/GoogleSignIn/Link-order-as-a-guest" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a-" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
             browse &amp; order as a guest
           </Link>
           .
@@ -322,16 +322,16 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       </div>
 
       {/* Right Column: Toggle + Form + Google OAuth */}
-      <div data-ui="store/GoogleSignIn/div-form" className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
-        <div className="space-y-4">
+      <div data-ui="store/GoogleSignIn/div-flex-2" className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
+        <div data-ui="store/GoogleSignIn/div-3" className="space-y-4">
           <div
-            data-ui="store/GoogleSignIn/div-tabs"
+            data-ui="store/GoogleSignIn/div-account-access"
             role="tablist"
             aria-label="Account access"
             className="grid grid-cols-2 rounded-full border bg-muted/60 p-1 text-sm font-medium"
           >
             <button
-              data-ui="store/GoogleSignIn/button-tab-signin"
+              data-ui="store/GoogleSignIn/button-sign-in"
               type="button"
               role="tab"
               aria-selected={mode === "signin"}
@@ -344,7 +344,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               Sign in
             </button>
             <button
-              data-ui="store/GoogleSignIn/button-tab-signup"
+              data-ui="store/GoogleSignIn/button-create-account"
               type="button"
               role="tab"
               aria-selected={mode === "signup"}
@@ -359,7 +359,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           </div>
 
           {problem && (
-            <p data-ui="store/GoogleSignIn/p" role="alert" className="rounded-xl bg-muted p-3 text-sm">
+            <p data-ui="store/GoogleSignIn/p-5" role="alert" className="rounded-xl bg-muted p-3 text-sm">
               {problem === "cancelled"
                 ? "Sign-in was cancelled, so you're not signed in yet. You can try again whenever you like."
                 : "We couldn't sign you in this time. Please try again."}
@@ -367,22 +367,22 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           )}
 
           {confirmationEmail && (
-            <p data-ui="store/GoogleSignIn/p-confirm" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
+            <p data-ui="store/GoogleSignIn/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
               <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-              <span>
-                We sent a confirmation link to <span className="font-semibold">{confirmationEmail}</span>. Open the link in your email to activate your account, then sign in below.
+              <span data-ui="store/GoogleSignIn/span-2">
+                We sent a confirmation link to <span data-ui="store/GoogleSignIn/span-3" className="font-semibold">{confirmationEmail}</span>. Open the link in your email to activate your account, then sign in below.
               </span>
             </p>
           )}
 
           {formError && (
-            <p data-ui="store/GoogleSignIn/p-error" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+            <p data-ui="store/GoogleSignIn/p-6" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {formError}
             </p>
           )}
 
           {mode === "signin" ? (
-            <form data-ui="store/GoogleSignIn/form-signin" onSubmit={onSignIn} noValidate className="space-y-2.5">
+            <form data-ui="store/GoogleSignIn/form" onSubmit={onSignIn} noValidate className="space-y-2.5">
               <TextField
                 label="Email"
                 kind="email"
@@ -400,7 +400,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 {...signInForm.register("password")}
               />
               <Button
-                data-ui="store/GoogleSignIn/Button-submit-signin"
+                data-ui="store/GoogleSignIn/Button-sign-in"
                 type="submit"
                 size="lg"
                 disabled={pending || loadingGoogle}
@@ -411,8 +411,8 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               </Button>
             </form>
           ) : (
-            <form data-ui="store/GoogleSignIn/form-signup" onSubmit={onSignUp} noValidate className="space-y-2">
-              <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <form data-ui="store/GoogleSignIn/form-2" onSubmit={onSignUp} noValidate className="space-y-2">
+              <div data-ui="store/GoogleSignIn/div-grid" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
                 <TextField
                   label="Full name"
                   kind="personName"
@@ -439,7 +439,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 error={signUpForm.formState.errors.email?.message}
                 {...signUpForm.register("email")}
               />
-              <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+              <div data-ui="store/GoogleSignIn/div-grid-2" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
                 <TextField
                   label="Password"
                   type="password"
@@ -457,11 +457,11 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                   {...signUpForm.register("confirmPassword")}
                 />
               </div>
-              <p className="text-[0.72rem] text-muted-foreground">
+              <p data-ui="store/GoogleSignIn/p-7" className="text-[0.72rem] text-muted-foreground">
                 Use at least {LIMITS.newPassword.min} characters with a letter and a number.
               </p>
               <Button
-                data-ui="store/GoogleSignIn/Button-submit-signup"
+                data-ui="store/GoogleSignIn/Button-create-account"
                 type="submit"
                 size="lg"
                 disabled={pending || loadingGoogle}
@@ -473,10 +473,10 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             </form>
           )}
 
-          <div data-ui="store/GoogleSignIn/div-divider" className="relative flex items-center py-1">
-            <div className="grow border-t border-border/70" />
-            <span className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
-            <div className="grow border-t border-border/70" />
+          <div data-ui="store/GoogleSignIn/div-flex-3" className="relative flex items-center py-1">
+            <div data-ui="store/GoogleSignIn/div-4" className="grow border-t border-border/70" />
+            <span data-ui="store/GoogleSignIn/span-4" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
+            <div data-ui="store/GoogleSignIn/div-5" className="grow border-t border-border/70" />
           </div>
 
           <Button
@@ -492,9 +492,9 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             {loadingGoogle ? "Opening Google…" : "Continue with Google"}
           </Button>
 
-          <p data-ui="store/GoogleSignIn/p-guest-mobile" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
+          <p data-ui="store/GoogleSignIn/p-8" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
             Signing in is optional —{" "}
-            <Link href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
+            <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a--2" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
               browse &amp; order as a guest
             </Link>
             .

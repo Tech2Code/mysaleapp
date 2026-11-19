@@ -31,7 +31,7 @@ export function AdminLoginForm() {
     params.get("error") === "not-admin"
       ? "This account doesn't have admin access."
       : params.get("reason") === "session-expired"
-        ? "Your 12-hour admin session has expired. Please sign in again."
+        ? "Your 7-day admin session has expired. Please sign in again."
         : null
   )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })

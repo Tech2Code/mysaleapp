@@ -244,8 +244,7 @@ export function ProductBrowser({
               const q = deferredQuery.trim()
               const parsed = q ? parseSearchQuery(q) : null
               const relaxedParsed = parsed ? { ...parsed, minPrice: null, maxPrice: null } : null
-              return [...products]
-                .sort((a, b) => {
+              return products.toSorted((a, b) => {
                   const stockDiff = Number(b.stock > 0) - Number(a.stock > 0)
                   if (stockDiff !== 0) return stockDiff
                   if (parsed && relaxedParsed) {

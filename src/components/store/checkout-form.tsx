@@ -69,13 +69,20 @@ export function CheckoutForm({
   const [serverError, setServerError] = useState<string | null>(null)
   const initialDefault = initialAddresses[0]
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
-  const addresses = initialAddresses.length > 0 || clientAddresses === null ? initialAddresses : clientAddresses
+  const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
+  const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? initialAddresses)
   /** id of the saved address in use, or "new" when typing a different one */
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
   const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
   const [saveAddress, setSaveAddress] = useState(true)
   const [hasOrderNote, setHasOrderNote] = useState(false)
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [showMobileQr, setShowMobileQr] = useState(false)
+  const [validatedCustomer, setValidatedCustomer] = useState<CheckoutInput | null>(null)
+  const [paymentRef, setPaymentRef] = useState("")
+  const [paymentRefError, setPaymentRefError] = useState<string | null>(null)
   const fetchedForUser = useRef<string | null>(null)
+  const wasSignedIn = useRef(signedIn)
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -151,18 +158,30 @@ export function CheckoutForm({
 
   // Clear cached account addresses/autofill if the user signs out while CheckoutForm stays mounted
   useEffect(() => {
-    if (!authReady || signedIn) return
+    if (signedIn) {
+      wasSignedIn.current = true
+      return
+    }
+    if (!authReady || !wasSignedIn.current) return
+    wasSignedIn.current = false
     fetchedForUser.current = null
+    form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     queueMicrotask(() => {
+      setClearedOnSignOut(true)
       setClientAddresses(null)
       setSelected("new")
+      setValidatedCustomer(null)
+      setPayDialogOpen(false)
+      setPaymentRef("")
+      setPaymentRefError(null)
+      setServerError(null)
     })
-  }, [authReady, signedIn])
+  }, [authReady, signedIn, form])
 
-  // Signed-in customers: fallback if server did not preload addresses (e.g. client-only session)
+  // Signed-in customers: fallback if server did not preload addresses (or after sign-out/account switch)
   useEffect(() => {
     if (!authReady || !user) return
-    if (initialAddresses.length > 0 || fetchedForUser.current === user.id) return
+    if ((!clearedOnSignOut && initialAddresses.length > 0) || fetchedForUser.current === user.id) return
     fetchedForUser.current = user.id
     let cancelled = false
     Promise.all([listMyAddresses(), getMyProfile()])
@@ -192,13 +211,7 @@ export function CheckoutForm({
     return () => {
       cancelled = true
     }
-  }, [authReady, user, form, initialAddresses.length])
-
-  const [payDialogOpen, setPayDialogOpen] = useState(false)
-  const [showMobileQr, setShowMobileQr] = useState(false)
-  const [validatedCustomer, setValidatedCustomer] = useState<CheckoutInput | null>(null)
-  const [paymentRef, setPaymentRef] = useState("")
-  const [paymentRefError, setPaymentRefError] = useState<string | null>(null)
+  }, [authReady, user, form, initialAddresses.length, clearedOnSignOut])
 
   const onSubmit = form.handleSubmit((values) => {
     if (area.error) {
@@ -700,6 +713,11 @@ export function CheckoutForm({
                 </>
               )
             })()}
+            {serverError && (
+              <p data-ui="store/CheckoutForm/p-7" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                {serverError}
+              </p>
+            )}
           </DialogBody>
 
           <DialogFooter>

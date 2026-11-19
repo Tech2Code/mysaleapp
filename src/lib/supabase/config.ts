@@ -37,3 +37,15 @@ export function safeAvatarUrl(raw: unknown): string | null {
     return null
   }
 }
+
+/**
+ * Strips the trailing ` (Admin)` badge that migration 0048 adds to `auth.users` metadata
+ * for the Supabase Dashboard "Display name" column, so app UI forms and menus always show
+ * the person's clean name.
+ */
+export function cleanMetaName(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined
+  const cleaned = raw.replace(/\s*\(Admin\)\s*$/i, "").trim()
+  if (!cleaned || cleaned.toLowerCase() === "admin") return undefined
+  return cleaned
+}

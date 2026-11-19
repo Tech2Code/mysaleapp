@@ -2,10 +2,11 @@ import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
 import { AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
 import { Skeletonize } from "@/components/shared/skeletonize"
-import { requireAdmin } from "@/features/auth/guards"
+import { getAdminPinStatus, requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
 import { getPaymentsToVerifyCount } from "@/features/orders/admin-queries"
-import { safeAvatarUrl } from "@/lib/supabase/config"
+import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
+import { getServerSupabase } from "@/lib/supabase/server"
 
 /**
  * Server-side gate (redirects non-admins). It renders nothing and sits NEXT to the page instead of wrapping it:
@@ -20,6 +21,15 @@ async function AdminGate() {
 /** Avatar + email of the signed-in admin, top right. */
 async function AccountSlot() {
   const user = await requireAdmin()
+  const supabase = await getServerSupabase()
+  const [{ data: profile }, pinStatus] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null; avatar_url: string | null }>(),
+    getAdminPinStatus(),
+  ])
   const meta = user.user_metadata as { full_name?: string; name?: string; avatar_url?: string }
   const lastSignIn = user.last_sign_in_at
     ? new Date(user.last_sign_in_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })
@@ -27,11 +37,12 @@ async function AccountSlot() {
   return (
     <AdminAccountMenu
       account={{
-        name: meta.full_name ?? meta.name ?? user.email?.split("@")[0] ?? "Admin",
+        name: cleanMetaName(profile?.full_name) ?? cleanMetaName(meta.full_name) ?? cleanMetaName(meta.name) ?? user.email?.split("@")[0] ?? "Admin",
         email: user.email ?? "",
-        avatarUrl: safeAvatarUrl(meta.avatar_url),
+        avatarUrl: safeAvatarUrl(profile?.avatar_url) ?? safeAvatarUrl(meta.avatar_url),
         lastSignIn,
         lastSignInAt: user.last_sign_in_at ?? null,
+        pinStatus,
       }}
     />
   )

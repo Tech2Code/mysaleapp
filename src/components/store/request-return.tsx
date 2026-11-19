@@ -56,6 +56,7 @@ export function RequestReturn({
   const [qty, setQty] = useState<Record<string, string>>({})
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
+  const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -95,6 +96,18 @@ export function RequestReturn({
   const needsDetail = !reason || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
+  // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to request a return;
+  // signed-in owners on /account/orders/[code] omit phoneLast4 and are recognised by their session.
+  const isGuest = phoneLast4 !== undefined
+  const phoneDigits = normalizeIndianPhone(phone)
+  const phoneError =
+    isGuest && phone.trim() && !phoneDigits
+      ? "Enter your 10-digit mobile number"
+      : isGuest && phoneDigits && !phoneDigits.endsWith(phoneLast4)
+        ? "Doesn't match the number you looked up"
+        : undefined
+  const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
+
   const submit = () =>
     startTransition(async () => {
       setError(null)
@@ -106,7 +119,18 @@ export function RequestReturn({
         setError(OTHER_DETAIL_MESSAGE)
         return
       }
-      const res = await requestReturn({ code: orderCode, phoneLast4, items: payload, reason, details: details.trim() })
+      if (phoneMissing) {
+        setError(phoneError ?? "Enter your 10-digit mobile number.")
+        return
+      }
+      const res = await requestReturn({
+        code: orderCode,
+        phoneLast4,
+        phone: isGuest ? phoneDigits ?? undefined : undefined,
+        items: payload,
+        reason,
+        details: details.trim(),
+      })
       if (!res.ok) {
         setError(res.error)
         return
@@ -116,6 +140,7 @@ export function RequestReturn({
         setQty({})
         setReason("")
         setDetails("")
+        setPhone("")
         toast.success("Return request sent. We'll review it and update you here.")
       })
       onDone?.()
@@ -129,6 +154,7 @@ export function RequestReturn({
       setQty({})
       setReason("")
       setDetails("")
+      setPhone("")
       setError(null)
     }
   }
@@ -202,6 +228,19 @@ export function RequestReturn({
             hint="Describe what happened so we can resolve your return quickly."
             error={details.trim().length > 0 && details.trim().length < OTHER_DETAIL_MIN ? OTHER_DETAIL_MESSAGE : undefined}
           />
+          {isGuest && (
+            <TextField
+              label="Your full mobile number"
+              kind="phone"
+              leading="+91"
+              fieldSize="md"
+              hint="Confirm the whole number you ordered with to request a return."
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              error={phoneError}
+            />
+          )}
           {error && (
             <p data-ui="store/RequestReturn/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
               {error}
@@ -212,7 +251,7 @@ export function RequestReturn({
           <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Close
           </Button>
-          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail} className="gap-1.5 rounded-full">
+          <Button data-ui="store/RequestReturn/Button-send-request" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail || phoneMissing} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send request
           </Button>
         </DialogFooter>
@@ -289,10 +328,10 @@ export function ReturnRequestsPanel({
         <PackageOpenIcon className="size-4 text-primary" aria-hidden /> Returns
       </h3>
       {/* Newest stage first: goods received back above the requests. */}
-      <ReturnsList bare returns={[...returns].reverse()} audience="customer" refundedInFull={refundedInFull} />
+      <ReturnsList bare returns={returns.toReversed()} audience="customer" refundedInFull={refundedInFull} />
       <h4 data-ui="store/ReturnRequestsPanel/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>
       <ul data-ui="store/ReturnRequestsPanel/ul" className="space-y-3">
-        {[...requests].reverse().map((r) => {
+        {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "customer")
           return (
             <li data-ui="store/ReturnRequestsPanel/li" key={r.id} className="space-y-2 rounded-xl border p-3.5">

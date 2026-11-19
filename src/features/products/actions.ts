@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
+import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { CACHE_TAGS } from "./queries"
@@ -95,6 +96,13 @@ export async function saveProduct(
       .select("id, stock")
       .single<{ id: string; stock: number }>()
     if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
+    await logAdminAction(supabase, {
+      actorId: auth.user.id,
+      action: "product.create",
+      targetType: "product",
+      targetId: data.id,
+      metadata: { slug: parsed.data.slug, name: parsed.data.name, stock: data.stock },
+    })
     refreshCatalogue()
     return { ok: true, data: { id: data.id, stock: data.stock } }
   }
@@ -131,6 +139,13 @@ export async function saveProduct(
     stock = Number(after)
   }
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "product.update",
+    targetType: "product",
+    targetId: data.id,
+    metadata: { slug: parsed.data.slug, stockDelta: delta, stockAfter: stock },
+  })
   refreshCatalogue()
   return { ok: true, data: { id: data.id, stock } }
 }
@@ -154,6 +169,12 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   const paths = extractStoragePaths(product?.images ?? [])
   if (paths.length) await supabase.storage.from("product-images").remove(paths)
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "product.delete",
+    targetType: "product",
+    targetId: id,
+  })
   refreshCatalogue()
   return { ok: true }
 }
@@ -181,6 +202,13 @@ export async function toggleProductFlag(
     .eq("id", id)
   if (error) return fail("Could not update product")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "product.toggle_flag",
+    targetType: "product",
+    targetId: id,
+    metadata: { flag: parsedFlag.data, value: parsedValue.data },
+  })
   refreshCatalogue()
   return { ok: true }
 }
@@ -201,6 +229,13 @@ export async function saveCategory(id: string | null, input: unknown): Promise<A
     : await supabase.from("categories").insert(parsed.data)
   if (error) return fail(friendlyDbError(error.message, error.code))
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: id ? "category.update" : "category.create",
+    targetType: "category",
+    targetId: id ?? parsed.data.slug,
+    metadata: { name: parsed.data.name, slug: parsed.data.slug },
+  })
   refreshCatalogue()
   return { ok: true }
 }
@@ -215,6 +250,12 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("categories").delete().eq("id", id)
   if (error) return fail("Could not delete category")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "category.delete",
+    targetType: "category",
+    targetId: id,
+  })
   refreshCatalogue()
   return { ok: true }
 }

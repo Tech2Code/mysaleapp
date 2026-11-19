@@ -7,9 +7,10 @@ import { headers } from "next/headers"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
 import { getCurrentUser } from "@/features/auth/guards"
+import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
-import { safeAvatarUrl } from "@/lib/supabase/config"
+import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { profileSchema, type Profile } from "./schema"
 
@@ -38,9 +39,10 @@ export async function getMyProfile(): Promise<Profile | null> {
     .eq("id", user.id)
     .maybeSingle<ProfileRow>()
 
+  const metaPhone = typeof user.user_metadata?.phone === "string" ? normalizeIndianPhone(user.user_metadata.phone) : null
   return {
-    fullName: data?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? "",
-    phone: data?.phone ?? (user.user_metadata?.phone as string | undefined) ?? "",
+    fullName: cleanMetaName(data?.full_name) ?? cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name) ?? "",
+    phone: data?.phone ?? metaPhone ?? "",
     avatarUrl: safeAvatarUrl(data?.avatar_url),
     email: user.email ?? "",
   }
@@ -62,29 +64,22 @@ export async function updateProfile(
   const currentEmail = (user.email ?? "").trim()
   const requestedEmail = p.email?.trim().toLowerCase()
   const isEmailChanged = Boolean(requestedEmail && requestedEmail !== currentEmail.toLowerCase())
+  if (isEmailChanged && (await limited("password-reset", user.id))) {
+    return fail(RATE_LIMIT_MESSAGE)
+  }
 
   const supabase = await getServerSupabase()
   const origin = isEmailChanged ? await trustedOrigin() : undefined
 
-  const [profileRes, authRes] = await Promise.all([
-    supabase.from("profiles").upsert({
-      id: user.id,
-      full_name: p.fullName,
-      phone: normalizedPhone,
-    }),
-    supabase.auth.updateUser(
-      {
-        ...(isEmailChanged && requestedEmail ? { email: requestedEmail } : {}),
-        data: {
-          full_name: p.fullName,
-          phone: normalizedPhone,
-        },
-      },
-      isEmailChanged && origin ? { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/account/profile?email_changed=1")}` } : undefined
-    ),
-  ])
+  // Request email change before mutating profiles so a rejected email doesn't leave partial profile edits saved.
+  const authRes =
+    isEmailChanged && requestedEmail
+      ? await supabase.auth.updateUser(
+          { email: requestedEmail },
+          origin ? { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/account/profile?email_changed=1")}` } : undefined
+        )
+      : { data: { user }, error: null }
 
-  if (profileRes.error) return fail("Could not save your profile")
   if (authRes.error && isEmailChanged) {
     const msg = authRes.error.message.toLowerCase()
     if (msg.includes("already") || msg.includes("registered")) {
@@ -97,6 +92,13 @@ export async function updateProfile(
     }
     return fail("Could not change your email address. Please try again.")
   }
+
+  const profileRes = await supabase.from("profiles").upsert({
+    id: user.id,
+    full_name: p.fullName,
+    phone: normalizedPhone,
+  })
+  if (profileRes.error) return fail("Could not save your profile")
 
   const updatedEmail = authRes.data.user?.email?.trim() || currentEmail
   const emailAppliedImmediately =

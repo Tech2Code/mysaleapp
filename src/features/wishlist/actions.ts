@@ -24,11 +24,17 @@ async function readIds(userId: string): Promise<ActionResult<string[]>> {
  * Used directly by signInCustomer / signUpCustomer to avoid a second auth round-trip after login.
  */
 export async function syncWishlistForUser(userId: string, localIds: unknown): Promise<ActionResult<string[]>> {
+  const supabase = await getServerSupabase()
+  // Always verify the caller owns `userId` because every export in a "use server" module is a public endpoint.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user || user.id !== userId) return fail("Not signed in")
+
   const rawList = Array.isArray(localIds) ? localIds.slice(0, 200) : []
   const candidateIds = Array.from(new Set(rawList.filter((x): x is string => uuidItem.safeParse(x).success)))
 
   if (candidateIds.length) {
-    const supabase = await getServerSupabase()
     // Intersect with existing products first so one deleted product doesn't abort the batch upsert.
     const { data: existingProducts, error: checkError } = await supabase
       .from("products")

@@ -1,7 +1,9 @@
 import type { EmailOtpType } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 import { siteConfig } from "@/config/site"
+import { normalizeIndianPhone } from "@/lib/format"
 import { safeNextPath } from "@/lib/safe-redirect"
+import { cleanMetaName } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 
 const OTP_TYPES = new Set<EmailOtpType>(["signup", "invite", "magiclink", "recovery", "email_change", "email"])
@@ -43,14 +45,43 @@ export async function GET(request: NextRequest) {
     return response
   }
 
+  const syncProfileFromMetadata = async (supabase: Awaited<ReturnType<typeof getServerSupabase>>) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+    const metaName = cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name) ?? null
+    const rawMetaPhone = typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : null
+    const metaPhone = rawMetaPhone ? normalizeIndianPhone(rawMetaPhone) : null
+    if (!metaName && !metaPhone) return
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null; phone: string | null }>()
+    if ((!existing?.full_name && metaName) || (!existing?.phone && metaPhone)) {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        full_name: cleanMetaName(existing?.full_name) || metaName,
+        phone: existing?.phone || metaPhone,
+      })
+    }
+  }
+
   if (code) {
     const supabase = await getServerSupabase()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+    if (!error) {
+      await syncProfileFromMetadata(supabase)
+      return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+    }
   } else if (tokenHash && isOtpType(otpType)) {
     const supabase = await getServerSupabase()
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType })
-    if (!error) return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+    if (!error) {
+      await syncProfileFromMetadata(supabase)
+      return finishSuccess(next, nextPathname === "/admin/reset-password" || otpType === "recovery")
+    }
   }
 
   // Step 1 of Supabase's two-step email change redirects with `?message=...` (or `#message=...`) and neither `code` nor `error`.

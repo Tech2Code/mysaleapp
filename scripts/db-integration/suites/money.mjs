@@ -60,7 +60,11 @@ export async function run(ctx) {
   {
     const S = "returns"
     const it = (p, restock = false, q = 1) => ({ productId: p.id, quantity: q, name: p.name, restock })
-    const deliver = (id) => admin.from("orders").update({ status: "delivered" }).eq("id", id)
+    const deliver = async (id) => {
+      await admin.from("orders").update({ status: "confirmed" }).eq("id", id)
+      await admin.from("orders").update({ status: "shipped", shipping_carrier: "AuditPost" }).eq("id", id)
+      return admin.from("orders").update({ status: "delivered" }).eq("id", id)
+    }
 
     let x = await newOrder([{ productId: P1.id, quantity: 3 }, { productId: P2.id, quantity: 2 }])
     const T = await pay(x, "delivered")
@@ -120,7 +124,7 @@ export async function run(ctx) {
     const nd = await newOrder([{ productId: P1.id, quantity: 1 }])
     r = await ret(nd.id, [it(P1)])
     rec(S, "non-delivered order -> NOT_DELIVERED", has(r, "NOT_DELIVERED"), msg(r))
-    r = await anon.rpc("request_return", { p_code: nd.code, p_phone_last4: nd.last4, p_items: [{ productId: P1.id, quantity: 1 }], p_reason: "Damaged", p_details: null })
+    r = await anon.rpc("request_return", { p_code: nd.code, p_phone_last4: nd.last4, p_items: [{ productId: P1.id, quantity: 1 }], p_reason: "Damaged", p_details: null, p_phone: nd.ph })
     rec(S, "request_return on a non-delivered order -> NOT_DELIVERED", has(r, "NOT_DELIVERED"), msg(r))
 
     // deleted product line
@@ -135,7 +139,7 @@ export async function run(ctx) {
     // request flow
     const q = await newOrder([{ productId: P1.id, quantity: 3 }])
     await pay(q, "delivered")
-    const req = (items, reason = "Damaged") => anon.rpc("request_return", { p_code: q.code, p_phone_last4: q.last4, p_items: items, p_reason: reason, p_details: MARK })
+    const req = (items, reason = "Damaged") => anon.rpc("request_return", { p_code: q.code, p_phone_last4: q.last4, p_items: items, p_reason: reason, p_details: MARK, p_phone: q.ph })
     r = await req([{ productId: P1.id, quantity: 4 }])
     rec(S, "request for more than ordered -> TOO_MANY_RETURNED", has(r, "TOO_MANY_RETURNED"), msg(r))
     r = await req([{ productId: P1.id, quantity: 1 }], " ")

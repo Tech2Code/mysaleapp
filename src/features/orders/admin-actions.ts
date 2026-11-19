@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
 import { CACHE_TAGS } from "@/features/products/queries"
+import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { formatDateTime } from "@/lib/format"
 import { getServerSupabase } from "@/lib/supabase/server"
@@ -87,6 +88,13 @@ export async function updateOrderStatus(input: unknown): Promise<ActionResult> {
   }
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.status_update",
+    targetType: "order",
+    targetId: orderId,
+    metadata: { from: current.status, to: status },
+  })
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }
@@ -177,6 +185,7 @@ export async function revertOrderStatus(input: unknown): Promise<ActionResult> {
       if (updateErr || !updated?.length) {
         return fail(mapRpcError(updateErr?.message ?? "", "Could not revert the order status."))
       }
+      await supabase.from("order_status_history").delete().eq("order_id", orderId).eq("status", expectedStatus)
     } else {
       return fail(mapRpcError(rpcError.message, "Could not revert the order status."))
     }
@@ -196,6 +205,13 @@ export async function revertOrderStatus(input: unknown): Promise<ActionResult> {
 
   await supabase.from("order_admin_notes").upsert({ order_id: orderId, note: combinedNote }, { onConflict: "order_id" })
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.status_revert",
+    targetType: "order",
+    targetId: orderId,
+    metadata: { from: expectedStatus, to: toStatus, reason },
+  })
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }
@@ -336,6 +352,13 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
   }
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.payment_update",
+    targetType: "order",
+    targetId: p.orderId,
+    metadata: { from: order.payment_status, to: p.status, confirmedOrder: confirmNow },
+  })
   revalidatePathsForAdmin(p.orderId)
   revalidatePathsForCustomer()
   return { ok: true, data: { confirmed: confirmNow } }
@@ -391,6 +414,12 @@ export async function updateAdminNote(input: unknown): Promise<ActionResult> {
     : await supabase.from("order_admin_notes").delete().eq("order_id", parsed.data.orderId)
   if (error) return fail("Could not save note")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.note_update",
+    targetType: "order",
+    targetId: parsed.data.orderId,
+  })
   revalidatePath(`/admin/orders/${parsed.data.orderId}`)
   return { ok: true }
 }
@@ -438,6 +467,13 @@ export async function cancelOrderAsAdmin(input: unknown): Promise<ActionResult> 
   }
   if (!updated?.length) return fail("This order was just changed by someone else. Refresh the page and try again.")
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.cancel",
+    targetType: "order",
+    targetId: orderId,
+    metadata: { from: current.status, reason },
+  })
   updateTag(CACHE_TAGS.products) // the DB trigger gave the reserved stock back
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
@@ -488,6 +524,13 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
     return fail(mapRpcError(error.message, "Could not record the return"))
   }
 
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.return_record",
+    targetType: "order",
+    targetId: orderId,
+    metadata: { refund, requestId: requestId ?? null },
+  })
   updateTag(CACHE_TAGS.products) // restocked items are sellable again
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
@@ -529,6 +572,13 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
     if (error.message.includes("BAD_PICKUP_DATE")) return fail(mapRpcError("BAD_PICKUP_DATE", "Pick a valid date"), { pickupDate: ["Pick a date from today"] })
     return fail("Could not save your decision")
   }
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: approve ? "return_request.approve" : "return_request.reject",
+    targetType: "order",
+    targetId: requestId,
+    metadata: { pickupDate: approve ? pickupDate : null },
+  })
   revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
@@ -561,6 +611,12 @@ export async function markReturnPickedUp(input: unknown): Promise<ActionResult> 
     if (error.message.includes("NOT_PENDING")) return fail("This return is not waiting for a pickup any more. Refresh the page.")
     return fail("Could not save the pickup")
   }
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "return_request.picked_up",
+    targetType: "order",
+    targetId: parsed.data.requestId,
+  })
   revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
@@ -576,6 +632,12 @@ export async function undoReturnStep(input: unknown): Promise<ActionResult> {
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("undo_return_step", { p_request_id: parsed.data.requestId })
   if (error) return fail(mapRpcError(error.message, "Could not undo this step"))
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "return_request.undo",
+    targetType: "order",
+    targetId: parsed.data.requestId,
+  })
   revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   return { ok: true }
@@ -604,6 +666,12 @@ export async function refundReturn(input: unknown): Promise<ActionResult<{ refun
     p_expected_refunded: parsed.data.expectedRefunded ?? null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not record the refund"))
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "order.return_refund",
+    targetType: "order",
+    targetId: parsed.data.returnId,
+  })
   revalidatePathsForAdmin()
   revalidatePathsForCustomer()
   const out = (data ?? {}) as { refundedAmount?: number; fullyRefunded?: boolean }
@@ -643,6 +711,13 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
     p_details: details ?? null,
   })
   if (error) return fail(mapRpcError(error.message, "Could not create the return request"))
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "return_request.create_as_admin",
+    targetType: "order",
+    targetId: orderId,
+    metadata: { reason },
+  })
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
   return { ok: true }

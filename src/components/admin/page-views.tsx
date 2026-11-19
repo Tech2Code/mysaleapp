@@ -7,6 +7,7 @@ import { LaunchPanel } from "@/components/admin/launch-panel"
 import { ProductForm } from "@/components/admin/product-form"
 import { StoreSettingsForm } from "@/components/admin/store-settings-form"
 import { buttonVariants } from "@/components/ui/button"
+import type { AdminPinStatus } from "@/features/auth/account-schema"
 import type { Category, Product } from "@/features/products/types"
 import type { LaunchCounts } from "@/features/settings/launch"
 import type { ChecklistItem } from "@/features/settings/launch-queries"
@@ -31,6 +32,7 @@ export function ProductFormView({ product, categories }: { product: Product | nu
               <Link data-ui="admin/ProductFormView/Link-view-in-store"
                 href={`/products/${product.slug}`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}
               >
                 <ExternalLinkIcon /> View in store
@@ -76,11 +78,21 @@ export function SettingsView({ settings }: { settings: StoreSettings }) {
   )
 }
 
-export function AdminAccountView({ name, phone, email }: { name: string; phone: string; email: string }) {
+export function AdminAccountView({
+  name,
+  phone,
+  email,
+  pinStatus,
+}: {
+  name: string
+  phone: string
+  email: string
+  pinStatus?: AdminPinStatus
+}) {
   return (
     <>
-      <AdminPageHeader title="My account" description="Your name, login email and password. No database access needed." />
-      <AccountSettings name={name} phone={phone} email={email} />
+      <AdminPageHeader title="My account" description="Your name, 4-digit Quick PIN, login email and password. No database access needed." />
+      <AccountSettings name={name} phone={phone} email={email} pinStatus={pinStatus} />
     </>
   )
 }

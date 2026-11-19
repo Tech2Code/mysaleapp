@@ -2,15 +2,16 @@
 
 import type { User } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
 import { syncWishlistForUser } from "@/features/wishlist/actions"
 import { fail, type ActionResult } from "@/lib/action-result"
+import { normalizeIndianPhone } from "@/lib/format"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { v } from "@/lib/validation"
-import { isSupabaseConfigured, safeAvatarUrl } from "@/lib/supabase/config"
+import { cleanMetaName, isSupabaseConfigured, safeAvatarUrl } from "@/lib/supabase/config"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { getServerSupabase } from "@/lib/supabase/server"
 import type { SessionUser } from "@/store/auth"
@@ -42,9 +43,9 @@ function buildSessionUser(user: User, profileName?: string | null, profileAvatar
     id: user.id,
     email: user.email ?? "",
     name:
-      profileName?.trim() ||
-      (meta.full_name as string | undefined)?.trim() ||
-      (meta.name as string | undefined)?.trim() ||
+      cleanMetaName(profileName) ||
+      cleanMetaName(meta.full_name) ||
+      cleanMetaName(meta.name) ||
       user.email?.split("@")[0] ||
       "You",
     avatarUrl: safeAvatarUrl(profileAvatar) ?? safeAvatarUrl(meta.avatar_url),
@@ -82,15 +83,15 @@ export async function signInCustomer(
   }
 
   const user = data.user
-  const metaName = (user.user_metadata?.full_name as string | undefined)?.trim()
-  const metaPhone = (user.user_metadata?.phone as string | undefined)?.trim()
+  const metaName = cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name)
+  const metaPhone = typeof user.user_metadata?.phone === "string" ? normalizeIndianPhone(user.user_metadata.phone) : null
   const { data: existing } = await supabase
     .from("profiles")
     .select("full_name, phone, avatar_url")
     .eq("id", user.id)
     .maybeSingle<{ full_name: string | null; phone: string | null; avatar_url: string | null }>()
 
-  const resolvedName = existing?.full_name || metaName || null
+  const resolvedName = cleanMetaName(existing?.full_name) || metaName || null
   const resolvedPhone = existing?.phone || metaPhone || null
 
   if ((metaName && !existing?.full_name) || (metaPhone && !existing?.phone)) {
@@ -98,16 +99,6 @@ export async function signInCustomer(
       id: user.id,
       full_name: resolvedName,
       phone: resolvedPhone,
-    })
-  } else if (
-    (existing?.full_name && existing.full_name.trim() !== (metaName ?? "")) ||
-    (existing?.phone && existing.phone.trim() !== (metaPhone ?? ""))
-  ) {
-    await supabase.auth.updateUser({
-      data: {
-        full_name: resolvedName,
-        phone: resolvedPhone,
-      },
     })
   }
 
@@ -169,9 +160,9 @@ export async function signUpCustomer(
       return fail("Please use a real email address (test domains like @example.com are blocked by Supabase).")
     }
     if (msg.includes("weak_password") || msg.includes("password")) {
-      return fail(error.message)
+      return fail("Please choose a stronger password (at least 8 characters).")
     }
-    return fail(`Could not create your account (${error.message}).`)
+    return fail("Could not create your account. Please try again.")
   }
 
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
@@ -235,15 +226,15 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
   }
 
   const user = data.user
-  const metaName = (user.user_metadata?.full_name as string | undefined)?.trim()
-  const metaPhone = (user.user_metadata?.phone as string | undefined)?.trim()
+  const metaName = cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name)
+  const metaPhone = typeof user.user_metadata?.phone === "string" ? normalizeIndianPhone(user.user_metadata.phone) : null
   const { data: existing } = await supabase
     .from("profiles")
     .select("full_name, phone, avatar_url")
     .eq("id", user.id)
     .maybeSingle<{ full_name: string | null; phone: string | null; avatar_url: string | null }>()
 
-  const resolvedName = existing?.full_name || metaName || null
+  const resolvedName = cleanMetaName(existing?.full_name) || metaName || null
   const resolvedPhone = existing?.phone || metaPhone || null
 
   if ((metaName && !existing?.full_name) || (metaPhone && !existing?.phone)) {
@@ -252,17 +243,17 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
       full_name: resolvedName,
       phone: resolvedPhone,
     })
-  } else if (
-    (existing?.full_name && existing.full_name.trim() !== (metaName ?? "")) ||
-    (existing?.phone && existing.phone.trim() !== (metaPhone ?? ""))
-  ) {
-    await supabase.auth.updateUser({
-      data: {
-        full_name: resolvedName,
-        phone: resolvedPhone,
-      },
-    })
   }
+
+  const cookieStore = await cookies()
+  cookieStore.delete("kk_pw_reset")
+  cookieStore.set("kk_admin_pin_at", String(Date.now()), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60,
+    path: "/",
+  })
 
   revalidatePath("/admin", "layout")
   revalidatePath("/", "layout")
@@ -272,6 +263,9 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
 export async function signOutAdmin(reason?: "session-expired"): Promise<void> {
   const supabase = await getServerSupabase()
   await supabase.auth.signOut()
+  const cookieStore = await cookies()
+  cookieStore.delete("kk_admin_pin_at")
+  cookieStore.delete("kk_pw_reset")
   revalidatePath("/admin", "layout")
   revalidatePath("/", "layout")
   redirect(reason === "session-expired" ? "/admin/login?reason=session-expired" : "/admin/login")

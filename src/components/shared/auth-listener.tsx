@@ -5,7 +5,7 @@ import { Suspense, useEffect } from "react"
 import { getMyProfile } from "@/features/account/actions"
 import { syncWishlist } from "@/features/wishlist/actions"
 import { getBrowserSupabase } from "@/lib/supabase/client"
-import { safeAvatarUrl } from "@/lib/supabase/config"
+import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
 import { useAuth, type SessionUser } from "@/store/auth"
 import { useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
@@ -26,7 +26,7 @@ function toSessionUser(user: User): SessionUser {
   return {
     id: user.id,
     email: override?.email || user.email || "",
-    name: override?.name || (meta.full_name as string) || (meta.name as string) || user.email?.split("@")[0] || "You",
+    name: override?.name || cleanMetaName(meta.full_name) || cleanMetaName(meta.name) || user.email?.split("@")[0] || "You",
     avatarUrl: override?.avatarUrl !== undefined ? override.avatarUrl : safeAvatarUrl(meta.avatar_url),
   }
 }
