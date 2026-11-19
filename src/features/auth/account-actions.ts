@@ -134,7 +134,7 @@ export async function changeAdminPassword(input: unknown): Promise<ActionResult>
   return { ok: true }
 }
 
-/** Public: sends a reset link. Always answers the same, so it can't be used to find out which emails are admins. */
+/** Public: sends a reset link only if the email belongs to an admin. Always answers the same so it can't be used to enumerate admin emails. */
 export async function requestPasswordReset(input: unknown): Promise<ActionResult> {
   if (!isSupabaseConfigured) return fail("Connect Supabase first (see README).")
   const parsed = emailSchema.safeParse(input)
@@ -143,23 +143,57 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   // Per IP + email, so the endpoint can't be used to flood someone's inbox with reset mails.
   if (await limited("password-reset", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
 
-  const origin = await trustedOrigin()
-  const supabase = await getServerSupabase()
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: origin ? `${origin}/auth/callback?next=/admin/reset-password` : undefined,
+  const [origin, cookieStore, supabase] = await Promise.all([
+    trustedOrigin(),
+    cookies(),
+    getServerSupabase(),
+  ])
+
+  // Only send the admin recovery email if this address actually belongs to an admin account.
+  const { data: isAdminEmail, error: rpcErr } = await supabase.rpc("is_admin_email", {
+    p_email: parsed.data.email,
   })
+  if (!rpcErr && isAdminEmail !== true) {
+    return { ok: true }
+  }
+
+  cookieStore.set("kk_recovery_intent", "admin", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 3600,
+    path: "/",
+  })
+
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: origin ? `${origin}/auth/callback` : undefined,
+  })
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("rate limit") || error.code === "over_email_send_rate_limit") {
+      return fail(
+        "Email limit reached on Supabase's free mail sender. Please wait a few minutes and try again."
+      )
+    }
+  }
   return { ok: true }
 }
 
 /** Step 2 of "forgot password": the reset link signed the person in; they now choose a new password. */
 export async function resetAdminPassword(input: unknown): Promise<ActionResult> {
-  const cookieStore = await cookies()
-  if (cookieStore.get("kk_pw_reset")?.value !== "1") {
+  const [cookieStore, user, admin] = await Promise.all([
+    cookies(),
+    getCurrentUser(),
+    isAdminUser(),
+  ])
+  if (!user) return fail("This reset link has expired. Please request a new one.")
+  if (!admin) return fail("Not authorised")
+  const hasResetCookie = cookieStore.get("kk_pw_reset")?.value === "1"
+  const recoverySentMs = user.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
+  const hasRecentRecovery = !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < 60 * 60 * 1000
+  if (!hasResetCookie && !hasRecentRecovery) {
     return fail("This reset link has expired. Please request a new one.")
   }
-  const user = await getCurrentUser()
-  if (!user) return fail("This reset link has expired. Please request a new one.")
-  if (!(await isAdminUser())) return fail("Not authorised")
   const parsed = resetSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
 
@@ -168,6 +202,7 @@ export async function resetAdminPassword(input: unknown): Promise<ActionResult> 
   if (error) return fail("Could not set the new password. Please request a new reset link.")
   await supabase.rpc("clear_admin_pin_lock")
   cookieStore.delete("kk_pw_reset")
+  cookieStore.delete("kk_recovery_intent")
   cookieStore.set("kk_admin_pin_at", String(Date.now()), {
     httpOnly: true,
     sameSite: "lax",

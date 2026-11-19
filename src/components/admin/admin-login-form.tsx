@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, LogInIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useLayoutEffect, useState, useTransition } from "react"
+import { useEffect, useLayoutEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { TextField } from "@/components/form"
@@ -30,9 +30,28 @@ export function AdminLoginForm() {
   const [error, setError] = useState<string | null>(
     params.get("reason") === "session-expired"
       ? "Your 7-day admin session has expired. Please sign in again."
-      : null
+      : params.get("error") === "not-admin"
+        ? "That account does not have admin access."
+        : null
   )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
+
+  useEffect(() => {
+    const reason = params.get("reason")
+    const errParam = params.get("error")
+    if (reason === "session-expired") {
+      queueMicrotask(() =>
+        setError("Your 7-day admin session has expired. Please sign in again.")
+      )
+    } else if (errParam === "not-admin") {
+      queueMicrotask(() => setError("That account does not have admin access."))
+    }
+    if (typeof window !== "undefined" && (reason || errParam || window.location.hash)) {
+      const nextParam = params.get("next")
+      const clean = nextParam ? `/admin/login?next=${encodeURIComponent(nextParam)}` : "/admin/login"
+      window.history.replaceState(null, "", clean)
+    }
+  }, [params])
 
   useLayoutEffect(() => {
     return () => {

@@ -101,6 +101,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
                       status={order.status}
                       paymentStatus={order.paymentStatus}
                       refundedAmount={order.refundedAmount}
+                      discountAmount={order.discountAmount}
                       items={order.items}
                       requests={order.returnRequests}
                       returns={order.returns}
@@ -132,7 +133,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
             requests={order.returnRequests}
             returns={order.returns}
             returnStage={order.returnStage}
-            admin={{ items: order.items, paymentStatus: order.paymentStatus, refundedAmount: order.refundedAmount }}
+            admin={{ items: order.items, paymentStatus: order.paymentStatus, refundedAmount: order.refundedAmount, discountAmount: order.discountAmount }}
           />
           <RefundSummary order={order} />
           <OrderSummary order={order} openLinksInNewTab audience="admin" />

@@ -204,6 +204,8 @@ export type OrderReturn = {
   refunded: boolean
   /** Item value refunded for THIS return (admin only: guests don't get it). null = no refund recorded. */
   refundAmount?: number | null
+  /** Whether the goods came back for a cash refund ('refund') or an exchange/replacement ('exchange'). */
+  resolutionType?: ReturnResolutionType
   createdAt: string
 }
 
@@ -353,8 +355,8 @@ export type OrderRow = {
   created_at: string
   updated_at: string
   history?: { status: OrderStatus; changed_at: string }[]
-  /** List queries embed only `refunded, created_at`; the detail queries embed everything. */
-  returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; refund_amount?: number | string | null; created_at: string }[]
+  /** List queries embed only `refunded, resolution_type, created_at`; the detail queries embed everything. */
+  returns?: { id: string; items: OrderReturn["items"]; reason: string | null; refunded: boolean; refund_amount?: number | string | null; resolution_type?: ReturnResolutionType | null; created_at: string }[]
   return_requests?: {
     id: string
     items: ReturnRequest["items"]
@@ -451,8 +453,21 @@ function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
 function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): ReturnStage | null {
   if (!row.return_requests && !row.returns) return null
   return returnStage({
-    requests: (row.return_requests ?? []).map((r) => ({ status: r.status, createdAt: r.created_at, decidedAt: r.decided_at, adminNote: r.admin_note, pickupDate: r.pickup_date ?? null, pickedUpAt: r.picked_up_at ?? null })),
-    returns: (row.returns ?? []).map((r) => ({ refunded: r.refunded, createdAt: r.created_at })),
+    requests: (row.return_requests ?? []).map((r) => ({
+      status: r.status,
+      createdAt: r.created_at,
+      decidedAt: r.decided_at,
+      adminNote: r.admin_note,
+      pickupDate: r.pickup_date ?? null,
+      pickedUpAt: r.picked_up_at ?? null,
+      resolutionType: r.resolution_type ?? undefined,
+      exchangePreference: r.exchange_preference ?? null,
+    })),
+    returns: (row.returns ?? []).map((r) => ({
+      refunded: r.refunded,
+      createdAt: r.created_at,
+      resolutionType: r.resolution_type ?? undefined,
+    })),
     paymentStatus: pricing.paymentStatus,
     refundedAmount: pricing.refundedAmount,
     paidAmount: pricing.paymentAmount ?? pricing.total,
@@ -551,6 +566,7 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
         reason: r.reason,
         refunded: r.refunded,
         refundAmount: r.refund_amount == null ? null : Number(r.refund_amount),
+        ...(r.resolution_type ? { resolutionType: r.resolution_type } : {}),
         createdAt: r.created_at,
       }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),

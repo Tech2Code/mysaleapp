@@ -1,5 +1,5 @@
 import { formatDate, formatPrice } from "@/lib/format"
-import type { OrderItem, OrderReturn, PaymentStatus, ReturnRequest, ReturnRequestStatus, StatusHistoryEntry } from "./types"
+import type { OrderItem, OrderReturn, PaymentStatus, ReturnRequest, ReturnRequestStatus, ReturnResolutionType, StatusHistoryEntry } from "./types"
 
 /**
  * Return rules in one place (pure functions, used by pages, client components and server actions).
@@ -97,15 +97,30 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
 }
 
 /** Label + tone of a return REQUEST's own status (the small pill on each request), from the same table as the stages. */
-export function requestStatusMeta(status: ReturnRequestStatus, audience: "admin" | "customer"): { label: string; tone: ReturnStageTone } {
+export function requestStatusMeta(
+  status: ReturnRequestStatus,
+  audience: "admin" | "customer",
+  resolutionType?: ReturnResolutionType
+): { label: string; tone: ReturnStageTone } {
   const c = STAGE_COPY[status] // request statuses are stage keys too (picked_up is derived, not a status)
-  return { label: audience === "admin" ? c.label : c.customerLabel, tone: c.tone }
+  const raw = audience === "admin" ? c.label : c.customerLabel
+  const label = resolutionType === "exchange" ? raw.replace(/^Return\b/, "Exchange") : raw
+  return { label, tone: c.tone }
 }
 
 export type ReturnStageInput = {
-  requests: { status: ReturnRequestStatus; createdAt: string; decidedAt?: string | null; adminNote?: string | null; pickupDate?: string | null; pickedUpAt?: string | null }[]
+  requests: {
+    status: ReturnRequestStatus
+    createdAt: string
+    decidedAt?: string | null
+    adminNote?: string | null
+    pickupDate?: string | null
+    pickedUpAt?: string | null
+    resolutionType?: ReturnResolutionType
+    exchangePreference?: string | null
+  }[]
   /** `refundAmount` (item value refunded for that return) is admin-only data; guests don't have it. */
-  returns: { refunded: boolean; createdAt: string; refundAmount?: number | null }[]
+  returns: { refunded: boolean; createdAt: string; refundAmount?: number | null; resolutionType?: ReturnResolutionType }[]
   paymentStatus: PaymentStatus
   /** Money already returned. Guests don't get it from the track RPC (0), so `returns[].refunded` is used too. */
   refundedAmount: number
@@ -178,13 +193,37 @@ const stage = (key: ReturnStageKey, extra: Partial<ReturnStage> = {}): ReturnSta
 export function returnStage(input: ReturnStageInput): ReturnStage | null {
   const request = latest(input.requests)
   const hasReturns = input.returns.length > 0 || request?.status === "received"
+  const isExchangeReq = request?.resolutionType === "exchange"
 
   // An open request (waiting for a decision / for the goods) is what needs attention, even after an earlier return.
-  if (request?.status === "requested") return stage("requested")
+  if (request?.status === "requested") {
+    return stage(
+      "requested",
+      isExchangeReq
+        ? {
+            label: "Exchange requested",
+            customerLabel: "Exchange requested",
+            customerDetail: "Waiting for the shop to approve your exchange request",
+          }
+        : {}
+    )
+  }
   if (request?.status === "approved") {
-    if (request.pickedUpAt) return stage("picked_up")
+    if (request.pickedUpAt) {
+      return stage(
+        "picked_up",
+        isExchangeReq
+          ? {
+              customerDetail: "We have collected your items. Your exchange replacement follows once they reach us",
+            }
+          : {}
+      )
+    }
     const on = request.pickupDate ? formatDate(request.pickupDate) : null
-    return stage("approved", on ? { detail: `Pickup scheduled for ${on}`, customerDetail: `Pickup scheduled for ${on}. Keep the items ready` } : {})
+    return stage("approved", {
+      ...(isExchangeReq ? { label: "Exchange approved", customerLabel: "Exchange approved" } : {}),
+      ...(on ? { detail: `Pickup scheduled for ${on}`, customerDetail: `Pickup scheduled for ${on}. Keep the items ready` } : {}),
+    })
   }
 
   const refund = hasReturns ? refundState(input) : "none"
@@ -199,8 +238,9 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
     const decided = asTime(request.decidedAt ?? request.createdAt)
     const stale = input.now ? input.now.getTime() - decided > REJECTED_BADGE_DAYS * 86_400_000 : false
     return stage("rejected", {
+      ...(isExchangeReq ? { label: "Exchange rejected", customerLabel: "Exchange not approved" } : {}),
       detail: why ? `Reason: ${why}` : STAGE_COPY.rejected.detail,
-      customerDetail: why ? `Reason: ${why}` : STAGE_COPY.rejected.customerDetail,
+      customerDetail: why ? `Reason: ${why}` : isExchangeReq ? "The shop couldn't approve this exchange" : STAGE_COPY.rejected.customerDetail,
       badge: !stale,
     })
   }
@@ -214,10 +254,25 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
           : STAGE_COPY.partly_refunded.detail
       return stage("partly_refunded", { detail: money })
     }
+    const allReturnsAreExchange =
+      (input.returns.length > 0 && input.returns.every((r) => r.resolutionType === "exchange")) ||
+      (isExchangeReq && input.returns.every((r) => !r.refunded && r.resolutionType !== "refund"))
+    if (allReturnsAreExchange) {
+      return stage("received", {
+        step: 4,
+        label: "Exchange received",
+        customerLabel: "Exchange received",
+        detail: "Returned items received for exchange",
+        customerDetail: "We have received your items for exchange. Your replacement will follow",
+        active: false,
+      })
+    }
     return stage("received")
   }
 
-  if (request?.status === "withdrawn") return stage("withdrawn")
+  if (request?.status === "withdrawn") {
+    return stage("withdrawn", isExchangeReq ? { label: "Exchange withdrawn", customerLabel: "Exchange withdrawn" } : {})
+  }
   return null
 }
 
@@ -234,15 +289,22 @@ export const canRequestAgain = (requests: Pick<ReturnRequest, "status">[], windo
  */
 export function customerStatusLine(orderDescription: string, s: ReturnStage | null, opts: { canRequestAgain?: boolean } = {}): string {
   if (!s || s.key === "withdrawn") return /[.!?]$/.test(orderDescription) ? orderDescription : `${orderDescription}.`
+  const isExchange = s.customerLabel.startsWith("Exchange") || s.customerDetail.includes("exchange")
   switch (s.key) {
     case "requested":
-      return "Your return is being reviewed."
+      return isExchange ? "Your exchange request is being reviewed." : "Your return is being reviewed."
     case "approved":
-      return s.customerDetail.startsWith("Pickup scheduled") ? `Return approved. ${s.customerDetail}.` : "Return approved — send the items back as asked."
+      return s.customerDetail.startsWith("Pickup scheduled")
+        ? `${isExchange ? "Exchange approved" : "Return approved"}. ${s.customerDetail}.`
+        : `${isExchange ? "Exchange approved" : "Return approved"} — send the items back as asked.`
     case "picked_up":
-      return "Pickup successful. Your refund follows once we receive the items."
+      return isExchange
+        ? "Pickup successful. Your exchange replacement follows once we receive the items."
+        : "Pickup successful. Your refund follows once we receive the items."
     case "received":
-      return "We have your items. Your refund will follow."
+      return isExchange
+        ? "We have received your items for exchange. Your replacement will follow."
+        : "We have your items. Your refund will follow."
     case "partly_refunded":
       return "Part of your refund has been sent."
     case "refunded":
@@ -273,7 +335,13 @@ export function returnRefundSummary(returns: ReturnStageInput["returns"]): strin
   const sorted = returns.toSorted((a, b) => asTime(a.createdAt) - asTime(b.createdAt))
   return sorted
     .map((r, i) => {
-      const what = r.refunded ? (r.refundAmount ? `Refunded ${formatPrice(r.refundAmount)}` : "Refunded") : "No refund recorded"
+      const what = r.refunded
+        ? r.refundAmount
+          ? `Refunded ${formatPrice(r.refundAmount)}`
+          : "Refunded"
+        : r.resolutionType === "exchange"
+          ? "Returned for exchange"
+          : "No refund recorded"
       return sorted.length > 1 ? `Return ${i + 1}: ${what}` : what
     })
     .join(" · ")
@@ -295,17 +363,39 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   // A rejected / withdrawn request that was followed by goods recorded another way is not part of the story any more:
   // only a live or completed request gets the request, approval and pickup steps.
   const stepRequest = stopped ? request : latest(input.requests.filter((q) => q.status !== "rejected" && q.status !== "withdrawn"))
+  const isExchange = stepRequest?.resolutionType === "exchange"
 
   // a request exists for every stage except "goods recorded directly by the admin"
   if (stepRequest) {
-    entries.push({ key: "requested", label: "Return requested", customerLabel: "Return requested", at: stepRequest.createdAt, note: null, state: "done" })
+    entries.push({
+      key: "requested",
+      label: isExchange ? "Exchange requested" : "Return requested",
+      customerLabel: isExchange ? "Exchange requested" : "Return requested",
+      at: stepRequest.createdAt,
+      note: isExchange && stepRequest.exchangePreference ? `Preference: ${stepRequest.exchangePreference}` : null,
+      state: "done",
+    })
   }
 
   if (stopped) {
     entries.push(
       stage.key === "rejected"
-        ? { key: "rejected", label: "Return rejected", customerLabel: "Return not approved", at: request?.decidedAt ?? null, note: request?.adminNote?.trim() || null, state: "stopped" }
-        : { key: "withdrawn", label: "Return withdrawn", customerLabel: "Return withdrawn", at: request?.decidedAt ?? null, note: null, state: "stopped" }
+        ? {
+            key: "rejected",
+            label: isExchange ? "Exchange rejected" : "Return rejected",
+            customerLabel: isExchange ? "Exchange not approved" : "Return not approved",
+            at: request?.decidedAt ?? null,
+            note: request?.adminNote?.trim() || null,
+            state: "stopped",
+          }
+        : {
+            key: "withdrawn",
+            label: isExchange ? "Exchange withdrawn" : "Return withdrawn",
+            customerLabel: isExchange ? "Exchange withdrawn" : "Return withdrawn",
+            at: request?.decidedAt ?? null,
+            note: null,
+            state: "stopped",
+          }
     )
     return entries
   }
@@ -316,8 +406,8 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
     const approved = stage.key !== "requested"
     entries.push({
       key: "approved",
-      label: approved ? "Return approved" : "Approval",
-      customerLabel: approved ? "Return approved" : "Waiting for approval",
+      label: approved ? (isExchange ? "Exchange approved" : "Return approved") : "Approval",
+      customerLabel: approved ? (isExchange ? "Exchange approved" : "Return approved") : "Waiting for approval",
       at: approved ? (request.decidedAt ?? null) : null,
       note: approved ? (request.adminNote?.trim() || null) : null,
       state: approved ? "done" : "current",
@@ -338,13 +428,39 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   }
 
   if (open) {
-    entries.push({ key: "received", label: "Goods received", customerLabel: "Return received", at: null, note: null, state: "upcoming" })
-    entries.push({ key: "refund", label: "Refund", customerLabel: "Refund to follow", at: null, note: null, state: "upcoming" })
+    entries.push({ key: "received", label: "Goods received", customerLabel: isExchange ? "Items received" : "Return received", at: null, note: null, state: "upcoming" })
+    entries.push({
+      key: "refund",
+      label: isExchange ? "Replacement" : "Refund",
+      customerLabel: isExchange ? "Replacement to follow" : "Refund to follow",
+      at: null,
+      note: null,
+      state: "upcoming",
+    })
     return entries
   }
 
-  entries.push({ key: "received", label: "Return received", customerLabel: "Return received", at: lastReturn?.createdAt ?? null, note: null, adminDetail: returnRefundSummary(input.returns), state: "done" })
+  entries.push({
+    key: "received",
+    label: isExchange ? "Exchange received" : "Return received",
+    customerLabel: isExchange ? "Exchange received" : "Return received",
+    at: lastReturn?.createdAt ?? null,
+    note: null,
+    adminDetail: returnRefundSummary(input.returns),
+    state: "done",
+  })
   const refund = refundState(input)
+  if (isExchange && refund === "none") {
+    entries.push({
+      key: "refund",
+      label: "Exchange completed",
+      customerLabel: "Replacement arranged",
+      at: lastReturn?.createdAt ?? null,
+      note: null,
+      state: "done",
+    })
+    return entries
+  }
   entries.push({
     key: "refund",
     label: refund === "full" ? "Refunded" : refund === "partly" ? "Partly refunded" : "Refund",

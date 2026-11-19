@@ -118,18 +118,50 @@ function GoogleIcon() {
 function SearchParamsSync({
   onParams,
 }: {
-  onParams: (nextPath: string, errorParam: string | null, initialMode: AuthMode) => void
+  onParams: (nextPath: string, errorParam: string | null, initialMode: AuthMode | null) => void
 }) {
   const params = useSearchParams()
   useEffect(() => {
     const nextPath = safeNextPath(params.get("next"), "/")
-    const errorParam = params.get("error")
+    let errorParam = params.get("error")
     const rawMode = params.get("mode")
-    const initialMode: AuthMode =
+    let initialMode: AuthMode | null =
       rawMode === "signup" || rawMode === "forgot" || rawMode === "reset-password"
         ? rawMode
-        : "signin"
+        : null
+
+    if (typeof window !== "undefined") {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+      const errCode = params.get("error_code") || hashParams.get("error_code")
+      const errDesc = (
+        params.get("error_description") ||
+        hashParams.get("error_description") ||
+        ""
+      ).toLowerCase()
+      if (errCode === "otp_expired" || errDesc.includes("expired") || errDesc.includes("invalid")) {
+        errorParam = "expired"
+        if (!initialMode) initialMode = "forgot"
+      } else if (!errorParam && hashParams.get("error")) {
+        errorParam = hashParams.get("error") === "access_denied" ? "cancelled" : "auth"
+      }
+    }
+
     onParams(nextPath, errorParam, initialMode)
+
+    // Strip transient error/mode/hash parameters from the browser address bar so the URL stays clean
+    if (
+      typeof window !== "undefined" &&
+      (errorParam ||
+        rawMode ||
+        params.has("error_code") ||
+        params.has("error_description") ||
+        window.location.hash)
+    ) {
+      const clean = new URLSearchParams()
+      if (nextPath && nextPath !== "/") clean.set("next", nextPath)
+      const qs = clean.toString()
+      window.history.replaceState(null, "", qs ? `/login?${qs}` : "/login")
+    }
   }, [params, onParams])
   return null
 }
@@ -149,6 +181,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null)
   const [resetLinkSentTo, setResetLinkSentTo] = useState<string | null>(null)
   const submittingRef = useRef(false)
+  const recoveryLockRef = useRef(false)
 
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -178,9 +211,19 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const urlMode = new URLSearchParams(window.location.search).get("mode")
-      if (urlMode === "reset-password") return
+      if (urlMode === "reset-password") {
+        recoveryLockRef.current = true
+        return
+      }
     }
-    if (ready && user && mode !== "reset-password" && !pending && !submittingRef.current) {
+    if (
+      ready &&
+      user &&
+      mode !== "reset-password" &&
+      !recoveryLockRef.current &&
+      !pending &&
+      !submittingRef.current
+    ) {
       router.replace(resolveNext())
     }
   }, [ready, user, mode, pending, router, resolveNext])
@@ -201,6 +244,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   useLayoutEffect(() => {
     return () => {
       submittingRef.current = false
+      recoveryLockRef.current = false
       signInForm.reset({ email: "", password: "" })
       signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
       forgotForm.reset({ email: "" })
@@ -214,6 +258,9 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   }, [signInForm, signUpForm, forgotForm, resetForm])
 
   const switchMode = (nextMode: AuthMode) => {
+    if (nextMode !== "reset-password") {
+      recoveryLockRef.current = false
+    }
     if (nextMode === "forgot") {
       const currentEmail = signInForm.getValues("email").trim()
       if (currentEmail && !forgotForm.getValues("email")) {
@@ -342,9 +389,16 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           return
         }
         resetForm.reset({ next: "", confirm: "" })
+        recoveryLockRef.current = false
         applyClientSignIn(res.data.user)
         showSuccess("Password updated")
-        later(() => toast.success("Your password has been updated."))
+        later(() =>
+          toast.success(
+            res.data.reactivated
+              ? "Your password has been updated and your deactivated account has been restored."
+              : "Your password has been updated."
+          )
+        )
         router.replace(resolveNext())
       })
     })(e)
@@ -360,7 +414,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     const targetNext = resolveNext()
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(targetNext)}` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?flow=oauth&next=${encodeURIComponent(targetNext)}` },
     })
     if (error) {
       setLoadingGoogle(false)
@@ -379,8 +433,11 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
         <SearchParamsSync
           onParams={(nextPath, errorParam, initialMode) => {
             setNext(nextPath)
-            setProblem(errorParam)
-            if (initialMode !== "signin") {
+            if (errorParam) setProblem(errorParam)
+            if (initialMode) {
+              if (initialMode === "reset-password") {
+                recoveryLockRef.current = true
+              }
               setMode(initialMode)
             }
           }}

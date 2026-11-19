@@ -67,7 +67,7 @@ npx supabase link --project-ref YOUR_NEW_PROD_PROJECT_REF
 ```powershell
 npm run db:dry
 ```
-- Yeh dikhayega ki `0001_init.sql` se lekar `0057_seed_dummy_reviews.sql` tak saari migrations naye DB par apply hone ke liye ready hain.
+- Yeh dikhayega ki `0001_init.sql` se lekar `0058_check_admin_email.sql` tak saari migrations naye DB par apply hone ke liye ready hain.
 
 ### 3.4 Saari Migrations Live DB Par Push Karein
 ```powershell

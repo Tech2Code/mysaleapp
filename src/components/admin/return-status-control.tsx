@@ -9,15 +9,16 @@ import { RefundReturnButton } from "@/components/admin/refund-return-button"
 import { DecideDialog, PickedUpButton, UndoStepButton } from "@/components/admin/return-requests"
 import { SelectField, type SelectOption } from "@/components/form"
 import { Button } from "@/components/ui/button"
+import { netReturnRefund } from "@/features/orders/refund"
 import { isOpenRequest, returnableQuantities, type ReturnStage } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
 
 type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create" | "revert_shipped"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
-function returnValue(r: OrderReturn, items: OrderItem[]): number {
-  const sum = r.items.reduce((n, i) => n + i.quantity * Math.max(0, ...items.filter((o) => o.productId === i.productId).map((o) => o.price)), 0)
-  return Math.round(sum * 100) / 100
+function returnValue(r: OrderReturn, items: OrderItem[], returns: OrderReturn[], discountAmount = 0, alreadyRefunded = 0): number {
+  const prior = returns.filter((o) => o.refunded && o.id !== r.id).flatMap((o) => o.items)
+  return netReturnRefund(items, r.items, { discountAmount, alreadyRefunded, priorReturnedLines: prior })
 }
 
 /**
@@ -33,6 +34,7 @@ export function ReturnStatusControl({
   status,
   paymentStatus,
   refundedAmount,
+  discountAmount = 0,
   items,
   requests,
   returns,
@@ -45,6 +47,7 @@ export function ReturnStatusControl({
   status: OrderStatus
   paymentStatus: PaymentStatus
   refundedAmount: number
+  discountAmount?: number
   items: OrderItem[]
   requests: ReturnRequest[]
   returns: OrderReturn[]
@@ -53,14 +56,15 @@ export function ReturnStatusControl({
   const [choice, setChoice] = useState<Choice>("current")
   const [revertOpen, setRevertOpen] = useState(false)
   const open = requests.find(isOpenRequest) ?? null
-  const unrefunded = returns.filter((r) => !r.refunded)
+  const unrefunded = returns.filter((r) => !r.refunded && r.resolutionType !== "exchange")
 
   const currentLabel = stage ? `${stage.label}` : "Delivered"
   const options: (SelectOption & { value: Choice })[] = [{ value: "current", label: currentLabel, tone: "current", badge: "Current" }]
   if (open?.status === "requested") {
+    const isExchange = open.resolutionType === "exchange"
     options.push(
-      { value: "approve", label: "Approve return", tone: "next", badge: "Next step" },
-      { value: "reject", label: "Reject return" }
+      { value: "approve", label: isExchange ? "Approve exchange" : "Approve return", tone: "next", badge: "Next step" },
+      { value: "reject", label: isExchange ? "Reject exchange" : "Reject return" }
     )
   }
   if (open?.status === "approved" && !open.pickedUpAt) options.push({ value: "picked_up", label: "Pickup successful", tone: "next", badge: "Next step" })
@@ -131,9 +135,15 @@ export function ReturnStatusControl({
           orderCode={orderCode}
           status={status}
           paymentStatus={paymentStatus}
+          refundedAmount={refundedAmount}
+          discountAmount={discountAmount}
           items={items}
           returns={returns}
-          prefill={{ requestId: open.id, items: open.items.map((i) => ({ productId: i.productId, quantity: i.quantity })) }}
+          prefill={{
+            requestId: open.id,
+            resolutionType: open.resolutionType,
+            items: open.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+          }}
           triggerLabel="Record the items that came back"
         />
       )}
@@ -141,7 +151,7 @@ export function ReturnStatusControl({
         <ul data-ui="admin/ReturnStatusControl/ul" className="space-y-2">
           {unrefunded.map((r) => (
             <li data-ui="admin/ReturnStatusControl/li" key={r.id}>
-              <RefundReturnButton returnId={r.id} value={returnValue(r, items)} expectedRefunded={refundedAmount} />
+              <RefundReturnButton returnId={r.id} value={returnValue(r, items, returns, discountAmount, refundedAmount)} expectedRefunded={refundedAmount} />
             </li>
           ))}
         </ul>

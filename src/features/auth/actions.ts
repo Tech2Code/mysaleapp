@@ -3,7 +3,6 @@
 import type { User } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
-import { redirect } from "next/navigation"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
 import { syncWishlistForUser } from "@/features/wishlist/actions"
@@ -199,7 +198,7 @@ export async function signUpCustomer(
   return { ok: true, data: { needsEmailConfirmation: true } }
 }
 
-/** Customer sign-out: clears the server session cookie and invalidates cached user pages. */
+/** Customer sign-out: clears the server session cookie and invalidates cached user pages via cookie mutation. */
 export async function signOutCustomer(): Promise<ActionResult> {
   if (isSupabaseConfigured) {
     const supabase = await getServerSupabase()
@@ -207,7 +206,7 @@ export async function signOutCustomer(): Promise<ActionResult> {
   }
   const cookieStore = await cookies()
   cookieStore.delete("kk_cust_pw_reset")
-  revalidatePath("/", "layout")
+  cookieStore.delete("kk_acct_reactivated")
   return { ok: true }
 }
 
@@ -234,12 +233,20 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
 
   if (await limited("password-reset", parsed.data.email)) return fail(RATE_LIMIT_MESSAGE)
 
-  const origin = await customerOrigin()
-  const nextPath = safeNextPath(parsed.data.next ?? null, "/")
-  const resetTarget = `/login?mode=reset-password&next=${encodeURIComponent(nextPath)}`
-  const supabase = await getServerSupabase()
+  const [origin, cookieStore, supabase] = await Promise.all([
+    customerOrigin(),
+    cookies(),
+    getServerSupabase(),
+  ])
+  cookieStore.set("kk_recovery_intent", "customer", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 3600,
+    path: "/",
+  })
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent(resetTarget)}` : undefined,
+    redirectTo: origin ? `${origin}/auth/callback` : undefined,
   })
   if (error) {
     const msg = error.message.toLowerCase()
@@ -255,22 +262,25 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
 /** Step 2 of customer "Forgot password?": sets the new password after clicking the emailed reset link. */
 export async function resetCustomerPassword(
   input: unknown
-): Promise<ActionResult<{ user: SessionUser }>> {
+): Promise<ActionResult<{ user: SessionUser; reactivated?: boolean }>> {
   if (!isSupabaseConfigured) return fail("Connect Supabase first (see README).")
-  const cookieStore = await cookies()
-  if (cookieStore.get("kk_cust_pw_reset")?.value !== "1") {
-    return fail("This reset link has expired. Please request a new one.")
-  }
   const parsed = customerResetSchema.safeParse(input)
   if (!parsed.success) {
     return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
   }
 
-  const supabase = await getServerSupabase()
+  const [cookieStore, supabase] = await Promise.all([cookies(), getServerSupabase()])
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return fail("This reset link has expired. Please request a new one.")
+
+  const hasResetCookie = cookieStore.get("kk_cust_pw_reset")?.value === "1"
+  const recoverySentMs = user.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
+  const hasRecentRecovery = !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < 60 * 60 * 1000
+  if (!hasResetCookie && !hasRecentRecovery) {
+    return fail("This reset link has expired. Please request a new one.")
+  }
 
   const { error } = await supabase.auth.updateUser({
     password: parsed.data.next,
@@ -280,19 +290,26 @@ export async function resetCustomerPassword(
     return fail("Could not set the new password. Please request a new reset link.")
   }
 
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url")
-    .eq("id", user.id)
-    .maybeSingle<{ full_name: string | null; avatar_url: string | null }>()
+  const [{ data: existing }, { data: restored }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null; avatar_url: string | null }>(),
+    supabase.rpc("reactivate_my_account"),
+  ])
+  const reactivated = Boolean(restored)
 
   cookieStore.delete("kk_cust_pw_reset")
+  cookieStore.delete("kk_recovery_intent")
+  cookieStore.delete("kk_acct_reactivated")
   revalidatePath("/account", "layout")
   revalidatePath("/", "layout")
   return {
     ok: true,
     data: {
       user: buildSessionUser(user, existing?.full_name, existing?.avatar_url),
+      ...(reactivated ? { reactivated: true } : {}),
     },
   }
 }
@@ -357,13 +374,23 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
   return { ok: true, data: { user: buildSessionUser(user, resolvedName, existing?.avatar_url) } }
 }
 
-export async function signOutAdmin(reason?: "session-expired"): Promise<void> {
-  const supabase = await getServerSupabase()
-  await supabase.auth.signOut()
+export async function signOutAdmin(
+  reason?: "session-expired"
+): Promise<ActionResult<{ redirectTo: string }>> {
+  if (isSupabaseConfigured) {
+    const supabase = await getServerSupabase()
+    await supabase.auth.signOut()
+  }
   const cookieStore = await cookies()
   cookieStore.delete("kk_admin_pin_at")
   cookieStore.delete("kk_pw_reset")
-  revalidatePath("/admin", "layout")
-  revalidatePath("/", "layout")
-  redirect(reason === "session-expired" ? "/admin/login?reason=session-expired" : "/admin/login")
+  return {
+    ok: true,
+    data: {
+      redirectTo:
+        reason === "session-expired"
+          ? "/admin/login?reason=session-expired"
+          : "/admin/login",
+    },
+  }
 }

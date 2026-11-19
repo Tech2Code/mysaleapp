@@ -23,6 +23,7 @@ import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import { getBrowserSupabase } from "@/lib/supabase/client"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [visitKey, setVisitKey] = useState(0)
@@ -51,10 +52,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
       email: profile.email,
       avatarUrl: profile.avatarUrl,
     })
-    if (profile.reactivated) {
-      toast.success("Welcome back! Your deactivated account has been restored.")
-    }
-  }, [profile.fullName, profile.email, profile.avatarUrl, profile.reactivated])
+  }, [profile.fullName, profile.email, profile.avatarUrl])
 
   useLayoutEffect(() => {
     return () => {
@@ -354,6 +352,7 @@ function DeactivateAccountCard() {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -376,9 +375,9 @@ function DeactivateAccountCard() {
       }
       setOpen(false)
       applyClientSignOut()
-      toast.success("Account deactivated. Sign back in anytime to restore your account.")
+      await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+      later(() => toast.success("Account deactivated. Sign back in anytime to restore your account."))
       router.replace("/login")
-      router.refresh()
     })
   }
 

@@ -152,19 +152,36 @@ export function buildReturnStageMessage(shop: Shop, input: { orderCode: string; 
   ].join("\n")
 }
 
-/** Message the ADMIN sends to the customer about their return request. */
+/** Message the ADMIN sends to the customer about their return or exchange request. */
 export function buildReturnDecisionMessage(
   shop: Shop,
-  input: { orderCode: string; customerName: string; approved: boolean; note?: string | null; pickupDate?: string | null }
+  input: {
+    orderCode: string
+    customerName: string
+    approved: boolean
+    note?: string | null
+    pickupDate?: string | null
+    resolutionType?: "refund" | "exchange"
+    exchangePreference?: string | null
+  }
 ): string {
+  const isExchange = input.resolutionType === "exchange"
+  const kind = isExchange ? "exchange" : "return"
   return [
     `Hi ${input.customerName}! 👋`,
-    `Update on your return request for order *${input.orderCode}* from ${shop.shopName}:`,
+    `Update on your ${kind} request for order *${input.orderCode}* from ${shop.shopName}:`,
     "",
-    input.approved ? "✅ *Approved.*" : "❌ *We couldn't approve this return.*",
+    input.approved ? "✅ *Approved.*" : `❌ *We couldn't approve this ${kind}.*`,
+    ...(isExchange && input.exchangePreference ? [`Exchange preference: ${input.exchangePreference}`] : []),
     ...(input.approved && input.pickupDate ? [`Pickup date: ${formatDate(input.pickupDate)}. Please keep the items packed and ready.`] : []),
     ...(input.note ? [input.approved ? `Note: ${input.note}` : `Reason: ${input.note}`] : []),
-    ...(input.approved ? ["Once the items reach us and are checked, we'll refund the price of the returned items. Delivery and other charges are not refunded."] : []),
+    ...(input.approved
+      ? [
+          isExchange
+            ? "Once the items reach us and are checked, we'll arrange your exchange replacement."
+            : "Once the items reach us and are checked, we'll refund the price of the returned items. Delivery and other charges are not refunded.",
+        ]
+      : []),
     "",
     "Reply here if you have any questions.",
   ].join("\n")

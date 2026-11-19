@@ -27,6 +27,47 @@ export function refundLines(items: OrderItem[], lines: { productId: string; name
   return [...merged.values()]
 }
 
+/**
+ * Net rupee amount the database refunds for `targetLines` after accounting for `discountAmount` (promo code)
+ * and capping at the order's net item total (never touching delivery or extra fees).
+ */
+export function netReturnRefund(
+  items: OrderItem[],
+  targetLines: { productId: string; quantity: number }[],
+  opts: {
+    discountAmount?: number
+    paidAmount?: number
+    alreadyRefunded?: number
+    priorReturnedLines?: { productId: string; quantity: number }[]
+  } = {}
+): number {
+  const itemsAll = round2(items.reduce((n, i) => n + i.price * i.quantity, 0))
+  if (itemsAll <= 0) return 0
+  const discount = Math.max(0, opts.discountAmount ?? 0)
+  const netItemsMax = Math.max(0, round2(itemsAll - discount))
+  const itemsNet = opts.paidAmount !== undefined ? Math.min(netItemsMax, Math.max(0, opts.paidAmount)) : netItemsMax
+
+  const rawValue = round2(
+    targetLines.reduce((n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId) : n), 0)
+  )
+  if (rawValue <= 0) return 0
+
+  const rawPrev = round2(
+    (opts.priorReturnedLines ?? []).reduce(
+      (n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId) : n),
+      0
+    )
+  )
+  const alreadyRef = Math.max(0, opts.alreadyRefunded ?? 0)
+  const remainingCap = Math.max(0, round2(itemsNet - alreadyRef))
+
+  if (rawPrev + rawValue >= itemsAll - 0.005) {
+    return opts.alreadyRefunded !== undefined ? remainingCap : itemsNet
+  }
+  const proportional = round2((rawValue * itemsNet) / itemsAll)
+  return opts.alreadyRefunded !== undefined ? Math.min(proportional, remainingCap) : Math.min(proportional, itemsNet)
+}
+
 /** What stays with the shop on a return: the delivery charge and every extra charge that was paid. */
 export function notRefundedCharges(pricing: { shippingFee: number; extraFees: OrderFee[] }): NotRefunded[] {
   return [
@@ -42,9 +83,11 @@ export type RefundBreakdown = {
   basis: "request" | "returned"
   lines: RefundLine[]
   itemsTotal: number
+  /** Portion of the order's promo code discount attributed to the returned items (0 when no promo code was used). */
+  promoDiscountShare: number
   notRefunded: NotRefunded[]
   notRefundedTotal: number
-  /** What the customer gets back for these lines (= itemsTotal). */
+  /** What the customer gets back for these lines (= itemsTotal - promoDiscountShare). */
   refundable: number
   /** What was paid for the order. */
   paid: number
@@ -52,32 +95,42 @@ export type RefundBreakdown = {
   alreadyRefunded: number
 }
 
-/** The refund picture of an order's return, or null when there is no return activity to talk about. */
+/** The refund picture of an order's return, or null when there is no return activity (or only an exchange). */
 export function refundBreakdown(o: {
   items: OrderItem[]
   returnRequests: ReturnRequest[]
   returns: OrderReturn[]
   shippingFee: number
   extraFees: OrderFee[]
+  discountAmount?: number
   total: number
   paymentAmount: number | null
   refundedAmount: number
 }): RefundBreakdown | null {
   const open = o.returnRequests.find(isOpenRequest)
-  const returnedItems = o.returns.flatMap((r) => r.items)
-  const source = open ? [...returnedItems, ...open.items] : returnedItems
+  const openRefundReq = open && open.resolutionType !== "exchange" ? open : undefined
+  const refundableReturns = o.returns.filter((r) => r.refunded || r.resolutionType !== "exchange")
+  const returnedItems = refundableReturns.flatMap((r) => r.items)
+  const source = openRefundReq ? [...returnedItems, ...openRefundReq.items] : returnedItems
   if (source.length === 0) return null
   const lines = refundLines(o.items, source)
   const itemsTotal = round2(lines.reduce((n, l) => n + l.amount, 0))
+  const paid = o.paymentAmount ?? o.total
+  const refundable = netReturnRefund(o.items, lines, {
+    discountAmount: o.discountAmount ?? 0,
+    paidAmount: paid,
+  })
+  const promoDiscountShare = Math.max(0, round2(itemsTotal - refundable))
   const notRefunded = notRefundedCharges(o)
   return {
-    basis: open ? "request" : "returned",
+    basis: openRefundReq ? "request" : "returned",
     lines,
     itemsTotal,
+    promoDiscountShare,
     notRefunded,
     notRefundedTotal: round2(notRefunded.reduce((n, c) => n + c.amount, 0)),
-    refundable: itemsTotal,
-    paid: o.paymentAmount ?? o.total,
+    refundable,
+    paid,
     alreadyRefunded: o.refundedAmount,
   }
 }

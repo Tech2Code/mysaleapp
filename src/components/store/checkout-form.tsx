@@ -326,7 +326,9 @@ export function CheckoutForm({
   const baseCharges = placeholder ? calculateCharges(shown, shop) : charges
   const shownCharges = placeholder ? baseCharges : applyPromoToCharges(baseCharges, appliedPromo)
   const shownCount = shown.reduce((n, l) => n + l.quantity, 0)
-  const promoBelowMin = Boolean(!placeholder && appliedPromo && baseCharges.subtotal < appliedPromo.minOrderAmount)
+  const promoBelowMin = Boolean(
+    !placeholder && appliedPromo && baseCharges.subtotal < Math.max(appliedPromo.minOrderAmount, 2)
+  )
 
   if (!placeholder && available.length === 0) {
     return (

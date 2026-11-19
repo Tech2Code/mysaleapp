@@ -93,6 +93,11 @@ function isAdminSessionExpired(user: User): boolean {
   return !Number.isNaN(signedInAt) && Date.now() - signedInAt >= ADMIN_SESSION_MAX_AGE_MS
 }
 
+export function hasRecentPasswordRecovery(user: User, windowMs = 60 * 60 * 1000): boolean {
+  const recoverySentMs = user.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
+  return !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < windowMs
+}
+
 async function isAdminPinLocked(): Promise<boolean> {
   const pin = await getAdminPinStatus()
   if (pin.mode !== "enabled" || !pin.hasPin) return false

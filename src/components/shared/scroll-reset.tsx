@@ -17,6 +17,7 @@ let viaHistory = false
 let pendingHash = ""
 let isTransitioning = false
 let isHolding = false
+let stopActiveHold: (() => void) | null = null
 let activeNav: { key: string; prevPath: string; viaHistory: boolean; hash: string } | null = null
 
 function getStorageKey(url: string) {
@@ -68,6 +69,21 @@ function isParentOrBackPath(targetPath: string, currentPath: string, prevPath: s
   if (!prevPath || targetPath !== prevPath || targetPath === currentPath) return false
   if (targetPath === "/") return true
   return currentPath.startsWith(`${targetPath}/`)
+}
+
+/**
+ * Finds the currently visible element matching `id`. With Next.js `<Activity>` / `cacheComponents`,
+ * previously visited pages remain mounted in the DOM with `display: none`, so `document.getElementById`
+ * can return a hidden copy from an earlier route instead of the visible one on the active page.
+ */
+function findVisibleById(id: string): HTMLElement | null {
+  if (!id || typeof document === "undefined") return null
+  const escaped = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(id) : id.replace(/"/g, '\\"')
+  const matches = document.querySelectorAll<HTMLElement>(`[id="${escaped}"]`)
+  for (const el of matches) {
+    if (el.getClientRects().length > 0) return el
+  }
+  return document.getElementById(id)
 }
 
 /**
@@ -153,12 +169,15 @@ export function ScrollReset() {
         } else if (url.hash) {
           pendingHash = ""
           viaHistory = false
+          stopActiveHold?.()
           const targetId = decodeURIComponent(url.hash.replace(/^#/, ""))
-          const targetEl = targetId ? document.getElementById(targetId) : null
+          const targetEl = findVisibleById(targetId)
           if (targetEl) {
-            window.requestAnimationFrame(() => {
-              targetEl.scrollIntoView({ behavior: "smooth", block: "start" })
-            })
+            e.preventDefault()
+            const scrollMarginTop = Number.parseFloat(window.getComputedStyle(targetEl).scrollMarginTop) || 88
+            const rect = targetEl.getBoundingClientRect()
+            const desiredTop = Math.max(0, window.scrollY + rect.top - scrollMarginTop)
+            window.scrollTo({ top: desiredTop, left: 0, behavior: "smooth" })
           }
         }
       } catch {
@@ -395,6 +414,7 @@ function holdAtPosition(targetY: number): () => void {
     if (stopped) return
     stopped = true
     isHolding = false
+    if (stopActiveHold === stop) stopActiveHold = null
     window.cancelAnimationFrame(rafId)
     window.clearInterval(pollTimer)
     ro?.disconnect()
@@ -407,6 +427,7 @@ function holdAtPosition(targetY: number): () => void {
     }
     isTransitioning = false
   }
+  stopActiveHold = stop
   window.addEventListener("wheel", onUserScroll, { passive: true })
   window.addEventListener("touchmove", onUserScroll, { passive: true })
   window.addEventListener("keydown", onKeyDown, { passive: true })
@@ -434,10 +455,10 @@ function holdAtHash(hash: string): () => void {
 
   const applyHashScroll = () => {
     if (stopped) return
-    const el = document.getElementById(targetId)
+    const el = findVisibleById(targetId)
     if (!el) return
     const isSkeleton = el.closest("[data-skeleton]") !== null
-    const scrollMarginTop = Number.parseFloat(window.getComputedStyle(el).scrollMarginTop) || 0
+    const scrollMarginTop = Number.parseFloat(window.getComputedStyle(el).scrollMarginTop) || 88
     const rect = el.getBoundingClientRect()
     const desiredTop = Math.max(0, window.scrollY + rect.top - scrollMarginTop)
     if (Math.abs(window.scrollY - desiredTop) > 2) {
@@ -493,6 +514,7 @@ function holdAtHash(hash: string): () => void {
     if (stopped) return
     stopped = true
     isHolding = false
+    if (stopActiveHold === stop) stopActiveHold = null
     window.cancelAnimationFrame(rafId)
     window.clearInterval(pollTimer)
     ro?.disconnect()
@@ -502,6 +524,7 @@ function holdAtHash(hash: string): () => void {
     lastScrollY = window.scrollY
     isTransitioning = false
   }
+  stopActiveHold = stop
 
   window.addEventListener("wheel", onUserScroll, { passive: true })
   window.addEventListener("touchmove", onUserScroll, { passive: true })

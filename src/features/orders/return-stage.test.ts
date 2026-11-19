@@ -69,6 +69,47 @@ describe("returnStage", () => {
     expect(stageLabel(s, "admin")).toBe("Return part-refunded")
     expect(stageDetail(s, "customer")).toBe(s.customerDetail)
   })
+
+  it("handles exchange requests with exchange labels and marks received exchanges as complete (active: false)", () => {
+    const exReq = (status: ReturnStageInput["requests"][number]["status"], extra = {}) =>
+      req(status, "2026-01-01T10:00:00Z", { resolutionType: "exchange" as const, exchangePreference: "Size M", ...extra })
+
+    expect(returnStage({ ...base, requests: [exReq("requested")] })).toMatchObject({
+      key: "requested",
+      label: "Exchange requested",
+      customerLabel: "Exchange requested",
+      active: true,
+    })
+    expect(returnStage({ ...base, requests: [exReq("approved")] })).toMatchObject({
+      key: "approved",
+      label: "Exchange approved",
+      customerLabel: "Exchange approved",
+      active: true,
+    })
+    const exReceived = returnStage({
+      ...base,
+      requests: [exReq("received")],
+      returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
+    })
+    expect(exReceived).toMatchObject({
+      key: "received",
+      step: 4,
+      label: "Exchange received",
+      customerLabel: "Exchange received",
+      active: false,
+    })
+    const timeline = returnTimeline({
+      ...base,
+      requests: [exReq("received")],
+      returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
+    })
+    expect(timeline.at(-1)).toMatchObject({
+      key: "refund",
+      label: "Exchange completed",
+      customerLabel: "Replacement arranged",
+      state: "done",
+    })
+  })
 })
 
 describe("returnTimeline", () => {

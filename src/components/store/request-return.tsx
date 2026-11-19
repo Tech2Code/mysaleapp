@@ -11,7 +11,7 @@ import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
-import { notRefundedCharges, refundLines } from "@/features/orders/refund"
+import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType } from "@/features/orders/types"
 import { formatDate, formatDateTime, formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -39,8 +39,8 @@ export function RequestReturn({
   onDone,
   charges,
 }: {
-  /** Delivery + extra charges of the order: shown as "not refunded" in the refund estimate. */
-  charges?: { shippingFee: number; extraFees: OrderFee[] }
+  /** Delivery + extra charges + promo discount of the order: shown in the refund estimate. */
+  charges?: { shippingFee: number; extraFees: OrderFee[]; discountAmount?: number }
   orderCode: string
   phoneLast4?: string
   status: OrderStatus
@@ -93,7 +93,11 @@ export function RequestReturn({
     .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
     .filter((i) => i.quantity > 0)
   const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
-  const estimateTotal = estimate.reduce((n, l) => n + l.amount, 0)
+  const rawEstimateTotal = estimate.reduce((n, l) => n + l.amount, 0)
+  const estimateTotal =
+    resolutionType === "exchange"
+      ? rawEstimateTotal
+      : netReturnRefund(items, payload, { discountAmount: charges?.discountAmount ?? 0 })
   const kept = charges ? notRefundedCharges(charges) : []
   const needsDetail = !reason || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
   const needsExchangePref = resolutionType === "exchange" && exchangePreference.trim().length < 2
@@ -415,7 +419,7 @@ export function ReturnRequestsPanel({
       <h4 data-ui="store/ReturnRequestsPanel/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>
       <ul data-ui="store/ReturnRequestsPanel/ul" className="space-y-3">
         {requests.toReversed().map((r) => {
-          const meta = requestStatusMeta(r.status, "customer")
+          const meta = requestStatusMeta(r.status, "customer", r.resolutionType)
           const isExchange = r.resolutionType === "exchange"
           return (
             <li data-ui="store/ReturnRequestsPanel/li" key={r.id} className="space-y-2 rounded-xl border p-3.5">

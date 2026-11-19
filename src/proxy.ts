@@ -6,6 +6,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Only run where a session matters; public catalog pages stay fully static.
-  matcher: ["/admin/:path*", "/account/:path*", "/checkout", "/auth/:path*", "/login"],
+  // "/" is included only to catch Supabase fallback redirects (/?code=... or /?error=...)
+  // and immediately forward them to /auth/callback; normal "/" requests return immediately.
+  matcher: ["/", "/admin/:path*", "/account/:path*", "/checkout", "/auth/:path*", "/login"],
 }

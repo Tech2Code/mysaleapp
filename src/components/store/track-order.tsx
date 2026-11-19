@@ -162,7 +162,7 @@ function TrackResult({
             items={result.items}
             returns={result.returns}
             requests={result.returnRequests}
-            charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees }}
+            charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees, discountAmount: result.discountAmount }}
             window={result.returnWindow}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
             onDone={() => void refetch()}

@@ -344,6 +344,9 @@ export async function submitProductReview(input: unknown): Promise<ActionResult<
     if (error.message.includes("NOT_SIGNED_IN")) {
       return fail("Please sign in to write a review.")
     }
+    if (error.message.includes("ITEM_UNAVAILABLE")) {
+      return fail("This product is no longer available for review.")
+    }
     return fail("Could not save your review. Please try again.")
   }
 
@@ -362,14 +365,26 @@ export async function deleteProductReview(input: { reviewId: string; productId: 
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return fail("Please sign in.")
+  if (await limited("place-order", `review-del:${user.id}`)) return fail(RATE_LIMIT_MESSAGE)
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("product_reviews")
     .delete()
     .eq("id", input.reviewId)
     .eq("product_id", input.productId)
+    .select("id, user_id")
 
-  if (error) return fail("Could not delete review.")
+  if (error || !deleted || deleted.length === 0) return fail("Could not delete review.")
+
+  if (deleted[0].user_id !== user.id) {
+    await logAdminAction(supabase, {
+      actorId: user.id,
+      action: "review.delete",
+      targetType: "product",
+      targetId: input.productId,
+      metadata: { reviewId: input.reviewId },
+    })
+  }
 
   refreshCatalogue()
   return { ok: true }

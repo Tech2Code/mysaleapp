@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
+import { netReturnRefund } from "@/features/orders/refund"
 import { returnableQuantities } from "@/features/orders/returns"
-import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus } from "@/features/orders/types"
+import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnResolutionType } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS } from "@/lib/validation"
@@ -26,18 +27,22 @@ export function AdminReturnOrder({
   orderCode,
   status,
   paymentStatus,
+  refundedAmount = 0,
+  discountAmount = 0,
   items,
   returns,
   prefill,
   triggerLabel = "Record a return",
 }: {
   /** From an approved customer request: its items are filled in and the request is closed when saved. */
-  prefill?: { requestId: string; items: { productId: string; quantity: number }[] }
+  prefill?: { requestId: string; resolutionType?: ReturnResolutionType; items: { productId: string; quantity: number }[] }
   triggerLabel?: string
   orderId: string
   orderCode: string
   status: OrderStatus
   paymentStatus: PaymentStatus
+  refundedAmount?: number
+  discountAmount?: number
   items: OrderItem[]
   returns: OrderReturn[]
 }) {
@@ -186,8 +191,19 @@ export function AdminReturnOrder({
             onChange={(e) => setReason(e.target.value)}
             placeholder={prefill ? "Optional note about the returned items" : "Why did these items come back?"}
           />
-          {paymentStatus === "paid" && (
-            <SwitchField label="I have refunded these items" description={`Turn on once you have sent back ${formatPrice(payload.reduce((n, p) => n + p.quantity * (items.find((i) => i.productId === p.productId)?.price ?? 0), 0))} for them. The payment shows "Refunded" only when every item is refunded.`} checked={refund} onCheckedChange={setRefund} />
+          {paymentStatus === "paid" && prefill?.resolutionType !== "exchange" && (
+            <SwitchField
+              label="I have refunded these items"
+              description={`Turn on once you have sent back ${formatPrice(
+                netReturnRefund(items, payload, {
+                  discountAmount,
+                  alreadyRefunded: refundedAmount,
+                  priorReturnedLines: returns.filter((r) => r.refunded).flatMap((r) => r.items),
+                })
+              )} for them. The payment shows "Refunded" only when every item is refunded.`}
+              checked={refund}
+              onCheckedChange={setRefund}
+            />
           )}
           {error && (
             <p data-ui="admin/AdminReturnOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">

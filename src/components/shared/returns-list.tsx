@@ -1,11 +1,13 @@
-import { PackageOpenIcon } from "lucide-react"
+import { ArrowLeftRightIcon, PackageOpenIcon } from "lucide-react"
 import { RefundReturnButton } from "@/components/admin/refund-return-button"
+import { netReturnRefund } from "@/features/orders/refund"
 import type { OrderItem, OrderReturn } from "@/features/orders/types"
 import { formatDateTime, formatPrice } from "@/lib/format"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
-function returnValue(r: OrderReturn, items: OrderItem[]): number {
-  return r.items.reduce((n, i) => n + i.quantity * Math.max(0, ...items.filter((o) => o.productId === i.productId).map((o) => o.price)), 0)
+function returnValue(r: OrderReturn, items: OrderItem[], returns: OrderReturn[], discountAmount = 0, alreadyRefunded = 0): number {
+  const prior = returns.filter((o) => o.refunded && o.id !== r.id).flatMap((o) => o.items)
+  return netReturnRefund(items, r.items, { discountAmount, alreadyRefunded, priorReturnedLines: prior })
 }
 
 /**
@@ -24,7 +26,7 @@ export function ReturnsList({
   /** Customer view: say "Refund done" only when the whole order is refunded (else "Part refunded"). */
   refundedInFull?: boolean
   /** Admin only: lets a return recorded without a refund be refunded later (the order must still be 'paid'). */
-  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number }
+  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number; discountAmount?: number }
   /** Rendered inside another card (the Returns card): no outer card, a small sub-heading instead. */
   bare?: boolean
 }) {
@@ -62,12 +64,20 @@ export function ReturnsList({
               <p data-ui="shared/ReturnsList/p-3" className="text-sm font-medium text-success">
                 {audience === "admin" && r.refundAmount ? `Refunded ${formatPrice(r.refundAmount)}` : refundedInFull ? "Refund done" : "Part refunded"}
               </p>
+            ) : r.resolutionType === "exchange" ? (
+              <p data-ui="shared/ReturnsList/p-inline-flex" className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                <ArrowLeftRightIcon className="size-3.5" aria-hidden /> Returned for exchange
+              </p>
             ) : (
               audience === "admin" && (
                 <div data-ui="shared/ReturnsList/div-flex" className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <p data-ui="shared/ReturnsList/p-4" className="text-sm font-medium text-muted-foreground">No refund recorded</p>
                   {admin && admin.paymentStatus === "paid" && (
-                    <RefundReturnButton returnId={r.id} value={returnValue(r, admin.items)} expectedRefunded={admin.refundedAmount} />
+                    <RefundReturnButton
+                      returnId={r.id}
+                      value={returnValue(r, admin.items, returns, admin.discountAmount ?? 0, admin.refundedAmount)}
+                      expectedRefunded={admin.refundedAmount}
+                    />
                   )}
                 </div>
               )

@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
 import { AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
 import { Skeletonize } from "@/components/shared/skeletonize"
-import { getAdminPinStatus, requireAdmin } from "@/features/auth/guards"
+import { getAdminPinStatus, getCurrentUser, isAdminUser, requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
 import { getPaymentsToVerifyCount } from "@/features/orders/admin-queries"
 import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
@@ -20,7 +20,8 @@ async function AdminGate() {
 
 /** Avatar + email of the signed-in admin, top right. */
 async function AccountSlot() {
-  const user = await requireAdmin()
+  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
+  if (!user || !admin) return null
   const supabase = await getServerSupabase()
   const [{ data: profile }, pinStatus] = await Promise.all([
     supabase
@@ -50,6 +51,8 @@ async function AccountSlot() {
 
 /** Red count on the "Orders" menu item: payments waiting to be verified. */
 async function OrdersBadge() {
+  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
+  if (!user || !admin) return null
   const count = await getPaymentsToVerifyCount()
   if (count === 0) return null
   return (

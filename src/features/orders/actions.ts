@@ -367,6 +367,7 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
   if (soft) return fail(soft)
   revalidatePath("/account", "layout")
   revalidatePath("/admin", "layout")
+  revalidatePath("/track")
   return { ok: true }
 }
 

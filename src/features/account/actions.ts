@@ -29,7 +29,7 @@ type ProfileRow = {
 }
 
 /** Name, phone and email of the signed-in customer. Returns null for guests. */
-export async function getMyProfile(): Promise<Profile | null> {
+export async function getMyProfile(opts?: { consumeReactivated?: boolean }): Promise<Profile | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
@@ -40,13 +40,17 @@ export async function getMyProfile(): Promise<Profile | null> {
     .eq("id", user.id)
     .maybeSingle<ProfileRow>()
 
-  let reactivated = false
-  if (data?.deactivated_at) {
-    const { data: restored } = await supabase.rpc("reactivate_my_account")
-    reactivated = Boolean(restored)
-  }
-
   const inRecovery = cookieStore.get("kk_cust_pw_reset")?.value === "1"
+  let reactivated = false
+  if (opts?.consumeReactivated && !inRecovery) {
+    if (cookieStore.get("kk_acct_reactivated")?.value === "1") {
+      cookieStore.delete("kk_acct_reactivated")
+      reactivated = true
+    } else if (data?.deactivated_at) {
+      const { data: restored } = await supabase.rpc("reactivate_my_account")
+      reactivated = Boolean(restored)
+    }
+  }
   const providers = Array.isArray(user.app_metadata?.providers) ? (user.app_metadata.providers as string[]) : []
   const hasEmailProvider =
     Boolean(user.user_metadata?.has_password) ||
@@ -249,7 +253,6 @@ export async function deactivateMyAccount(input: unknown): Promise<ActionResult>
 
   await supabase.auth.signOut()
   cookieStore.delete("kk_cust_pw_reset")
-  revalidatePath("/", "layout")
-  revalidatePath("/account", "layout")
+  cookieStore.delete("kk_acct_reactivated")
   return { ok: true }
 }

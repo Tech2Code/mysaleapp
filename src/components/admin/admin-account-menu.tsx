@@ -142,11 +142,12 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
       if (expired) return
       expired = true
       startTransition(async () => {
+        const res = await signOutAdmin("session-expired")
         applyClientSignOut()
         await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-        await signOutAdmin("session-expired")
         showSuccess("Session expired")
         later(() => toast.info("Your 7-day admin session has expired. Please sign in again."))
+        router.replace(res.ok ? res.data.redirectTo : "/admin/login?reason=session-expired")
       })
     }
 
@@ -175,7 +176,7 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
       window.removeEventListener("focus", checkExpiry)
       document.removeEventListener("visibilitychange", onVisible)
     }
-  }, [account.lastSignInAt, later, showSuccess])
+  }, [account.lastSignInAt, later, router, showSuccess])
 
   // 12-hour PIN lock / first-time setup prompt
   useEffect(() => {
@@ -231,13 +232,14 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
 
   const handleSignOutNow = useCallback(() => {
     startTransition(async () => {
+      const res = await signOutAdmin()
       applyClientSignOut()
       await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-      await signOutAdmin()
       showSuccess("Signed out")
       later(() => toast.success("Signed out"))
+      router.replace(res.ok ? res.data.redirectTo : "/admin/login")
     })
-  }, [later, showSuccess])
+  }, [later, router, showSuccess])
 
   const handleLockScreenNow = () => {
     startTransition(async () => {

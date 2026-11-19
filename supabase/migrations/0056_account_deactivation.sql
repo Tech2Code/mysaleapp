@@ -9,6 +9,9 @@ alter table public.profiles
   add column if not exists deactivation_reason text
     check (deactivation_reason is null or length(deactivation_reason) <= 200);
 
+revoke insert (deactivated_at, deactivation_reason), update (deactivated_at, deactivation_reason)
+  on public.profiles from anon, authenticated;
+
 -- 2. RPC: deactivate_my_account ----------------------------------------
 create or replace function public.deactivate_my_account(p_reason text default null)
 returns jsonb
@@ -26,22 +29,33 @@ begin
     raise exception 'ADMIN_CANNOT_DEACTIVATE';
   end if;
 
-  -- Block deactivation while an order is still in progress (pending, confirmed, packed, shipped)
+  -- Block deactivation while an order is still in progress or awaiting a cancellation refund
   if exists (
     select 1 from public.orders o
     where o.user_id = v_uid
-      and o.status in ('pending', 'confirmed', 'packed', 'shipped')
+      and (
+        o.status in ('pending', 'confirmed', 'packed', 'shipped')
+        or (o.status = 'cancelled' and o.payment_status = 'paid')
+      )
   ) then
     raise exception 'ACTIVE_ORDERS_EXIST';
   end if;
 
-  -- Block deactivation while an order has an open return/exchange request
+  -- Block deactivation while an order has an open return/exchange request or a received return awaiting refund
   if exists (
     select 1
     from public.return_requests r
     join public.orders o on o.id = r.order_id
     where o.user_id = v_uid
       and r.status in ('requested', 'approved')
+  ) or exists (
+    select 1
+    from public.order_returns ret
+    join public.orders o on o.id = ret.order_id
+    where o.user_id = v_uid
+      and ret.refunded = false
+      and coalesce(ret.resolution_type, 'refund') = 'refund'
+      and o.payment_status = 'paid'
   ) then
     raise exception 'OPEN_RETURNS_EXIST';
   end if;

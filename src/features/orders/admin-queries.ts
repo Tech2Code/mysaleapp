@@ -21,7 +21,7 @@ import {
 export const ADMIN_ORDERS_PAGE_SIZE = 20
 
 /** Just enough of the return rows for a list row to show its return stage (see returnStage()). */
-const RETURN_EMBED = "returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at)"
+const RETURN_EMBED = "returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)"
 
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string; year?: string; month?: string; today?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
@@ -52,10 +52,15 @@ export const RETURN_VIEW_ID_LIMIT = 100
  * the "refund pending" view also needs the order's payment to still be 'paid' (not fully refunded yet).
  */
 async function ordersWithReturns(supabase: Supabase, opts: { refunded: boolean; stillPaid: boolean }): Promise<<Q>(query: Q) => Q> {
-  const { data, error } = await supabase
+  let retQuery = supabase
     .from("order_returns")
     .select("order_id")
     .eq("refunded", opts.refunded)
+  if (!opts.refunded) {
+    // Exchange returns do not owe a cash refund and should not appear in "Refunds to send"
+    retQuery = retQuery.neq("resolution_type", "exchange")
+  }
+  const { data, error } = await retQuery
     .order("created_at", { ascending: false })
     .limit(RETURN_VIEW_ID_LIMIT)
   if (error) throw new Error(error.message)
@@ -227,7 +232,7 @@ export async function getOrderById(id: string): Promise<OrderWithHistory | null>
     adminCheck,
     supabase
       .from("orders")
-      .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)")
+      .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)")
       .eq("id", id)
       .maybeSingle<OrderRow>(),
   ])

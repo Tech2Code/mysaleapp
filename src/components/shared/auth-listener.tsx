@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect } from "react"
 import { toast } from "sonner"
 import { getMyProfile } from "@/features/account/actions"
@@ -70,7 +70,7 @@ function runBackgroundAccountSync(userId: string, skipWishlist = false) {
   setTimeout(async () => {
     const [wishRes, profile] = await Promise.all([
       skipWishlist ? Promise.resolve(null) : syncWishlist(localIds),
-      getMyProfile().catch(() => null),
+      getMyProfile({ consumeReactivated: true }).catch(() => null),
     ])
     if (useAuth.getState().user?.id !== userId) return
     if (profile) {
@@ -160,12 +160,57 @@ export async function syncAuthSession() {
 }
 
 function AuthRouteSync() {
+  const router = useRouter()
   const pathname = usePathname()
   const search = useSearchParams().toString()
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search)
+      const hashRaw = window.location.hash.replace(/^#/, "")
+      const hashParams = new URLSearchParams(hashRaw)
+
+      // 1. If Supabase landed on a non-callback route with ?code=... or ?token_hash=..., forward to /auth/callback
+      if (
+        pathname !== "/auth/callback" &&
+        (searchParams.has("code") || searchParams.has("token_hash"))
+      ) {
+        window.location.replace(`/auth/callback${window.location.search}`)
+        return
+      }
+
+      // 2. If Supabase attached #error=... or ?error_code=... onto a non-login page (e.g. /?error=access_denied&error_code=otp_expired#error=...)
+      const errCode = searchParams.get("error_code") || hashParams.get("error_code")
+      const errDesc = (
+        searchParams.get("error_description") ||
+        hashParams.get("error_description") ||
+        ""
+      ).toLowerCase()
+      const rawErr = searchParams.get("error") || hashParams.get("error")
+
+      if (
+        pathname !== "/login" &&
+        pathname !== "/admin/forgot-password" &&
+        pathname !== "/admin/login" &&
+        (errCode || errDesc || (rawErr && hashParams.has("error")))
+      ) {
+        const isExpired =
+          errCode === "otp_expired" ||
+          errDesc.includes("expired") ||
+          errDesc.includes("invalid")
+        // Clean the current history entry first so Back doesn't show raw query/hash errors
+        window.history.replaceState(null, "", pathname)
+        if (pathname?.startsWith("/admin")) {
+          router.replace(isExpired ? "/admin/forgot-password?error=expired" : "/admin/login")
+        } else {
+          router.replace(isExpired ? "/login?mode=forgot&error=expired" : "/login?error=auth")
+        }
+        return
+      }
+    }
+
     void syncAuthSession()
-  }, [pathname, search])
+  }, [pathname, router, search])
 
   return null
 }
@@ -175,6 +220,7 @@ function AuthRouteSync() {
  * guest wishlist into the account when a user signs in.
  */
 export function AuthListener() {
+  const router = useRouter()
   const setUser = useAuth((s) => s.setUser)
 
   useEffect(() => {
@@ -186,6 +232,13 @@ export function AuthListener() {
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       handleSessionChange(session?.user ?? null, event === "SIGNED_OUT")
+      if (event === "PASSWORD_RECOVERY" && typeof window !== "undefined") {
+        const currentPath = window.location.pathname
+        if (currentPath !== "/login" && currentPath !== "/admin/reset-password") {
+          window.history.replaceState(null, "", currentPath)
+          router.replace("/login?mode=reset-password")
+        }
+      }
     })
 
     const onStorage = (e: StorageEvent) => {
@@ -204,7 +257,7 @@ export function AuthListener() {
       window.removeEventListener("storage", onStorage)
       window.removeEventListener("focus", onFocus)
     }
-  }, [setUser])
+  }, [router, setUser])
 
   return (
     <Suspense fallback={null}>

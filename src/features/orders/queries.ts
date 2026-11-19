@@ -4,7 +4,7 @@ import { getServerSupabase } from "@/lib/supabase/server"
 import { resolveOrderPeriod } from "./dashboard-range"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
 
-const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
 
 export type CustomerOrderStatusCounts = {
   active: number
@@ -18,7 +18,7 @@ export async function getMyOrders(filters?: { year?: string; month?: string; sta
   const supabase = await getServerSupabase()
   let query = supabase
     .from("orders")
-    .select("*, returns:order_returns(refunded, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at)")
+    .select("*, returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100)

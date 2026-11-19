@@ -266,7 +266,7 @@ export function MyOrderView({
                   items={order.items}
                   returns={order.returns}
                   requests={order.returnRequests}
-                  charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees }}
+                  charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees, discountAmount: order.discountAmount }}
                   window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: shop.returnWindowDays }}
                   whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${order.orderCode}.`)}
                 />

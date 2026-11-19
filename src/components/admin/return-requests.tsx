@@ -80,12 +80,24 @@ export function DecideDialog({
         setError(res.fieldErrors?.note?.[0] ?? (res.fieldErrors?.pickupDate ? null : res.error))
         return
       }
-      const url = whatsappLink(`91${phone}`, buildReturnDecisionMessage(shop, { orderCode, customerName, approved: approve, note: note.trim() || null, pickupDate: approve ? pickupDate : null }))
+      const isExchange = request.resolutionType === "exchange"
+      const url = whatsappLink(
+        `91${phone}`,
+        buildReturnDecisionMessage(shop, {
+          orderCode,
+          customerName,
+          approved: approve,
+          note: note.trim() || null,
+          pickupDate: approve ? pickupDate : null,
+          resolutionType: request.resolutionType,
+          exchangePreference: request.exchangePreference,
+        })
+      )
       later(() => {
         setOpen(false)
         setNote("")
         setPickupDate("")
-        toast.success(approve ? "Return approved" : "Return rejected", {
+        toast.success(approve ? (isExchange ? "Exchange approved" : "Return approved") : isExchange ? "Exchange rejected" : "Return rejected", {
           action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
         })
       })
@@ -167,7 +179,8 @@ export function DecideDialog({
             disabled={pending || (approve ? !pickupDate : note.trim().length < 3)}
             className="gap-1.5 rounded-full"
           >
-            {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />} {approve ? "Approve return" : "Reject return"}
+            {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />}{" "}
+            {approve ? (request.resolutionType === "exchange" ? "Approve exchange" : "Approve return") : request.resolutionType === "exchange" ? "Reject exchange" : "Reject return"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -285,7 +298,7 @@ export function AdminReturnRequests({
   requests: ReturnRequest[]
   returns: OrderReturn[]
   returnStage: ReturnStage | null
-  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number }
+  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number; discountAmount?: number }
 }) {
   if (requests.length === 0 && returns.length === 0) return null
   return (
@@ -301,7 +314,7 @@ export function AdminReturnRequests({
       {requests.length > 0 && <h4 data-ui="admin/AdminReturnRequests/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>}
       <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
         {requests.toReversed().map((r) => {
-          const meta = requestStatusMeta(r.status, "admin")
+          const meta = requestStatusMeta(r.status, "admin", r.resolutionType)
           const isExchange = r.resolutionType === "exchange"
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">

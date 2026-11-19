@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useState, useTransition, type ReactNode } from "react"
 import { toast } from "sonner"
 import { applyClientSignOut } from "@/components/shared/auth-listener"
@@ -97,6 +97,7 @@ function NavItemsWithPath(props: { onNavigate?: () => void; ordersBadge?: ReactN
 }
 
 function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ordersBadge?: ReactNode }) {
+  const router = useRouter()
   const [askSignOut, setAskSignOut] = useState(false)
   const [signingOut, startSignOut] = useTransition()
   useBlockWhile(signingOut)
@@ -139,12 +140,14 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
           pending={signingOut}
           onConfirm={() => {
             setAskSignOut(false)
+            onNavigate?.()
             startSignOut(async () => {
+              const res = await signOutAdmin()
               applyClientSignOut()
               await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-              await signOutAdmin()
               showSuccess("Signed out")
               later(() => toast.success("Signed out"))
+              router.replace(res.ok ? res.data.redirectTo : "/admin/login")
             })
           }}
         />

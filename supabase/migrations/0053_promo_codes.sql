@@ -39,6 +39,9 @@ create policy "promo_codes_admin_all"
   using (public.is_admin())
   with check (public.is_admin());
 
+revoke all on public.promo_codes from anon;
+revoke truncate, references, trigger on public.promo_codes from authenticated;
+
 -- 2. Add promo_code & discount_amount to public.orders ----------------
 alter table public.orders
   add column if not exists promo_code      text,
@@ -461,6 +464,79 @@ begin
 end $$;
 
 revoke all on function public.restock_cancelled_order() from public, anon, authenticated;
+
+-- 5b. Reset promo_codes.used_count when test orders are cleared -------
+create or replace function public.admin_reset_data(p_scopes text[])
+returns jsonb
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+declare
+  v_orders int := 0; v_addresses int := 0; v_wishlists int := 0; v_products int := 0; v_categories int := 0;
+  v_restock_ids uuid[];
+begin
+  if not public.is_admin() then raise exception 'NOT_ADMIN'; end if;
+
+  if 'orders' = any (p_scopes) then
+    select coalesce(array_agg(x.id), '{}') into v_restock_ids from (
+      select o.id from public.orders o
+      where o.stock_reserved and o.stock_restored_at is null
+        and o.status <> 'cancelled' and o.status::text <> 'delivered'
+      order by o.id
+      for update
+    ) x;
+    perform o.id from public.orders o order by o.id for update;
+
+    perform p.id from public.products p
+    where p.id in (
+      select (e ->> 'productId')::uuid from public.orders o, jsonb_array_elements(o.items) e
+      where o.id = any (v_restock_ids)
+    )
+    order by p.id for update;
+
+    update public.products p set stock = p.stock + m.qty
+    from (
+      select (e ->> 'productId')::uuid as pid, sum((e ->> 'quantity')::int)::int as qty
+      from public.orders o, jsonb_array_elements(o.items) e
+      where o.id = any (v_restock_ids)
+      group by 1
+    ) m
+    where p.id = m.pid;
+
+    delete from public.order_status_history where true;
+    delete from public.orders where true;
+    get diagnostics v_orders = row_count;
+
+    update public.promo_codes
+    set used_count = 0,
+        updated_at = now()
+    where used_count > 0;
+  end if;
+
+  if 'customers' = any (p_scopes) or 'catalog' = any (p_scopes) then
+    delete from public.wishlists where true;
+    get diagnostics v_wishlists = row_count;
+  end if;
+
+  if 'customers' = any (p_scopes) then
+    delete from public.addresses where true;
+    get diagnostics v_addresses = row_count;
+  end if;
+
+  if 'catalog' = any (p_scopes) then
+    delete from public.products where true;
+    get diagnostics v_products = row_count;
+    delete from public.categories where true;
+    get diagnostics v_categories = row_count;
+  end if;
+
+  return jsonb_build_object(
+    'orders', v_orders, 'addresses', v_addresses, 'wishlists', v_wishlists,
+    'products', v_products, 'categories', v_categories
+  );
+end $$;
+
+revoke all on function public.admin_reset_data(text[]) from public, anon;
+grant execute on function public.admin_reset_data(text[]) to authenticated;
 
 -- 6. Include promoCode and discountAmount in track_order --------------
 create or replace function public.track_order(p_code text, p_phone_last4 text)

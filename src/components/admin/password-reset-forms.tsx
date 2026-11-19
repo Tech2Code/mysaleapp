@@ -25,6 +25,18 @@ export function ForgotPasswordForm() {
   const form = useForm<z.input<typeof emailSchema>>({ resolver: zodResolver(emailSchema), defaultValues: { email: "" } })
 
   useEffect(() => {
+    const errParam = params.get("error")
+    if (errParam === "expired") {
+      queueMicrotask(() =>
+        setError("That link has expired or was already used. Request a new one below.")
+      )
+    }
+    if (typeof window !== "undefined" && (errParam || window.location.hash)) {
+      window.history.replaceState(null, "", window.location.pathname)
+    }
+  }, [params])
+
+  useEffect(() => {
     return () => {
       form.reset({ email: "" })
       setError(null)

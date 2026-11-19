@@ -173,34 +173,64 @@ const REVIEW_ASPECTS = [
 ] as const
 
 const LOVED_PREFIX = "Loved: "
+const DISLIKED_PREFIX = "Disliked: "
 
 function parseLovedAspects(title?: string | null): Record<string, "up" | "down"> {
-  if (!title || !title.startsWith(LOVED_PREFIX)) return {}
-  const raw = title.slice(LOVED_PREFIX.length)
+  if (!title) return {}
   const out: Record<string, "up" | "down"> = {}
-  for (const part of raw.split(",").map((s) => s.trim())) {
-    if ((REVIEW_ASPECTS as readonly string[]).includes(part)) {
-      out[part] = "up"
+  const segments = title.split("|").map((s) => s.trim())
+  for (const seg of segments) {
+    if (seg.startsWith(LOVED_PREFIX)) {
+      for (const part of seg.slice(LOVED_PREFIX.length).split(",").map((s) => s.trim())) {
+        if ((REVIEW_ASPECTS as readonly string[]).includes(part)) out[part] = "up"
+      }
+    } else if (seg.startsWith(DISLIKED_PREFIX)) {
+      for (const part of seg.slice(DISLIKED_PREFIX.length).split(",").map((s) => s.trim())) {
+        if ((REVIEW_ASPECTS as readonly string[]).includes(part)) out[part] = "down"
+      }
     }
   }
   return out
 }
 
-function extractLovedPills(title?: string | null): string[] {
-  if (!title || !title.startsWith(LOVED_PREFIX)) return []
-  return title
-    .slice(LOVED_PREFIX.length)
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
+function extractAspectPills(title?: string | null): { liked: string[]; disliked: string[] } {
+  if (!title || (!title.startsWith(LOVED_PREFIX) && !title.startsWith(DISLIKED_PREFIX))) {
+    return { liked: [], disliked: [] }
+  }
+  const liked: string[] = []
+  const disliked: string[] = []
+  for (const seg of title.split("|").map((s) => s.trim())) {
+    if (seg.startsWith(LOVED_PREFIX)) {
+      liked.push(
+        ...seg
+          .slice(LOVED_PREFIX.length)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      )
+    } else if (seg.startsWith(DISLIKED_PREFIX)) {
+      disliked.push(
+        ...seg
+          .slice(DISLIKED_PREFIX.length)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      )
+    }
+  }
+  return { liked, disliked }
 }
 
 function formatLovedTitle(votes: Record<string, "up" | "down">, fallbackTitle?: string | null): string {
   const liked = REVIEW_ASPECTS.filter((aspect) => votes[aspect] === "up")
-  if (liked.length > 0) {
-    return `${LOVED_PREFIX}${liked.join(", ")}`.slice(0, 100)
+  const disliked = REVIEW_ASPECTS.filter((aspect) => votes[aspect] === "down")
+  const parts: string[] = []
+  if (liked.length > 0) parts.push(`${LOVED_PREFIX}${liked.join(", ")}`)
+  if (disliked.length > 0) parts.push(`${DISLIKED_PREFIX}${disliked.join(", ")}`)
+  if (parts.length > 0) {
+    return parts.join(" | ").slice(0, 100)
   }
-  if (fallbackTitle && !fallbackTitle.startsWith(LOVED_PREFIX)) {
+  if (fallbackTitle && !fallbackTitle.startsWith(LOVED_PREFIX) && !fallbackTitle.startsWith(DISLIKED_PREFIX)) {
     return fallbackTitle.slice(0, 100)
   }
   return ""
@@ -684,7 +714,7 @@ export function ProductReviewsSection({
   }
 
   const handleStarClick = (star: number) => {
-    if (!authReady) return
+    if (!authReady || !reviewStateReady) return
     if (!user) {
       router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`)
       return
@@ -714,11 +744,13 @@ export function ProductReviewsSection({
     })
   }
 
-  const totalCount = initialReviews.length || (product.reviewCount ?? 0)
+  const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
   const avgRating =
-    initialReviews.length > 0
-      ? Math.round((initialReviews.reduce((s, r) => s + r.rating, 0) / initialReviews.length) * 10) / 10
-      : Number(product.ratingAvg ?? 0)
+    product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
+      ? Number(product.ratingAvg)
+      : initialReviews.length > 0
+        ? Math.round((initialReviews.reduce((s, r) => s + r.rating, 0) / initialReviews.length) * 10) / 10
+        : Number(product.ratingAvg ?? 0)
 
   const distribution = [5, 4, 3, 2, 1].map((stars) => {
     const count = initialReviews.filter((r) => r.rating === stars).length
@@ -793,6 +825,7 @@ export function ProductReviewsSection({
               <div data-ui="store/ProductReviewsSection/div-9" className="mt-2.5">
                 <InteractiveStarPicker
                   size="md"
+                  disabled={!reviewStateReady}
                   value={myReview?.rating ?? draftRating}
                   onSelect={handleStarClick}
                 />
@@ -862,8 +895,8 @@ export function ProductReviewsSection({
                   {initialReviews.map((review) => {
                     const isMine = Boolean(user && review.userId === user.id)
                     const canDelete = isMine || isAdmin
-                    const lovedPills = extractLovedPills(review.title)
-                    const hasCustomTitle = Boolean(review.title && lovedPills.length === 0)
+                    const aspectPills = extractAspectPills(review.title)
+                    const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
                     return (
                       <li
                         data-ui="store/ProductReviewsSection/li"
@@ -925,15 +958,24 @@ export function ProductReviewsSection({
                           )}
                         </div>
 
-                        {lovedPills.length > 0 && (
+                        {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
                           <div data-ui="store/ProductReviewsSection/div-flex-11" className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                            {lovedPills.map((pill) => (
+                            {aspectPills.liked.map((pill) => (
                               <span
                                 data-ui="store/ProductReviewsSection/span-inline-flex-2"
-                                key={pill}
+                                key={`up-${pill}`}
                                 className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
                               >
                                 <ThumbsUpIcon className="size-2.5" aria-hidden /> {pill}
+                              </span>
+                            ))}
+                            {aspectPills.disliked.map((pill) => (
+                              <span
+                                data-ui="store/ProductReviewsSection/span-inline-flex-3"
+                                key={`down-${pill}`}
+                                className="inline-flex items-center gap-1 rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium text-destructive"
+                              >
+                                <ThumbsDownIcon className="size-2.5" aria-hidden /> {pill}
                               </span>
                             ))}
                           </div>

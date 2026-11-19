@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { normalizeIndianPhone } from "@/lib/format"
-import { LIMITS, PATTERNS, v } from "@/lib/validation"
+import { LIMITS, PATTERNS, todayIST, v } from "@/lib/validation"
 import { requiredNumber } from "@/lib/zod-helpers"
 
 /** 10-digit Indian numbers (including +91 / 0 prefixes) get 91 added; anything else must already include the country code. */
@@ -143,7 +143,7 @@ export const createPromoCodeSchema = z
     maxUses: optionalPositiveInt(100000, "Enter a positive usage limit"),
     expiresAt: z.preprocess(
       (x) => (typeof x === "string" && x.trim() === "" ? null : x),
-      v.isoDate().nullable()
+      v.isoDate().refine((d) => d >= todayIST(), "Pick today or a future expiry date").nullable()
     ),
   })
   .superRefine((val, ctx) => {

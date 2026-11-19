@@ -57,14 +57,12 @@ export function AccountMenu() {
   const signOut = () =>
     startSignOut(async () => {
       setAskSignOut(false)
+      await signOutCustomer()
       applyClientSignOut()
-      await Promise.allSettled([
-        getBrowserSupabase()?.auth.signOut({ scope: "local" }),
-        signOutCustomer(),
-      ])
+      await getBrowserSupabase()?.auth.signOut({ scope: "local" })
       showSuccess("Signed out")
       later(() => toast.success("Signed out successfully"))
-      router.push("/")
+      router.replace("/")
     })
 
   return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { notRefundedCharges, refundBreakdown, refundLines } from "./refund"
+import { netReturnRefund, notRefundedCharges, refundBreakdown, refundLines } from "./refund"
 import type { OrderItem, ReturnRequest } from "./types"
 
 const items: OrderItem[] = [
@@ -50,5 +50,62 @@ describe("refund = items only", () => {
       refundedAmount: 500,
     })
     expect(combined).toMatchObject({ basis: "request", itemsTotal: 800, refundable: 800, alreadyRefunded: 500 })
+  })
+
+  it("accounts for promo discountAmount proportionally and never refunds delivery/extra fees", () => {
+    // items subtotal = 1300 (2x500 + 1x300), discount = 260 (20% off), shipping = 60, extra = 40 -> total = 1140
+    const discountedOrder = {
+      ...base,
+      discountAmount: 260,
+      total: 1140,
+      paymentAmount: 1140,
+    }
+    // Returning 1 Candle (raw 500) -> 20% promo share (100) -> refundable = 400
+    const partial = refundBreakdown({
+      ...discountedOrder,
+      returnRequests: [request("approved", [{ productId: "a", name: "Candle", quantity: 1 }])],
+    })
+    expect(partial).toMatchObject({
+      basis: "request",
+      itemsTotal: 500,
+      promoDiscountShare: 100,
+      refundable: 400,
+      notRefundedTotal: 100,
+      paid: 1140,
+    })
+
+    // Returning all items (raw 1300) -> refundable = 1040 (never eating the ₹100 delivery + extra fees)
+    const full = refundBreakdown({
+      ...discountedOrder,
+      returnRequests: [
+        request("approved", [
+          { productId: "a", name: "Candle", quantity: 2 },
+          { productId: "b", name: "Basket", quantity: 1 },
+        ]),
+      ],
+    })
+    expect(full).toMatchObject({
+      itemsTotal: 1300,
+      promoDiscountShare: 260,
+      refundable: 1040,
+      paid: 1140,
+    })
+    expect(netReturnRefund(items, [{ productId: "a", quantity: 2 }, { productId: "b", quantity: 1 }], { discountAmount: 260, paidAmount: 1140 })).toBe(1040)
+  })
+
+  it("returns null for pure exchange requests and unrefunded exchange returns", () => {
+    const exchangeReq: ReturnRequest = {
+      ...request("approved", [{ productId: "a", name: "Candle", quantity: 1 }]),
+      resolutionType: "exchange",
+      exchangePreference: "Terracotta colour",
+    }
+    expect(refundBreakdown({ ...base, returnRequests: [exchangeReq] })).toBeNull()
+    expect(
+      refundBreakdown({
+        ...base,
+        returnRequests: [{ ...exchangeReq, status: "received" }],
+        returns: [{ id: "x", items: [{ productId: "a", name: "Candle", quantity: 1 }], reason: null, refunded: false, resolutionType: "exchange", createdAt: "2026-01-02T00:00:00Z" }],
+      })
+    ).toBeNull()
   })
 })

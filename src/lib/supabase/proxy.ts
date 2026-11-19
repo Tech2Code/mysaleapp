@@ -10,6 +10,28 @@ import { isSupabaseConfigured, supabaseConfig } from "./config"
  * features/auth/guards.ts and in database RLS.
  */
 export async function updateSession(request: NextRequest) {
+  const { pathname, search, searchParams } = request.nextUrl
+
+  // If Supabase falls back to the Site URL root (e.g. /?code=... or /?error=access_denied&error_code=otp_expired),
+  // forward immediately to /auth/callback so the user lands on the proper UI with a clean URL.
+  if (pathname !== "/auth/callback" && request.method === "GET") {
+    const hasAuthCallbackParams =
+      searchParams.has("code") ||
+      searchParams.has("token_hash") ||
+      searchParams.has("error_code") ||
+      (searchParams.has("error") && searchParams.has("error_description"))
+    if (hasAuthCallbackParams) {
+      const callbackUrl = request.nextUrl.clone()
+      callbackUrl.pathname = "/auth/callback"
+      return NextResponse.redirect(callbackUrl)
+    }
+    if (pathname === "/") {
+      return NextResponse.next({ request })
+    }
+  } else if (pathname === "/") {
+    return NextResponse.next({ request })
+  }
+
   let response = NextResponse.next({ request })
   if (!isSupabaseConfigured) return response
 
@@ -33,7 +55,17 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname, search } = request.nextUrl
+  // Never redirect POST / Server Action requests from proxy: returning a 307 redirect
+  // to a Next-Action fetch causes Next.js's action response parser to throw
+  // "An unexpected response was received from the server." Server Actions enforce
+  // auth themselves via features/auth/guards.ts.
+  if (
+    (request.method !== "GET" && request.method !== "HEAD") ||
+    request.headers.has("next-action")
+  ) {
+    return response
+  }
+
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/")
   const isAdminPublic =
     pathname === "/admin/login" ||
