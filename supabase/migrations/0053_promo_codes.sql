@@ -42,7 +42,11 @@ create policy "promo_codes_admin_all"
 revoke all on public.promo_codes from anon;
 revoke truncate, references, trigger on public.promo_codes from authenticated;
 
--- 2. Add promo_code & discount_amount to public.orders ----------------
+-- 2. Add promo_code & discount_amount to public.orders (and per-product return_window_days)
+alter table public.products
+  add column if not exists return_window_days int
+    check (return_window_days is null or return_window_days between 0 and 90);
+
 alter table public.orders
   add column if not exists promo_code      text,
   add column if not exists discount_amount numeric(10,2) not null default 0;
@@ -264,6 +268,8 @@ begin
   order by p.id
   for update;
 
+  select * into v_settings from public.store_settings limit 1;
+
   with raw as (
     select (e ->> 'productId')::uuid as product_id, (e ->> 'quantity')::int as qty
     from jsonb_array_elements(p_items) e
@@ -273,7 +279,8 @@ begin
   select
     jsonb_agg(jsonb_build_object(
       'productId', p.id, 'name', p.name, 'slug', p.slug, 'price', p.price,
-      'quantity', m.qty, 'image', p.images[1]
+      'quantity', m.qty, 'image', p.images[1],
+      'returnWindowDays', coalesce(p.return_window_days, v_settings.return_window_days, 7)
     ) order by p.name),
     round(sum(p.price * m.qty), 2),
     count(*) filter (where p.id is not null and p.is_active and m.qty between 1 and 20 and p.stock >= m.qty),
@@ -321,8 +328,6 @@ begin
         updated_at = now()
     where id = v_promo.id;
   end if;
-
-  select * into v_settings from public.store_settings limit 1;
 
   -- Rule A: Special handling tier (highest applicable tier ONCE per order, never compounded per item/qty).
   v_oversized_amt := case when v_has_oversized then round(coalesce(v_settings.oversized_fee, 80), 2) else 0 end;

@@ -123,6 +123,8 @@ export type OrderItem = {
   price: number
   quantity: number
   image: string | null
+  /** Per-item return & exchange window in days after delivery (snapshotted on order creation, or enriched from product). */
+  returnWindowDays?: number | null
 }
 
 export type StatusHistoryEntry = { status: OrderStatus; changedAt: string }
@@ -507,7 +509,11 @@ export function mapOrder(row: OrderRow): Order {
     city: row.city,
     pincode: row.pincode,
     note: row.note,
-    items: (row.items ?? []).map((i) => ({ ...i, price: Number(i.price) })),
+    items: (row.items ?? []).map((i) => ({
+      ...i,
+      price: Number(i.price),
+      ...(i.returnWindowDays == null ? {} : { returnWindowDays: Number(i.returnWindowDays) }),
+    })),
     status: row.status,
     adminNote: (Array.isArray(row.private_note) ? row.private_note[0]?.note : row.private_note?.note) ?? null,
     shipping: row.shipping_carrier

@@ -354,7 +354,8 @@ export function RevertOrderStatusDialog({
   const router = useRouter()
   const [reason, setReason] = useState("")
   const [clearShipping, setClearShipping] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [reasonError, setReasonError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
   useBlockWhile(pending)
@@ -368,17 +369,16 @@ export function RevertOrderStatusDialog({
     if (!nextOpen) {
       setReason("")
       setClearShipping(false)
-      setError(null)
+      setSubmitted(false)
+      setReasonError(null)
     }
   }
 
-  const submit = () =>
+  const submit = () => {
+    setSubmitted(true)
+    setReasonError(null)
+    if (reasonInvalid) return
     startTransition(async () => {
-      setError(null)
-      if (reasonInvalid) {
-        setError(OTHER_DETAIL_MESSAGE)
-        return
-      }
       const res = await revertOrderStatus({
         orderId,
         expectedStatus: from,
@@ -387,7 +387,8 @@ export function RevertOrderStatusDialog({
         clearShipping: from === "shipped" ? clearShipping : false,
       })
       if (!res.ok) {
-        setError(res.error)
+        if (res.fieldErrors?.reason?.[0]) setReasonError(res.fieldErrors.reason[0])
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -396,6 +397,7 @@ export function RevertOrderStatusDialog({
       })
       router.refresh()
     })
+  }
 
   const descriptionText =
     from === "confirmed" && to === "pending"
@@ -421,9 +423,9 @@ export function RevertOrderStatusDialog({
             value={reason}
             onChange={(e) => {
               setReason(e.target.value)
-              if (error) setError(null)
+              if (reasonError) setReasonError(null)
             }}
-            error={trimmedReason.length > 0 && reasonInvalid ? OTHER_DETAIL_MESSAGE : undefined}
+            error={reasonError ?? ((submitted || trimmedReason.length > 0) && reasonInvalid ? OTHER_DETAIL_MESSAGE : undefined)}
           />
           {from === "shipped" && hasShipping && (
             <SwitchField
@@ -433,17 +435,12 @@ export function RevertOrderStatusDialog({
               onCheckedChange={setClearShipping}
             />
           )}
-          {error && (
-            <p data-ui="admin/RevertOrderStatusDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {error}
-            </p>
-          )}
         </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/RevertOrderStatusDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleClose(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/RevertOrderStatusDialog/Button-revert-to" type="button" onClick={submit} disabled={pending || reasonInvalid} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/RevertOrderStatusDialog/Button-revert-to" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <RotateCcwIcon className="size-4" />} Revert to {STATUS_META[to].label}
           </Button>
         </DialogFooter>
@@ -458,7 +455,8 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
   useBlockWhile(pending)
@@ -467,16 +465,19 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 
   const needsDetail = !reason || otherNeedsDetail(reason, detail)
 
-  const submit = () =>
+  const submit = () => {
+    setSubmitted(true)
+    setServerFieldErrors({})
+    if (!reason || needsDetail) return
     startTransition(async () => {
-      setError(null)
-      if (!reason) {
-        setError("Please choose a reason.")
-        return
-      }
       const res = await cancelOrderAsAdmin({ orderId, reason, detail: detail.trim() || undefined })
       if (!res.ok) {
-        setError(res.error)
+        const nextFieldErrors: Record<string, string> = {}
+        for (const [k, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
+        }
+        setServerFieldErrors(nextFieldErrors)
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -485,6 +486,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
       })
       router.refresh()
     })
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -492,7 +494,8 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
     if (!nextOpen) {
       setReason("")
       setDetail("")
-      setError(null)
+      setSubmitted(false)
+      setServerFieldErrors({})
     }
   }
 
@@ -518,8 +521,12 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             placeholder="Select a reason"
             fieldSize="md"
             value={reason}
-            onValueChange={setReason}
+            onValueChange={(val) => {
+              setReason(val)
+              if (serverFieldErrors.reason) setServerFieldErrors((p) => ({ ...p, reason: "" }))
+            }}
             options={ADMIN_CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
+            error={serverFieldErrors.reason || (submitted && !reason ? "Please choose a reason" : undefined)}
           />
           <TextAreaField
             label={reason === OTHER_REASON ? "Reason (the customer will see it)" : "Message to the customer (optional)"}
@@ -527,20 +534,23 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             rows={2}
             maxLength={LIMITS.cancelDetail.max}
             value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            error={Boolean(reason) && needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+            onChange={(e) => {
+              setDetail(e.target.value)
+              if (serverFieldErrors.detail) setServerFieldErrors((p) => ({ ...p, detail: "" }))
+            }}
+            error={
+              serverFieldErrors.detail ||
+              ((submitted || Boolean(detail.trim())) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
+                ? OTHER_DETAIL_MESSAGE
+                : undefined)
+            }
           />
-          {error && (
-            <p data-ui="admin/AdminCancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {error}
-            </p>
-          )}
         </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <CheckIcon className="size-4" /> Keep order
           </Button>
-          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Cancel order
           </Button>
         </DialogFooter>

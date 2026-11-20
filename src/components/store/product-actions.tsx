@@ -673,8 +673,10 @@ export function ProductReviewsSection({
     }
   }, [product.id])
 
+  const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
+
   useEffect(() => {
-    if (!authReady) return
+    if (totalCount === 0 || !authReady) return
     if (!user) {
       queueMicrotask(() => {
         setCanReview(false)
@@ -705,7 +707,7 @@ export function ProductReviewsSection({
     return () => {
       cancelled = true
     }
-  }, [authReady, user, product.id, stateLoadedForUser])
+  }, [authReady, user, product.id, stateLoadedForUser, totalCount])
 
   const openReviewModal = (star?: number) => {
     const chosen = star ?? myReview?.rating ?? (draftRating || 5)
@@ -744,7 +746,8 @@ export function ProductReviewsSection({
     })
   }
 
-  const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
+  if (totalCount === 0) return null
+
   const avgRating =
     product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
       ? Number(product.ratingAvg)
@@ -863,7 +866,7 @@ export function ProductReviewsSection({
         </div>
 
         {/* Right reviews list column (equal height card with left column) */}
-        <div data-ui="store/ProductReviewsSection/div-flex-4" className="flex h-full flex-col justify-between gap-4 rounded-3xl border bg-card p-5 sm:p-6">
+        <div data-ui="store/ProductReviewsSection/div-flex-4" className="flex h-full flex-col justify-between gap-4 overflow-hidden rounded-3xl border bg-card p-5 sm:p-6 lg:h-0 lg:min-h-full">
           {initialReviews.length === 0 ? (
             <div data-ui="store/ProductReviewsSection/div-flex-5" className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed bg-muted/25 px-6 py-12 text-center">
               <StarRow rating={5} size="md" />
@@ -876,9 +879,9 @@ export function ProductReviewsSection({
             </div>
           ) : (
             <>
-              <div data-ui="store/ProductReviewsSection/div-10" className="space-y-4">
-                <div data-ui="store/ProductReviewsSection/div-flex-6" className="flex flex-wrap items-center justify-between gap-2 border-b pb-3.5">
-                  <div data-ui="store/ProductReviewsSection/div-11">
+              <div data-ui="store/ProductReviewsSection/div-flex-6" className="flex min-h-0 flex-1 flex-col gap-4">
+                <div data-ui="store/ProductReviewsSection/div-flex-7" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3.5">
+                  <div data-ui="store/ProductReviewsSection/div-10">
                     <h3 data-ui="store/ProductReviewsSection/h3-verified-customer-feed" className="font-sans text-base font-semibold">
                       Verified customer feedback
                     </h3>
@@ -891,7 +894,10 @@ export function ProductReviewsSection({
                   </span>
                 </div>
 
-                <ul data-ui="store/ProductReviewsSection/ul" className="space-y-3.5">
+                <ul
+                  data-ui="store/ProductReviewsSection/ul"
+                  className="max-h-96 min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-1 lg:max-h-none"
+                >
                   {initialReviews.map((review) => {
                     const isMine = Boolean(user && review.userId === user.id)
                     const canDelete = isMine || isAdmin
@@ -903,9 +909,9 @@ export function ProductReviewsSection({
                         key={review.id}
                         className="rounded-2xl border bg-background/60 p-4 transition-colors sm:p-5"
                       >
-                        <div data-ui="store/ProductReviewsSection/div-flex-7" className="flex flex-wrap items-start justify-between gap-2">
-                          <div data-ui="store/ProductReviewsSection/div-12" className="space-y-1">
-                            <div data-ui="store/ProductReviewsSection/div-flex-8" className="flex flex-wrap items-center gap-2">
+                        <div data-ui="store/ProductReviewsSection/div-flex-8" className="flex items-start justify-between gap-2">
+                          <div data-ui="store/ProductReviewsSection/div-11" className="min-w-0 flex-1 space-y-1.5">
+                            <div data-ui="store/ProductReviewsSection/div-flex-9" className="flex flex-wrap items-center gap-2">
                               <StarRow rating={review.rating} />
                               <span data-ui="store/ProductReviewsSection/span-5" className="rounded-md bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
                                 {RATING_LABELS[review.rating] ?? "Great"}
@@ -916,7 +922,7 @@ export function ProductReviewsSection({
                                 </span>
                               )}
                             </div>
-                            <div data-ui="store/ProductReviewsSection/div-flex-9" className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <div data-ui="store/ProductReviewsSection/div-flex-10" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                               <span data-ui="store/ProductReviewsSection/span-7" className="font-medium text-foreground/85">
                                 {review.reviewerName}
                               </span>
@@ -925,13 +931,13 @@ export function ProductReviewsSection({
                                   <CheckCircle2Icon className="size-3" aria-hidden /> Verified purchase
                                 </span>
                               )}
-                              <span data-ui="store/ProductReviewsSection/span-8">·</span>
+                              <span data-ui="store/ProductReviewsSection/span-8" aria-hidden>·</span>
                               <span data-ui="store/ProductReviewsSection/span-9">{formatDate(review.createdAt)}</span>
                             </div>
                           </div>
 
                           {(isMine || canDelete) && (
-                            <div data-ui="store/ProductReviewsSection/div-flex-10" className="flex items-center gap-1">
+                            <div data-ui="store/ProductReviewsSection/div-flex-11" className="-mt-1 -mr-1 flex shrink-0 items-center gap-0.5">
                               {isMine && (
                                 <button
                                   data-ui="store/ProductReviewsSection/button-edit-your-review"
@@ -959,7 +965,7 @@ export function ProductReviewsSection({
                         </div>
 
                         {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
-                          <div data-ui="store/ProductReviewsSection/div-flex-11" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          <div data-ui="store/ProductReviewsSection/div-flex-12" className="mt-2.5 flex flex-wrap items-center gap-1.5">
                             {aspectPills.liked.map((pill) => (
                               <span
                                 data-ui="store/ProductReviewsSection/span-inline-flex-2"
@@ -990,7 +996,7 @@ export function ProductReviewsSection({
                 </ul>
               </div>
 
-              <div data-ui="store/ProductReviewsSection/div-flex-12" className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+              <div data-ui="store/ProductReviewsSection/div-flex-13" className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
                 <span data-ui="store/ProductReviewsSection/span-flex" className="flex items-center gap-1.5">
                   <CheckCircle2Icon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
                   100% genuine reviews from verified delivered orders

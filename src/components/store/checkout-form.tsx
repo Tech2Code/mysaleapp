@@ -66,7 +66,6 @@ export function CheckoutForm({
   const signedIn = Boolean(user) || (!authReady && (initialProfile !== null || initialAddresses.length > 0))
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
-  const [serverError, setServerError] = useState<string | null>(null)
   const initialDefault = initialAddresses[0]
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
@@ -181,7 +180,6 @@ export function CheckoutForm({
       setPromoInput("")
       setAppliedPromo(null)
       setPromoError(null)
-      setServerError(null)
     })
   }, [authReady, signedIn, form])
 
@@ -225,14 +223,10 @@ export function CheckoutForm({
       form.setError("pincode", { message: area.error })
       return
     }
-    setServerError(null)
     setPaymentRefError(null)
     setValidatedCustomer(values)
     setPayDialogOpen(true)
   })
-
-  const parsedPaymentRef = paymentReferenceSchema.safeParse(paymentRef)
-  const isPaymentRefValid = parsedPaymentRef.success
 
   const handleApplyPromo = () => {
     const code = promoInput.trim().toUpperCase()
@@ -269,7 +263,6 @@ export function CheckoutForm({
       return
     }
     setPaymentRefError(null)
-    setServerError(null)
     startTransition(async () => {
       const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
       const res = await placeOrder({
@@ -284,7 +277,6 @@ export function CheckoutForm({
         const refFieldMsg = res.fieldErrors?.paymentReference?.[0]
         if (refFieldMsg) {
           setPaymentRefError(refFieldMsg)
-          toast.error(refFieldMsg)
           return
         }
         if (res.error.toLowerCase().includes("promo code")) {
@@ -294,7 +286,6 @@ export function CheckoutForm({
           toast.error(res.error)
           return
         }
-        setServerError(res.error)
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
           const msg = messages?.[0]
           if (msg && field in validatedCustomer) {
@@ -649,11 +640,6 @@ export function CheckoutForm({
         </div>
 
         <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className="border-t pt-4" />
-        {serverError && (
-          <p data-ui="store/CheckoutForm/p-7" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-            {serverError}
-          </p>
-        )}
         <Button data-ui="store/CheckoutForm/Button-hidden"
           type="submit"
           size="lg"
@@ -768,7 +754,7 @@ export function CheckoutForm({
                           <p data-ui="store/CheckoutForm/p-flex-5" className="flex items-center gap-2 font-semibold text-neutral-900">
                             <QrCodeIcon className="size-4 text-primary" /> Scan with any UPI app
                           </p>
-                          <p data-ui="store/CheckoutForm/p-8" className="text-xs/relaxed text-neutral-600">
+                          <p data-ui="store/CheckoutForm/p-7" className="text-xs/relaxed text-neutral-600">
                             Amount <strong data-ui="store/CheckoutForm/strong" className="font-semibold text-neutral-900">{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
                           </p>
                         </div>
@@ -805,7 +791,7 @@ export function CheckoutForm({
                       </div>
                     </div>
                   ) : (
-                    <p data-ui="store/CheckoutForm/p-9" className="rounded-2xl border bg-muted/50 p-4 text-sm/relaxed">
+                    <p data-ui="store/CheckoutForm/p-8" className="rounded-2xl border bg-muted/50 p-4 text-sm/relaxed">
                       UPI details aren&apos;t configured yet.{" "}
                       <a data-ui="store/CheckoutForm/a-message-us-on-whatsapp"
                         href={shopWhatsappLink(shop, `Hi! I'd like to pay ${formatPrice(shownCharges.total)} and place my order.`)}
@@ -843,11 +829,6 @@ export function CheckoutForm({
                 </>
               )
             })()}
-            {serverError && (
-              <p data-ui="store/CheckoutForm/p-10" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                {serverError}
-              </p>
-            )}
           </DialogBody>
 
           <DialogFooter>
@@ -864,7 +845,7 @@ export function CheckoutForm({
             <Button data-ui="store/CheckoutForm/Button-3"
               type="button"
               size="lg"
-              disabled={pending || !isPaymentRefValid}
+              disabled={pending}
               onClick={confirmPaymentAndPlaceOrder}
               className="gap-1.5 rounded-full px-6"
             >

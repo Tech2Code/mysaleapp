@@ -220,7 +220,15 @@ function PasswordForm() {
   const { errors } = form.formState
   const [currentVal, nextVal, confirmVal] = useWatch({ control: form.control, name: ["current", "next", "confirm"] })
   const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
-  const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
+  const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal)
+  const sameAsCurrentError =
+    Boolean(currentVal && nextVal && currentVal === nextVal)
+      ? "New password must be different from current password"
+      : undefined
+  const mismatchConfirmError =
+    Boolean(nextVal && confirmVal && nextVal !== confirmVal)
+      ? "Passwords do not match"
+      : undefined
 
   return (
     <form
@@ -256,7 +264,7 @@ function PasswordForm() {
           autoComplete="new-password"
           maxLength={LIMITS.password.max}
           hint={`At least ${LIMITS.newPassword.min} characters, with a letter and a number.`}
-          error={errors.next?.message}
+          error={errors.next?.message ?? sameAsCurrentError}
           {...form.register("next")}
         />
         <TextField
@@ -265,7 +273,7 @@ function PasswordForm() {
           fieldSize="md"
           autoComplete="new-password"
           maxLength={LIMITS.password.max}
-          error={errors.confirm?.message}
+          error={errors.confirm?.message ?? mismatchConfirmError}
           {...form.register("confirm")}
         />
       </div>
@@ -324,7 +332,9 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   const [verifySecret, setVerifySecret] = useState("")
   const [nextPin, setNextPin] = useState("")
   const [confirmNextPin, setConfirmNextPin] = useState("")
-  const [manageError, setManageError] = useState<string | null>(null)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [nextPinError, setNextPinError] = useState<string | null>(null)
+  const [confirmPinError, setConfirmPinError] = useState<string | null>(null)
   const [showDisableConfirm, setShowDisableConfirm] = useState(false)
 
   const isEnabled = status.mode === "enabled" && status.hasPin
@@ -355,23 +365,25 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
 
   const handleChangePin = (e: React.FormEvent) => {
     e.preventDefault()
+    setVerifyError(null)
+    setNextPinError(null)
+    setConfirmPinError(null)
     if (authMethod === "pin" && !/^\d{4}$/.test(verifySecret)) {
-      setManageError("Enter your current 4-digit PIN")
+      setVerifyError("Enter your current 4-digit PIN")
       return
     }
     if (authMethod === "password" && verifySecret.length < 6) {
-      setManageError("Enter your account password")
+      setVerifyError("Enter your account password")
       return
     }
     if (!/^\d{4}$/.test(nextPin)) {
-      setManageError("Enter a new 4-digit PIN")
+      setNextPinError("Enter a new 4-digit PIN")
       return
     }
     if (nextPin !== confirmNextPin) {
-      setManageError("New PINs don't match")
+      setConfirmPinError("New PINs don't match")
       return
     }
-    setManageError(null)
     startTransition(async () => {
       const res = await changeAdminPin({
         authMethod,
@@ -381,14 +393,10 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
         confirm: confirmNextPin,
       })
       if (!res.ok) {
-        const msg =
-          res.fieldErrors?.currentPin?.[0] ??
-          res.fieldErrors?.password?.[0] ??
-          res.fieldErrors?.next?.[0] ??
-          res.fieldErrors?.confirm?.[0] ??
-          res.error
-        setManageError(msg)
-        toast.error(msg)
+        setVerifyError(res.fieldErrors?.currentPin?.[0] ?? res.fieldErrors?.password?.[0] ?? null)
+        setNextPinError(res.fieldErrors?.next?.[0] ?? null)
+        setConfirmPinError(res.fieldErrors?.confirm?.[0] ?? null)
+        toast.error(res.error)
         return
       }
       const next: Partial<AdminPinStatus> = {
@@ -409,17 +417,17 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   }
 
   const handleDisablePin = () => {
+    setVerifyError(null)
     if (isEnabled) {
       if (authMethod === "pin" && !/^\d{4}$/.test(verifySecret)) {
-        setManageError("Enter your current 4-digit PIN first to turn off PIN lock")
+        setVerifyError("Enter your current 4-digit PIN first to turn off PIN lock")
         return
       }
       if (authMethod === "password" && verifySecret.length < 6) {
-        setManageError("Enter your account password first to turn off PIN lock")
+        setVerifyError("Enter your account password first to turn off PIN lock")
         return
       }
     }
-    setManageError(null)
     startTransition(async () => {
       const res = await disableAdminPin(
         isEnabled
@@ -430,12 +438,8 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
           : undefined
       )
       if (!res.ok) {
-        const msg =
-          res.fieldErrors?.currentPin?.[0] ??
-          res.fieldErrors?.password?.[0] ??
-          res.error
-        setManageError(msg)
-        toast.error(msg)
+        setVerifyError(res.fieldErrors?.currentPin?.[0] ?? res.fieldErrors?.password?.[0] ?? null)
+        toast.error(res.error)
         return
       }
       const next: Partial<AdminPinStatus> = {
@@ -550,7 +554,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
               onClick={() => {
                 setAuthMethod((m) => (m === "pin" ? "password" : "pin"))
                 setVerifySecret("")
-                setManageError(null)
+                setVerifyError(null)
               }}
               className="text-xs font-medium text-primary underline-offset-4 hover:underline"
             >
@@ -568,8 +572,9 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
               value={verifySecret}
               onChange={(e) => {
                 setVerifySecret(e.target.value)
-                setManageError(null)
+                setVerifyError(null)
               }}
+              error={verifyError ?? undefined}
             />
           ) : (
             <TextField
@@ -582,8 +587,9 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
               value={verifySecret}
               onChange={(e) => {
                 setVerifySecret(e.target.value)
-                setManageError(null)
+                setVerifyError(null)
               }}
+              error={verifyError ?? undefined}
             />
           )}
 
@@ -598,8 +604,14 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   value={nextPin}
                   onChange={(e) => {
                     setNextPin(e.target.value)
-                    setManageError(null)
+                    setNextPinError(null)
                   }}
+                  error={
+                    nextPinError ??
+                    (authMethod === "pin" && verifySecret.length === 4 && nextPin.length === 4 && verifySecret === nextPin
+                      ? "New PIN must be different from current PIN"
+                      : undefined)
+                  }
                 />
                 <TextField
                   label="Confirm new PIN"
@@ -609,15 +621,16 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   value={confirmNextPin}
                   onChange={(e) => {
                     setConfirmNextPin(e.target.value)
-                    setManageError(null)
+                    setConfirmPinError(null)
                   }}
+                  error={
+                    confirmPinError ??
+                    (nextPin.length === 4 && confirmNextPin.length === 4 && nextPin !== confirmNextPin
+                      ? "New PINs don't match"
+                      : undefined)
+                  }
                 />
               </div>
-              {manageError && (
-                <p data-ui="admin/PinLockForm/p" role="alert" className="text-xs font-medium text-destructive">
-                  {manageError}
-                </p>
-              )}
               <div data-ui="admin/PinLockForm/div-flex-5" className="flex flex-wrap items-center gap-2">
                 <Button data-ui="admin/PinLockForm/Button-change-pin"
                   type="submit"
@@ -638,7 +651,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   disabled={pending}
                   onClick={() => {
                     setShowDisableConfirm(true)
-                    setManageError(null)
+                    setVerifyError(null)
                   }}
                   className="rounded-full text-destructive hover:text-destructive"
                 >
@@ -648,7 +661,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
             </>
           ) : (
             <div data-ui="admin/PinLockForm/div" className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3.5">
-              <p data-ui="admin/PinLockForm/p-2" className="text-xs text-muted-foreground">
+              <p data-ui="admin/PinLockForm/p" className="text-xs text-muted-foreground">
                 Turning off Quick PIN means the admin panel will stay unlocked for your full 7-day login session without asking for a 4-digit PIN every 12 hours.{" "}
                 {!verifySecret && (
                   <span data-ui="admin/PinLockForm/span-3" className="font-medium text-foreground">
@@ -656,11 +669,6 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   </span>
                 )}
               </p>
-              {manageError && (
-                <p data-ui="admin/PinLockForm/p-3" role="alert" className="text-xs font-medium text-destructive">
-                  {manageError}
-                </p>
-              )}
               <div data-ui="admin/PinLockForm/div-flex-6" className="flex flex-wrap items-center gap-2">
                 <Button data-ui="admin/PinLockForm/Button-confirm-don-apos-t-use"
                   type="button"
@@ -677,7 +685,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   disabled={pending}
                   onClick={() => {
                     setShowDisableConfirm(false)
-                    setManageError(null)
+                    setVerifyError(null)
                   }}
                   className="rounded-full"
                 >

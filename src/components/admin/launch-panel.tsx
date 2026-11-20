@@ -25,10 +25,10 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
   const router = useRouter()
   const [scopes, setScopes] = useState<ResetScope[]>(["orders", "customers"])
   const [confirm, setConfirm] = useState("")
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
-  const [error, setError] = useState<string | null>(null)
 
   const ready = checklist.every((c) => c.done)
   const placeholders = checklist.filter((c) => c.settings && !c.done)
@@ -38,10 +38,11 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
 
   const run = () =>
     startTransition(async () => {
-      setError(null)
+      setConfirmError(null)
       const res = await resetStoreData({ scopes, confirm: confirm.trim() })
       if (!res.ok) {
-        setError(res.error)
+        if (res.fieldErrors?.confirm?.[0]) setConfirmError(res.fieldErrors.confirm[0])
+        toast.error(res.error)
         return
       }
       const d = res.data
@@ -51,7 +52,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
       if (d.imagesFailed > 0 || d.imagesUnlisted) toast.warning(msg)
       else later(() => toast.success(msg))
       if (d.imagesFailed > 0 || d.imagesUnlisted) {
-        setError(
+        toast.error(
           `The database data was cleared, but ${d.imagesFailed > 0 ? `${d.imagesFailed} product photo${d.imagesFailed === 1 ? "" : "s"} could not be removed from storage` : "the photo storage could not be fully listed"}${d.imagesFailed > 0 && d.imagesUnlisted ? ", and some folders could not be read" : ""}. Delete the leftovers in Supabase Storage (product-images).`
         )
       }
@@ -140,16 +141,15 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
           label={`Type ${RESET_CONFIRM_WORD} to confirm`}
           fieldSize="md"
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={(e) => {
+            setConfirm(e.target.value)
+            if (confirmError) setConfirmError(null)
+          }}
           autoComplete="off"
           maxLength={10}
           placeholder={RESET_CONFIRM_WORD}
+          error={confirmError ?? undefined}
         />
-        {error && (
-          <p data-ui="admin/LaunchPanel/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-            {error}
-          </p>
-        )}
         <Button data-ui="admin/LaunchPanel/Button-clear-selected-data" type="button" variant="destructive" disabled={!canRun} onClick={run} className="rounded-full">
           {pending && <Loader2Icon className="animate-spin" />} Clear selected data
         </Button>

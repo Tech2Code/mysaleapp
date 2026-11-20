@@ -74,7 +74,7 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
   )
 
   return (
-    <div data-ui="layout:/admin" className="lg:flex">
+    <div data-ui="layout:/admin" className="mx-auto w-full max-w-400 lg:flex lg:border-x">
       <AdminSidebar ordersBadge={badge} />
       <div data-ui="layout:/admin/div" className="min-w-0 flex-1">
         <AdminTopbar

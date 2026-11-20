@@ -1,5 +1,7 @@
 import "server-only"
 import { requireUser } from "@/features/auth/guards"
+import { getActiveProducts } from "@/features/products/queries"
+import { getStoreSettings } from "@/features/settings/queries"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { resolveOrderPeriod } from "./dashboard-range"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
@@ -53,12 +55,26 @@ export async function getMyOrderStatusCounts(): Promise<CustomerOrderStatusCount
 export async function getMyOrder(code: string, nextPath = `/account/orders/${code}`): Promise<OrderWithHistory | null> {
   const user = await requireUser(nextPath)
   const supabase = await getServerSupabase()
-  const { data, error } = await supabase
-    .from("orders")
-    .select(WITH_HISTORY)
-    .eq("user_id", user.id)
-    .eq("order_code", code.toUpperCase())
-    .maybeSingle<OrderRow>()
+  const [{ data, error }, products, shop] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(WITH_HISTORY)
+      .eq("user_id", user.id)
+      .eq("order_code", code.toUpperCase())
+      .maybeSingle<OrderRow>(),
+    getActiveProducts(),
+    getStoreSettings(),
+  ])
   if (error) throw new Error(error.message)
-  return data ? mapOrderWithHistory(data) : null
+  if (!data) return null
+  const order = mapOrderWithHistory(data)
+  const byId = new Map(products.map((p) => [p.id, p]))
+  return {
+    ...order,
+    items: order.items.map((item) => ({
+      ...item,
+      returnWindowDays:
+        item.returnWindowDays ?? byId.get(item.productId)?.returnWindowDays ?? shop.returnWindowDays,
+    })),
+  }
 }

@@ -73,6 +73,17 @@ export const productSchema = z
       v.wholeNumber(LIMITS.weightGrams.max, "Enter weight in grams (0 = standard)")
     ),
     shippingClass: z.enum(SHIPPING_CLASSES).default("standard"),
+    returnWindowDays: z
+      .preprocess(
+        (x) => (x === "" || x === null || x === undefined ? null : typeof x === "string" ? Number(x.trim()) : x),
+        z
+          .number({ error: "Enter 0 to 90 days" })
+          .int("Whole days only")
+          .min(0, "Can't be negative")
+          .max(LIMITS.returnWindowDays.max, `At most ${LIMITS.returnWindowDays.max} days`)
+          .nullable()
+      )
+      .optional(),
     shortDescription: z.preprocess(
       (v) => (typeof v === "string" && v.trim() === "" ? null : v),
       z.string().trim().max(LIMITS.shortDescription.max, `Keep it under ${LIMITS.shortDescription.max} characters`).nullable()

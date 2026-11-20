@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { MyOrderView } from "@/components/account/account-views"
 import { getMyOrder } from "@/features/orders/queries"
-import { returnWindow } from "@/features/orders/returns"
+import { effectiveReturnDays, returnWindow } from "@/features/orders/returns"
 import { getStoreSettings } from "@/features/settings/queries"
 import Loading from "./loading"
 
@@ -22,5 +22,12 @@ async function MyOrderDetails({ params }: Pick<PageProps<"/account/orders/[code]
   const [order, shop] = await Promise.all([getMyOrder(code), getStoreSettings()])
   if (!order) notFound()
 
-  return <MyOrderView order={order} shop={shop} win={returnWindow(order.history, shop.returnWindowDays, new Date())} />
+  const w = returnWindow(order.history, shop.returnWindowDays, new Date(), order.items)
+  return (
+    <MyOrderView
+      order={order}
+      shop={shop}
+      win={{ ...w, days: effectiveReturnDays(shop.returnWindowDays, order.items) }}
+    />
+  )
 }

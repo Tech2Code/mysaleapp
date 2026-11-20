@@ -15,6 +15,22 @@ export const RETURN_REASONS = [
   "Other",
 ] as const
 
+export const EXCHANGE_REASONS = [
+  "Need a different size or dimensions",
+  "Prefer a different colour or finish",
+  "Ordered the wrong variant by mistake",
+  "Want to swap for another design",
+  "Other",
+] as const
+
+export const REPLACEMENT_REASONS = [
+  "Damaged or broken in transit",
+  "Defective or flawed piece received",
+  "Wrong item delivered instead of ordered item",
+  "Missing part or incomplete set",
+  "Other",
+] as const
+
 /** A request that still needs attention (counts against "one open request per order"). */
 export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === "requested" || r.status === "approved"
 
@@ -27,15 +43,43 @@ export function deliveredAt(history: StatusHistoryEntry[]): string | null {
   return latest.changedAt
 }
 
+/** Effective return window days for an order: max of each item's `returnWindowDays` (falling back to `windowDays`). */
+export function effectiveReturnDays(windowDays: number, items?: Pick<OrderItem, "returnWindowDays">[]): number {
+  if (!items || items.length === 0) return Math.max(0, windowDays)
+  return Math.max(0, ...items.map((i) => (i.returnWindowDays == null ? windowDays : Number(i.returnWindowDays))))
+}
+
 /**
  * The return window: `until` is the last moment a request can be made; `open` is whether that is still ahead.
+ * When `items` are passed, uses the longest item return window on the order so mixed-window orders stay open
+ * as long as at least one item is still inside its window.
  * `now` is passed in so callers read the clock themselves (after connection() in server components).
  */
-export function returnWindow(history: StatusHistoryEntry[], windowDays: number, now: Date): { until: Date | null; open: boolean } {
+export function returnWindow(
+  history: StatusHistoryEntry[],
+  windowDays: number,
+  now: Date,
+  items?: Pick<OrderItem, "returnWindowDays">[]
+): { until: Date | null; open: boolean } {
+  const effectiveDays = items && items.length > 0 ? effectiveReturnDays(windowDays, items) : windowDays
   const delivered = deliveredAt(history)
-  if (!delivered || windowDays <= 0) return { until: null, open: false }
-  const until = new Date(new Date(delivered).getTime() + windowDays * 86_400_000)
+  if (!delivered || effectiveDays <= 0) return { until: null, open: false }
+  const until = new Date(new Date(delivered).getTime() + effectiveDays * 86_400_000)
   return { until, open: now.getTime() <= until.getTime() }
+}
+
+/** Return & exchange window for one specific ordered item. */
+export function itemReturnWindow(
+  history: StatusHistoryEntry[],
+  itemWindowDays: number | null | undefined,
+  defaultWindowDays: number,
+  now: Date
+): { until: Date | null; open: boolean; days: number } {
+  const days = itemWindowDays == null ? defaultWindowDays : Math.max(0, Math.trunc(Number(itemWindowDays)))
+  const delivered = deliveredAt(history)
+  if (!delivered || days <= 0) return { until: null, open: false, days }
+  const until = new Date(new Date(delivered).getTime() + days * 86_400_000)
+  return { until, open: now.getTime() <= until.getTime(), days }
 }
 
 /** How many of each product can still be sent back: ordered minus goods already received back. */
@@ -78,8 +122,8 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
     detail: "Rejected", customerDetail: "The shop couldn't approve this return",
   },
   withdrawn: {
-    step: 1, tone: "neutral", label: "Return withdrawn", customerLabel: "Return withdrawn",
-    detail: "The customer withdrew the request", customerDetail: "You withdrew this request",
+    step: 1, tone: "neutral", label: "Return cancelled", customerLabel: "Return cancelled",
+    detail: "The customer cancelled the request", customerDetail: "You cancelled this request",
   },
   received: {
     step: 3, tone: "success", label: "Return received", customerLabel: "Return received",
@@ -271,7 +315,7 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
   }
 
   if (request?.status === "withdrawn") {
-    return stage("withdrawn", isExchangeReq ? { label: "Exchange withdrawn", customerLabel: "Exchange withdrawn" } : {})
+    return stage("withdrawn", isExchangeReq ? { label: "Exchange cancelled", customerLabel: "Exchange cancelled" } : {})
   }
   return null
 }
@@ -384,15 +428,15 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
             key: "rejected",
             label: isExchange ? "Exchange rejected" : "Return rejected",
             customerLabel: isExchange ? "Exchange not approved" : "Return not approved",
-            at: request?.decidedAt ?? null,
+            at: request?.decidedAt ?? request?.createdAt ?? null,
             note: request?.adminNote?.trim() || null,
             state: "stopped",
           }
         : {
             key: "withdrawn",
-            label: isExchange ? "Exchange withdrawn" : "Return withdrawn",
-            customerLabel: isExchange ? "Exchange withdrawn" : "Return withdrawn",
-            at: request?.decidedAt ?? null,
+            label: isExchange ? "Exchange cancelled" : "Return cancelled",
+            customerLabel: isExchange ? "Exchange cancelled" : "Return cancelled",
+            at: request?.decidedAt ?? request?.createdAt ?? null,
             note: null,
             state: "stopped",
           }

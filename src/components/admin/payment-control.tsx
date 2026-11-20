@@ -131,7 +131,6 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const otherTrimmed = (otherMethodNow ?? "").trim()
   const refTrimmed = (referenceNow ?? "").trim()
   const amtTrimmed = (amountNow ?? "").trim()
-  const amtNum = Number(amtTrimmed)
   const noteTrimmed = (noteNow ?? "").trim()
   const combinedNoteNow = isRefunding ? noteTrimmed : combineOtherPaymentNote(methodNow ?? "", otherTrimmed, noteTrimmed)
 
@@ -142,31 +141,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
     amtTrimmed !== (order.paymentAmount == null ? "" : String(order.paymentAmount)) ||
     combinedNoteNow !== (order.paymentNote ?? "").trim()
 
-  const refundFormValid =
-    refTrimmed.length >= LIMITS.utr.min &&
-    refTrimmed !== (order.paymentReference ?? "").trim() &&
-    amtTrimmed !== "" &&
-    Number.isFinite(amtNum) &&
-    amtNum > 0 &&
-    amtNum <= remainingToRefund + 0.005 &&
-    noteTrimmed.length >= 3
-
-  const otherMethodValid = methodNow !== "other" || otherTrimmed.length >= 2
-
-  const manualEditValid =
-    hasPaymentChanges &&
-    otherMethodValid &&
-    (statusNow === "paid"
-      ? Boolean(methodNow) &&
-        ((methodNow !== "upi" && methodNow !== "bank_transfer") || refTrimmed.length >= LIMITS.utr.min) &&
-        (amtTrimmed !== "" && Number.isFinite(amtNum) && amtNum > 0)
-      : statusNow === "failed"
-        ? noteTrimmed.length >= 5
-        : statusNow === "submitted"
-          ? refTrimmed.length >= LIMITS.utr.min
-          : true)
-
-  const canSubmitDialog = isRefunding ? refundFormValid : manualEditValid
+  const canSubmitDialog = isRefunding ? true : hasPaymentChanges
 
   const notifyUrl = (result: "paid" | "failed", amount?: number | null, why?: string | null) =>
     whatsappLink(

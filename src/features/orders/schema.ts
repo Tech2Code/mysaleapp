@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { joinCityState } from "@/features/location/states"
 import { LIMITS, addDays, todayIST, v } from "@/lib/validation"
-import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, otherNeedsDetail } from "./reasons"
+import { OTHER_DETAIL_MESSAGE, otherNeedsDetail } from "./reasons"
 
 /** Shared by the checkout form (client) and the placeOrder action (server). Rules live in lib/validation. */
 export const checkoutSchema = z.object({
@@ -133,7 +133,7 @@ export const requestReturnSchema = z
     resolutionType: z.enum(["refund", "exchange"]).default("refund"),
     exchangePreference: v.note(200).optional(),
   })
-  .refine((v) => Boolean(v.details && v.details.trim().length >= OTHER_DETAIL_MIN) && !otherNeedsDetail(v.reason, v.details), {
+  .refine((v) => !otherNeedsDetail(v.reason, v.details), {
     path: ["details"],
     error: OTHER_DETAIL_MESSAGE,
   })

@@ -40,7 +40,8 @@ export function CancelOrder({
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [phone, setPhone] = useState("")
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -75,13 +76,11 @@ export function CancelOrder({
         : undefined
   const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
 
-  const submit = () =>
+  const submit = () => {
+    setSubmitted(true)
+    setServerFieldErrors({})
+    if (!reason || needsDetail || phoneMissing) return
     startTransition(async () => {
-      setError(null)
-      if (!reason) {
-        setError("Please select why you are cancelling.")
-        return
-      }
       const res = await cancelOrder({
         code: orderCode,
         phoneLast4,
@@ -90,7 +89,12 @@ export function CancelOrder({
         detail: detail.trim() || undefined,
       })
       if (!res.ok) {
-        setError(res.error)
+        const nextFieldErrors: Record<string, string> = {}
+        for (const [k, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
+        }
+        setServerFieldErrors(nextFieldErrors)
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -100,6 +104,7 @@ export function CancelOrder({
       })
       router.refresh()
     })
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -108,7 +113,8 @@ export function CancelOrder({
       setReason("")
       setDetail("")
       setPhone("")
-      setError(null)
+      setSubmitted(false)
+      setServerFieldErrors({})
     }
   }
 
@@ -137,8 +143,12 @@ export function CancelOrder({
               placeholder="Select a reason"
               fieldSize="md"
               value={reason}
-              onValueChange={setReason}
+              onValueChange={(val) => {
+                setReason(val)
+                if (serverFieldErrors.reason) setServerFieldErrors((p) => ({ ...p, reason: "" }))
+              }}
               options={CANCEL_REASONS.map((r) => ({ value: r, label: r }))}
+              error={serverFieldErrors.reason || (submitted && !reason ? "Please select why you are cancelling" : undefined)}
             />
             <TextAreaField
               label={reason === OTHER_REASON ? "Please tell us the reason" : "Anything else? (optional)"}
@@ -146,8 +156,16 @@ export function CancelOrder({
               rows={2}
               maxLength={LIMITS.cancelDetail.max}
               value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-              error={needsDetail && detail.trim() ? OTHER_DETAIL_MESSAGE : undefined}
+              onChange={(e) => {
+                setDetail(e.target.value)
+                if (serverFieldErrors.detail) setServerFieldErrors((p) => ({ ...p, detail: "" }))
+              }}
+              error={
+                serverFieldErrors.detail ||
+                ((submitted || Boolean(detail.trim())) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
+                  ? OTHER_DETAIL_MESSAGE
+                  : undefined)
+              }
             />
             {isGuest && (
               <TextField
@@ -157,14 +175,17 @@ export function CancelOrder({
                 hint="To cancel, confirm the whole number you ordered with."
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                error={phoneError}
+                onChange={(e) => {
+                  setPhone(e.target.value)
+                  if (serverFieldErrors.phone) setServerFieldErrors((p) => ({ ...p, phone: "" }))
+                }}
+                error={
+                  serverFieldErrors.phone ||
+                  ((submitted || Boolean(phone.trim())) && phoneMissing
+                    ? (phoneError ?? "Enter your 10-digit mobile number")
+                    : undefined)
+                }
               />
-            )}
-            {error && (
-              <p data-ui="store/CancelOrder/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                {error}
-              </p>
             )}
           </div>
         </DialogBody>
@@ -172,7 +193,7 @@ export function CancelOrder({
           <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <CheckIcon className="size-4" /> Keep order
           </Button>
-          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending || needsDetail || phoneMissing} className="gap-1.5 rounded-full">
+          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Yes, cancel order
           </Button>
         </DialogFooter>

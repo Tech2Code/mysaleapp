@@ -3,6 +3,10 @@
 -- when opening a return request, with a specific exchange preference note (e.g., preferred size, colour, or piece).
 
 -- 1. Add resolution_type & exchange_preference columns to return_requests & order_returns --
+alter table public.products
+  add column if not exists return_window_days int
+    check (return_window_days is null or return_window_days between 0 and 90);
+
 alter table public.return_requests
   add column if not exists resolution_type text not null default 'refund'
     check (resolution_type in ('refund', 'exchange')),
@@ -36,6 +40,7 @@ declare
   v_id            uuid;
   v_state         text;
   v_days          int;
+  v_item_days     int;
   v_delivered     timestamptz;
   v_item          jsonb;
   v_pid           uuid;
@@ -69,9 +74,8 @@ begin
   if v_order.status <> 'delivered' then raise exception 'NOT_DELIVERED'; end if;
 
   select return_window_days into v_days from public.store_settings limit 1;
-  if coalesce(v_days, 0) <= 0 then raise exception 'RETURNS_OFF'; end if;
   v_delivered := public.order_delivered_at(v_order.id);
-  if v_delivered is null or now() > v_delivered + make_interval(days => v_days) then raise exception 'WINDOW_CLOSED'; end if;
+  if v_delivered is null then raise exception 'WINDOW_CLOSED'; end if;
 
   if length(btrim(coalesce(p_reason, ''))) < 2 then raise exception 'REASON_REQUIRED'; end if;
   if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) not between 1 and 50 then
@@ -87,6 +91,20 @@ begin
     select coalesce(sum((e ->> 'quantity')::int), 0), max(e ->> 'name') into v_ordered, v_name
     from jsonb_array_elements(v_order.items) e where (e ->> 'productId')::uuid = v_pid;
     if v_ordered = 0 then raise exception 'ITEM_NOT_IN_ORDER'; end if;
+
+    -- Per-product return window: use snapshotted returnWindowDays on the order line, else live product setting, else store default
+    select coalesce(
+      max((e ->> 'returnWindowDays')::int),
+      (select p.return_window_days from public.products p where p.id = v_pid),
+      v_days,
+      0
+    )
+    into v_item_days
+    from jsonb_array_elements(v_order.items) e
+    where (e ->> 'productId')::uuid = v_pid;
+
+    if v_item_days <= 0 then raise exception 'RETURNS_OFF'; end if;
+    if now() > v_delivered + make_interval(days => v_item_days) then raise exception 'WINDOW_CLOSED'; end if;
 
     select coalesce(sum((r ->> 'quantity')::int), 0) into v_returned
     from public.order_returns o, jsonb_array_elements(o.items) r
@@ -233,7 +251,20 @@ begin
   return jsonb_build_object(
     'orderCode', v_order.order_code,
     'status', v_order.status,
-    'items', v_order.items,
+    'items', coalesce((
+      select jsonb_agg(
+        e || jsonb_build_object(
+          'returnWindowDays',
+          coalesce(
+            (e ->> 'returnWindowDays')::int,
+            (select p.return_window_days from public.products p where p.id = (e ->> 'productId')::uuid),
+            (select s.return_window_days from public.store_settings s limit 1),
+            7
+          )
+        )
+      )
+      from jsonb_array_elements(v_order.items) e
+    ), v_order.items),
     'subtotal', v_order.subtotal,
     'shippingFee', v_order.shipping_fee,
     'shippingFeeOriginal', v_order.shipping_fee_original,
@@ -552,3 +583,35 @@ end $$;
 
 revoke all on function public.refund_return(uuid, numeric) from public, anon;
 grant execute on function public.refund_return(uuid, numeric) to authenticated;
+
+-- 6. Stamp decided_at on withdraw_return_request so the timeline & request card show the exact withdrawal timestamp --
+update public.return_requests
+set decided_at = coalesce(decided_at, created_at)
+where status = 'withdrawn' and decided_at is null;
+
+create or replace function public.withdraw_return_request(
+  p_code text, p_phone_last4 text, p_request_id uuid, p_phone text default null
+)
+returns jsonb
+language plpgsql security definer set search_path = public, pg_temp
+as $$
+declare
+  v_id    uuid;
+  v_state text;
+begin
+  -- Signed-in owners match auth.uid() automatically; guests must prove the full 10-digit mobile number.
+  select g.res_id, g.res_state into v_id, v_state
+  from public.find_order_for_guest(p_code, p_phone_last4, p_phone, true) g;
+  if v_state = 'locked' then return jsonb_build_object('ok', false, 'error', 'TOO_MANY_ATTEMPTS'); end if;
+  if v_state <> 'ok' then return jsonb_build_object('ok', false, 'error', 'ORDER_NOT_FOUND'); end if;
+
+  update public.return_requests
+  set status = 'withdrawn',
+      decided_at = now()
+  where id = p_request_id and order_id = v_id and status = 'requested';
+  if not found then raise exception 'CANNOT_WITHDRAW'; end if;
+  return jsonb_build_object('ok', true);
+end $$;
+
+revoke all on function public.withdraw_return_request(text, text, uuid, text) from public;
+grant execute on function public.withdraw_return_request(text, text, uuid, text) to anon, authenticated;

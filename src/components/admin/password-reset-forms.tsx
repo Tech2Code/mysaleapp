@@ -5,6 +5,7 @@ import { KeyRoundIcon, Loader2Icon, MailCheckIcon, SendIcon } from "lucide-react
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 import type { z } from "zod"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
@@ -19,17 +20,12 @@ export function ForgotPasswordForm() {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const [sentTo, setSentTo] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(
-    params.get("error") === "expired" ? "That link has expired or was already used. Request a new one below." : null
-  )
   const form = useForm<z.input<typeof emailSchema>>({ resolver: zodResolver(emailSchema), defaultValues: { email: "" } })
 
   useEffect(() => {
     const errParam = params.get("error")
     if (errParam === "expired") {
-      queueMicrotask(() =>
-        setError("That link has expired or was already used. Request a new one below.")
-      )
+      toast.error("That link has expired or was already used. Request a new one below.")
     }
     if (typeof window !== "undefined" && (errParam || window.location.hash)) {
       window.history.replaceState(null, "", window.location.pathname)
@@ -39,7 +35,6 @@ export function ForgotPasswordForm() {
   useEffect(() => {
     return () => {
       form.reset({ email: "" })
-      setError(null)
       setSentTo(null)
     }
   }, [form])
@@ -64,19 +59,19 @@ export function ForgotPasswordForm() {
       className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
-          setError(null)
           const res = await requestPasswordReset(values)
-          if (res.ok) setSentTo(values.email)
-          else setError(res.error)
+          if (res.ok) {
+            setSentTo(values.email)
+          } else {
+            if (res.fieldErrors?.email?.[0]) {
+              form.setError("email", { message: res.fieldErrors.email[0] })
+            }
+            toast.error(res.error)
+          }
         })
       )}
     >
       <TextField label="Admin email" kind="email" error={form.formState.errors.email?.message} {...form.register("email")} />
-      {error && (
-        <p data-ui="admin/ForgotPasswordForm/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
       <Button data-ui="admin/ForgotPasswordForm/Button-send-reset-link" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
         {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send reset link
       </Button>
@@ -88,14 +83,12 @@ export function ForgotPasswordForm() {
 export function ResetPasswordForm() {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
-  const [error, setError] = useState<string | null>(null)
   const form = useForm<z.input<typeof resetSchema>>({ resolver: zodResolver(resetSchema), defaultValues: { next: "", confirm: "" } })
   const { errors } = form.formState
 
   useEffect(() => {
     return () => {
       form.reset({ next: "", confirm: "" })
-      setError(null)
     }
   }, [form])
 
@@ -106,9 +99,15 @@ export function ResetPasswordForm() {
       className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
-          setError(null)
           const res = await resetAdminPassword(values) // redirects to /admin on success
-          if (res && !res.ok) setError(res.error)
+          if (res && !res.ok) {
+            for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+              if (msgs?.[0] && (field === "next" || field === "confirm")) {
+                form.setError(field, { message: msgs[0] })
+              }
+            }
+            toast.error(res.error)
+          }
         })
       )}
     >
@@ -129,11 +128,6 @@ export function ResetPasswordForm() {
         error={errors.confirm?.message}
         {...form.register("confirm")}
       />
-      {error && (
-        <p data-ui="admin/ResetPasswordForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
       <Button data-ui="admin/ResetPasswordForm/Button-set-new-password" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
         {pending ? <Loader2Icon className="animate-spin" /> : <KeyRoundIcon className="size-4" />} Set new password
       </Button>

@@ -95,7 +95,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
         )}
       </div>
 
-      <div data-ui="store/ProductCard/div-flex-2" className="mt-2 flex flex-1 flex-col gap-0.5 px-0.5 sm:mt-3 sm:gap-1">
+      <div data-ui="store/ProductCard/div-flex-2" className="mt-2 flex flex-col gap-0.5 px-0.5 sm:mt-3 sm:gap-1">
         {product.category && (
           <span data-ui="store/ProductCard/span-3" className="truncate text-[0.65rem] font-medium tracking-wide text-muted-foreground uppercase sm:text-xs">
             {product.category.name}
@@ -128,7 +128,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             <span className="text-[0.7rem] text-muted-foreground sm:text-xs">({reviewCount})</span>
           </div>
         )}
-        <div data-ui="store/ProductCard/div-flex-3" className="mt-auto flex items-baseline gap-1.5 pt-1 sm:gap-2">
+        <div data-ui="store/ProductCard/div-flex-3" className="flex items-baseline gap-1.5 pt-0.5 sm:gap-2">
           <span data-ui="store/ProductCard/span-4" className="text-sm font-bold sm:text-base">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
             <span data-ui="store/ProductCard/span-5" className="text-xs text-muted-foreground line-through sm:text-sm">

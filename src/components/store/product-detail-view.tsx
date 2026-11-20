@@ -1,4 +1,4 @@
-import { CheckCircle2Icon, HandHeartIcon, InfoIcon, ShieldCheckIcon, StarIcon, TruckIcon } from "lucide-react"
+import { CheckCircle2Icon, HandHeartIcon, InfoIcon, RotateCcwIcon, ShieldCheckIcon, StarIcon, TruckIcon } from "lucide-react"
 import { Accordion, AccordionItem } from "@/components/shared/accordion"
 import { FadeIn } from "@/components/shared/motion"
 import { ReadMore } from "@/components/shared/read-more"
@@ -43,6 +43,7 @@ export function ProductDetailView({
   const off = discountPercent(product.price, product.compareAtPrice)
   const taxNote = priceNote(settings)
   const surcharges = describeProductSurcharges(product, settings)
+  const returnDays = product.returnWindowDays ?? settings.returnWindowDays
   const perks = [
     { icon: HandHeartIcon, text: settings.highlightLine },
     {
@@ -51,6 +52,13 @@ export function ProductDetailView({
         settings.freeDeliveryAbove > 0
           ? `Free delivery above ${formatPrice(settings.freeDeliveryAbove)}`
           : `Delivery ${formatPrice(settings.deliveryFee)} per order`,
+    },
+    {
+      icon: RotateCcwIcon,
+      text:
+        returnDays > 0
+          ? `${returnDays}-${returnDays === 1 ? "day" : "day"} return & exchange window after delivery`
+          : "Non-returnable item (damaged-in-transit help on WhatsApp)",
     },
     { icon: ShieldCheckIcon, text: "Pay securely by UPI · No cash on delivery" },
   ]
@@ -178,6 +186,11 @@ export function ProductDetailView({
             <Accordion>
               {product.careInstructions && <AccordionItem title="Care instructions">{product.careInstructions}</AccordionItem>}
               <AccordionItem title="Delivery">{freeDelivery} We pack every order by hand and share the courier and tracking details with you once it ships.</AccordionItem>
+              <AccordionItem title="Returns & exchanges">
+                {returnDays > 0
+                  ? `You can request a return (for a refund of the item price) or an exchange/replacement for this item within ${returnDays} ${returnDays === 1 ? "day" : "days"} of delivery directly from your order page or the Track Order page.`
+                  : "This piece is non-returnable once delivered. If it arrives damaged in transit, message us on WhatsApp and we will help right away."}
+              </AccordionItem>
               <AccordionItem title="Payment">
                 Pay securely by UPI at checkout and enter your 12-digit UTR / reference number to place the order. We confirm your order once the
                 payment is verified. Cash on delivery isn&apos;t available.

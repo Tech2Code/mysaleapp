@@ -197,7 +197,7 @@ export function MyOrderView({
   order: OrderWithHistory
   shop: StoreSettings
   /** The return window, computed by the page (it reads the clock). */
-  win: { open: boolean; until: Date | null }
+  win: { open: boolean; until: Date | null; days?: number }
 }) {
   return (
     <section data-ui="account/MyOrderView" className="space-y-6">
@@ -264,10 +264,11 @@ export function MyOrderView({
                   orderCode={order.orderCode}
                   status={order.status}
                   items={order.items}
+                  history={order.history}
                   returns={order.returns}
                   requests={order.returnRequests}
                   charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees, discountAmount: order.discountAmount }}
-                  window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: shop.returnWindowDays }}
+                  window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: win.days ?? shop.returnWindowDays }}
                   whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${order.orderCode}.`)}
                 />
                 <CancelOrder

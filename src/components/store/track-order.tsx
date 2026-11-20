@@ -160,6 +160,7 @@ function TrackResult({
             phoneLast4={isOwner ? undefined : query.phoneLast4}
             status={result.status}
             items={result.items}
+            history={result.history}
             returns={result.returns}
             requests={result.returnRequests}
             charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees, discountAmount: result.discountAmount }}
@@ -267,7 +268,6 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   const user = useAuth((s) => s.user)
   const signedIn = Boolean(user)
   const [result, setResult] = useState<TrackedOrder | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const [query, setQuery] = useState<{ code: string; phoneLast4: string } | null>(null)
@@ -282,7 +282,6 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
     form.reset({ code: urlCode, phoneLast4: "" })
     return () => {
       form.reset({ code: "", phoneLast4: "" })
-      setError(null)
       setResult(null)
       setQuery(null)
     }
@@ -298,7 +297,6 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   }, [lookups])
 
   const onSubmit = form.handleSubmit((values) => {
-    setError(null)
     startTransition(async () => {
       const res = await trackOrder(values)
       if (res.ok) {
@@ -307,7 +305,12 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
         setQuery({ code: res.data.orderCode, phoneLast4: String(values.phoneLast4) })
       } else {
         setResult(null)
-        setError(res.error)
+        for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0] && (field === "code" || field === "phoneLast4")) {
+            form.setError(field, { message: msgs[0] })
+          }
+        }
+        toast.error(res.error)
       }
     })
   })
@@ -369,13 +372,8 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
         <Button data-ui="store/TrackOrderBody/Button-track-order" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
           {pending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />} Track order
         </Button>
-        {error && (
-          <p data-ui="store/TrackOrderBody/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
-            {error}
-          </p>
-        )}
         <div data-ui="store/TrackOrderBody/div-2" className="mt-auto border-t pt-4 text-sm">
-          <p data-ui="store/TrackOrderBody/p-3" className="text-muted-foreground">Can&apos;t find your order code?</p>
+          <p data-ui="store/TrackOrderBody/p-2" className="text-muted-foreground">Can&apos;t find your order code?</p>
           <a data-ui="store/TrackOrderBody/a-ask-us-on-whatsapp"
             href={shopWhatsappLink(shop, "Hi! I need help finding my order.")}
             target="_blank"

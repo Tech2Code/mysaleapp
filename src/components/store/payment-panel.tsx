@@ -12,7 +12,6 @@ import {
   SmartphoneIcon,
 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -100,8 +99,8 @@ function ReferenceForm({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+  const router = useRouter()
   const user = useAuth((s) => s.user)
-  const [serverError, setServerError] = useState<string | null>(null)
   const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { reference: "" } })
   const refValue = useWatch({ control: form.control, name: "reference" })
   const refClean = (refValue ?? "").trim().toUpperCase()
@@ -111,11 +110,19 @@ function ReferenceForm({
 
   const onSubmit = form.handleSubmit((values) => {
     if (isUnchangedOrEmpty) return
-    setServerError(null)
     startTransition(async () => {
       const res = await submitPayment({ code: orderCode, phoneLast4, reference: values.reference })
       if (!res.ok) {
-        setServerError(res.error)
+        const refMsg = res.fieldErrors?.reference?.[0]
+        if (refMsg) {
+          form.setError("reference", { message: refMsg })
+        }
+        toast.error(
+          res.error,
+          !user && /sign in/i.test(res.error)
+            ? { action: { label: "Sign in", onClick: () => router.push("/login?next=/account/orders") } }
+            : undefined
+        )
         return
       }
       later(() => toast.success("Payment submitted. We'll verify it shortly."))
@@ -135,19 +142,6 @@ function ReferenceForm({
         error={form.formState.errors.reference?.message ?? (Boolean(prevClean) && refClean === prevClean ? "This is already your submitted reference number" : undefined)}
         {...form.register("reference")}
       />
-      {serverError && (
-        <p data-ui="store/ReferenceForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-          {serverError}
-          {!user && /sign in/i.test(serverError) && (
-            <>
-              {" "}
-              <Link data-ui="store/ReferenceForm/Link-sign-in" href="/login?next=/account/orders" className="font-semibold underline underline-offset-4">
-                Sign in
-              </Link>
-            </>
-          )}
-        </p>
-      )}
       <Button data-ui="store/ReferenceForm/Button" type="submit" size="lg" disabled={pending || isUnchangedOrEmpty} className="w-full rounded-full">
         {pending && <Loader2Icon className="animate-spin" />} {submitLabel}
       </Button>

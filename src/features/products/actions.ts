@@ -29,6 +29,7 @@ function toRowWithStock(p: ProductValues) {
     stock: p.stock,
     weight_grams: p.weightGrams,
     shipping_class: p.shippingClass,
+    return_window_days: p.returnWindowDays ?? null,
     fees: [],
     short_description: p.shortDescription,
     highlights: p.highlights,

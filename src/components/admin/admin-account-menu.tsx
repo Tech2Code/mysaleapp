@@ -347,6 +347,7 @@ function AdminPinGateDialog({
   const [pin, setPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
   const [pinError, setPinError] = useState<string | null>(null)
+  const [confirmPinError, setConfirmPinError] = useState<string | null>(null)
   const pinInputRef = useRef<HTMLInputElement>(null)
 
   const [forgotMode, setForgotMode] = useState(false)
@@ -354,7 +355,9 @@ function AdminPinGateDialog({
   const [recoveryAction, setRecoveryAction] = useState<"unlock" | "reset" | "disable">("reset")
   const [newPin, setNewPin] = useState("")
   const [newPinConfirm, setNewPinConfirm] = useState("")
-  const [recoveryError, setRecoveryError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [newPinError, setNewPinError] = useState<string | null>(null)
+  const [newPinConfirmError, setNewPinConfirmError] = useState<string | null>(null)
 
   const submitPinUnlock = (pinValue: string) => {
     if (!/^\d{4}$/.test(pinValue)) {
@@ -378,21 +381,22 @@ function AdminPinGateDialog({
 
   const submitFirstTimeSetup = (e: React.FormEvent) => {
     e.preventDefault()
+    setPinError(null)
+    setConfirmPinError(null)
     if (!/^\d{4}$/.test(pin)) {
       setPinError("Enter a 4-digit numeric PIN")
       return
     }
     if (pin !== confirmPin) {
-      setPinError("PINs don't match")
+      setConfirmPinError("PINs don't match")
       return
     }
-    setPinError(null)
     startTransition(async () => {
       const res = await setAdminPin({ pin, confirm: confirmPin })
       if (!res.ok) {
-        const msg = res.fieldErrors?.pin?.[0] ?? res.fieldErrors?.confirm?.[0] ?? res.error
-        setPinError(msg)
-        toast.error(msg)
+        setPinError(res.fieldErrors?.pin?.[0] ?? null)
+        setConfirmPinError(res.fieldErrors?.confirm?.[0] ?? null)
+        toast.error(res.error)
         return
       }
       later(() => toast.success("4-digit PIN enabled"))
@@ -414,21 +418,23 @@ function AdminPinGateDialog({
 
   const submitPasswordRecovery = (e: React.FormEvent) => {
     e.preventDefault()
+    setPasswordError(null)
+    setNewPinError(null)
+    setNewPinConfirmError(null)
     if (!password) {
-      setRecoveryError("Enter your account password")
+      setPasswordError("Enter your account password")
       return
     }
     if (recoveryAction === "reset") {
       if (!/^\d{4}$/.test(newPin)) {
-        setRecoveryError("Enter a new 4-digit PIN")
+        setNewPinError("Enter a new 4-digit PIN")
         return
       }
       if (newPin !== newPinConfirm) {
-        setRecoveryError("New PINs don't match")
+        setNewPinConfirmError("New PINs don't match")
         return
       }
     }
-    setRecoveryError(null)
     startTransition(async () => {
       const res = await unlockAdminWithPassword({
         password,
@@ -437,13 +443,10 @@ function AdminPinGateDialog({
         confirmPin: recoveryAction === "reset" ? newPinConfirm : undefined,
       })
       if (!res.ok) {
-        const msg =
-          res.fieldErrors?.password?.[0] ??
-          res.fieldErrors?.newPin?.[0] ??
-          res.fieldErrors?.confirmPin?.[0] ??
-          res.error
-        setRecoveryError(msg)
-        toast.error(msg)
+        setPasswordError(res.fieldErrors?.password?.[0] ?? null)
+        setNewPinError(res.fieldErrors?.newPin?.[0] ?? null)
+        setNewPinConfirmError(res.fieldErrors?.confirmPin?.[0] ?? null)
+        toast.error(res.error)
         return
       }
       const message =
@@ -496,6 +499,7 @@ function AdminPinGateDialog({
                     setPin(e.target.value)
                     setPinError(null)
                   }}
+                  error={pinError ?? undefined}
                 />
                 <TextField
                   label="Confirm PIN"
@@ -505,15 +509,16 @@ function AdminPinGateDialog({
                   value={confirmPin}
                   onChange={(e) => {
                     setConfirmPin(e.target.value)
-                    setPinError(null)
+                    setConfirmPinError(null)
                   }}
+                  error={
+                    confirmPinError ??
+                    (pin.length === 4 && confirmPin.length === 4 && pin !== confirmPin
+                      ? "PINs don't match"
+                      : undefined)
+                  }
                 />
               </div>
-              {pinError && (
-                <p data-ui="admin/AdminPinGateDialog/p" role="alert" className="text-xs font-medium text-destructive">
-                  {pinError}
-                </p>
-              )}
             </DialogBody>
             <DialogFooter className="sm:justify-between">
               <Button data-ui="admin/AdminPinGateDialog/Button-don-apos-t-use-pin"
@@ -576,7 +581,9 @@ function AdminPinGateDialog({
                   type="button"
                   onClick={() => {
                     setForgotMode(true)
-                    setRecoveryError(null)
+                    setPasswordError(null)
+                    setNewPinError(null)
+                    setNewPinConfirmError(null)
                   }}
                   className="text-xs font-medium text-primary underline-offset-4 hover:underline"
                 >
@@ -624,8 +631,9 @@ function AdminPinGateDialog({
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
-                  setRecoveryError(null)
+                  setPasswordError(null)
                 }}
+                error={passwordError ?? undefined}
               />
               <div data-ui="admin/AdminPinGateDialog/div" className="space-y-1.5">
                 <span data-ui="admin/AdminPinGateDialog/span-3" className="block text-xs font-medium text-muted-foreground">After verifying password:</span>
@@ -642,7 +650,9 @@ function AdminPinGateDialog({
                       type="button"
                       onClick={() => {
                         setRecoveryAction(item.id)
-                        setRecoveryError(null)
+                        setPasswordError(null)
+                        setNewPinError(null)
+                        setNewPinConfirmError(null)
                       }}
                       className={`rounded-lg px-2 py-1.5 text-xs font-medium transition ${
                         recoveryAction === item.id
@@ -665,8 +675,9 @@ function AdminPinGateDialog({
                     value={newPin}
                     onChange={(e) => {
                       setNewPin(e.target.value)
-                      setRecoveryError(null)
+                      setNewPinError(null)
                     }}
+                    error={newPinError ?? undefined}
                   />
                   <TextField
                     label="Confirm new PIN"
@@ -676,15 +687,16 @@ function AdminPinGateDialog({
                     value={newPinConfirm}
                     onChange={(e) => {
                       setNewPinConfirm(e.target.value)
-                      setRecoveryError(null)
+                      setNewPinConfirmError(null)
                     }}
+                    error={
+                      newPinConfirmError ??
+                      (newPin.length === 4 && newPinConfirm.length === 4 && newPin !== newPinConfirm
+                        ? "New PINs don't match"
+                        : undefined)
+                    }
                   />
                 </div>
-              )}
-              {recoveryError && (
-                <p data-ui="admin/AdminPinGateDialog/p-2" role="alert" className="text-xs font-medium text-destructive">
-                  {recoveryError}
-                </p>
               )}
             </DialogBody>
             <DialogFooter className="sm:justify-between">
@@ -694,7 +706,9 @@ function AdminPinGateDialog({
                 disabled={pending}
                 onClick={() => {
                   setForgotMode(false)
-                  setRecoveryError(null)
+                  setPasswordError(null)
+                  setNewPinError(null)
+                  setNewPinConfirmError(null)
                 }}
                 className="rounded-full"
               >

@@ -43,7 +43,7 @@ export function DecideDialog({
   const [pickupDate, setPickupDate] = useState("")
   const [bounds, setBounds] = useState<{ min?: string; max?: string }>({})
   const [pickupError, setPickupError] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [noteError, setNoteError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -58,26 +58,27 @@ export function DecideDialog({
       setNote("")
       setPickupDate("")
       setPickupError(null)
-      setError(null)
+      setNoteError(null)
     }
   }
 
   const submit = () => {
-    setError(null)
+    setNoteError(null)
     setPickupError(null)
     if (approve && !pickupDate) {
       setPickupError("Pick the pickup date")
       return
     }
-    if (!approve && !note.trim()) {
-      setError("Enter the reason for rejecting")
+    if (!approve && note.trim().length < 3) {
+      setNoteError("Enter the reason for rejecting (at least 3 characters)")
       return
     }
     startTransition(async () => {
       const res = await decideReturnRequest({ requestId: request.id, approve, note: note.trim() || undefined, pickupDate: approve ? pickupDate : undefined })
       if (!res.ok) {
         setPickupError(res.fieldErrors?.pickupDate?.[0] ?? null)
-        setError(res.fieldErrors?.note?.[0] ?? (res.fieldErrors?.pickupDate ? null : res.error))
+        setNoteError(res.fieldErrors?.note?.[0] ?? null)
+        toast.error(res.error)
         return
       }
       const isExchange = request.resolutionType === "exchange"
@@ -97,6 +98,8 @@ export function DecideDialog({
         setOpen(false)
         setNote("")
         setPickupDate("")
+        setPickupError(null)
+        setNoteError(null)
         toast.success(approve ? (isExchange ? "Exchange approved" : "Return approved") : isExchange ? "Exchange rejected" : "Return rejected", {
           action: { label: "Tell customer on WhatsApp", onClick: () => window.open(url, "_blank", "noopener") },
         })
@@ -153,7 +156,10 @@ export function DecideDialog({
               min={bounds.min}
               max={bounds.max}
               value={pickupDate}
-              onChange={setPickupDate}
+              onChange={(val) => {
+                setPickupDate(val)
+                if (pickupError) setPickupError(null)
+              }}
               error={pickupError ?? undefined}
             />
           )}
@@ -163,8 +169,16 @@ export function DecideDialog({
             rows={3}
             maxLength={LIMITS.returnDetail.max}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
-            error={error ?? undefined}
+            onChange={(e) => {
+              setNote(e.target.value)
+              if (noteError) setNoteError(null)
+            }}
+            error={
+              noteError ??
+              (!approve && note.trim().length > 0 && note.trim().length < 3
+                ? "Enter at least 3 characters"
+                : undefined)
+            }
           />
         </DialogBody>
         <DialogFooter>
@@ -176,7 +190,7 @@ export function DecideDialog({
             type="button"
             variant={approve ? "default" : "destructive"}
             onClick={submit}
-            disabled={pending || (approve ? !pickupDate : note.trim().length < 3)}
+            disabled={pending}
             className="gap-1.5 rounded-full"
           >
             {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />}{" "}
@@ -192,17 +206,15 @@ export function DecideDialog({
 export function PickedUpButton({ requestId }: { requestId: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   const confirm = () =>
     startTransition(async () => {
-      setError(null)
       const res = await markReturnPickedUp({ requestId })
       if (!res.ok) {
-        setError(res.error)
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -223,16 +235,11 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
       >
         Pickup successful
       </Button>
-      {error && !open && <p data-ui="admin/PickedUpButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
       <ConfirmDialog
         open={open}
-        onOpenChange={(o) => {
-          if (pending) return
-          setOpen(o)
-          if (!o) setError(null)
-        }}
+        onOpenChange={(o) => !pending && setOpen(o)}
         title="Mark the pickup as successful?"
-        description={error ? `The customer will see that their items were collected. Do this only after the courier has the parcel. (${error})` : "The customer will see that their items were collected. Do this only after the courier has the parcel."}
+        description="The customer will see that their items were collected. Do this only after the courier has the parcel."
         confirmLabel="Yes, picked up"
         pending={pending}
         onConfirm={confirm}
@@ -245,17 +252,15 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
 export function UndoStepButton({ requestId, title, description }: { requestId: string; title: string; description: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
   useBlockWhile(pending)
 
   const confirm = () =>
     startTransition(async () => {
-      setError(null)
       const res = await undoReturnStep({ requestId })
       if (!res.ok) {
-        setError(res.error)
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -270,16 +275,11 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
       <Button data-ui="admin/UndoStepButton/Button-undo-this-step" type="button" variant="outline" onClick={() => setOpen(true)} className="rounded-full">
         Undo this step
       </Button>
-      {error && !open && <p data-ui="admin/UndoStepButton/p" role="alert" className="text-sm text-destructive">{error}</p>}
       <ConfirmDialog
         open={open}
-        onOpenChange={(o) => {
-          if (pending) return
-          setOpen(o)
-          if (!o) setError(null)
-        }}
+        onOpenChange={(o) => !pending && setOpen(o)}
         title={title}
-        description={error ? `${description} (${error})` : description}
+        description={description}
         confirmLabel="Yes, undo"
         pending={pending}
         onConfirm={confirm}
@@ -316,6 +316,8 @@ export function AdminReturnRequests({
         {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "admin", r.resolutionType)
           const isExchange = r.resolutionType === "exchange"
+          const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
+          const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
               <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
@@ -332,7 +334,7 @@ export function AdminReturnRequests({
                   >
                     {isExchange ? (
                       <>
-                        <ArrowLeftRightIcon className="size-3" aria-hidden /> Exchange / Replacement
+                        <ArrowLeftRightIcon className="size-3" aria-hidden /> {isReplacement ? "Replacement" : "Exchange"}
                       </>
                     ) : (
                       "Refund"
@@ -348,10 +350,12 @@ export function AdminReturnRequests({
                   </li>
                 ))}
               </ul>
-              {isExchange && r.exchangePreference && (
+              {isExchange && cleanPref && (
                 <p data-ui="admin/AdminReturnRequests/p" className="rounded-lg border border-indigo-500/20 bg-indigo-500/8 px-3 py-2 text-xs text-indigo-900 dark:text-indigo-200">
-                  <span data-ui="admin/AdminReturnRequests/span-4" className="font-semibold">Requested exchange: </span>
-                  {r.exchangePreference}
+                  <span data-ui="admin/AdminReturnRequests/span-4" className="font-semibold">
+                    {isReplacement ? "Replacement details: " : "Requested exchange: "}
+                  </span>
+                  {cleanPref}
                 </p>
               )}
               <p data-ui="admin/AdminReturnRequests/p-2" className="text-sm">
@@ -369,6 +373,11 @@ export function AdminReturnRequests({
                 <p data-ui="admin/AdminReturnRequests/p-4" className="text-sm">
                   <span data-ui="admin/AdminReturnRequests/span-8" className="text-muted-foreground">Pickup: </span>
                   {r.pickedUpAt ? `successful on ${formatDateTime(r.pickedUpAt)}` : r.pickupDate ? `scheduled for ${formatDate(r.pickupDate)}` : "date not set"}
+                </p>
+              )}
+              {r.status === "withdrawn" && (
+                <p data-ui="admin/AdminReturnRequests/p-5" className="text-xs text-muted-foreground">
+                  Cancelled on {formatDateTime(r.decidedAt ?? r.createdAt)}
                 </p>
               )}
             </li>

@@ -55,6 +55,7 @@ function toFormValues(product: Product | null): ProductInput {
     stock: product?.stock ?? 10,
     weightGrams: product?.weightGrams ?? 0,
     shippingClass: product?.shippingClass ?? "standard",
+    returnWindowDays: product?.returnWindowDays == null ? "" : String(product.returnWindowDays),
     isActive: product?.isActive ?? true,
     isFeatured: product?.isFeatured ?? false,
     seoTitle: product?.seoTitle ?? "",
@@ -122,9 +123,9 @@ function ProductFormInner({
   const { errors, isDirty } = form.formState
 
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
-  const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal] = useWatch({
+  const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal, returnWindowVal] = useWatch({
     control: form.control,
-    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription", "weightGrams", "shippingClass"],
+    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription", "weightGrams", "shippingClass", "returnWindowDays"],
   })
   const highlightCount = String(highlightsText ?? "").split("\n").filter((l) => l.trim()).length
 
@@ -161,6 +162,7 @@ function ProductFormInner({
             stock: res.data.stock,
             weightGrams: values.weightGrams,
             shippingClass: values.shippingClass,
+            returnWindowDays: values.returnWindowDays ?? null,
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             seoTitle: values.seoTitle ?? null,
@@ -363,8 +365,8 @@ function ProductFormInner({
           </Section>
 
           <Section
-            title="Shipping & parcel"
-            description="Declare the item's physical size and weight. Handling & courier slab rates are managed centrally in Settings."
+            title="Shipping, parcel & returns"
+            description="Declare the item's physical size, weight, and return window. Leave the return window blank to use the store default."
           >
             <FormSelectField
               control={form.control}
@@ -386,6 +388,23 @@ function ProductFormInner({
               }
               error={errors.weightGrams?.message}
               {...form.register("weightGrams")}
+            />
+            <TextField
+              label="Return & exchange window (days)"
+              kind="digits"
+              maxLength={2}
+              fieldSize="md"
+              inputMode="numeric"
+              placeholder={`Store default (${storeSettings.returnWindowDays} days)`}
+              hint={
+                returnWindowVal === "" || returnWindowVal === null || returnWindowVal === undefined
+                  ? `Uses store default (${storeSettings.returnWindowDays} days). Enter 0 to make this product non-returnable.`
+                  : Number(returnWindowVal) === 0
+                    ? "0 = Non-returnable item (no return or exchange allowed after delivery)."
+                    : `Custom window: ${Number(returnWindowVal)} ${Number(returnWindowVal) === 1 ? "day" : "days"} after delivery for this product.`
+              }
+              error={errors.returnWindowDays?.message}
+              {...form.register("returnWindowDays")}
             />
             <p data-ui="admin/ProductFormInner/p-8" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
               {shippingClassVal === "oversized"

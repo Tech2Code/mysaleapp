@@ -223,7 +223,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 792 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Run it with `npx tsc --noEmit` and `npm run lint` before every push.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 792 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, `npm run ui:tag`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
 - **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 

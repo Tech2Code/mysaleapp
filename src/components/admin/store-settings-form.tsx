@@ -561,12 +561,12 @@ function StoreSettingsFormInner({
               {...form.register("unpaidOrderExpiryHours")}
             />
             <TextField
-              label="Return window (days after delivery)" kind="digits"
+              label="Return & exchange window (days after delivery)" kind="digits"
               fieldSize="md"
               inputMode="numeric"
               maxLength={2}
               containerClassName="sm:w-64"
-              hint="How long customers can request a return. 0 = returns are not accepted."
+              hint="How long customers can request a return or exchange after delivery (up to 90 days). 0 = returns & exchanges are turned off."
               error={errors.returnWindowDays?.message}
               {...form.register("returnWindowDays")}
             />

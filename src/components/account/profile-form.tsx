@@ -253,8 +253,16 @@ function CustomerPasswordForm({
   })
 
   const canSubmit = hasPassword
-    ? Boolean(currentVal && nextVal && confirmVal && currentVal !== nextVal)
+    ? Boolean(currentVal && nextVal && confirmVal)
     : Boolean(nextVal && confirmVal)
+  const sameAsCurrentError =
+    hasPassword && Boolean(currentVal && nextVal && currentVal === nextVal)
+      ? "New password must be different from current password"
+      : undefined
+  const mismatchConfirmError =
+    Boolean(nextVal && confirmVal && nextVal !== confirmVal)
+      ? "Passwords do not match"
+      : undefined
 
   const onSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
@@ -316,7 +324,7 @@ function CustomerPasswordForm({
           autoComplete="new-password"
           maxLength={LIMITS.password.max}
           hint={`At least ${LIMITS.newPassword.min} characters, with a letter and a number.`}
-          error={errors.next?.message}
+          error={errors.next?.message ?? sameAsCurrentError}
           {...form.register("next")}
         />
         <TextField
@@ -324,7 +332,7 @@ function CustomerPasswordForm({
           type="password"
           autoComplete="new-password"
           maxLength={LIMITS.password.max}
-          error={errors.confirm?.message}
+          error={errors.confirm?.message ?? mismatchConfirmError}
           {...form.register("confirm")}
         />
       </div>
@@ -349,7 +357,6 @@ function DeactivateAccountCard() {
   const [open, setOpen] = useState(false)
   const [reasonChoice, setReasonChoice] = useState("")
   const [customNote, setCustomNote] = useState("")
-  const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -360,17 +367,15 @@ function DeactivateAccountCard() {
     if (!nextOpen) {
       setReasonChoice("")
       setCustomNote("")
-      setError(null)
     }
   }
 
   const handleDeactivate = () => {
-    setError(null)
     const combinedReason = [reasonChoice, customNote.trim()].filter(Boolean).join(" — ").slice(0, 200)
     startTransition(async () => {
       const res = await deactivateMyAccount({ reason: combinedReason || undefined })
       if (!res.ok) {
-        setError(res.error)
+        toast.error(res.error)
         return
       }
       setOpen(false)
@@ -444,12 +449,6 @@ function DeactivateAccountCard() {
                 value={customNote}
                 onChange={(e) => setCustomNote(e.target.value)}
               />
-            )}
-
-            {error && (
-              <p data-ui="account/DeactivateAccountCard/p-3" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                {error}
-              </p>
             )}
           </DialogBody>
 

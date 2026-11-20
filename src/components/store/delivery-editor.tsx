@@ -72,7 +72,6 @@ export function DeliveryEditor({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
-  const [serverError, setServerError] = useState<string | null>(null)
 
   const initialSplit = splitCityState(delivery.city)
   const form = useForm<CheckoutInput>({
@@ -90,7 +89,6 @@ export function DeliveryEditor({
     if (pending) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setServerError(null)
       form.reset({
         name: delivery.name,
         phone: delivery.phone,
@@ -131,14 +129,13 @@ export function DeliveryEditor({
       form.setError("pincode", { message: area.error })
       return
     }
-    setServerError(null)
     startTransition(async () => {
       const res = await updateOrderDelivery({ code: orderCode, phoneLast4, customer: values })
       if (!res.ok) {
-        setServerError(res.error)
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
           if (messages?.[0] && field in values) form.setError(field as keyof CheckoutInput, { message: messages[0] })
         }
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -213,11 +210,6 @@ export function DeliveryEditor({
                   <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
                 </div>
                 <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
-                {serverError && (
-                  <p data-ui="store/DeliveryEditor/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                    {serverError}
-                  </p>
-                )}
               </DialogBody>
               <DialogFooter>
                 <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">

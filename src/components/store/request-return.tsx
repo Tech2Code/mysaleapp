@@ -2,17 +2,17 @@
 
 import { ArrowLeftRightIcon, CheckIcon, Loader2Icon, PackageOpenIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { isOpenRequest, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
+import { EXCHANGE_REASONS, isOpenRequest, itemReturnWindow, REPLACEMENT_REASONS, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
-import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType } from "@/features/orders/types"
+import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType, StatusHistoryEntry } from "@/features/orders/types"
 import { formatDate, formatDateTime, formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { TONES } from "@/components/shared/status-badge"
@@ -32,6 +32,7 @@ export function RequestReturn({
   phoneLast4,
   status,
   items,
+  history = [],
   returns,
   requests,
   window: win,
@@ -45,6 +46,7 @@ export function RequestReturn({
   phoneLast4?: string
   status: OrderStatus
   items: OrderItem[]
+  history?: StatusHistoryEntry[]
   returns: OrderReturn[]
   requests: ReturnRequest[]
   window: Window
@@ -55,33 +57,73 @@ export function RequestReturn({
   const [open, setOpen] = useState(false)
   const [qty, setQty] = useState<Record<string, string>>({})
   const [resolutionType, setResolutionType] = useState<ReturnResolutionType>("refund")
+  const [exchangeKind, setExchangeKind] = useState<"" | "exchange" | "replacement">("")
   const [exchangePreference, setExchangePreference] = useState("")
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [phone, setPhone] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
+  const itemsListRef = useRef<HTMLUListElement>(null)
+  const exchangeBoxRef = useRef<HTMLDivElement>(null)
+  const nextFieldsRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   useRevealOnChange(requests.map((r) => `${r.id}:${r.status}`).join(","))
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
-  const lines = useMemo(() => {
+  const allLines = useMemo(() => {
     const seen = new Set<string>()
     return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
   }, [items, left])
 
-  // One line with exactly one piece left: nothing to choose, so start at 1 (the customer can still clear it).
-  const qtyOf = (id: string) => qty[id] ?? (lines.length === 1 && (left.get(id) ?? 0) === 1 ? "1" : "")
+  const windowByProduct = useMemo(() => {
+    const now = new Date()
+    const map = new Map<string, { until: Date | null; open: boolean; days: number }>()
+    for (const i of allLines) {
+      if (history.length > 0) {
+        map.set(i.productId, itemReturnWindow(history, i.returnWindowDays, win.days, now))
+      } else {
+        const d = i.returnWindowDays == null ? win.days : Math.max(0, Math.trunc(Number(i.returnWindowDays)))
+        map.set(i.productId, { until: win.until ? new Date(win.until) : null, open: d > 0 && win.open, days: d })
+      }
+    }
+    return map
+  }, [allLines, history, win.days, win.open, win.until])
 
-  if (status !== "delivered" || win.days <= 0) return null
-  if (requests.some(isOpenRequest) || lines.length === 0) return null
+  const lines = useMemo(
+    () => allLines.filter((i) => (windowByProduct.get(i.productId)?.open ?? win.open) && (windowByProduct.get(i.productId)?.days ?? win.days) > 0),
+    [allLines, windowByProduct, win.open, win.days]
+  )
 
-  if (!win.open) {
+  // Default the first returnable item to "1" when the customer hasn't edited quantities yet so single/multi-item orders are ready immediately.
+  const qtyOf = (id: string) => {
+    if (qty[id] !== undefined) return qty[id]
+    if (lines.length === 1 || (Object.keys(qty).length === 0 && lines[0]?.productId === id)) return "1"
+    return ""
+  }
+
+  if (status !== "delivered") return null
+  if (requests.some(isOpenRequest) || allLines.length === 0) return null
+
+  if (win.days <= 0) {
     return (
       <p data-ui="store/RequestReturn" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
-        The {win.days}-day return window for this order has ended{win.until ? ` (${formatDate(win.until)})` : ""}. If something is wrong with your order,{" "}
+        {allLines.length === 1 ? "This item is non-returnable." : "Items in this order are non-returnable."} If something arrived damaged in transit,{" "}
         <a data-ui="store/RequestReturn/a-message-us-on-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-4">
+          message us on WhatsApp
+        </a>
+        .
+      </p>
+    )
+  }
+
+  if (!win.open || lines.length === 0) {
+    return (
+      <p data-ui="store/RequestReturn" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
+        The {win.days}-day return &amp; exchange window for this order has ended{win.until ? ` (${formatDate(win.until)})` : ""}. If something is wrong with your order,{" "}
+        <a data-ui="store/RequestReturn/a-message-us-on-whatsapp-2" href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-4">
           message us on WhatsApp
         </a>
         .
@@ -99,7 +141,8 @@ export function RequestReturn({
       ? rawEstimateTotal
       : netReturnRefund(items, payload, { discountAmount: charges?.discountAmount ?? 0 })
   const kept = charges ? notRefundedCharges(charges) : []
-  const needsDetail = !reason || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)
+  const needsDetail = !reason || otherNeedsDetail(reason, details)
+  const needsExchangeKind = resolutionType === "exchange" && !exchangeKind
   const needsExchangePref = resolutionType === "exchange" && exchangePreference.trim().length < 2
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
@@ -115,56 +158,101 @@ export function RequestReturn({
         : undefined
   const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
 
-  const submit = () =>
+  const reasonOptions =
+    resolutionType === "exchange"
+      ? exchangeKind === "replacement"
+        ? REPLACEMENT_REASONS
+        : EXCHANGE_REASONS
+      : RETURN_REASONS
+
+  const submitButtonLabel =
+    resolutionType === "refund"
+      ? "Send return request"
+      : exchangeKind === "replacement"
+        ? "Send replacement request"
+        : exchangeKind === "exchange"
+          ? "Send exchange request"
+          : "Proceed with exchange / replacement"
+
+  const showLowerFields = resolutionType === "refund" || Boolean(exchangeKind)
+
+  const submit = () => {
+    setSubmitted(true)
+    setServerFieldErrors({})
+    if (payload.length === 0) {
+      itemsListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      if (lines.length > 1) {
+        toast.error("Please enter a quantity of at least 1 for the item(s) you want to return or exchange.")
+      }
+      return
+    }
+    if (tooMany) {
+      itemsListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      return
+    }
+    if (needsExchangeKind) {
+      exchangeBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      return
+    }
+    if (needsExchangePref || !reason || needsDetail || phoneMissing) {
+      nextFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      return
+    }
     startTransition(async () => {
-      setError(null)
-      if (!reason) {
-        setError("Please select why you are returning the item(s).")
-        return
-      }
-      if (needsExchangePref) {
-        setError("Please enter what you would like in exchange (size, colour, or replacement details).")
-        return
-      }
-      if (details.trim().length < OTHER_DETAIL_MIN) {
-        setError(OTHER_DETAIL_MESSAGE)
-        return
-      }
-      if (phoneMissing) {
-        setError(phoneError ?? "Enter your 10-digit mobile number.")
-        return
-      }
+      const rawPref = exchangePreference.trim()
+      const formattedPref =
+        resolutionType === "exchange"
+          ? exchangeKind === "replacement"
+            ? rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
+              ? `Replacement: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
+              : rawPref
+            : rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
+              ? `Exchange: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
+              : rawPref
+          : undefined
       const res = await requestReturn({
         code: orderCode,
         phoneLast4,
         phone: isGuest ? phoneDigits ?? undefined : undefined,
         items: payload,
         reason,
-        details: details.trim(),
+        details: details.trim() || undefined,
         resolutionType,
-        exchangePreference: resolutionType === "exchange" ? exchangePreference.trim() : undefined,
+        exchangePreference: formattedPref,
       })
       if (!res.ok) {
-        setError(res.error)
+        const nextFieldErrors: Record<string, string> = {}
+        for (const [k, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
+        }
+        setServerFieldErrors(nextFieldErrors)
+        toast.error(res.error)
         return
       }
+      const submittedKind = resolutionType === "exchange" ? (exchangeKind === "replacement" ? "replacement" : "exchange") : "refund"
       later(() => {
         setOpen(false)
         setQty({})
         setResolutionType("refund")
+        setExchangeKind("")
         setExchangePreference("")
         setReason("")
         setDetails("")
         setPhone("")
+        setSubmitted(false)
+        setServerFieldErrors({})
         toast.success(
-          resolutionType === "exchange"
-            ? "Exchange request sent. We'll review it and update you here."
-            : "Return request sent. We'll review it and update you here."
+          submittedKind === "replacement"
+            ? "Replacement request sent. We'll review it and update you here."
+            : submittedKind === "exchange"
+              ? "Exchange request sent. We'll review it and update you here."
+              : "Return request sent. We'll review it and update you here."
         )
       })
       onDone?.()
       router.refresh()
     })
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -172,11 +260,13 @@ export function RequestReturn({
     if (!nextOpen) {
       setQty({})
       setResolutionType("refund")
+      setExchangeKind("")
       setExchangePreference("")
       setReason("")
       setDetails("")
       setPhone("")
-      setError(null)
+      setSubmitted(false)
+      setServerFieldErrors({})
     }
   }
 
@@ -184,10 +274,15 @@ export function RequestReturn({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         data-ui="store/RequestReturn/DialogTrigger-inline-flex"
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-full border px-6 text-sm font-semibold transition-colors hover:bg-muted"
+        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border px-6 text-sm font-semibold transition-colors hover:bg-muted"
       >
-        <Undo2Icon className="size-4" aria-hidden /> Request return or exchange
+        <Undo2Icon className="size-4 shrink-0" aria-hidden /> Request return or exchange
       </DialogTrigger>
+      {win.until && (
+        <span data-ui="store/RequestReturn/span" className="basis-full text-xs text-muted-foreground">
+          {win.days}-day return &amp; exchange window open until <strong data-ui="store/RequestReturn/strong" className="font-medium text-foreground">{formatDate(win.until)}</strong>
+        </span>
+      )}
       <DialogContent data-ui="store/RequestReturn/DialogContent" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return or exchange items from {orderCode}</DialogTitle>
@@ -198,37 +293,72 @@ export function RequestReturn({
         </DialogHeader>
 
         <DialogBody>
-          <ul data-ui="store/RequestReturn/ul" className="space-y-3">
-            {lines.map((i) => {
+          <ul ref={itemsListRef} data-ui="store/RequestReturn/ul" className="space-y-3">
+            {allLines.map((i) => {
               const max = left.get(i.productId) ?? 0
+              const itemWin = windowByProduct.get(i.productId)
+              const eligible = (itemWin?.open ?? win.open) && (itemWin?.days ?? win.days) > 0
               return (
-                <li data-ui="store/RequestReturn/li-grid" key={i.productId} className="grid items-start gap-x-4 gap-y-1 rounded-xl border p-3 sm:grid-cols-[1fr_7rem]">
-                  <p data-ui="store/RequestReturn/p" className="text-sm font-medium sm:pt-1">{i.name}</p>
-                  <TextField
-                    label={`Qty (max ${max})`}
-                    kind="digits"
-                    fieldSize="md"
-                    inputMode="numeric"
-                    maxLength={String(LIMITS.returnQuantity.max).length}
-                    placeholder="0"
-                    value={qtyOf(i.productId)}
-                    onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
-                    error={Number(qtyOf(i.productId)) > max ? `At most ${max}` : undefined}
-                  />
+                <li
+                  data-ui="store/RequestReturn/li"
+                  key={i.productId}
+                  className={cn(
+                    "grid items-start gap-x-4 gap-y-1 rounded-xl border p-3 sm:grid-cols-[1fr_7rem]",
+                    !eligible && "bg-muted/40 opacity-75"
+                  )}
+                >
+                  <div data-ui="store/RequestReturn/div" className="space-y-0.5 sm:pt-1">
+                    <p data-ui="store/RequestReturn/p" className="text-sm font-medium">{i.name}</p>
+                    <p data-ui="store/RequestReturn/p-2" className="text-xs text-muted-foreground">
+                      {itemWin && itemWin.days <= 0
+                        ? "Non-returnable item"
+                        : itemWin && !itemWin.open
+                          ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
+                          : itemWin
+                            ? `${itemWin.days}-day return & exchange window${itemWin.until ? ` · until ${formatDate(itemWin.until.toISOString())}` : ""}`
+                            : `${win.days}-day return & exchange window`}
+                    </p>
+                  </div>
+                  {eligible ? (
+                    <TextField
+                      label={`Qty (max ${max})`}
+                      kind="digits"
+                      fieldSize="md"
+                      inputMode="numeric"
+                      maxLength={String(LIMITS.returnQuantity.max).length}
+                      placeholder="0"
+                      value={qtyOf(i.productId)}
+                      onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
+                      error={
+                        Number(qtyOf(i.productId)) > max
+                          ? `At most ${max}`
+                          : submitted && payload.length === 0 && i.productId === lines[0]?.productId
+                            ? "Enter at least 1"
+                            : undefined
+                      }
+                    />
+                  ) : (
+                    <span data-ui="store/RequestReturn/span-inline-flex" className="inline-flex items-center self-center rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground sm:justify-self-end">
+                      {(itemWin?.days ?? 0) <= 0 ? "Non-returnable" : "Window ended"}
+                    </span>
+                  )}
                 </li>
               )
             })}
           </ul>
 
-          <div data-ui="store/RequestReturn/div" className="space-y-2">
-            <p data-ui="store/RequestReturn/p-2" className="text-sm font-medium text-foreground">
+          <div data-ui="store/RequestReturn/div-2" className="space-y-2">
+            <p data-ui="store/RequestReturn/p-3" className="text-sm font-medium text-foreground">
               What would you prefer? *
             </p>
             <div data-ui="store/RequestReturn/div-grid" className="grid gap-2.5 sm:grid-cols-2">
               <button
                 data-ui="store/RequestReturn/button"
                 type="button"
-                onClick={() => setResolutionType("refund")}
+                onClick={() => {
+                  setResolutionType("refund")
+                  if (reason && !(RETURN_REASONS as readonly string[]).includes(reason)) setReason("")
+                }}
                 className={cn(
                   "flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors",
                   resolutionType === "refund"
@@ -237,11 +367,11 @@ export function RequestReturn({
                 )}
               >
                 <WalletIcon className={cn("mt-0.5 size-4 shrink-0", resolutionType === "refund" ? "text-primary" : "text-muted-foreground")} aria-hidden />
-                <span data-ui="store/RequestReturn/span" className="space-y-0.5">
-                  <span data-ui="store/RequestReturn/span-2" className="block text-sm font-semibold">
+                <span data-ui="store/RequestReturn/span-2" className="space-y-0.5">
+                  <span data-ui="store/RequestReturn/span-3" className="block text-sm font-semibold">
                     Refund
                   </span>
-                  <span data-ui="store/RequestReturn/span-3" className="block text-xs text-muted-foreground">
+                  <span data-ui="store/RequestReturn/span-4" className="block text-xs text-muted-foreground">
                     Get the item price refunded after pickup
                   </span>
                 </span>
@@ -249,7 +379,14 @@ export function RequestReturn({
               <button
                 data-ui="store/RequestReturn/button-2"
                 type="button"
-                onClick={() => setResolutionType("exchange")}
+                onClick={() => {
+                  setResolutionType("exchange")
+                  const targetReasons = exchangeKind === "replacement" ? REPLACEMENT_REASONS : EXCHANGE_REASONS
+                  if (reason && !(targetReasons as readonly string[]).includes(reason)) setReason("")
+                  requestAnimationFrame(() => {
+                    exchangeBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                  })
+                }}
                 className={cn(
                   "flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors",
                   resolutionType === "exchange"
@@ -258,11 +395,11 @@ export function RequestReturn({
                 )}
               >
                 <ArrowLeftRightIcon className={cn("mt-0.5 size-4 shrink-0", resolutionType === "exchange" ? "text-primary" : "text-muted-foreground")} aria-hidden />
-                <span data-ui="store/RequestReturn/span-4" className="space-y-0.5">
-                  <span data-ui="store/RequestReturn/span-5" className="block text-sm font-semibold">
+                <span data-ui="store/RequestReturn/span-5" className="space-y-0.5">
+                  <span data-ui="store/RequestReturn/span-6" className="block text-sm font-semibold">
                     Exchange / Replacement
                   </span>
-                  <span data-ui="store/RequestReturn/span-6" className="block text-xs text-muted-foreground">
+                  <span data-ui="store/RequestReturn/span-7" className="block text-xs text-muted-foreground">
                     Swap for another size, colour, or piece
                   </span>
                 </span>
@@ -271,75 +408,184 @@ export function RequestReturn({
           </div>
 
           {resolutionType === "exchange" && (
-            <TextField
-              label="What would you like in exchange?"
-              required
-              fieldSize="md"
-              maxLength={200}
-              placeholder="e.g. Size M instead of S, or replacement in Terracotta colour"
-              value={exchangePreference}
-              onChange={(e) => setExchangePreference(e.target.value)}
-              hint="Specify the preferred size, colour, variant, or replacement piece."
-              error={exchangePreference.length > 0 && exchangePreference.trim().length < 2 ? "Enter at least 2 characters" : undefined}
-            />
-          )}
+            <div ref={exchangeBoxRef} data-ui="store/RequestReturn/div-3" className="space-y-3 rounded-xl border bg-muted/30 p-3.5">
+              <SelectField
+                label="Would you like an exchange or a replacement? *"
+                placeholder="Choose Exchange or Replacement"
+                fieldSize="md"
+                value={exchangeKind}
+                onValueChange={(val) => {
+                  const nextKind = val as "" | "exchange" | "replacement"
+                  setExchangeKind(nextKind)
+                  const nextReasons = nextKind === "replacement" ? REPLACEMENT_REASONS : EXCHANGE_REASONS
+                  if (reason && !(nextReasons as readonly string[]).includes(reason)) setReason("")
+                  if (nextKind) {
+                    requestAnimationFrame(() => {
+                      nextFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                    })
+                  }
+                }}
+                options={[
+                  { value: "exchange", label: "Exchange — swap for another size, colour, or piece" },
+                  { value: "replacement", label: "Replacement — get a fresh piece of the same item" },
+                ]}
+                error={submitted && needsExchangeKind ? "Please select Exchange or Replacement" : undefined}
+              />
 
-          {estimate.length > 0 && (
-            <div data-ui="store/RequestReturn/div-2" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
-              <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
-                <span data-ui="store/RequestReturn/span-7">{resolutionType === "exchange" ? "Exchange item value" : "You will get back"}</span>
-                <span data-ui="store/RequestReturn/span-8">{formatPrice(estimateTotal)}</span>
-              </p>
-              <p data-ui="store/RequestReturn/p-3" className="text-xs text-muted-foreground">
-                {resolutionType === "exchange"
-                  ? "Once your returned item(s) are picked up and checked, we will dispatch your replacement at no extra item cost."
-                  : `Price of the items you return.${kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}`}
-              </p>
+              {exchangeKind === "exchange" && (
+                <TextField
+                  label="Which size, colour, or piece would you like in exchange?"
+                  required
+                  fieldSize="md"
+                  maxLength={180}
+                  placeholder="e.g. Size M instead of S, or Terracotta colour"
+                  value={exchangePreference}
+                  onChange={(e) => {
+                    setExchangePreference(e.target.value)
+                    if (serverFieldErrors.exchangePreference) {
+                      setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
+                    }
+                  }}
+                  hint="Specify the preferred size, colour, variant, or piece you want in exchange."
+                  error={
+                    serverFieldErrors.exchangePreference ||
+                    ((submitted || exchangePreference.length > 0) && needsExchangePref
+                      ? "Please enter what you would like in exchange (at least 2 characters)"
+                      : undefined)
+                  }
+                />
+              )}
+
+              {exchangeKind === "replacement" && (
+                <TextField
+                  label="What should we check for your replacement piece?"
+                  required
+                  fieldSize="md"
+                  maxLength={180}
+                  placeholder="e.g. Send a fresh undamaged piece of the same item"
+                  value={exchangePreference}
+                  onChange={(e) => {
+                    setExchangePreference(e.target.value)
+                    if (serverFieldErrors.exchangePreference) {
+                      setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
+                    }
+                  }}
+                  hint="We will dispatch a brand-new replacement of the exact same item after pickup."
+                  error={
+                    serverFieldErrors.exchangePreference ||
+                    ((submitted || exchangePreference.length > 0) && needsExchangePref
+                      ? "Please enter a short note for your replacement item (at least 2 characters)"
+                      : undefined)
+                  }
+                />
+              )}
             </div>
           )}
-          <SelectField
-            label="Why are you returning it? *"
-            placeholder="Select a reason"
-            fieldSize="md"
-            value={reason}
-            onValueChange={setReason}
-            options={RETURN_REASONS.map((r) => ({ value: r, label: r }))}
-          />
-          <TextAreaField
-            label={reason === OTHER_REASON ? "Please tell us the reason" : "Please describe the issue"}
-            required
-            rows={2}
-            maxLength={LIMITS.returnDetail.max}
-            value={details}
-            onChange={(e) => setDetails(e.target.value)}
-            hint="Describe what happened so we can resolve your return quickly."
-            error={details.trim().length > 0 && details.trim().length < OTHER_DETAIL_MIN ? OTHER_DETAIL_MESSAGE : undefined}
-          />
-          {isGuest && (
-            <TextField
-              label="Your full mobile number"
-              kind="phone"
-              leading="+91"
-              fieldSize="md"
-              hint="Confirm the whole number you ordered with to request a return."
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              error={phoneError}
-            />
-          )}
-          {error && (
-            <p data-ui="store/RequestReturn/p-4" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {error}
-            </p>
+
+          {showLowerFields && (
+            <div ref={nextFieldsRef} data-ui="store/RequestReturn/div-4" className="space-y-4">
+              {estimate.length > 0 && (
+                <div data-ui="store/RequestReturn/div-5" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
+                  <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
+                    <span data-ui="store/RequestReturn/span-8">
+                      {resolutionType === "exchange"
+                        ? exchangeKind === "replacement"
+                          ? "Replacement item value"
+                          : "Exchange item value"
+                        : "You will get back"}
+                    </span>
+                    <span data-ui="store/RequestReturn/span-9">{formatPrice(estimateTotal)}</span>
+                  </p>
+                  <p data-ui="store/RequestReturn/p-4" className="text-xs text-muted-foreground">
+                    {resolutionType === "exchange"
+                      ? exchangeKind === "replacement"
+                        ? "Once your returned item(s) are picked up and checked, we will dispatch a fresh replacement piece at no extra cost."
+                        : "Once your returned item(s) are picked up and checked, we will dispatch your requested exchange item at no extra item cost."
+                      : `Price of the items you return.${kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}`}
+                  </p>
+                </div>
+              )}
+              <SelectField
+                label={
+                  resolutionType === "exchange"
+                    ? exchangeKind === "replacement"
+                      ? "Why do you need a replacement? *"
+                      : "Why are you exchanging it? *"
+                    : "Why are you returning it? *"
+                }
+                placeholder="Select a reason"
+                fieldSize="md"
+                value={reason}
+                onValueChange={(val) => {
+                  setReason(val)
+                  if (serverFieldErrors.reason) {
+                    setServerFieldErrors((prev) => ({ ...prev, reason: "" }))
+                  }
+                }}
+                options={reasonOptions.map((r) => ({ value: r, label: r }))}
+                error={
+                  serverFieldErrors.reason ||
+                  (submitted && !reason
+                    ? resolutionType === "exchange"
+                      ? exchangeKind === "replacement"
+                        ? "Please select why you need a replacement"
+                        : "Please select why you are exchanging this item"
+                      : "Please select why you are returning this item"
+                    : undefined)
+                }
+              />
+              <TextAreaField
+                label={reason === OTHER_REASON ? "Please tell us the reason" : "Additional details (optional)"}
+                required={reason === OTHER_REASON}
+                rows={2}
+                maxLength={LIMITS.returnDetail.max}
+                value={details}
+                onChange={(e) => {
+                  setDetails(e.target.value)
+                  if (serverFieldErrors.details) {
+                    setServerFieldErrors((prev) => ({ ...prev, details: "" }))
+                  }
+                }}
+                hint={reason === OTHER_REASON ? "Tell us the reason (at least 5 characters)." : "Add any extra details that help us handle your request faster."}
+                error={
+                  serverFieldErrors.details ||
+                  ((submitted || details.trim().length > 0) && reason === OTHER_REASON && details.trim().length < OTHER_DETAIL_MIN
+                    ? OTHER_DETAIL_MESSAGE
+                    : undefined)
+                }
+              />
+              {isGuest && (
+                <TextField
+                  label="Your full mobile number"
+                  kind="phone"
+                  leading="+91"
+                  fieldSize="md"
+                  hint="Confirm the whole number you ordered with to submit this request."
+                  required
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value)
+                    if (serverFieldErrors.phone) {
+                      setServerFieldErrors((prev) => ({ ...prev, phone: "" }))
+                    }
+                  }}
+                  error={
+                    serverFieldErrors.phone ||
+                    (isGuest && (submitted || phone.trim().length > 0) && phoneMissing
+                      ? (phoneError ?? "Enter your 10-digit mobile number")
+                      : undefined)
+                  }
+                />
+              )}
+            </div>
           )}
         </DialogBody>
         <DialogFooter>
           <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Close
           </Button>
-          <Button data-ui="store/RequestReturn/Button-send" type="button" onClick={submit} disabled={pending || payload.length === 0 || tooMany || needsDetail || needsExchangePref || phoneMissing} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send {resolutionType === "exchange" ? "exchange" : "return"} request
+          <Button data-ui="store/RequestReturn/Button" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
+            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} {submitButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -368,6 +614,7 @@ export function ReturnRequestsPanel({
   const [pending, startTransition] = useTransition()
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [phone, setPhone] = useState("")
+  const [withdrawSubmitted, setWithdrawSubmitted] = useState(false)
   const later = useToastAfter(pending)
   useBlockWhile(pending)
   if (requests.length === 0) return <ReturnsList returns={returns} audience="customer" refundedInFull={refundedInFull} />
@@ -387,9 +634,17 @@ export function ReturnRequestsPanel({
   const closeConfirm = () => {
     setConfirmId(null)
     setPhone("")
+    setWithdrawSubmitted(false)
   }
 
-  const withdraw = (id: string) =>
+  const activeRequest = requests.find((r) => r.id === confirmId)
+  const activeIsExchange = activeRequest?.resolutionType === "exchange"
+
+  const withdraw = (id: string) => {
+    setWithdrawSubmitted(true)
+    if (phoneMissing) return
+    const targetReq = requests.find((r) => r.id === id)
+    const isEx = targetReq?.resolutionType === "exchange"
     startTransition(async () => {
       const res = await withdrawReturnRequest({
         code: orderCode,
@@ -403,11 +658,12 @@ export function ReturnRequestsPanel({
       }
       later(() => {
         closeConfirm()
-        toast.success("Return request withdrawn")
+        toast.success(isEx ? "Exchange request cancelled" : "Return request cancelled")
       })
       onChanged?.()
       router.refresh()
     })
+  }
 
   return (
     <section data-ui="store/ReturnRequestsPanel" aria-label="Return requests" className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
@@ -421,6 +677,8 @@ export function ReturnRequestsPanel({
         {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "customer", r.resolutionType)
           const isExchange = r.resolutionType === "exchange"
+          const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
+          const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
           return (
             <li data-ui="store/ReturnRequestsPanel/li" key={r.id} className="space-y-2 rounded-xl border p-3.5">
               <div data-ui="store/ReturnRequestsPanel/div-flex" className="flex flex-wrap items-center justify-between gap-2">
@@ -437,7 +695,7 @@ export function ReturnRequestsPanel({
                   >
                     {isExchange ? (
                       <>
-                        <ArrowLeftRightIcon className="size-3" aria-hidden /> Exchange / Replacement
+                        <ArrowLeftRightIcon className="size-3" aria-hidden /> {isReplacement ? "Replacement" : "Exchange"}
                       </>
                     ) : (
                       "Refund"
@@ -453,10 +711,12 @@ export function ReturnRequestsPanel({
                   </li>
                 ))}
               </ul>
-              {isExchange && r.exchangePreference && (
+              {isExchange && cleanPref && (
                 <p data-ui="store/ReturnRequestsPanel/p" className="rounded-lg border border-indigo-500/20 bg-indigo-500/8 px-3 py-2 text-xs text-indigo-900 dark:text-indigo-200">
-                  <span data-ui="store/ReturnRequestsPanel/span-4" className="font-semibold">Requested exchange: </span>
-                  {r.exchangePreference}
+                  <span data-ui="store/ReturnRequestsPanel/span-4" className="font-semibold">
+                    {isReplacement ? "Replacement details: " : "Requested exchange: "}
+                  </span>
+                  {cleanPref}
                 </p>
               )}
               <p data-ui="store/ReturnRequestsPanel/p-2" className="text-sm text-muted-foreground">
@@ -482,9 +742,15 @@ export function ReturnRequestsPanel({
                         : "Send the items back as described above. Once they reach us and are checked, your refund is processed."}
                 </p>
               )}
+              {r.status === "withdrawn" && (
+                <p data-ui="store/ReturnRequestsPanel/p-5" className="text-xs text-muted-foreground">
+                  Cancelled on {formatDateTime(r.decidedAt ?? r.createdAt)}
+                </p>
+              )}
               {r.status === "requested" && (
-                <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className="rounded-full">
-                  {pending && <Loader2Icon className="animate-spin" />} Withdraw request
+                <Button data-ui="store/ReturnRequestsPanel/Button" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className="rounded-full">
+                  {pending && <Loader2Icon className="animate-spin" />}{" "}
+                  {isExchange ? (isReplacement ? "Cancel replacement" : "Cancel exchange") : "Cancel return"}
                 </Button>
               )}
             </li>
@@ -494,22 +760,26 @@ export function ReturnRequestsPanel({
       <Dialog open={confirmId !== null} onOpenChange={(o) => !o && !pending && closeConfirm()}>
         <DialogContent data-ui="store/ReturnRequestsPanel/DialogContent" className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Withdraw this return request?</DialogTitle>
+            <DialogTitle>{activeIsExchange ? "Cancel this exchange request?" : "Cancel this return request?"}</DialogTitle>
           </DialogHeader>
           <DialogBody>
             <DialogDescription className="text-sm/relaxed text-muted-foreground">
-              We will not review it any further. You can send a new request while the return window is open.
+              We won&apos;t process this request further, and no pickup will take place. You can submit a new request while the return window is open.
             </DialogDescription>
             {isGuest && (
               <TextField
                 label="Your full mobile number"
                 kind="phone"
                 leading="+91"
-                hint="Confirm the whole number you ordered with to withdraw this request."
+                hint="Confirm the whole number you ordered with to cancel this request."
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                error={phoneError}
+                error={
+                  (withdrawSubmitted || Boolean(phone.trim())) && phoneMissing
+                    ? (phoneError ?? "Enter your 10-digit mobile number")
+                    : undefined
+                }
               />
             )}
           </DialogBody>
@@ -517,8 +787,9 @@ export function ReturnRequestsPanel({
             <Button data-ui="store/ReturnRequestsPanel/Button-keep-request" type="button" variant="outline" onClick={closeConfirm} disabled={pending} className="gap-1.5 rounded-full">
               <CheckIcon className="size-4" /> Keep request
             </Button>
-            <Button data-ui="store/ReturnRequestsPanel/Button-withdraw-request-2" type="button" variant="destructive" disabled={pending || phoneMissing} onClick={() => confirmId && withdraw(confirmId)} className="gap-1.5 rounded-full">
-              {pending ? <Loader2Icon className="animate-spin" /> : <Undo2Icon className="size-4" />} Withdraw request
+            <Button data-ui="store/ReturnRequestsPanel/Button-2" type="button" variant="destructive" disabled={pending} onClick={() => confirmId && withdraw(confirmId)} className="gap-1.5 rounded-full">
+              {pending ? <Loader2Icon className="animate-spin" /> : <Undo2Icon className="size-4" />}{" "}
+              {activeIsExchange ? "Cancel exchange" : "Cancel return"}
             </Button>
           </DialogFooter>
         </DialogContent>

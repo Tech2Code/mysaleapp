@@ -28,7 +28,7 @@ const RPC_ERRORS: Record<string, string> = {
   ITEM_NOT_IN_ORDER: "One of those items isn't part of this order.",
   TOO_MANY_RETURNED: "You can't return more than you ordered.",
   ALREADY_OPEN: "You already have a return request open for this order.",
-  CANNOT_WITHDRAW: "This request has already been reviewed, so it can't be withdrawn.",
+  CANNOT_WITHDRAW: "This request has already been reviewed, so it can't be cancelled.",
   ALREADY_CANCELLED: "This order is already cancelled.",
   CANNOT_CANCEL: "This order is already packed, so it can't be cancelled here. Please message us on WhatsApp.",
   TOO_MANY_ATTEMPTS: "Too many wrong attempts for this order. Please try again in 15 minutes, sign in, or message us on WhatsApp.",

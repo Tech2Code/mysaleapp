@@ -509,24 +509,27 @@ html:has([data-slot="sheet-overlay"][data-open]) {
   overflow: hidden;
 }
 
-/* Popups (dialogs, sheets, dropdown lists): a slim scrollbar so it does not eat the width of a small popup. */
+/* Popups (dialogs, sheets, dropdown lists) & scrollable review feeds: a slim scrollbar so it does not eat UI width. */
 [data-slot="dialog-content"],
 [data-slot="dialog-body"],
 [data-slot="sheet-content"],
-[data-slot="select-content"] {
+[data-slot="select-content"],
+[data-ui="store/ProductReviewsSection/ul"] {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent) transparent;
 }
 [data-slot="dialog-content"]::-webkit-scrollbar,
 [data-slot="dialog-body"]::-webkit-scrollbar,
 [data-slot="sheet-content"]::-webkit-scrollbar,
-[data-slot="select-content"]::-webkit-scrollbar {
-  width: 6px;
+[data-slot="select-content"]::-webkit-scrollbar,
+[data-ui="store/ProductReviewsSection/ul"]::-webkit-scrollbar {
+  width: 4px;
 }
 [data-slot="dialog-content"]::-webkit-scrollbar-thumb,
 [data-slot="dialog-body"]::-webkit-scrollbar-thumb,
 [data-slot="sheet-content"]::-webkit-scrollbar-thumb,
-[data-slot="select-content"]::-webkit-scrollbar-thumb {
+[data-slot="select-content"]::-webkit-scrollbar-thumb,
+[data-ui="store/ProductReviewsSection/ul"]::-webkit-scrollbar-thumb {
   border-radius: 9999px;
   background: color-mix(in oklab, var(--foreground) 25%, transparent);
 }

@@ -177,7 +177,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
   const later = useToastAfter(pending)
-  const [formError, setFormError] = useState<string | null>(null)
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null)
   const [resetLinkSentTo, setResetLinkSentTo] = useState<string | null>(null)
   const submittingRef = useRef(false)
@@ -249,7 +248,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
       forgotForm.reset({ email: "" })
       resetForm.reset({ next: "", confirm: "" })
-      setFormError(null)
       setConfirmationEmail(null)
       setResetLinkSentTo(null)
       setLoadingGoogle(false)
@@ -268,7 +266,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       }
     }
     setMode(nextMode)
-    setFormError(null)
     setProblem(null)
     setConfirmationEmail(null)
     setResetLinkSentTo(null)
@@ -278,7 +275,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     void signInForm.handleSubmit((values) => {
       submittingRef.current = true
       startTransition(async () => {
-        setFormError(null)
         const { ids: storedIds, ownerId } = useWishlist.getState()
         const localWishlistIds = ownerId === null ? storedIds : []
         const res = await signInCustomer({ ...values, wishlistIds: localWishlistIds })
@@ -289,7 +285,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               signInForm.setError(field, { message: msgs[0] })
             }
           }
-          setFormError(res.error)
+          toast.error(res.error)
           return
         }
         signInForm.reset({ email: "", password: "" })
@@ -311,7 +307,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     void signUpForm.handleSubmit((values) => {
       submittingRef.current = true
       startTransition(async () => {
-        setFormError(null)
         setConfirmationEmail(null)
         const targetNext = resolveNext()
         const { ids: storedIds, ownerId } = useWishlist.getState()
@@ -324,7 +319,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               signUpForm.setError(field as keyof SignUpValues, { message: msgs[0] })
             }
           }
-          setFormError(res.error)
+          toast.error(res.error)
           return
         }
 
@@ -352,7 +347,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const onForgotPassword = (e: React.FormEvent<HTMLFormElement>) => {
     void forgotForm.handleSubmit((values) => {
       startTransition(async () => {
-        setFormError(null)
         const res = await requestCustomerPasswordReset({
           email: values.email,
           next: resolveNext(),
@@ -363,7 +357,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               forgotForm.setError("email", { message: msgs[0] })
             }
           }
-          setFormError(res.error)
+          toast.error(res.error)
           return
         }
         setResetLinkSentTo(values.email)
@@ -376,7 +370,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     void resetForm.handleSubmit((values) => {
       submittingRef.current = true
       startTransition(async () => {
-        setFormError(null)
         const res = await resetCustomerPassword(values)
         if (!res.ok) {
           submittingRef.current = false
@@ -385,7 +378,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               resetForm.setError(field, { message: msgs[0] })
             }
           }
-          setFormError(res.error)
+          toast.error(res.error)
           return
         }
         resetForm.reset({ next: "", confirm: "" })
@@ -546,12 +539,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             </p>
           )}
 
-          {formError && (
-            <p data-ui="store/GoogleSignIn/p-6" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {formError}
-            </p>
-          )}
-
           {mode === "signin" ? (
             <form key="signin" data-ui="store/GoogleSignIn/form" onSubmit={onSignIn} noValidate className="space-y-2.5">
               <TextField
@@ -597,7 +584,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 <p data-ui="store/GoogleSignIn/p-flex-2" className="flex items-center gap-2 font-semibold">
                   <MailCheckIcon className="size-4 text-success" aria-hidden /> Check your inbox
                 </p>
-                <p data-ui="store/GoogleSignIn/p-7">
+                <p data-ui="store/GoogleSignIn/p-6">
                   If an account exists for <span data-ui="store/GoogleSignIn/span-4" className="font-semibold">{resetLinkSentTo}</span>, a password reset link is on its way. Open the link in your email to choose a new password.
                 </p>
                 <Button data-ui="store/GoogleSignIn/Button-back-to-sign-in"
@@ -612,7 +599,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               </div>
             ) : (
               <form key="forgot" data-ui="store/GoogleSignIn/form-2" onSubmit={onForgotPassword} noValidate className="space-y-2.5">
-                <p data-ui="store/GoogleSignIn/p-8" className="text-xs text-muted-foreground">
+                <p data-ui="store/GoogleSignIn/p-7" className="text-xs text-muted-foreground">
                   Enter the email address for your account and we&apos;ll send you a link to reset your password.
                 </p>
                 <TextField
@@ -644,7 +631,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             )
           ) : mode === "reset-password" ? (
             <form key="reset-password" data-ui="store/GoogleSignIn/form-3" onSubmit={onResetPassword} noValidate className="space-y-2.5">
-              <p data-ui="store/GoogleSignIn/p-9" className="text-xs text-muted-foreground">
+              <p data-ui="store/GoogleSignIn/p-8" className="text-xs text-muted-foreground">
                 Choose a new password for your account. You&apos;ll be signed in right after.
               </p>
               <TextField
@@ -722,7 +709,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                   {...signUpForm.register("confirmPassword")}
                 />
               </div>
-              <p data-ui="store/GoogleSignIn/p-10" className="text-[0.72rem] text-muted-foreground">
+              <p data-ui="store/GoogleSignIn/p-9" className="text-[0.72rem] text-muted-foreground">
                 Use at least {LIMITS.newPassword.min} characters with a letter and a number.
               </p>
               <Button
@@ -757,7 +744,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             {loadingGoogle ? "Opening Google…" : "Continue with Google"}
           </Button>
 
-          <p data-ui="store/GoogleSignIn/p-11" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
+          <p data-ui="store/GoogleSignIn/p-10" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
             Signing in is optional —{" "}
             <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a--2" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
               browse &amp; order as a guest

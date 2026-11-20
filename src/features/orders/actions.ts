@@ -14,7 +14,7 @@ import { joinCityState } from "@/features/location/states"
 import { cancelReasonText } from "./reasons"
 import { mapRpcError } from "./rpc-errors"
 import { cancelOrderSchema, checkoutSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema, validatePromoSchema } from "./schema"
-import { returnWindow } from "./returns"
+import { effectiveReturnDays, returnWindow } from "./returns"
 import { buildOrderMessage, shopWhatsappLink } from "./whatsapp"
 import type { ValidatedPromo } from "./pricing"
 import { mapFees, normalizePricing, type OrderPricing, type TrackedOrder } from "./types"
@@ -229,6 +229,11 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
   if (!data) return fail("No order found with that code and phone number.")
 
   const t = data as TrackedOrder
+  const normalizedItems = t.items.map((i) => ({
+    ...i,
+    price: Number(i.price),
+    ...(i.returnWindowDays == null ? {} : { returnWindowDays: Number(i.returnWindowDays) }),
+  }))
   return {
     ok: true,
     data: {
@@ -238,13 +243,13 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
       returns: t.returns ?? [],
       returnRequests: t.returnRequests ?? [],
       returnWindow: (() => {
-        const days = shop.returnWindowDays
-        const w = returnWindow(t.history ?? [], days, new Date())
+        const days = effectiveReturnDays(shop.returnWindowDays, normalizedItems)
+        const w = returnWindow(t.history ?? [], shop.returnWindowDays, new Date(), normalizedItems)
         return { open: w.open, until: w.until ? w.until.toISOString() : null, days }
       })(),
       delivery: t.delivery ?? null,
       ...normalizePricing(t),
-      items: t.items.map((i) => ({ ...i, price: Number(i.price) })),
+      items: normalizedItems,
     },
   }
 }
@@ -385,7 +390,7 @@ export async function withdrawReturnRequest(input: unknown): Promise<ActionResul
     p_request_id: parsed.data.requestId,
     p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
-  if (error) return fail(mapRpcError(error.message, "Could not withdraw the request. Please try again."))
+  if (error) return fail(mapRpcError(error.message, "Could not cancel the request. Please try again."))
   const soft = softRpcError(data)
   if (soft) return fail(soft)
   revalidatePath("/account", "layout")

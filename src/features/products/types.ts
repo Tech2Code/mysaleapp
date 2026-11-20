@@ -48,6 +48,8 @@ export type Product = {
   weightGrams: number
   /** Physical handling class (standard / fragile / oversized). */
   shippingClass: ShippingClass
+  /** Per-product return & exchange window in days after delivery (null = use store default; 0 = non-returnable). */
+  returnWindowDays?: number | null
   /** One or two sentences shown right under the price. */
   shortDescription: string | null
   /** Key selling points (max 6), shown as a checklist near the price. */
@@ -82,6 +84,7 @@ export type ProductRow = {
   /** Added by migration 0046; optional so the app keeps working before it is applied. */
   weight_grams?: number | null
   shipping_class?: string | null
+  return_window_days?: number | null
   short_description?: string | null
   highlights?: string[] | null
   specs?: ProductSpec[] | null
@@ -122,6 +125,10 @@ export function mapProduct(row: ProductRow): Product {
     stock: row.stock,
     weightGrams: Number.isFinite(rawWeight) && rawWeight > 0 ? Math.trunc(rawWeight) : 0,
     shippingClass: isShippingClass(row.shipping_class) ? row.shipping_class : "standard",
+    returnWindowDays:
+      row.return_window_days == null || !Number.isFinite(Number(row.return_window_days))
+        ? null
+        : Math.max(0, Math.trunc(Number(row.return_window_days))),
     shortDescription: row.short_description ?? null,
     highlights: row.highlights ?? [],
     specs: row.specs ?? [],

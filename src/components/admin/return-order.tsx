@@ -53,7 +53,8 @@ export function AdminReturnOrder({
   )
   const [reason, setReason] = useState("")
   const [refund, setRefund] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
+  const [reasonError, setReasonError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -90,16 +91,20 @@ export function AdminReturnOrder({
 
   const reasonMissing = !prefill && reason.trim().length < 3
 
-  const submit = () =>
-    startTransition(async () => {
-      setError(null)
-      if (reasonMissing) {
-        setError("Enter the reason for the return (at least 3 characters).")
-        return
+  const submit = () => {
+    setSubmitted(true)
+    setReasonError(null)
+    if (payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId)) || reasonMissing) {
+      if (payload.length === 0 && lines.length > 1) {
+        toast.error("Please enter a quantity of at least 1 for the returned item(s).")
       }
+      return
+    }
+    startTransition(async () => {
       const res = await recordOrderReturn({ orderId, items: payload, reason: reason.trim() || undefined, refund, requestId: prefill?.requestId })
       if (!res.ok) {
-        setError(res.error)
+        if (res.fieldErrors?.reason?.[0]) setReasonError(res.fieldErrors.reason[0])
+        toast.error(res.error)
         return
       }
       const stockNote = res.data.restocked > 0 ? ` ${res.data.restocked} item(s) back in stock.` : ""
@@ -113,10 +118,13 @@ export function AdminReturnOrder({
         setRows({})
         setReason("")
         setRefund(false)
+        setSubmitted(false)
+        setReasonError(null)
         toast.success(`Return recorded.${stockNote}${refundNote}`)
       })
       router.refresh()
     })
+  }
 
   const defaultRows = () =>
     Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
@@ -130,7 +138,8 @@ export function AdminReturnOrder({
       setRows({})
       setReason("")
       setRefund(false)
-      setError(null)
+      setSubmitted(false)
+      setReasonError(null)
     }
   }
 
@@ -166,7 +175,13 @@ export function AdminReturnOrder({
                       maxLength={String(LIMITS.returnQuantity.max).length}
                       value={row.qty}
                       onChange={(e) => setRow(i.productId, { qty: e.target.value })}
-                      error={over ? `At most ${max}` : undefined}
+                      error={
+                        over
+                          ? `At most ${max}`
+                          : submitted && payload.length === 0 && i.productId === lines[0]?.productId
+                            ? "Enter at least 1"
+                            : undefined
+                      }
                     />
                     <div data-ui="admin/AdminReturnOrder/div" className="sm:pt-6">
                       <SwitchField
@@ -188,8 +203,17 @@ export function AdminReturnOrder({
             rows={2}
             maxLength={LIMITS.returnDetail.max}
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value)
+              if (reasonError) setReasonError(null)
+            }}
             placeholder={prefill ? "Optional note about the returned items" : "Why did these items come back?"}
+            error={
+              reasonError ??
+              ((submitted || reason.trim().length > 0) && reasonMissing
+                ? "Enter the reason for the return (at least 3 characters)"
+                : undefined)
+            }
           />
           {paymentStatus === "paid" && prefill?.resolutionType !== "exchange" && (
             <SwitchField
@@ -205,17 +229,12 @@ export function AdminReturnOrder({
               onCheckedChange={setRefund}
             />
           )}
-          {error && (
-            <p data-ui="admin/AdminReturnOrder/p-2" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-              {error}
-            </p>
-          )}
         </DialogBody>
         <DialogFooter>
           <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
             <XIcon className="size-4" /> Cancel
           </Button>
-          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending || payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId)) || reasonMissing} className="gap-1.5 rounded-full">
+          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
             {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save return
           </Button>
         </DialogFooter>

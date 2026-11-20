@@ -86,15 +86,26 @@ const RETURN_WAITING: Record<string, string> = {
 
 /** The return steps (requested, approved, pickup, picked up, received, refund) that continue the order timeline after Delivered. */
 function returnSteps(input: ReturnStageInput, audience: "admin" | "customer"): Step[] {
-  return returnTimeline(input).map((e) => ({
-    key: "return-" + e.key,
-    label: audience === "admin" ? e.label : e.customerLabel,
-    state: e.state === "stopped" ? ("cancelled" as const) : e.state,
-    detail:
-      [e.at ? formatDateTime(e.at) : null, e.note, audience === "admin" ? e.adminDetail : null].filter(Boolean).join(" · ") ||
-      (e.state === "done" ? "Done" : RETURN_WAITING[e.key] ?? ""),
-    success: e.key === "refund" && e.state === "done",
-  }))
+  return returnTimeline(input).map((e) => {
+    const isReplacementStep =
+      e.key === "refund" &&
+      (e.label.includes("Exchange") || e.label.includes("Replacement") || e.customerLabel.includes("Replacement"))
+    const fallbackDetail =
+      e.state === "done"
+        ? "Done"
+        : isReplacementStep
+          ? "Replacement item goes out to you"
+          : RETURN_WAITING[e.key] ?? ""
+    return {
+      key: "return-" + e.key,
+      label: audience === "admin" ? e.label : e.customerLabel,
+      state: e.state === "stopped" ? ("cancelled" as const) : e.state,
+      detail:
+        [e.at ? formatDateTime(e.at) : null, e.note, audience === "admin" ? e.adminDetail : null].filter(Boolean).join(" · ") ||
+        fallbackDetail,
+      success: e.key === "refund" && e.state === "done",
+    }
+  })
 }
 
 /** Vertical progress timeline, shared by customers and admins. A return continues it after "Delivered". */

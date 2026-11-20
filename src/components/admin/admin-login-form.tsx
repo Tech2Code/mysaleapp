@@ -4,8 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2Icon, LogInIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useLayoutEffect, useState, useTransition } from "react"
+import { useEffect, useLayoutEffect, useTransition } from "react"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 import { z } from "zod"
 import { TextField } from "@/components/form"
 import { applyClientSignIn } from "@/components/shared/auth-listener"
@@ -27,24 +28,15 @@ export function AdminLoginForm() {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
-  const [error, setError] = useState<string | null>(
-    params.get("reason") === "session-expired"
-      ? "Your 7-day admin session has expired. Please sign in again."
-      : params.get("error") === "not-admin"
-        ? "That account does not have admin access."
-        : null
-  )
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "" } })
 
   useEffect(() => {
     const reason = params.get("reason")
     const errParam = params.get("error")
     if (reason === "session-expired") {
-      queueMicrotask(() =>
-        setError("Your 7-day admin session has expired. Please sign in again.")
-      )
+      toast.info("Your 7-day admin session has expired. Please sign in again.")
     } else if (errParam === "not-admin") {
-      queueMicrotask(() => setError("That account does not have admin access."))
+      toast.error("That account does not have admin access.")
     }
     if (typeof window !== "undefined" && (reason || errParam || window.location.hash)) {
       const nextParam = params.get("next")
@@ -56,16 +48,19 @@ export function AdminLoginForm() {
   useLayoutEffect(() => {
     return () => {
       form.reset({ email: "", password: "" })
-      setError(null)
     }
   }, [form])
 
   const onSubmit = form.handleSubmit((values) =>
     startTransition(async () => {
-      setError(null)
       const res = await signInAdmin(values)
       if (!res.ok) {
-        setError(res.error)
+        for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0] && (field === "email" || field === "password")) {
+            form.setError(field, { message: msgs[0] })
+          }
+        }
+        toast.error(res.error)
         return
       }
       form.reset({ email: "", password: "" })
@@ -92,11 +87,6 @@ export function AdminLoginForm() {
           Forgot password?
         </Link>
       </div>
-      {error && (
-        <p data-ui="admin/AdminLoginForm/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
       <Button data-ui="admin/AdminLoginForm/Button-sign-in" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
         {pending ? <Loader2Icon className="animate-spin" /> : <LogInIcon className="size-4" />} Sign in
       </Button>

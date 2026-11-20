@@ -69,8 +69,7 @@ export function CourierDialog({
     (trackingUrlNow ?? "").trim() !== initial.trackingUrl.trim() ||
     (expectedDeliveryNow ?? "").trim() !== initial.expectedDelivery.trim()
 
-  const carrierValid = (carrierNow ?? "").trim().length >= LIMITS.carrier.min
-  const canSubmit = carrierValid && (!requireChanges || hasChanges)
+  const canSubmit = !requireChanges || hasChanges
 
   useEffect(() => {
     if (open && !wasOpen.current) {

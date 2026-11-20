@@ -701,7 +701,7 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
   const parsed = createRequestSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
   const { orderId, items, reason, details, resolutionType, exchangePreference } = parsed.data
-  if (!details || details.trim().length < OTHER_DETAIL_MIN || otherNeedsDetail(reason, details)) {
+  if (otherNeedsDetail(reason, details)) {
     return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
   }
   if (resolutionType === "exchange" && (!exchangePreference || exchangePreference.trim().length < 2)) {

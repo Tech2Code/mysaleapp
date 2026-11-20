@@ -47,7 +47,6 @@ function AddressDialog({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
-  const [serverError, setServerError] = useState<string | null>(null)
 
   const initialSplit = address ? splitCityState(address.city) : { city: "", state: NO_STATE }
   const form = useForm<AddressInput, unknown, AddressValues>({
@@ -94,14 +93,13 @@ function AddressDialog({
       form.setError("pincode", { message: area.error })
       return
     }
-    setServerError(null)
     startTransition(async () => {
       const res = await saveAddress(address?.id ?? null, values)
       if (!res.ok) {
-        setServerError(res.error)
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
           if (messages?.[0] && field in values) form.setError(field as keyof AddressInput, { message: messages[0] })
         }
+        toast.error(res.error)
         return
       }
       later(() => {
@@ -167,12 +165,6 @@ function AddressDialog({
                 />
               )}
             />
-
-            {serverError && (
-              <p data-ui="account/AddressDialog/p" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                {serverError}
-              </p>
-            )}
           </DialogBody>
           <DialogFooter>
             <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
