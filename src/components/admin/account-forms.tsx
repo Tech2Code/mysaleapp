@@ -50,7 +50,7 @@ function useSubmit<T extends Record<string, string>>(setError: (name: keyof T & 
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
-  const run = (action: () => Promise<ActionResult>, onOk: () => void) =>
+  const run = <R = void,>(action: () => Promise<ActionResult<R>>, onOk: () => void) =>
     startTransition(async () => {
       const res = await action()
       if (res.ok) return onOk()
@@ -69,6 +69,16 @@ function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; on
     resolver: zodResolver(profileSchema),
     defaultValues: { name, phone },
   })
+  const [prevProps, setPrevProps] = useState({ name, phone })
+  if (name !== prevProps.name || phone !== prevProps.phone) {
+    setPrevProps({ name, phone })
+    setSaved({ name, phone })
+  }
+
+  useEffect(() => {
+    form.reset({ name: saved.name, phone: saved.phone })
+  }, [form, saved.name, saved.phone])
+
   const { errors } = form.formState
   const nameVal = useWatch({ control: form.control, name: "name" })
   const phoneVal = useWatch({ control: form.control, name: "phone" })
@@ -242,6 +252,7 @@ function PasswordForm() {
         run(
           () => changeAdminPassword(values),
           () => {
+            notifyAdminPinChanged({ unlockedAt: Date.now(), manualLock: false })
             later(() => toast.success("Password changed"))
             form.reset()
             setResetCount((c) => c + 1)
@@ -306,17 +317,6 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
     setStatus(initialStatus)
   }
 
-  // Keep in sync if PIN state changes from the top-right modal
-  useEffect(() => {
-    const onPinSync = (e: Event) => {
-      const detail = (e as CustomEvent<Partial<AdminPinStatus>>).detail
-      if (!detail) return
-      setStatus((prev) => ({ ...prev, ...detail }))
-    }
-    window.addEventListener("kk-admin-pin-changed", onPinSync)
-    return () => window.removeEventListener("kk-admin-pin-changed", onPinSync)
-  }, [])
-
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -338,6 +338,38 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   const [nextPinError, setNextPinError] = useState<string | null>(null)
   const [confirmPinError, setConfirmPinError] = useState<string | null>(null)
   const [showDisableConfirm, setShowDisableConfirm] = useState(false)
+
+  // Keep in sync if PIN state changes from the top-right modal or another tab
+  useEffect(() => {
+    const applyPatch = (detail: Partial<AdminPinStatus> | null | undefined) => {
+      if (!detail) return
+      setStatus((prev) => ({ ...prev, ...detail }))
+      setShowDisableConfirm(false)
+      setVerifySecret("")
+      setVerifyError(null)
+      setNextPin("")
+      setConfirmNextPin("")
+      setNextPinError(null)
+      setConfirmPinError(null)
+    }
+    const onPinSync = (e: Event) => {
+      applyPatch((e as CustomEvent<Partial<AdminPinStatus>>).detail)
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== "kk_admin_pin_sync" || !e.newValue) return
+      try {
+        applyPatch(JSON.parse(e.newValue) as Partial<AdminPinStatus>)
+      } catch {
+        // Ignore malformed storage payload
+      }
+    }
+    window.addEventListener("kk-admin-pin-changed", onPinSync)
+    window.addEventListener("storage", onStorage)
+    return () => {
+      window.removeEventListener("kk-admin-pin-changed", onPinSync)
+      window.removeEventListener("storage", onStorage)
+    }
+  }, [])
 
   const isEnabled = status.mode === "enabled" && status.hasPin
 
@@ -380,6 +412,10 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
     }
     if (!/^\d{4}$/.test(nextPin)) {
       setNextPinError("Enter a new 4-digit PIN")
+      return
+    }
+    if (authMethod === "pin" && verifySecret === nextPin) {
+      setNextPinError("New PIN must be different from current PIN")
       return
     }
     if (nextPin !== confirmNextPin) {
@@ -546,7 +582,20 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
           </div>
         </form>
       ) : (
-        <form key={`pin-change-${pinResetCount}`} data-ui="admin/PinLockForm/form-2" noValidate onSubmit={handleChangePin} className="space-y-3">
+        <form
+          key={`pin-change-${pinResetCount}`}
+          data-ui="admin/PinLockForm/form-2"
+          noValidate
+          onSubmit={(e) => {
+            if (showDisableConfirm) {
+              e.preventDefault()
+              handleDisablePin()
+            } else {
+              handleChangePin(e)
+            }
+          }}
+          className="space-y-3"
+        >
           <div data-ui="admin/PinLockForm/div-flex-4" className="flex flex-wrap items-center justify-between gap-2">
             <span data-ui="admin/PinLockForm/span-2" className="text-xs font-medium text-muted-foreground">
               Verify with your {authMethod === "pin" ? "current PIN" : "account password"} to change or turn off PIN:
@@ -641,7 +690,9 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                     pending ||
                     !verifySecret ||
                     nextPin.length !== 4 ||
-                    confirmNextPin.length !== 4
+                    confirmNextPin.length !== 4 ||
+                    nextPin !== confirmNextPin ||
+                    (authMethod === "pin" && verifySecret === nextPin)
                   }
                   className="rounded-full"
                 >

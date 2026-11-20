@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import { Suspense } from "react"
 import { InvoicePageView } from "@/components/account/account-views"
 import { getOrderById } from "@/features/orders/admin-queries"
@@ -19,6 +20,7 @@ export default function AdminInvoicePage({ params }: { params: Promise<{ id: str
 
 async function AdminInvoiceDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  await connection()
   const [order, shop] = await Promise.all([getOrderById(id), getStoreSettings()])
   if (!order || order.status === "cancelled") notFound()
 

@@ -158,6 +158,7 @@ function SearchParamsSync({
         window.location.hash)
     ) {
       const clean = new URLSearchParams()
+      if (rawMode === "reset-password") clean.set("mode", "reset-password")
       if (nextPath && nextPath !== "/") clean.set("next", nextPath)
       const qs = clean.toString()
       window.history.replaceState(null, "", qs ? `/login?${qs}` : "/login")
@@ -379,10 +380,21 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             }
           }
           toast.error(res.error)
+          if (res.error.toLowerCase().includes("expired")) {
+            recoveryLockRef.current = false
+            setProblem("That password reset link has expired. Enter your email below to get a new one.")
+            setMode("forgot")
+            if (typeof window !== "undefined") {
+              window.history.replaceState(null, "", "/login")
+            }
+          }
           return
         }
         resetForm.reset({ next: "", confirm: "" })
         recoveryLockRef.current = false
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", "/login")
+        }
         applyClientSignIn(res.data.user)
         showSuccess("Password updated")
         later(() =>

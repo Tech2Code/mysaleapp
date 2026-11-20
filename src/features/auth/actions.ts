@@ -292,6 +292,12 @@ export async function resetCustomerPassword(
     data: { has_password: true },
   })
   if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("different") || msg.includes("same") || error.code === "same_password") {
+      return fail("Use a new password, not your current one.", {
+        next: ["Use a new password, not your current one"],
+      })
+    }
     return fail("Could not set the new password. Please request a new reset link.")
   }
 
@@ -389,6 +395,8 @@ export async function signOutAdmin(
   const cookieStore = await cookies()
   cookieStore.delete("kk_admin_pin_at")
   cookieStore.delete("kk_pw_reset")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/", "layout")
   return {
     ok: true,
     data: {

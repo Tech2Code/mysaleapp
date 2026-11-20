@@ -46,7 +46,7 @@ export function composeReturnDetails(
   if (!cleanPickup) {
     return cleanDetails ? cleanDetails.slice(0, 300) : undefined
   }
-  const tag = `[Pickup: ${cleanPickup.slice(0, 180)}]`
+  const tag = `[Pickup: ${cleanPickup.slice(0, 220)}]`
   if (!cleanDetails) return tag
   const maxDetailLen = Math.max(0, 300 - tag.length - 1)
   const truncatedDetail = cleanDetails.slice(0, maxDetailLen).trim()
@@ -99,22 +99,26 @@ export function returnWindow(
   const effectiveDays = items && items.length > 0 ? effectiveReturnDays(windowDays, items) : windowDays
   const delivered = deliveredAt(history)
   if (!delivered || effectiveDays <= 0) return { until: null, open: false }
-  const until = new Date(new Date(delivered).getTime() + effectiveDays * 86_400_000)
+  const deliveredMs = new Date(delivered).getTime()
+  if (Number.isNaN(deliveredMs)) return { until: null, open: false }
+  const until = new Date(deliveredMs + effectiveDays * 86_400_000)
   return { until, open: now.getTime() <= until.getTime() }
 }
 
-/** Return & exchange window for one specific ordered item. */
+/** Return & exchange window for one specific ordered item. When `now` is omitted (SSR/prerender), `open` is true while `days > 0` and the caller intersects with the server-computed order window. */
 export function itemReturnWindow(
   history: StatusHistoryEntry[],
   itemWindowDays: number | null | undefined,
   defaultWindowDays: number,
-  now: Date
+  now?: Date | null
 ): { until: Date | null; open: boolean; days: number } {
   const days = itemWindowDays == null ? defaultWindowDays : Math.max(0, Math.trunc(Number(itemWindowDays)))
   const delivered = deliveredAt(history)
   if (!delivered || days <= 0) return { until: null, open: false, days }
-  const until = new Date(new Date(delivered).getTime() + days * 86_400_000)
-  return { until, open: now.getTime() <= until.getTime(), days }
+  const deliveredMs = new Date(delivered).getTime()
+  if (Number.isNaN(deliveredMs)) return { until: null, open: false, days }
+  const until = new Date(deliveredMs + days * 86_400_000)
+  return { until, open: now ? now.getTime() <= until.getTime() : true, days }
 }
 
 /** How many of each product can still be sent back: ordered minus goods already received back. */
@@ -326,17 +330,12 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
 
   if (hasReturns) {
     if (refund === "full") return stage("refunded")
-    if (refund === "partly") {
-      const money =
-        input.refundedAmount > 0 && input.paidAmount > 0
-          ? `${formatPrice(input.refundedAmount)} of ${formatPrice(input.paidAmount)} refunded`
-          : STAGE_COPY.partly_refunded.detail
-      return stage("partly_refunded", { detail: money })
-    }
-    const allReturnsAreExchange =
+    const latestReturn = latest(input.returns)
+    const latestIsExchange =
+      latestReturn?.resolutionType === "exchange" ||
       (input.returns.length > 0 && input.returns.every((r) => r.resolutionType === "exchange")) ||
       (isExchangeReq && input.returns.every((r) => !r.refunded && r.resolutionType !== "refund"))
-    if (allReturnsAreExchange) {
+    if (latestIsExchange && (!request || !latestReturn || asTime(latestReturn.createdAt) >= asTime(request.createdAt))) {
       return stage("received", {
         step: 4,
         label: "Exchange received",
@@ -345,6 +344,13 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
         customerDetail: "We have received your items for exchange. Your replacement will follow",
         active: false,
       })
+    }
+    if (refund === "partly") {
+      const money =
+        input.refundedAmount > 0 && input.paidAmount > 0
+          ? `${formatPrice(input.refundedAmount)} of ${formatPrice(input.paidAmount)} refunded`
+          : STAGE_COPY.partly_refunded.detail
+      return stage("partly_refunded", { detail: money })
     }
     return stage("received")
   }
@@ -451,7 +457,10 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
       label: isExchange ? "Exchange requested" : "Return requested",
       customerLabel: isExchange ? "Exchange requested" : "Return requested",
       at: stepRequest.createdAt,
-      note: isExchange && stepRequest.exchangePreference ? `Preference: ${stepRequest.exchangePreference}` : null,
+      note:
+        isExchange && stepRequest.exchangePreference
+          ? `Preference: ${stepRequest.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`
+          : null,
       state: "done",
     })
   }
@@ -529,7 +538,7 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
     state: "done",
   })
   const refund = refundState(input)
-  if (isExchange && refund === "none") {
+  if (isExchange) {
     entries.push({
       key: "refund",
       label: "Exchange completed",

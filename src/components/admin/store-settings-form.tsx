@@ -616,6 +616,21 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
   const discountType = useWatch({ control: form.control, name: "discountType" })
   const expiresAtVal = useWatch({ control: form.control, name: "expiresAt" })
 
+  useEffect(() => {
+    if (discountType === "flat") {
+      form.setValue("maxDiscountAmount", null)
+      form.clearErrors("maxDiscountAmount")
+    }
+  }, [discountType, form])
+
+  useLayoutEffect(() => {
+    return () => {
+      setCreateOpen(false)
+      setDeleteTarget(null)
+      form.reset()
+    }
+  }, [form])
+
   const onCreateSubmit = form.handleSubmit((values) => {
     startTransition(async () => {
       const res = await createPromoCode(values)

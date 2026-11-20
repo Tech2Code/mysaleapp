@@ -68,8 +68,17 @@ export function CheckoutForm({
   useBlockWhile(pending)
   const initialDefault = initialAddresses[0]
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
+  const [clientProfile, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
+  const [prevInitialAddresses, setPrevInitialAddresses] = useState(initialAddresses)
+  if (initialAddresses !== prevInitialAddresses) {
+    setPrevInitialAddresses(initialAddresses)
+    if (!clearedOnSignOut) {
+      setClientAddresses(null)
+    }
+  }
   const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? initialAddresses)
+  const activeProfile = clearedOnSignOut ? clientProfile : (clientProfile ?? initialProfile)
   /** id of the saved address in use, or "new" when typing a different one */
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
   const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
@@ -173,6 +182,7 @@ export function CheckoutForm({
     queueMicrotask(() => {
       setClearedOnSignOut(true)
       setClientAddresses(null)
+      setClientProfile(null)
       setSelected("new")
       setValidatedCustomer(null)
       setPayDialogOpen(false)
@@ -190,20 +200,22 @@ export function CheckoutForm({
       prevUserId.current = null
       return
     }
-    const switchedAccount = prevUserId.current !== null && prevUserId.current !== user.id
+    const switchedAccount =
+      (prevUserId.current !== null && prevUserId.current !== user.id) || clearedOnSignOut
     prevUserId.current = user.id
     if (switchedAccount) {
       fetchedForUser.current = null
       form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     }
-    if ((!switchedAccount && !clearedOnSignOut && initialAddresses.length > 0) || fetchedForUser.current === user.id) return
+    if ((!switchedAccount && initialAddresses.length > 0) || fetchedForUser.current === user.id) return
     fetchedForUser.current = user.id
     let cancelled = false
     Promise.all([listMyAddresses(), getMyProfile()])
       .then(([list, profile]) => {
         if (cancelled) return
-        if (switchedAccount) setClearedOnSignOut(true)
+        setClearedOnSignOut(false)
         setClientAddresses(list)
+        setClientProfile(profile ? { fullName: profile.fullName, phone: profile.phone } : null)
         if (!switchedAccount && form.formState.isDirty) return
         const first = list[0]
         if (first) {
@@ -335,8 +347,8 @@ export function CheckoutForm({
       } else {
         setSelected("new")
         form.reset({
-          name: signedIn ? (initialProfile?.fullName ?? "") : "",
-          phone: signedIn ? (initialProfile?.phone ?? "") : "",
+          name: signedIn ? (activeProfile?.fullName ?? "") : "",
+          phone: signedIn ? (activeProfile?.phone ?? "") : "",
           address: "",
           city: "",
           state: NO_STATE,
@@ -674,9 +686,19 @@ export function CheckoutForm({
                 </p>
               )}
               {promoBelowMin && appliedPromo && (
-                <p data-ui="store/CheckoutForm/p-6" role="alert" className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                  Add {formatPrice(appliedPromo.minOrderAmount - baseCharges.subtotal)} more to use <span data-ui="store/CheckoutForm/span-12" className="font-mono font-bold">{appliedPromo.code}</span>.
-                </p>
+                <div data-ui="store/CheckoutForm/div-flex-7" className="flex items-center justify-between gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                  <p data-ui="store/CheckoutForm/p-6" role="alert">
+                    Add {formatPrice(appliedPromo.minOrderAmount - baseCharges.subtotal)} more to use <span data-ui="store/CheckoutForm/span-12" className="font-mono font-bold">{appliedPromo.code}</span>.
+                  </p>
+                  <button
+                    data-ui="store/CheckoutForm/button-remove-2"
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="shrink-0 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -714,7 +736,7 @@ export function CheckoutForm({
 
       {/* Native e-commerce sticky bottom pay bar on phones */}
       <div
-        data-ui="store/CheckoutForm/div-flex-7"
+        data-ui="store/CheckoutForm/div-flex-8"
         data-mobile-bottom-bar
         className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-data-skeleton:hidden"
       >
@@ -809,7 +831,7 @@ export function CheckoutForm({
                           ...(upiPayeeName ? [{ label: "Name", value: upiPayeeName }] : []),
                           { label: "Amount", value: shownCharges.total.toFixed(2) },
                         ].map((row) => (
-                          <div data-ui="store/CheckoutForm/div-flex-8" key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/45 px-3.5 py-2 text-xs">
+                          <div data-ui="store/CheckoutForm/div-flex-9" key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/45 px-3.5 py-2 text-xs">
                             <span data-ui="store/CheckoutForm/span-19" className="font-medium text-muted-foreground">{row.label}</span>
                             <span data-ui="store/CheckoutForm/span-flex-2" className="flex min-w-0 items-center gap-1.5 font-mono font-semibold text-foreground">
                               <span data-ui="store/CheckoutForm/span-20" className="truncate">{row.value}</span>

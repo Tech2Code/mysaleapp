@@ -2,17 +2,19 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { KeyRoundIcon, Loader2Icon, MailCheckIcon, SendIcon } from "lucide-react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
+import { notifyAdminPinChanged } from "@/components/admin/admin-account-menu"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { requestPasswordReset, resetAdminPassword } from "@/features/auth/account-actions"
 import { emailSchema, resetSchema } from "@/features/auth/account-schema"
+import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS } from "@/lib/validation"
-import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 
 /** Step 1: ask for the account email; a reset link is sent. */
 export function ForgotPasswordForm() {
@@ -81,8 +83,11 @@ export function ForgotPasswordForm() {
 
 /** Step 2: the link signed the admin in; choose a new password. */
 export function ResetPasswordForm() {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const showSuccess = useBusySuccess()
+  const later = useToastAfter(pending)
   const form = useForm<z.input<typeof resetSchema>>({ resolver: zodResolver(resetSchema), defaultValues: { next: "", confirm: "" } })
   const { errors } = form.formState
 
@@ -99,15 +104,24 @@ export function ResetPasswordForm() {
       className="space-y-2"
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
-          const res = await resetAdminPassword(values) // redirects to /admin on success
-          if (res && !res.ok) {
+          const res = await resetAdminPassword(values)
+          if (!res.ok) {
             for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
               if (msgs?.[0] && (field === "next" || field === "confirm")) {
                 form.setError(field, { message: msgs[0] })
               }
             }
             toast.error(res.error)
+            if (res.error.toLowerCase().includes("expired")) {
+              router.replace("/admin/forgot-password?error=expired")
+            }
+            return
           }
+          form.reset({ next: "", confirm: "" })
+          notifyAdminPinChanged({ unlockedAt: res.data.unlockedAt, manualLock: false })
+          showSuccess("Password updated")
+          later(() => toast.success("Your password has been updated"))
+          router.replace("/admin")
         })
       )}
     >

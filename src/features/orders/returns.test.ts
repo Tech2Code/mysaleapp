@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { composeReturnDetails, deliveredAt, returnableQuantities, returnWindow, splitReturnDetails } from "./returns"
+import { composeReturnDetails, deliveredAt, itemReturnWindow, returnableQuantities, returnWindow, splitReturnDetails } from "./returns"
 import type { OrderItem, OrderReturn, StatusHistoryEntry } from "./types"
 
 const h = (status: StatusHistoryEntry["status"], changedAt: string): StatusHistoryEntry => ({ status, changedAt })
@@ -39,6 +39,13 @@ describe("returnWindow", () => {
   it("uses the latest delivered entry", () => {
     const hist = [h("delivered", "2026-03-01T00:00:00+00:00"), h("delivered", "2026-03-05T00:00:00Z")]
     expect(returnWindow(hist, 7, new Date("2026-03-12T00:00:00Z")).open).toBe(true)
+  })
+  it("computes itemReturnWindow safely during SSR/prerender when now is null", () => {
+    const w = itemReturnWindow(history, 5, 7, null)
+    expect(w.days).toBe(5)
+    expect(w.open).toBe(true)
+    expect(w.until?.getTime()).toBe(start + 5 * DAY)
+    expect(itemReturnWindow(history, 0, 7, null)).toEqual({ until: null, open: false, days: 0 })
   })
 })
 

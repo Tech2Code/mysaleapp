@@ -211,7 +211,10 @@ export async function changeCustomerPassword(input: unknown): Promise<ActionResu
     return fail("Could not update your password. Please try again.")
   }
 
+  await supabase.rpc("reactivate_my_account")
   cookieStore.delete("kk_cust_pw_reset")
+  cookieStore.delete("kk_recovery_intent")
+  cookieStore.delete("kk_acct_reactivated")
   revalidatePath("/account/profile")
   return { ok: true }
 }

@@ -12,8 +12,9 @@ async function readIds(userId: string): Promise<ActionResult<string[]>> {
   const supabase = await getServerSupabase()
   const { data, error } = await supabase
     .from("wishlists")
-    .select("product_id")
+    .select("product_id, products!inner(is_active)")
     .eq("user_id", userId)
+    .eq("products.is_active", true)
     .order("created_at", { ascending: false })
   if (error) return fail("Could not sync wishlist")
   return { ok: true, data: data.map((r) => r.product_id as string) }
@@ -40,6 +41,7 @@ export async function syncWishlistForUser(userId: string, localIds: unknown): Pr
       .from("products")
       .select("id")
       .in("id", candidateIds)
+      .eq("is_active", true)
     if (checkError) return fail("Could not sync wishlist")
     const validIds = (existingProducts ?? []).map((p) => p.id as string)
     if (validIds.length) {

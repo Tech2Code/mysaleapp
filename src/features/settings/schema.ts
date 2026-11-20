@@ -42,7 +42,7 @@ export const storeSettingsSchema = z.object({
   gstRegistered: z.boolean(),
   gstin: z.preprocess(
     (x) => (typeof x === "string" ? x.trim().toUpperCase() || null : x),
-    z.string().regex(GSTIN_PATTERN, `Enter the ${LIMITS.gstin}-character GSTIN`).nullable()
+    z.string().nullable()
   ),
   gstRate: v.money(LIMITS.gstRate.max, "Enter the GST rate, e.g. 12"),
   legalName: v.optionalText(LIMITS.legalName.max),
@@ -59,7 +59,10 @@ export const storeSettingsSchema = z.object({
   /** true = calling number is the WhatsApp number; `phone` is then ignored. */
   phoneSameAsWhatsapp: z.boolean(),
   email: v.optionalEmail(),
-  phone: v.optionalDisplayPhone(),
+  phone: z.preprocess(
+    (x) => (typeof x === "string" ? x.trim() || null : x),
+    z.string().nullable()
+  ),
   city: v.optionalText(LIMITS.city.max),
   region: v.optionalText(LIMITS.region.max),
   instagramUrl: v.optionalUrl("Instagram link"),
@@ -92,8 +95,26 @@ export const storeSettingsSchema = z.object({
     z.string().min(LIMITS.payeeName.min, "Too short").nullable()
   ),
 }).superRefine((s, ctx) => {
+  if (!s.phoneSameAsWhatsapp && s.phone) {
+    const res = v.optionalDisplayPhone().safeParse(s.phone)
+    if (!res.success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["phone"],
+        message: res.error.issues[0]?.message ?? "Enter a valid phone number",
+      })
+    }
+  }
   if (!s.gstRegistered) return
-  if (!s.gstin) ctx.addIssue({ code: "custom", path: ["gstin"], message: "Enter your GSTIN" })
+  if (!s.gstin) {
+    ctx.addIssue({ code: "custom", path: ["gstin"], message: "Enter your GSTIN" })
+  } else if (!GSTIN_PATTERN.test(s.gstin)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["gstin"],
+      message: `Enter the ${LIMITS.gstin}-character GSTIN`,
+    })
+  }
   if (!(s.gstRate > 0)) ctx.addIssue({ code: "custom", path: ["gstRate"], message: "Enter the GST rate, e.g. 12" })
 })
 
@@ -157,7 +178,7 @@ export const createPromoCodeSchema = z
         message: "Percentage discount must be between 1% and 90%",
       })
     }
-    if (val.discountType === "flat" && val.minOrderAmount > 0 && val.minOrderAmount <= val.discountValue) {
+    if (val.discountType === "flat" && val.minOrderAmount <= val.discountValue) {
       ctx.addIssue({
         code: "custom",
         path: ["minOrderAmount"],

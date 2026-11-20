@@ -592,9 +592,18 @@ export function OrderItemReviewWidget({
     }
   }, [authReady, user, item.productId, loadedKey])
 
+  useEffect(() => {
+    const onReviewSync = (e: Event) => {
+      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      if (!pid || pid === item.productId) setLoadedKey(null)
+    }
+    window.addEventListener("kk-review-updated", onReviewSync)
+    return () => window.removeEventListener("kk-review-updated", onReviewSync)
+  }, [item.productId])
+
   const handleStarSelect = (star: number) => {
     if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/products/${item.slug}#customer-reviews`)}`)
+      router.push(`/login?next=${encodeURIComponent(`/products/${item.slug}`)}`)
       return
     }
     setDraftRating(star)
@@ -612,13 +621,15 @@ export function OrderItemReviewWidget({
             {myReview ? "Your product rating (tap a star to edit)" : "Rate a product"}
           </p>
         </div>
-        <Link
-          data-ui="store/OrderItemReviewWidget/Link-view-reviews"
-          href={`/products/${item.slug}#customer-reviews`}
-          className="text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
-        >
-          View reviews →
-        </Link>
+        {myReview && (
+          <Link
+            data-ui="store/OrderItemReviewWidget/Link-view-reviews"
+            href={`/products/${item.slug}#customer-reviews`}
+            className="text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            View reviews →
+          </Link>
+        )}
       </div>
 
       <div data-ui="store/OrderItemReviewWidget/div-2" className="mt-2">
@@ -638,6 +649,7 @@ export function OrderItemReviewWidget({
         onSaved={(savedRating) => {
           setDraftRating(savedRating)
           setLoadedKey(null)
+          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: item.productId } }))
         }}
       />
     </div>
@@ -669,9 +681,13 @@ export function ProductReviewsSection({
     if (product.id.startsWith("ph-")) return
     const scrollToReviews = (behavior: ScrollBehavior) => {
       if (window.location.hash !== "#customer-reviews") return
-      const el = document.getElementById("customer-reviews")
-      if (!el || el.closest("[data-skeleton]")) return
-      el.scrollIntoView({ behavior, block: "start" })
+      const candidates = document.querySelectorAll<HTMLElement>("#customer-reviews")
+      for (const node of candidates) {
+        if (node.getClientRects().length > 0 && !node.closest("[data-skeleton]")) {
+          node.scrollIntoView({ behavior, block: "start" })
+          return
+        }
+      }
     }
     const rafId = window.requestAnimationFrame(() => scrollToReviews("instant"))
     const onHashChange = () => scrollToReviews("smooth")
@@ -683,6 +699,15 @@ export function ProductReviewsSection({
   }, [product.id])
 
   const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
+
+  useEffect(() => {
+    const onReviewSync = (e: Event) => {
+      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      if (!pid || pid === product.id) setStateLoadedForUser(null)
+    }
+    window.addEventListener("kk-review-updated", onReviewSync)
+    return () => window.removeEventListener("kk-review-updated", onReviewSync)
+  }, [product.id])
 
   useEffect(() => {
     if (!authReady) return
@@ -747,15 +772,20 @@ export function ProductReviewsSection({
         return
       }
       later(() => {
+        if (user && target.userId === user.id) {
+          setMyReview(null)
+          setDraftRating(0)
+        }
         setDeleteTarget(null)
         setStateLoadedForUser(null)
+        window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
         toast.success("Review removed.")
       })
       router.refresh()
     })
   }
 
-  if (totalCount === 0 && !canReview && !myReview) return null
+  if (totalCount === 0) return null
 
   const avgRating =
     product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
@@ -1041,6 +1071,7 @@ export function ProductReviewsSection({
         onSaved={(savedRating) => {
           setDraftRating(savedRating)
           setStateLoadedForUser(null)
+          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
         }}
       />
 

@@ -53,7 +53,9 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const over = (id: string) => Number(qtyOf(id)) > (left.get(id) ?? 0)
   const detailsMissing = otherNeedsDetail(reason, details)
   const exchangeKindMissing = resolutionType === "exchange" && !exchangeKind
-  const exchangePrefMissing = resolutionType === "exchange" && exchangePreference.trim().length < 2
+  const exchangePrefMissing =
+    resolutionType === "exchange" &&
+    exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim().length < 2
   const showLowerFields = resolutionType === "refund" || Boolean(exchangeKind)
 
   const reasonOptions =

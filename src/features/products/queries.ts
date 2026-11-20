@@ -157,7 +157,10 @@ export async function getProductReviews(productId: string): Promise<ProductRevie
     .limit(50)
     .returns<ProductReviewRow[]>()
 
-  if (error) return []
+  if (error) {
+    cacheLife("seconds")
+    return []
+  }
   return (data ?? []).map((r) => ({
     id: r.id,
     productId: r.product_id,

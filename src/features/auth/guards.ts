@@ -59,8 +59,8 @@ type RpcPinState = {
   lockedUntil?: string | null
 }
 
-/** Reads the signed-in admin's 4-digit PIN configuration and 12-hour unlock timestamp (cached per request). */
-export const getAdminPinStatus = cache(async (): Promise<AdminPinStatus> => {
+/** Reads the signed-in admin's 4-digit PIN configuration and 12-hour unlock timestamp. */
+export async function getAdminPinStatus(): Promise<AdminPinStatus> {
   const fallback: AdminPinStatus = {
     mode: "unset",
     hasPin: false,
@@ -82,7 +82,7 @@ export const getAdminPinStatus = cache(async (): Promise<AdminPinStatus> => {
   const hasPin = Boolean(raw.hasPin) && mode === "enabled"
   const cookieVal = cookieStore.get("kk_admin_pin_at")?.value
   const parsedCookie = parseAdminPinCookie(cookieVal, user.id, raw.updatedAt)
-  const manualLock = parsedCookie.valid && parsedCookie.manualLock
+  const manualLock = hasPin && parsedCookie.valid && parsedCookie.manualLock
   const signedInMs = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : 0
   const validSignInMs = Number.isFinite(signedInMs) && signedInMs > 0 ? signedInMs : 0
 
@@ -106,7 +106,7 @@ export const getAdminPinStatus = cache(async (): Promise<AdminPinStatus> => {
     unlockedAt,
     manualLock,
   }
-})
+}
 
 function isAdminSessionExpired(user: User): boolean {
   const signedInAt = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : NaN
@@ -134,7 +134,11 @@ export async function requireAdmin(): Promise<User> {
   if (isAdminSessionExpired(user)) {
     const supabase = await getServerSupabase()
     await supabase.auth.signOut()
-    cookieStore.delete("kk_admin_pin_at")
+    try {
+      cookieStore.delete("kk_admin_pin_at")
+    } catch {
+      // Server Components cannot mutate cookies directly; proxy/signOut handles cookie cleanup.
+    }
     redirect("/admin/login?reason=session-expired")
   }
   return user

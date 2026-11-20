@@ -5,7 +5,7 @@
  *  - Page navigations: network-first, fall back to the cached page, then /offline.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v2"
+const VERSION = "v3"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
@@ -69,7 +69,7 @@ self.addEventListener("fetch", (event) => {
   // React Server Component payloads are handled by Next.js itself.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return
 
-  if (url.pathname.startsWith("/_next/static")) {
+  if (url.pathname.startsWith("/_next/static") && !url.pathname.startsWith("/_next/static/development/")) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
@@ -99,7 +99,7 @@ self.addEventListener("fetch", (event) => {
             }
             return res
           })
-          .catch(() => hit)
+          .catch(() => hit || Response.error())
         return hit || network
       })
     )

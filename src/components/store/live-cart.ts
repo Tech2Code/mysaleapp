@@ -46,6 +46,7 @@ export function useLiveCart(products: LiveProduct[]) {
       if (
         nextQty !== item.quantity ||
         live.stock !== item.maxQuantity ||
+        live.price !== item.price ||
         live.name !== item.name ||
         live.slug !== item.slug ||
         nextImg !== item.image
@@ -55,6 +56,7 @@ export function useLiveCart(products: LiveProduct[]) {
           ...item,
           name: live.name,
           slug: live.slug,
+          price: live.price,
           image: nextImg,
           maxQuantity: live.stock,
           quantity: nextQty,

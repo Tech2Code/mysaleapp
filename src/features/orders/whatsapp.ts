@@ -172,7 +172,9 @@ export function buildReturnDecisionMessage(
     `Update on your ${kind} request for order *${input.orderCode}* from ${shop.shopName}:`,
     "",
     input.approved ? "✅ *Approved.*" : `❌ *We couldn't approve this ${kind}.*`,
-    ...(isExchange && input.exchangePreference ? [`Exchange preference: ${input.exchangePreference}`] : []),
+    ...(isExchange && input.exchangePreference
+      ? [`Exchange preference: ${input.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`]
+      : []),
     ...(input.approved && input.pickupDate ? [`Pickup date: ${formatDate(input.pickupDate)}. Please keep the items packed and ready.`] : []),
     ...(input.note ? [input.approved ? `Note: ${input.note}` : `Reason: ${input.note}`] : []),
     ...(input.approved

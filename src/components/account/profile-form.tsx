@@ -90,6 +90,9 @@ function ProfileFormInner({
     resolver: zodResolver(profileSchema),
     defaultValues: { fullName: saved.fullName, email: saved.email, phone: saved.phone },
   })
+  useEffect(() => {
+    form.reset({ fullName: saved.fullName, email: saved.email, phone: saved.phone })
+  }, [form, saved.email, saved.fullName, saved.phone])
   const { errors } = form.formState
   const [fullNameVal, emailVal, phoneVal] = useWatch({
     control: form.control,

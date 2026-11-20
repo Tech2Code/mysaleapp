@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { connection } from "next/server"
 import { Suspense } from "react"
 import { MyOrderView } from "@/components/account/account-views"
 import { getMyOrder } from "@/features/orders/queries"
@@ -19,7 +20,9 @@ export default function MyOrderPage({ params }: PageProps<"/account/orders/[code
 
 async function MyOrderDetails({ params }: Pick<PageProps<"/account/orders/[code]">, "params">) {
   const { code } = await params
-  const [order, shop] = await Promise.all([getMyOrder(code), getStoreSettings()])
+  await connection()
+  const cleanCode = decodeURIComponent(code)
+  const [order, shop] = await Promise.all([getMyOrder(cleanCode), getStoreSettings()])
   if (!order) notFound()
 
   const w = returnWindow(order.history, shop.returnWindowDays, new Date(), order.items)

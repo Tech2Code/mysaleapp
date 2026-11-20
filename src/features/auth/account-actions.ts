@@ -4,7 +4,6 @@
 
 import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
-import { redirect } from "next/navigation"
 import { z } from "zod"
 import {
   assertAdmin,
@@ -121,7 +120,9 @@ export async function requestAdminEmailChange(input: unknown): Promise<ActionRes
 }
 
 /** Re-checks the current password first, so a borrowed, unlocked laptop can't be used to take over the account. */
-export async function changeAdminPassword(input: unknown): Promise<ActionResult> {
+export async function changeAdminPassword(
+  input: unknown
+): Promise<ActionResult<{ unlockedAt: number }>> {
   const auth = await assertAdmin()
   if (!auth.ok) return fail(auth.error)
   const parsed = changePasswordSchema.safeParse(input)
@@ -134,10 +135,20 @@ export async function changeAdminPassword(input: unknown): Promise<ActionResult>
   if (check.error) return fail("Your current password is incorrect.", { current: ["Incorrect password"] })
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.next })
-  if (error) return fail("Could not change the password. Please try again.")
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("different") || msg.includes("same") || error.code === "same_password") {
+      return fail("Use a new password, not your current one.", {
+        next: ["Use a new password, not your current one"],
+      })
+    }
+    return fail("Could not change the password. Please try again.")
+  }
   await supabase.rpc("clear_admin_pin_lock")
-  await stampAdminPinUnlock(auth.user.id, Date.now())
-  return { ok: true }
+  const now = Date.now()
+  await stampAdminPinUnlock(auth.user.id, now)
+  revalidatePath("/admin", "layout")
+  return { ok: true, data: { unlockedAt: now } }
 }
 
 /** Public: sends a reset link only if the email belongs to an admin. Always answers the same so it can't be used to enumerate admin emails. */
@@ -186,7 +197,9 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
 }
 
 /** Step 2 of "forgot password": the reset link signed the person in; they now choose a new password. */
-export async function resetAdminPassword(input: unknown): Promise<ActionResult> {
+export async function resetAdminPassword(
+  input: unknown
+): Promise<ActionResult<{ unlockedAt: number }>> {
   const [cookieStore, user, admin] = await Promise.all([
     cookies(),
     getCurrentUser(),
@@ -202,12 +215,22 @@ export async function resetAdminPassword(input: unknown): Promise<ActionResult> 
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.auth.updateUser({ password: parsed.data.next })
-  if (error) return fail("Could not set the new password. Please request a new reset link.")
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes("different") || msg.includes("same") || error.code === "same_password") {
+      return fail("Use a new password, not your current one.", {
+        next: ["Use a new password, not your current one"],
+      })
+    }
+    return fail("Could not set the new password. Please request a new reset link.")
+  }
   await supabase.rpc("clear_admin_pin_lock")
   cookieStore.delete("kk_pw_reset")
   cookieStore.delete("kk_recovery_intent")
-  await stampAdminPinUnlock(user.id, Date.now())
-  redirect("/admin")
+  const now = Date.now()
+  await stampAdminPinUnlock(user.id, now)
+  revalidatePath("/admin", "layout")
+  return { ok: true, data: { unlockedAt: now } }
 }
 
 const PIN_COOKIE_NAME = "kk_admin_pin_at"
@@ -237,6 +260,12 @@ export async function setAdminPin(input: unknown): Promise<ActionResult<{ unlock
   if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
 
   const supabase = await getServerSupabase()
+  const { data: stateData } = await supabase.rpc("get_admin_pin_state")
+  const state = (stateData ?? {}) as RpcPinState
+  if (state.mode === "enabled" && state.hasPin) {
+    return fail("A PIN is already set. Enter your current PIN or account password to change it.")
+  }
+
   const { error } = await supabase.rpc("set_admin_pin", { p_pin: parsed.data.pin })
   if (error) return fail("Could not save your PIN. Please try again.")
 
@@ -412,6 +441,12 @@ export async function unlockAdminWithPassword(
 export async function lockAdminScreen(): Promise<ActionResult> {
   const auth = await assertAdmin({ allowWhenPinLocked: true })
   if (!auth.ok) return fail(auth.error)
+  const supabase = await getServerSupabase()
+  const { data: stateData } = await supabase.rpc("get_admin_pin_state")
+  const state = (stateData ?? {}) as RpcPinState
+  if (state.mode !== "enabled" || !state.hasPin) {
+    return fail("Set a 4-digit PIN first before locking the screen.")
+  }
   await stampAdminPinUnlock(auth.user.id, "locked")
   revalidatePath("/admin", "layout")
   return { ok: true }

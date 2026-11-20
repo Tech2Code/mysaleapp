@@ -144,7 +144,7 @@ export function DecideDialog({
               {request.exchangePreference && (
                 <p data-ui="admin/DecideDialog/p" className="mt-1 text-indigo-800 dark:text-indigo-300">
                   <span data-ui="admin/DecideDialog/span" className="font-semibold">Preference: </span>
-                  {request.exchangePreference}
+                  {request.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}
                 </p>
               )}
             </div>

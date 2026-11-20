@@ -68,6 +68,36 @@ export function notifyAdminPinChanged(next: Partial<AdminPinStatus>) {
   }
 }
 
+function computeGateMode(
+  pin: AdminPinStatus | undefined,
+  lastSignInAt?: string | null,
+  nowMs?: number
+): "none" | "unlock" | "setup-prompt" {
+  if (!pin || pin.mode === "disabled") return "none"
+  if (pin.mode === "enabled" && pin.hasPin) {
+    if (
+      pin.manualLock ||
+      !pin.unlockedAt ||
+      (nowMs !== undefined && nowMs - pin.unlockedAt >= ADMIN_PIN_WINDOW_MS)
+    ) {
+      return "unlock"
+    }
+    return "none"
+  }
+  if (pin.mode === "unset" && nowMs !== undefined) {
+    const baseTime =
+      pin.unlockedAt > 0
+        ? pin.unlockedAt
+        : lastSignInAt
+          ? Date.parse(lastSignInAt) || 0
+          : 0
+    if (baseTime > 0 && nowMs - baseTime >= ADMIN_PIN_WINDOW_MS) {
+      return "setup-prompt"
+    }
+  }
+  return "none"
+}
+
 /** Who is signed in to the admin panel, plus quick links, 12-hour PIN lock, and 7-day Sign out. */
 export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   const router = useRouter()
@@ -79,21 +109,28 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
     updatedAt: account.pinStatus?.updatedAt ?? null,
     lockedUntil: account.pinStatus?.lockedUntil ?? null,
     unlockedAt:
-      account.pinStatus?.unlockedAt ||
-      (account.lastSignInAt ? Date.parse(account.lastSignInAt) || 0 : 0),
+      account.pinStatus?.mode === "enabled" && account.pinStatus?.hasPin
+        ? (account.pinStatus.unlockedAt ?? 0)
+        : account.pinStatus?.unlockedAt ||
+          (account.lastSignInAt ? Date.parse(account.lastSignInAt) || 0 : 0),
     manualLock: account.pinStatus?.manualLock ?? false,
   }))
+  const [gateMode, setGateMode] = useState<"none" | "unlock" | "setup-prompt">(() =>
+    computeGateMode(account.pinStatus, account.lastSignInAt)
+  )
   const [prevPinProp, setPrevPinProp] = useState(account.pinStatus)
   if (account.pinStatus && account.pinStatus !== prevPinProp) {
     setPrevPinProp(account.pinStatus)
-    setPinState(account.pinStatus)
+    setPinState({
+      ...account.pinStatus,
+      unlockedAt:
+        account.pinStatus.mode === "enabled" && account.pinStatus.hasPin
+          ? (account.pinStatus.unlockedAt ?? 0)
+          : account.pinStatus.unlockedAt ||
+            (account.lastSignInAt ? Date.parse(account.lastSignInAt) || 0 : 0),
+    })
+    setGateMode(computeGateMode(account.pinStatus, account.lastSignInAt))
   }
-
-  const [gateMode, setGateMode] = useState<"none" | "unlock" | "setup-prompt">(() =>
-    account.pinStatus?.manualLock && account.pinStatus.mode === "enabled" && account.pinStatus.hasPin
-      ? "unlock"
-      : "none"
-  )
 
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
@@ -150,7 +187,6 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
         applyClientSignOut()
         await getBrowserSupabase()?.auth.signOut({ scope: "local" })
         showSuccess("Session expired")
-        later(() => toast.info("Your 7-day admin session has expired. Please sign in again."))
         router.replace(res.ok ? res.data.redirectTo : "/admin/login?reason=session-expired")
       })
     }
@@ -184,14 +220,7 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
 
   // 12-hour PIN lock / first-time setup prompt
   useEffect(() => {
-    if (!account.lastSignInAt) return
     if (pinState.mode === "disabled") return
-
-    const baseTime =
-      pinState.unlockedAt > 0
-        ? pinState.unlockedAt
-        : Date.parse(account.lastSignInAt) || 0
-    if (!baseTime && !pinState.manualLock) return
 
     let timerId: number | null = null
 
@@ -208,16 +237,34 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
         window.clearTimeout(timerId)
         timerId = null
       }
-      if (pinState.manualLock && pinState.mode === "enabled" && pinState.hasPin) {
-        setGateMode("unlock")
+      if (pinState.mode === "enabled" && pinState.hasPin) {
+        if (pinState.manualLock || !pinState.unlockedAt) {
+          setGateMode("unlock")
+          return
+        }
+        const remaining = pinState.unlockedAt + ADMIN_PIN_WINDOW_MS - Date.now()
+        if (remaining <= 0) {
+          setGateMode("unlock")
+          return
+        }
+        timerId = window.setTimeout(triggerPinGate, Math.min(remaining, 2_147_483_647))
         return
       }
-      const remaining = baseTime + ADMIN_PIN_WINDOW_MS - Date.now()
-      if (remaining <= 0) {
-        triggerPinGate()
-        return
+      if (pinState.mode === "unset") {
+        const baseTime =
+          pinState.unlockedAt > 0
+            ? pinState.unlockedAt
+            : account.lastSignInAt
+              ? Date.parse(account.lastSignInAt) || 0
+              : 0
+        if (!baseTime) return
+        const remaining = baseTime + ADMIN_PIN_WINDOW_MS - Date.now()
+        if (remaining <= 0) {
+          setGateMode("setup-prompt")
+          return
+        }
+        timerId = window.setTimeout(triggerPinGate, Math.min(remaining, 2_147_483_647))
       }
-      timerId = window.setTimeout(triggerPinGate, Math.min(remaining, 2_147_483_647))
     }
 
     checkPinWindow()
@@ -233,6 +280,32 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
       document.removeEventListener("visibilitychange", onVisible)
     }
   }, [account.lastSignInAt, pinState.hasPin, pinState.manualLock, pinState.mode, pinState.unlockedAt])
+
+  // If any server action returns "Admin screen is locked. Enter your 4-digit PIN to continue."
+  // (shown as a toast), immediately pop open the 4-digit PIN unlock dialog.
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const checkLockedToast = () => {
+      const toasts = document.querySelectorAll("[data-sonner-toast]:not([data-pin-handled])")
+      for (const node of toasts) {
+        if (node.textContent?.includes("Admin screen is locked")) {
+          node.setAttribute("data-pin-handled", "1")
+          setPinState((prev) => ({
+            ...prev,
+            mode: "enabled",
+            hasPin: true,
+            unlockedAt: 0,
+            manualLock: true,
+          }))
+          setGateMode("unlock")
+          break
+        }
+      }
+    }
+    const observer = new MutationObserver(checkLockedToast)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
 
   const handleSignOutNow = useCallback(() => {
     startTransition(async () => {
@@ -326,6 +399,7 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
           }))
           setGateMode("none")
           notifyAdminPinChanged({ ...next, manualLock: false })
+          router.refresh()
         }}
         onSignOut={handleSignOutNow}
       />

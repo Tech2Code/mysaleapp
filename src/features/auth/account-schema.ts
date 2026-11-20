@@ -58,6 +58,12 @@ export const changePinSchema = z
         message: "Enter your current 4-digit PIN",
         path: ["currentPin"],
       })
+    } else if (d.authMethod === "pin" && d.currentPin === d.next) {
+      ctx.addIssue({
+        code: "custom",
+        message: "New PIN must be different from current PIN",
+        path: ["next"],
+      })
     } else if (d.authMethod === "password" && (d.password ?? "").length < 6) {
       ctx.addIssue({
         code: "custom",

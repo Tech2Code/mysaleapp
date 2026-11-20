@@ -130,7 +130,12 @@ export function DeliveryEditor({
       return
     }
     startTransition(async () => {
-      const res = await updateOrderDelivery({ code: orderCode, phoneLast4, customer: values })
+      const res = await updateOrderDelivery({
+        code: orderCode,
+        phoneLast4,
+        phone: delivery.phone,
+        customer: values,
+      })
       if (!res.ok) {
         for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
           if (messages?.[0] && field in values) form.setError(field as keyof CheckoutInput, { message: messages[0] })
@@ -163,7 +168,7 @@ export function DeliveryEditor({
       </div>
 
       <p data-ui="store/DeliveryEditor/p" className="font-medium">
-        {delivery.name} · {delivery.phone}
+        {delivery.name} · +91 {delivery.phone}
       </p>
       <p data-ui="store/DeliveryEditor/p-2" className="text-muted-foreground">
         {delivery.address}, {delivery.city} - {delivery.pincode}

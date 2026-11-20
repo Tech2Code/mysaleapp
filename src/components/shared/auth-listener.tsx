@@ -132,6 +132,19 @@ function handleSessionChange(user: User | null, isSignedOutEvent = false) {
       profileOverrides.clear()
       useWishlist.getState().clear()
       clearOrderSession()
+      if (typeof window !== "undefined" && (isSignedOutEvent || currentUser !== null)) {
+        const p = window.location.pathname
+        if (p === "/account" || p.startsWith("/account/")) {
+          window.location.replace(`/login?next=${encodeURIComponent(p)}`)
+        } else if (
+          (p === "/admin" || p.startsWith("/admin/")) &&
+          !p.startsWith("/admin/login") &&
+          !p.startsWith("/admin/forgot-password") &&
+          !p.startsWith("/admin/reset-password")
+        ) {
+          window.location.replace("/admin/login")
+        }
+      }
     }
     return
   }
@@ -192,6 +205,8 @@ function AuthRouteSync() {
         pathname !== "/login" &&
         pathname !== "/admin/forgot-password" &&
         pathname !== "/admin/login" &&
+        pathname !== "/admin/account" &&
+        pathname !== "/account/profile" &&
         (errCode || errDesc || (rawErr && hashParams.has("error")))
       ) {
         const isExpired =

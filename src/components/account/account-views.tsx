@@ -152,7 +152,7 @@ export function MyOrdersView({
       o.cancellation?.refundReference,
       o.cancellation?.reason,
       STATUS_META[o.status].label,
-      o.returnStage?.badge,
+      o.returnStage?.customerLabel,
       o.returnStage?.customerDetail,
     ]
       .filter(Boolean)

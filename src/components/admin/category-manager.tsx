@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckIcon, Loader2Icon, PencilIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useLayoutEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextAreaField, TextField } from "@/components/form"
@@ -46,7 +46,7 @@ function CategoryDialog({
   const [slugTouched, setSlugTouched] = useState(Boolean(category))
   const form = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
-    values: {
+    defaultValues: {
       name: category?.name ?? "",
       slug: category?.slug ?? "",
       description: category?.description ?? "",
@@ -71,6 +71,11 @@ function CategoryDialog({
     startTransition(async () => {
       const res = await saveCategory(category?.id ?? null, values)
       if (!res.ok) {
+        for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
+          if (msgs?.[0] && (field === "name" || field === "slug" || field === "description" || field === "sort")) {
+            form.setError(field, { message: msgs[0] })
+          }
+        }
         toast.error(res.error)
         return
       }
@@ -154,6 +159,14 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
 
   const [toDelete, setToDelete] = useState<Row | null>(null)
 
+  useLayoutEffect(() => {
+    return () => {
+      setOpen(false)
+      setEditing(null)
+      setToDelete(null)
+    }
+  }, [])
+
   const remove = (c: Row) => {
     setDeletingId(c.id)
     startTransition(async () => {
@@ -231,7 +244,7 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
         pending={pending}
         onConfirm={() => toDelete && remove(toDelete)}
       />
-      {open && <CategoryDialog category={editing} nextSort={nextSort} open={open} onOpenChange={setOpen} />}
+      {open && <CategoryDialog key={editing?.id ?? "new"} category={editing} nextSort={nextSort} open={open} onOpenChange={setOpen} />}
     </>
   )
 }

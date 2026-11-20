@@ -201,9 +201,16 @@ export async function GET(request: NextRequest) {
     Boolean(code) ||
     Boolean(tokenHash)
 
+  // Email-change confirmation links return to the profile page where EmailForm / ProfileFormInner shows the banner.
+  if (nextPathname === "/admin/account" || nextPathname === "/account/profile") {
+    const errUrl = new URL(nextPathname, base)
+    errUrl.searchParams.set("error_description", errorDescription || "expired")
+    return clearIntentAndRedirect(errUrl)
+  }
+
   // An expired/used admin link (password reset, email confirmation) stays on the admin screens.
   if (isAdminNext || recoveryIntent === "admin") {
-    if (isExpiredLink || nextPathname === "/admin/reset-password" || nextPathname === "/admin/account") {
+    if (isExpiredLink || nextPathname === "/admin/reset-password") {
       return clearIntentAndRedirect(new URL("/admin/forgot-password?error=expired", base))
     }
     return clearIntentAndRedirect(new URL("/admin/login", base))

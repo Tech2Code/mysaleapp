@@ -23,7 +23,7 @@ import { TONES } from "@/components/shared/status-badge"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
-import { LIMITS } from "@/lib/validation"
+import { LIMITS, PATTERNS } from "@/lib/validation"
 
 type Window = { open: boolean; until: string | null; days: number }
 
@@ -116,6 +116,13 @@ export function RequestReturn({
     }
   }, [open, isGuest])
 
+  // Never read the clock synchronously during render (Next.js Cache Components forbids `new Date()` in Client Component prerenders).
+  const [clientNow, setClientNow] = useState<Date | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- populate client clock after mount
+    setClientNow(new Date())
+  }, [])
+
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const allLines = useMemo(() => {
     const seen = new Set<string>()
@@ -123,18 +130,18 @@ export function RequestReturn({
   }, [items, left])
 
   const windowByProduct = useMemo(() => {
-    const now = new Date()
     const map = new Map<string, { until: Date | null; open: boolean; days: number }>()
     for (const i of allLines) {
       if (history.length > 0) {
-        map.set(i.productId, itemReturnWindow(history, i.returnWindowDays, win.days, now))
+        const itemWin = itemReturnWindow(history, i.returnWindowDays, win.days, clientNow)
+        map.set(i.productId, { ...itemWin, open: win.open && itemWin.open })
       } else {
         const d = i.returnWindowDays == null ? win.days : Math.max(0, Math.trunc(Number(i.returnWindowDays)))
         map.set(i.productId, { until: win.until ? new Date(win.until) : null, open: d > 0 && win.open, days: d })
       }
     }
     return map
-  }, [allLines, history, win.days, win.open, win.until])
+  }, [allLines, history, win.days, win.open, win.until, clientNow])
 
   const lines = useMemo(
     () => allLines.filter((i) => (windowByProduct.get(i.productId)?.open ?? win.open) && (windowByProduct.get(i.productId)?.days ?? win.days) > 0),
@@ -187,7 +194,8 @@ export function RequestReturn({
   const kept = charges ? notRefundedCharges(charges) : []
   const needsDetail = !reason || otherNeedsDetail(reason, details)
   const needsExchangeKind = resolutionType === "exchange" && !exchangeKind
-  const needsExchangePref = resolutionType === "exchange" && exchangePreference.trim().length < 2
+  const cleanExchangePref = exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim()
+  const needsExchangePref = resolutionType === "exchange" && cleanExchangePref.length < 2
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
   // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to request a return;
@@ -203,7 +211,14 @@ export function RequestReturn({
 
   const pickupPhoneDigits = normalizeIndianPhone(pickupPhone)
   const newPickupErrors = {
-    name: pickupMode === "new" && pickupName.trim().length < LIMITS.personName.min ? "Enter contact name" : undefined,
+    name:
+      pickupMode === "new"
+        ? pickupName.trim().length < LIMITS.personName.min
+          ? "Enter contact name"
+          : !PATTERNS.personName.test(pickupName.trim())
+            ? "Use letters, spaces and basic punctuation only"
+            : undefined
+        : undefined,
     phone: pickupMode === "new" && !pickupPhoneDigits ? "Enter a valid 10-digit mobile number" : undefined,
     pincode:
       pickupMode === "new"
@@ -211,9 +226,19 @@ export function RequestReturn({
           ? "Enter a valid 6-digit pincode"
           : pickupArea.error ?? undefined
         : undefined,
-    city: pickupMode === "new" && pickupCity.trim().length < LIMITS.city.min ? "Enter city / district" : undefined,
+    city:
+      pickupMode === "new"
+        ? pickupCity.trim().length < LIMITS.city.min
+          ? "Enter city / district"
+          : !PATTERNS.city.test(pickupCity.trim())
+            ? "Letters, spaces and basic punctuation only"
+            : undefined
+        : undefined,
     state: pickupMode === "new" && !pickupState ? "Select state" : undefined,
-    address: pickupMode === "new" && pickupAddressLine.trim().length < LIMITS.address.min ? "Enter full pickup address (at least 8 characters)" : undefined,
+    address:
+      pickupMode === "new" && pickupAddressLine.trim().length < LIMITS.address.min
+        ? `Enter full pickup address (at least ${LIMITS.address.min} characters)`
+        : undefined,
   }
   const hasNewPickupError =
     pickupMode === "new" &&
@@ -231,10 +256,16 @@ export function RequestReturn({
     if (pickupMode === "saved") {
       const chosen = savedAddresses.find((a) => a.id === selectedAddressId)
       if (!chosen) return undefined
-      return `${chosen.label}: ${chosen.fullName} (+91 ${chosen.phone}), ${chosen.address}, ${chosen.city} - ${chosen.pincode}`
+      const prefix = `${chosen.label}: ${chosen.fullName.slice(0, 40)} (+91 ${chosen.phone}), `
+      const suffix = `, ${chosen.city.slice(0, 40)} - ${chosen.pincode}`
+      const maxAddr = Math.max(30, 215 - prefix.length - suffix.length)
+      return `${prefix}${chosen.address.slice(0, maxAddr)}${suffix}`
     }
     if (pickupMode === "new" && !hasNewPickupError && pickupPhoneDigits && pickupState) {
-      return `${pickupName.trim()} (+91 ${pickupPhoneDigits}), ${pickupAddressLine.trim()}, ${joinCityState(pickupCity.trim(), pickupState)} - ${pickupPincode.trim()}`
+      const prefix = `${pickupName.trim().slice(0, 40)} (+91 ${pickupPhoneDigits}), `
+      const suffix = `, ${joinCityState(pickupCity.trim(), pickupState).slice(0, 45)} - ${pickupPincode.trim()}`
+      const maxAddr = Math.max(30, 215 - prefix.length - suffix.length)
+      return `${prefix}${pickupAddressLine.trim().slice(0, maxAddr)}${suffix}`
     }
     return undefined
   })()
@@ -285,7 +316,7 @@ export function RequestReturn({
     }
     startTransition(async () => {
       if (pickupMode === "new" && saveNewPickupAddress && !isGuest && pickupPhoneDigits && pickupState) {
-        await saveAddress(null, {
+        const saveRes = await saveAddress(null, {
           label: newAddressLabel,
           fullName: pickupName.trim(),
           phone: pickupPhoneDigits,
@@ -295,6 +326,9 @@ export function RequestReturn({
           pincode: pickupPincode.trim(),
           isDefault: false,
         }).catch(() => null)
+        if (saveRes && !saveRes.ok) {
+          toast.info(`Could not save address to address book: ${saveRes.error}`)
+        }
       }
       const rawPref = exchangePreference.trim()
       const formattedPref =
@@ -423,7 +457,7 @@ export function RequestReturn({
                         : itemWin && !itemWin.open
                           ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
                           : itemWin
-                            ? `${itemWin.days}-day return & exchange window${itemWin.until ? ` · until ${formatDate(itemWin.until.toISOString())}` : ""}`
+                            ? `${itemWin.days}-day return & exchange window${itemWin.until ? ` · until ${formatDate(itemWin.until)}` : ""}`
                             : `${win.days}-day return & exchange window`}
                     </p>
                   </div>
@@ -1066,7 +1100,7 @@ export function ReturnRequestsPanel({
                 Reason: {r.reason}
                 {cleanDetails ? ` — ${cleanDetails}` : ""}
               </p>
-              {pickupAddress && (
+              {pickupAddress && !isGuest && (
                 <p data-ui="store/ReturnRequestsPanel/p-flex" className="flex items-start gap-1.5 rounded-lg border bg-muted/35 px-3 py-2 text-xs text-foreground">
                   <MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
                   <span data-ui="store/ReturnRequestsPanel/span-5">

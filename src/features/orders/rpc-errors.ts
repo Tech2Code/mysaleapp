@@ -47,7 +47,12 @@ const RPC_ERRORS: Record<string, string> = {
   REQUEST_REQUIRED: "A return needs an approved customer request first.",
   ANOTHER_OPEN: "The customer already has another open return request, so this one can't be reopened.",
   CANNOT_UNDO: "This step can't be undone: the items were already received or refunded.",
-  NOT_IN_REQUEST:"You can only record the items and quantities the customer asked to return.",
+  NOT_PENDING: "This request has already been decided, so it can't be undone from here.",
+  NOTE_REQUIRED: "Please enter a reason or instructions before saving.",
+  PAYMENT_REQUIRED: "Verify or mark the payment as paid before moving this order forward.",
+  CARRIER_REQUIRED: "Enter the courier / shipping details before marking this order as shipped.",
+  INVALID_STATUS_TRANSITION: "That status change isn't allowed from the current order status.",
+  NOT_IN_REQUEST: "You can only record the items and quantities the customer asked to return.",
 }
 
 /** Friendly message for the first known code found in an RPC error message, else `fallback`. */

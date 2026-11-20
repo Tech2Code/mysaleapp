@@ -132,14 +132,16 @@ export const requestReturnSchema = z
     details: v.note(LIMITS.returnDetail.max).optional(),
     resolutionType: z.enum(["refund", "exchange"]).default("refund"),
     exchangePreference: v.note(200).optional(),
-    pickupAddress: v.note(180).optional(),
+    pickupAddress: v.note(240).optional(),
   })
   .refine((v) => !otherNeedsDetail(v.reason, v.details), {
     path: ["details"],
     error: OTHER_DETAIL_MESSAGE,
   })
   .refine(
-    (v) => v.resolutionType !== "exchange" || Boolean(v.exchangePreference && v.exchangePreference.trim().length >= 2),
+    (v) =>
+      v.resolutionType !== "exchange" ||
+      Boolean(v.exchangePreference && v.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim().length >= 2),
     {
       path: ["exchangePreference"],
       error: "Please enter what you would like in exchange (size, colour, or replacement details).",

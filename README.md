@@ -127,7 +127,7 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
    - **Auto-cancel (`pg_cron`):** Unpaid orders (`pending` / `failed`) older than `unpaid_order_expiry_hours` are automatically cancelled every 15 minutes by `expire_unpaid_orders()`.
    - **Automatic stock restore:** Cancelling an order automatically restores reserved stock via the `orders_restock_on_cancel` trigger. If the customer had already paid (or submitted a UTR before cancellation), the order appears under **Refund due** so the admin can verify/refund it.
 5. **Returns, Exchanges & Refunds (Myntra-style 4-step flow).**
-   - Within `return_window_days` of delivery, customers can request a **Refund** or an **Exchange / Replacement** (specifying preferred size, colour, or replacement piece) for specific items and quantities.
+   - Within `return_window_days` of delivery, customers can request a **Refund** or an **Exchange / Replacement** (specifying preferred size, colour, or replacement piece, and optionally choosing a saved or newly entered alternate pickup address) for specific items and quantities.
    - **Step 1 (Requested) → Step 2 (Approved + Pickup date) → Step 2b (Pickup successful) → Step 3 (Goods received & restocked) → Step 4 (Refunded / Replaced).**
    - Returns refund **item value only** (delivery and handling charges are non-refundable and clearly itemised). Admins can also initiate a return/exchange on a customer's behalf or undo a return step if clicked by mistake.
 6. **Promo Codes, Verified Product Reviews & Account Controls.**
@@ -177,7 +177,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 797 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 803 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 
