@@ -2,6 +2,7 @@
 
 import { HeartIcon } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useMemo } from "react"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { placeholderCards } from "@/features/products/placeholders"
@@ -17,14 +18,21 @@ export function WishlistView({ products, preview = false }: { products: ProductC
   const ids = useWishlist((s) => s.ids)
   const { user, ready: authReady } = useAuth()
 
+  const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
+  const saved = useMemo(() => ids.map((id) => byId.get(id)).filter((p): p is ProductCardData => Boolean(p)), [ids, byId])
+
+  useEffect(() => {
+    if (!mounted || preview || products.length === 0) return
+    if (saved.length !== ids.length) {
+      useWishlist.getState().replaceAll(saved.map((p) => p.id))
+    }
+  }, [mounted, preview, products.length, saved, ids.length])
+
   if (preview || !mounted) {
     // The saved list lives in the browser: show placeholder cards in the real grid meanwhile.
     const grid = <WishlistGrid products={placeholderCards(4)} />
     return preview ? grid : <Skeletonize>{grid}</Skeletonize>
   }
-
-  const byId = new Map(products.map((p) => [p.id, p]))
-  const saved = ids.map((id) => byId.get(id)).filter((p): p is ProductCardData => Boolean(p))
 
   return (
     <div data-ui="store/WishlistView" className="space-y-8">

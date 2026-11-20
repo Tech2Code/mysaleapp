@@ -431,7 +431,11 @@ function ProductFormInner({
         onCancel={() => {
           form.reset(toFormValues(product))
           setSlugTouched(Boolean(product))
-          router.back()
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back()
+          } else {
+            router.push("/admin/products")
+          }
         }}
       />
     </form>

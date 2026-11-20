@@ -138,10 +138,24 @@ export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
   return Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, counts[i]])) as ReturnViewCounts
 }
 
-export async function getOrderFilterCounts(): Promise<OrderFilterCounts> {
+export async function getOrderFilterCounts(filters?: {
+  year?: string
+  month?: string
+  today?: string
+}): Promise<OrderFilterCounts> {
   const adminCheck = requireAdmin()
   const supabase = await getServerSupabase()
-  const head = () => supabase.from("orders").select("id", { count: "exact", head: true })
+  const period =
+    filters && (filters.year !== undefined || filters.month !== undefined)
+      ? resolveOrderPeriod({ year: filters.year, month: filters.month }, filters.today)
+      : null
+  const head = () => {
+    let q = supabase.from("orders").select("id", { count: "exact", head: true })
+    if (period?.startIso && period?.endIso) {
+      q = q.gte("created_at", period.startIso).lt("created_at", period.endIso)
+    }
+    return q
+  }
 
   const [, returnCounts, statusCounts, paymentCounts] = await Promise.all([
     adminCheck,

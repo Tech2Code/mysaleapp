@@ -131,7 +131,7 @@ export function ProductActions({
       <div
         data-ui="store/ProductActions/div-grid-2"
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2.5 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2.5 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-data-skeleton:hidden"
       >
         <Button
           data-ui="store/ProductActions/Button-add-to-cart-2"
@@ -414,7 +414,7 @@ function ShareExperienceDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="store/ShareExperienceDialog/DialogContent" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent data-ui="store/ShareExperienceDialog/DialogContent" className="sm:max-w-lg">
         <DialogHeader>
           <div data-ui="store/ShareExperienceDialog/div-flex" className="flex flex-wrap items-center justify-between gap-2 pr-8">
             <DialogTitle className="text-lg font-semibold">Share your experience</DialogTitle>
@@ -564,7 +564,16 @@ export function OrderItemReviewWidget({
   const [draftRating, setDraftRating] = useState(0)
 
   useEffect(() => {
-    if (!authReady || !user) return
+    if (!authReady) return
+    if (!user) {
+      queueMicrotask(() => {
+        setMyReview(null)
+        setDraftRating(0)
+        setLoadedKey(null)
+        setDialogOpen(false)
+      })
+      return
+    }
     const key = `${user.id}:${item.productId}`
     if (loadedKey === key) return
     let cancelled = false
@@ -676,7 +685,7 @@ export function ProductReviewsSection({
   const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
 
   useEffect(() => {
-    if (totalCount === 0 || !authReady) return
+    if (!authReady) return
     if (!user) {
       queueMicrotask(() => {
         setCanReview(false)
@@ -707,7 +716,7 @@ export function ProductReviewsSection({
     return () => {
       cancelled = true
     }
-  }, [authReady, user, product.id, stateLoadedForUser, totalCount])
+  }, [authReady, user, product.id, stateLoadedForUser])
 
   const openReviewModal = (star?: number) => {
     const chosen = star ?? myReview?.rating ?? (draftRating || 5)
@@ -746,7 +755,7 @@ export function ProductReviewsSection({
     })
   }
 
-  if (totalCount === 0) return null
+  if (totalCount === 0 && !canReview && !myReview) return null
 
   const avgRating =
     product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
@@ -896,6 +905,7 @@ export function ProductReviewsSection({
 
                 <ul
                   data-ui="store/ProductReviewsSection/ul"
+                  data-slot="reviews-list"
                   className="max-h-96 min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-1 lg:max-h-none"
                 >
                   {initialReviews.map((review) => {

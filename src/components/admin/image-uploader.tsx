@@ -119,6 +119,11 @@ export function ImageUploader({
   }
 
   const removeImage = (url: string) => {
+    const sessionPath = sessionPaths.current.get(url)
+    if (sessionPath) {
+      sessionPaths.current.delete(url)
+      void getBrowserSupabase()?.storage.from(BUCKET).remove([sessionPath])
+    }
     onChange((current) => current.filter((u) => u !== url))
   }
 

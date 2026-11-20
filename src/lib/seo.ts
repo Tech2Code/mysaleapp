@@ -131,7 +131,11 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
   }
 }
 
-export function itemListJsonLd(products: Product[], shop: Pick<StoreSettings, "shopName">, category?: Category) {
+export function itemListJsonLd(
+  products: Pick<Product, "slug" | "name">[],
+  shop: Pick<StoreSettings, "shopName">,
+  category?: Category
+) {
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",

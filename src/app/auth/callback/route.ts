@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js"
 import { NextResponse, type NextRequest } from "next/server"
 import { siteConfig } from "@/config/site"
+import { signPasswordResetCookie } from "@/features/auth/guards"
 import { normalizeIndianPhone } from "@/lib/format"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { cleanMetaName } from "@/lib/supabase/config"
@@ -40,7 +41,11 @@ export async function GET(request: NextRequest) {
     return res
   }
 
-  const finishSuccess = (target: string, mode: "admin-recovery" | "customer-recovery" | "normal") => {
+  const finishSuccess = (
+    target: string,
+    mode: "admin-recovery" | "customer-recovery" | "normal",
+    userId?: string
+  ) => {
     const targetUrl = new URL(target, base)
     if (otpType === "email_change" && (targetUrl.pathname === "/admin/account" || targetUrl.pathname === "/account/profile")) {
       targetUrl.searchParams.set("email_changed", "1")
@@ -49,13 +54,18 @@ export async function GET(request: NextRequest) {
       targetUrl.pathname = "/admin/reset-password"
       targetUrl.search = ""
     } else if (mode === "customer-recovery" && targetUrl.pathname !== "/login") {
+      const preservedNext = safeNextPath(`${targetUrl.pathname}${targetUrl.search}`, "/")
       targetUrl.pathname = "/login"
+      targetUrl.search = ""
       targetUrl.searchParams.set("mode", "reset-password")
+      if (preservedNext !== "/") {
+        targetUrl.searchParams.set("next", preservedNext)
+      }
     }
     const response = NextResponse.redirect(targetUrl)
     response.cookies.delete("kk_recovery_intent")
-    if (mode === "admin-recovery") {
-      response.cookies.set("kk_pw_reset", "1", {
+    if (mode === "admin-recovery" && userId) {
+      response.cookies.set("kk_pw_reset", signPasswordResetCookie("admin", userId), {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -63,8 +73,8 @@ export async function GET(request: NextRequest) {
         path: "/",
       })
     }
-    if (mode === "customer-recovery") {
-      response.cookies.set("kk_cust_pw_reset", "1", {
+    if (mode === "customer-recovery" && userId) {
+      response.cookies.set("kk_cust_pw_reset", signPasswordResetCookie("customer", userId), {
         httpOnly: true,
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
@@ -102,19 +112,28 @@ export async function GET(request: NextRequest) {
 
   const handleAuthenticatedSuccess = async (supabase: Awaited<ReturnType<typeof getServerSupabase>>) => {
     const user = await syncProfileFromMetadata(supabase)
+    const isNonRecoveryOtp =
+      otpType === "signup" ||
+      otpType === "email_change" ||
+      otpType === "invite" ||
+      next.includes("email_changed=1")
     const recoverySentMs = user?.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
     const isRecentRecovery =
       flow !== "oauth" &&
+      !isNonRecoveryOtp &&
+      (flow === "recovery" || recoveryIntent === "admin" || recoveryIntent === "customer") &&
       !Number.isNaN(recoverySentMs) &&
       Date.now() - recoverySentMs < 60 * 60 * 1000
 
     const isRecoveryFlow =
-      otpType === "recovery" ||
-      nextPathname === "/admin/reset-password" ||
-      next.includes("mode=reset-password") ||
-      recoveryIntent === "admin" ||
-      recoveryIntent === "customer" ||
-      isRecentRecovery
+      !isNonRecoveryOtp &&
+      (otpType === "recovery" ||
+        flow === "recovery" ||
+        nextPathname === "/admin/reset-password" ||
+        next.includes("mode=reset-password") ||
+        recoveryIntent === "admin" ||
+        recoveryIntent === "customer" ||
+        isRecentRecovery)
 
     if (isRecoveryFlow) {
       const { data: isAdmin } = await supabase.rpc("is_admin")
@@ -124,16 +143,19 @@ export async function GET(request: NextRequest) {
         (isAdmin === true && recoveryIntent !== "customer" && !next.includes("mode=reset-password"))
 
       if (wantsAdminReset) {
-        if (isAdmin !== true) {
+        if (isAdmin !== true || !user) {
           await supabase.auth.signOut()
           return clearIntentAndRedirect(new URL("/admin/login", base))
         }
-        return finishSuccess("/admin/reset-password", "admin-recovery")
+        return finishSuccess("/admin/reset-password", "admin-recovery", user.id)
       }
-      return finishSuccess(next, "customer-recovery")
+      if (!user) {
+        return clearIntentAndRedirect(new URL("/login?mode=forgot&error=expired", base))
+      }
+      return finishSuccess(next, "customer-recovery", user.id)
     }
 
-    const response = finishSuccess(next, "normal")
+    const response = finishSuccess(next, "normal", user?.id)
     if (!isAdminNext && user) {
       const { data: restored } = await supabase.rpc("reactivate_my_account")
       if (restored) {
@@ -166,7 +188,9 @@ export async function GET(request: NextRequest) {
   // Step 1 of Supabase's two-step email change redirects with `?message=...` (or `#message=...`) and neither `code` nor `error`.
   if (!code && !tokenHash && !oauthError && (nextPathname === "/admin/account" || nextPathname === "/account/profile")) {
     const accountUrl = new URL(nextPathname, base)
-    if (infoMessage) accountUrl.searchParams.set("message", infoMessage)
+    if (infoMessage && /confirmation link|other email|confirm/i.test(infoMessage)) {
+      accountUrl.searchParams.set("message", "email_step_1")
+    }
     return clearIntentAndRedirect(accountUrl)
   }
 

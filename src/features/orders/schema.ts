@@ -132,6 +132,7 @@ export const requestReturnSchema = z
     details: v.note(LIMITS.returnDetail.max).optional(),
     resolutionType: z.enum(["refund", "exchange"]).default("refund"),
     exchangePreference: v.note(200).optional(),
+    pickupAddress: v.note(180).optional(),
   })
   .refine((v) => !otherNeedsDetail(v.reason, v.details), {
     path: ["details"],

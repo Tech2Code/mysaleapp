@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useMounted } from "@/hooks/use-mounted"
 import { calculateCharges } from "@/features/orders/pricing"
 import type { ShippingClass } from "@/features/products/types"
@@ -33,6 +33,39 @@ export function useLiveCart(products: LiveProduct[]) {
   const mounted = useMounted()
   const items = useCart((s) => s.items)
   const settings = useStoreSettings()
+
+  useEffect(() => {
+    if (!mounted || products.length === 0 || items.length === 0) return
+    const byId = new Map(products.map((p) => [p.id, p]))
+    let changed = false
+    const synced = items.map((item) => {
+      const live = byId.get(item.productId)
+      if (!live || live.stock <= 0) return item
+      const nextQty = Math.min(item.quantity, live.stock)
+      const nextImg = live.images[0] ?? item.image
+      if (
+        nextQty !== item.quantity ||
+        live.stock !== item.maxQuantity ||
+        live.name !== item.name ||
+        live.slug !== item.slug ||
+        nextImg !== item.image
+      ) {
+        changed = true
+        return {
+          ...item,
+          name: live.name,
+          slug: live.slug,
+          image: nextImg,
+          maxQuantity: live.stock,
+          quantity: nextQty,
+        }
+      }
+      return item
+    })
+    if (changed) {
+      useCart.setState({ items: synced })
+    }
+  }, [mounted, products, items])
 
   return useMemo(() => {
     const byId = new Map(products.map((p) => [p.id, p]))

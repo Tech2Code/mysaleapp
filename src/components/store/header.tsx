@@ -33,7 +33,7 @@ function CountBadge({ count }: { count: number }) {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.4, opacity: 0 }}
           transition={{ type: "spring", stiffness: 600, damping: 20 }}
-          className="absolute top-0.5 right-0.5 grid min-w-4.6 place-items-center rounded-full bg-primary px-1 text-[0.65rem] leading-4.6 font-bold text-primary-foreground ring-2 ring-background"
+          className="absolute top-0.5 right-0.5 grid min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.65rem]/4.5 font-bold text-primary-foreground ring-2 ring-background"
         >
           {count > 99 ? "99+" : count}
         </m.span>
@@ -135,7 +135,7 @@ function MobileHeaderShortcuts({
         className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
         aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
       >
-        <HeartIcon className="size-4.6" />
+        <HeartIcon className="size-4.5" />
         {mounted && <CountBadge count={wishCount} />}
       </Link>
       <button
@@ -145,7 +145,7 @@ function MobileHeaderShortcuts({
         className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
         aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
       >
-        <ShoppingBagIcon className="size-4.6" />
+        <ShoppingBagIcon className="size-4.5" />
         {mounted && <CountBadge count={itemCount} />}
       </button>
     </div>
@@ -189,11 +189,11 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             <MenuIcon className="size-5" />
           </SheetTrigger>
           <SheetContent data-ui="store/Header/SheetContent" side="left" className="w-80">
-            <SheetHeader>
+            <SheetHeader className="pr-12">
               <SheetTitle className="sr-only">Menu</SheetTitle>
               <Logo />
             </SheetHeader>
-            <nav data-ui="store/Header/nav-mobile" className="flex flex-col gap-1 px-3" aria-label="Mobile">
+            <nav data-ui="store/Header/nav-mobile" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label="Mobile">
               <Suspense fallback={<MobileNavItems links={mobileLinks} pathname={null} onNavigate={closeMobile} />}>
                 <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
               </Suspense>
@@ -211,13 +211,14 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
         <div data-ui="store/Header/div-flex-2" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
           <button data-ui="store/Header/button-search-products"
+            data-search-trigger=""
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}
             aria-label="Search products"
             aria-expanded={searchOpen}
           >
-            <SearchIcon className="size-4.6" />
+            <SearchIcon className="size-4.5" />
           </button>
           <Suspense fallback={null}>
             <MobileHeaderShortcuts
@@ -232,7 +233,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
             aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
           >
-            <HeartIcon className="size-4.6" />
+            <HeartIcon className="size-4.5" />
             {mounted && <CountBadge count={wishCount} />}
           </Link>
           <button data-ui="store/Header/button"
@@ -241,7 +242,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
             aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
           >
-            <ShoppingBagIcon className="size-4.6" />
+            <ShoppingBagIcon className="size-4.5" />
             {mounted && <CountBadge count={itemCount} />}
           </button>
           <span data-ui="store/Header/span-inline-flex" className="inline-flex"><AccountMenu /></span>

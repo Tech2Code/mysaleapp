@@ -34,6 +34,41 @@ export const REPLACEMENT_REASONS = [
 /** A request that still needs attention (counts against "one open request per order"). */
 export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === "requested" || r.status === "approved"
 
+const PICKUP_TAG_RE = /(?:\r?\n|^)\[Pickup:\s*([^\]]+)\]\s*$/i
+
+/** Packs the customer's optional return note and an alternate pickup address into the 300-char `details` field. */
+export function composeReturnDetails(
+  details: string | null | undefined,
+  pickupAddress: string | null | undefined
+): string | undefined {
+  const cleanDetails = (details ?? "").replace(PICKUP_TAG_RE, "").trim()
+  const cleanPickup = (pickupAddress ?? "").replace(/[\[\]\r\n]+/g, " ").replace(/\s+/g, " ").trim()
+  if (!cleanPickup) {
+    return cleanDetails ? cleanDetails.slice(0, 300) : undefined
+  }
+  const tag = `[Pickup: ${cleanPickup.slice(0, 180)}]`
+  if (!cleanDetails) return tag
+  const maxDetailLen = Math.max(0, 300 - tag.length - 1)
+  const truncatedDetail = cleanDetails.slice(0, maxDetailLen).trim()
+  return truncatedDetail ? `${truncatedDetail}\n${tag}` : tag
+}
+
+/** Splits a stored `return_requests.details` string into the customer's reason note and any alternate pickup address. */
+export function splitReturnDetails(raw: string | null | undefined): {
+  details: string | null
+  pickupAddress: string | null
+} {
+  if (!raw) return { details: null, pickupAddress: null }
+  const match = raw.match(PICKUP_TAG_RE)
+  if (!match) {
+    const clean = raw.trim()
+    return { details: clean || null, pickupAddress: null }
+  }
+  const pickupAddress = match[1]?.trim() || null
+  const details = raw.replace(PICKUP_TAG_RE, "").trim() || null
+  return { details, pickupAddress }
+}
+
 /** When the order was delivered: the latest "delivered" entry in its history, provided no later entry moved it back. */
 export function deliveredAt(history: StatusHistoryEntry[]): string | null {
   if (history.length === 0) return null

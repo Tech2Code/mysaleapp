@@ -4,6 +4,12 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import type { User } from "@supabase/supabase-js"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
+import {
+  hasValidPasswordResetCookie,
+  parseAdminPinCookie,
+  signAdminPinCookie,
+  signPasswordResetCookie,
+} from "@/lib/supabase/proxy"
 import { getServerSupabase } from "@/lib/supabase/server"
 import {
   ADMIN_PIN_WINDOW_MS,
@@ -11,6 +17,13 @@ import {
   type AdminPinMode,
   type AdminPinStatus,
 } from "./account-schema"
+
+export {
+  hasValidPasswordResetCookie,
+  parseAdminPinCookie,
+  signAdminPinCookie,
+  signPasswordResetCookie,
+}
 
 /**
  * Data Access Layer for auth. Every protected page AND every Server Action
@@ -66,21 +79,28 @@ export const getAdminPinStatus = cache(async (): Promise<AdminPinStatus> => {
   const mode: AdminPinMode =
     raw.mode === "enabled" || raw.mode === "disabled" ? raw.mode : "unset"
 
+  const hasPin = Boolean(raw.hasPin) && mode === "enabled"
   const cookieVal = cookieStore.get("kk_admin_pin_at")?.value
-  const manualLock = cookieVal === "locked"
+  const parsedCookie = parseAdminPinCookie(cookieVal, user.id, raw.updatedAt)
+  const manualLock = parsedCookie.valid && parsedCookie.manualLock
   const signedInMs = user.last_sign_in_at ? Date.parse(user.last_sign_in_at) : 0
-  const cookieMs = cookieVal && !manualLock ? Number(cookieVal) : NaN
+  const validSignInMs = Number.isFinite(signedInMs) && signedInMs > 0 ? signedInMs : 0
+
+  // When a 4-digit PIN is enabled, only a valid HMAC-signed unlock cookie unlocks the session
+  // (preventing DevTools cookie deletion or timestamp editing from bypassing the PIN lock).
   const unlockedAt = manualLock
     ? 0
-    : Number.isFinite(cookieMs) && cookieMs > 0
-      ? Math.max(cookieMs, Number.isFinite(signedInMs) ? signedInMs : 0)
-      : Number.isFinite(signedInMs) && signedInMs > 0
-        ? signedInMs
+    : hasPin
+      ? parsedCookie.valid
+        ? parsedCookie.unlockedAt
         : 0
+      : parsedCookie.valid && parsedCookie.unlockedAt > 0
+        ? Math.max(parsedCookie.unlockedAt, validSignInMs)
+        : validSignInMs
 
   return {
     mode,
-    hasPin: Boolean(raw.hasPin),
+    hasPin,
     updatedAt: raw.updatedAt ?? null,
     lockedUntil: raw.lockedUntil ?? null,
     unlockedAt,
@@ -108,7 +128,7 @@ async function isAdminPinLocked(): Promise<boolean> {
 export async function requireAdmin(): Promise<User> {
   const [user, admin, cookieStore] = await Promise.all([getCurrentUser(), isAdminUser(), cookies()])
   if (!user || !admin) redirect("/admin/login")
-  if (cookieStore.get("kk_pw_reset")?.value === "1") {
+  if (hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
     redirect("/admin/reset-password")
   }
   if (isAdminSessionExpired(user)) {
@@ -126,7 +146,7 @@ export async function assertAdmin(options?: {
 }): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
   const [user, admin, cookieStore] = await Promise.all([getCurrentUser(), isAdminUser(), cookies()])
   if (!user || !admin) return { ok: false, error: "Not authorised" }
-  if (cookieStore.get("kk_pw_reset")?.value === "1") {
+  if (hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
     return { ok: false, error: "Please finish setting your new password first." }
   }
   if (isAdminSessionExpired(user)) {

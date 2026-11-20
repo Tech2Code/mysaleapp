@@ -28,6 +28,7 @@ export function ProductFlagSwitch({
   const [optimistic, setOptimistic] = useOptimistic(value)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
+  const later = useToastAfter(pending)
 
   return (
     <Switch
@@ -37,7 +38,21 @@ export function ProductFlagSwitch({
         startTransition(async () => {
           setOptimistic(checked)
           const res = await toggleProductFlag(productId, flag, checked)
-          if (!res.ok) toast.error(res.error)
+          if (!res.ok) {
+            toast.error(res.error)
+          } else {
+            later(() =>
+              toast.success(
+                flag === "isActive"
+                  ? checked
+                    ? "Product shown in store"
+                    : "Product hidden from store"
+                  : checked
+                    ? "Featured on home page"
+                    : "Removed from featured"
+              )
+            )
+          }
           router.refresh()
         })
       }

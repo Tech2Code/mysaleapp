@@ -92,7 +92,7 @@ export function AdminAccountView({
 }) {
   return (
     <>
-      <AdminPageHeader title="My account" description="Your name, 4-digit Quick PIN, login email and password. No database access needed." />
+      <AdminPageHeader title="My account" description="Manage your display name, 4-digit Quick PIN, login email, and password." />
       <AccountSettings name={name} phone={phone} email={email} pinStatus={pinStatus} />
     </>
   )

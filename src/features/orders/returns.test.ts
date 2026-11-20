@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { deliveredAt, returnableQuantities, returnWindow } from "./returns"
+import { composeReturnDetails, deliveredAt, returnableQuantities, returnWindow, splitReturnDetails } from "./returns"
 import type { OrderItem, OrderReturn, StatusHistoryEntry } from "./types"
 
 const h = (status: StatusHistoryEntry["status"], changedAt: string): StatusHistoryEntry => ({ status, changedAt })
@@ -56,5 +56,30 @@ describe("returnableQuantities", () => {
   })
   it("is empty with no items", () => {
     expect(returnableQuantities([], []).size).toBe(0)
+  })
+})
+
+describe("composeReturnDetails / splitReturnDetails", () => {
+  it("packs and splits customer details and an alternate pickup address", () => {
+    const composed = composeReturnDetails("Arrived with a chip on the rim", "Rohan (+91 9876543210), 12 MG Road, Bengaluru, Karnataka - 560001")
+    expect(composed).toBe(
+      "Arrived with a chip on the rim\n[Pickup: Rohan (+91 9876543210), 12 MG Road, Bengaluru, Karnataka - 560001]"
+    )
+    expect(splitReturnDetails(composed)).toEqual({
+      details: "Arrived with a chip on the rim",
+      pickupAddress: "Rohan (+91 9876543210), 12 MG Road, Bengaluru, Karnataka - 560001",
+    })
+  })
+
+  it("handles pickup address without extra details, and details without pickup address", () => {
+    const onlyPickup = composeReturnDetails("", "Home: Meera (+91 9123456789), 4 Park St, Kolkata - 700016")
+    expect(splitReturnDetails(onlyPickup)).toEqual({
+      details: null,
+      pickupAddress: "Home: Meera (+91 9123456789), 4 Park St, Kolkata - 700016",
+    })
+    expect(splitReturnDetails(composeReturnDetails("Just a note", null))).toEqual({
+      details: "Just a note",
+      pickupAddress: null,
+    })
   })
 })

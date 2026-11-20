@@ -40,7 +40,7 @@ export function InstallPrompt() {
           exit={{ opacity: 0, y: 40 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           className={cn(
-            "fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-2xl border bg-card p-4 shadow-2xl shadow-black/15",
+            "fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-2xl border bg-card p-4 shadow-2xl shadow-black/15",
             "sm:right-auto sm:left-6 sm:mx-0 sm:bottom-6"
           )}
         >

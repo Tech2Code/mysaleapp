@@ -264,9 +264,8 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
     }
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        const searchBtn = document.querySelector('[data-ui="store/Header/button-search-products"]')
-        const mobileBtn = document.querySelector('[data-ui="store/Header/button-search-pill-mobile"]')
-        if ((searchBtn && searchBtn.contains(e.target as Node)) || (mobileBtn && mobileBtn.contains(e.target as Node))) return
+        const target = e.target as Element | null
+        if (target?.closest?.("[data-search-trigger]")) return
         close()
       }
     }

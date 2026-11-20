@@ -117,7 +117,7 @@ export async function createPromoCode(input: unknown): Promise<ActionResult> {
   await logAdminAction(supabase, {
     actorId: auth.user.id,
     action: "promo_code.create",
-    targetType: "settings",
+    targetType: "promo_code",
     targetId: created?.id ?? p.code,
     metadata: {
       code: p.code,
@@ -152,7 +152,7 @@ export async function togglePromoCode(input: unknown): Promise<ActionResult> {
   await logAdminAction(supabase, {
     actorId: auth.user.id,
     action: parsed.data.isActive ? "promo_code.enable" : "promo_code.disable",
-    targetType: "settings",
+    targetType: "promo_code",
     targetId: data.id,
     metadata: { code: data.code, isActive: parsed.data.isActive },
   })
@@ -182,7 +182,7 @@ export async function deletePromoCode(input: unknown): Promise<ActionResult> {
   await logAdminAction(supabase, {
     actorId: auth.user.id,
     action: "promo_code.delete",
-    targetType: "settings",
+    targetType: "promo_code",
     targetId: data.id,
     metadata: { code: data.code },
   })

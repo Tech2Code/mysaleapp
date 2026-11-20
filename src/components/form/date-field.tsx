@@ -285,6 +285,9 @@ export function DateField({
                         key={iso}
                         type="button"
                         disabled={isDayDisabled}
+                        aria-label={formatDisplayDate(iso)}
+                        aria-pressed={isSelected}
+                        aria-current={isToday ? "date" : undefined}
                         onClick={() => handleSelect(iso)}
                         className={cn(
                           "size-8 rounded-full text-xs font-medium transition-colors flex items-center justify-center",

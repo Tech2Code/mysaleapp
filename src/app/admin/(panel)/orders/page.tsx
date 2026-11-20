@@ -24,7 +24,10 @@ export default async function AdminOrdersPage({ searchParams }: PageProps<"/admi
     month: period.month,
     today,
   }
-  const [{ orders, total, page }, filterCounts] = await Promise.all([listOrders(filters), getOrderFilterCounts()])
+  const [{ orders, total, page }, filterCounts] = await Promise.all([
+    listOrders(filters),
+    getOrderFilterCounts({ year: period.year, month: period.month, today }),
+  ])
   const pages = Math.max(1, Math.ceil(total / ADMIN_ORDERS_PAGE_SIZE))
 
   return <OrdersView orders={orders} total={total} page={page} pages={pages} filters={filters} filterCounts={filterCounts} />

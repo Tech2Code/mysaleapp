@@ -1,7 +1,83 @@
+import { createHmac, timingSafeEqual } from "node:crypto"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { ADMIN_SESSION_MAX_AGE_MS } from "@/features/auth/account-schema"
 import { isSupabaseConfigured, supabaseConfig } from "./config"
+
+function getCookieSecret(): string {
+  return (
+    process.env.RATE_LIMIT_SALT ||
+    process.env.CRON_SECRET ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "kalakriti-local-dev-cookie-secret"
+  )
+}
+
+function hmacHex(payload: string): string {
+  return createHmac("sha256", getCookieSecret()).update(payload).digest("hex").slice(0, 32)
+}
+
+function safeSigEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  try {
+    return timingSafeEqual(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"))
+  } catch {
+    return false
+  }
+}
+
+export function signPasswordResetCookie(scope: "admin" | "customer", userId: string, nowMs = Date.now()): string {
+  const ts = String(Math.floor(nowMs))
+  const sig = hmacHex(`pw-reset:${scope}:${userId}:${ts}`)
+  return `${ts}.${sig}`
+}
+
+export function hasValidPasswordResetCookie(
+  cookieVal: string | undefined,
+  scope: "admin" | "customer",
+  userId: string,
+  maxAgeMs = 15 * 60 * 1000
+): boolean {
+  if (!cookieVal || !userId) return false
+  const parts = cookieVal.split(".")
+  if (parts.length !== 2) return false
+  const [tsStr, sig] = parts
+  const ts = Number(tsStr)
+  if (!Number.isFinite(ts) || ts <= 0) return false
+  const age = Date.now() - ts
+  if (age < -60_000 || age > maxAgeMs) return false
+  const expected = hmacHex(`pw-reset:${scope}:${userId}:${tsStr}`)
+  return safeSigEqual(sig, expected)
+}
+
+export function signAdminPinCookie(userId: string, value: "locked" | number | string): string {
+  const raw = value === "locked" ? "locked" : String(Math.floor(Number(value)))
+  const sig = hmacHex(`admin-pin:${userId}:${raw}`)
+  return `${raw}.${sig}`
+}
+
+export function parseAdminPinCookie(
+  cookieVal: string | undefined,
+  userId: string,
+  pinUpdatedAt?: string | null
+): { valid: boolean; manualLock: boolean; unlockedAt: number } {
+  if (!cookieVal || !userId) return { valid: false, manualLock: false, unlockedAt: 0 }
+  const parts = cookieVal.split(".")
+  if (parts.length !== 2) return { valid: false, manualLock: false, unlockedAt: 0 }
+  const [raw, sig] = parts
+  const expected = hmacHex(`admin-pin:${userId}:${raw}`)
+  if (!safeSigEqual(sig, expected)) return { valid: false, manualLock: false, unlockedAt: 0 }
+  if (raw === "locked") return { valid: true, manualLock: true, unlockedAt: 0 }
+  const ts = Number(raw)
+  if (!Number.isFinite(ts) || ts <= 0 || ts > Date.now() + 60_000) {
+    return { valid: false, manualLock: false, unlockedAt: 0 }
+  }
+  const updatedMs = pinUpdatedAt ? Date.parse(pinUpdatedAt) : NaN
+  if (!Number.isNaN(updatedMs) && ts + 5_000 < updatedMs) {
+    return { valid: false, manualLock: false, unlockedAt: 0 }
+  }
+  return { valid: true, manualLock: false, unlockedAt: ts }
+}
 
 /**
  * Refreshes the Supabase auth cookie on every matched request so Server
@@ -78,7 +154,7 @@ export async function updateSession(request: NextRequest) {
   const needsLogin = (isAdmin && !isAdminPublic) || isAccount
 
   if (user && isAdmin && !isAdminPublic) {
-    if (request.cookies.get("kk_pw_reset")?.value === "1") {
+    if (hasValidPasswordResetCookie(request.cookies.get("kk_pw_reset")?.value, "admin", user.id)) {
       const url = request.nextUrl.clone()
       url.pathname = "/admin/reset-password"
       url.search = ""

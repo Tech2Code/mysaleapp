@@ -386,7 +386,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
 
   const handleQueryChange = (val: string) => {
     setQuery(val)
-    if (val.trim().length === 0) {
+    if (val.trim().length < CUSTOMER_ORDER_MIN_SEARCH_CHARS) {
       setDebouncedQuery("")
     }
   }

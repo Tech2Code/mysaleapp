@@ -1,15 +1,19 @@
 "use client"
 
-import { ArrowLeftRightIcon, CheckIcon, Loader2Icon, PackageOpenIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
+import { ArrowLeftRightIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, PlusIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
+import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { listMyAddresses, saveAddress } from "@/features/addresses/actions"
+import { ADDRESS_LABELS, type Address } from "@/features/addresses/types"
+import { joinCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { EXCHANGE_REASONS, isOpenRequest, itemReturnWindow, REPLACEMENT_REASONS, RETURN_REASONS, requestStatusMeta, returnableQuantities } from "@/features/orders/returns"
+import { EXCHANGE_REASONS, isOpenRequest, itemReturnWindow, REPLACEMENT_REASONS, RETURN_REASONS, requestStatusMeta, returnableQuantities, splitReturnDetails } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType, StatusHistoryEntry } from "@/features/orders/types"
@@ -39,9 +43,12 @@ export function RequestReturn({
   whatsappUrl,
   onDone,
   charges,
+  orderDelivery,
 }: {
   /** Delivery + extra charges + promo discount of the order: shown in the refund estimate. */
   charges?: { shippingFee: number; extraFees: OrderFee[]; discountAmount?: number }
+  /** Original delivery address of the order, shown as the default pickup address. */
+  orderDelivery?: { name: string; phone: string; address: string; city: string; pincode: string } | null
   orderCode: string
   phoneLast4?: string
   status: OrderStatus
@@ -62,15 +69,52 @@ export function RequestReturn({
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [phone, setPhone] = useState("")
+  const [pickupMode, setPickupMode] = useState<"order" | "saved" | "new">("order")
+  const [showPickupPicker, setShowPickupPicker] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("")
+  const [pickupName, setPickupName] = useState(orderDelivery?.name ?? "")
+  const [pickupPhone, setPickupPhone] = useState(orderDelivery?.phone ?? "")
+  const [pickupAddressLine, setPickupAddressLine] = useState("")
+  const [pickupCity, setPickupCity] = useState("")
+  const [pickupState, setPickupState] = useState<IndianState | "">("")
+  const [pickupPincode, setPickupPincode] = useState("")
+  const [saveNewPickupAddress, setSaveNewPickupAddress] = useState(false)
+  const [newAddressLabel, setNewAddressLabel] = useState<(typeof ADDRESS_LABELS)[number]>("Home")
   const [submitted, setSubmitted] = useState(false)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const itemsListRef = useRef<HTMLUListElement>(null)
   const exchangeBoxRef = useRef<HTMLDivElement>(null)
   const nextFieldsRef = useRef<HTMLDivElement>(null)
+  const pickupBoxRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   useRevealOnChange(requests.map((r) => `${r.id}:${r.status}`).join(","))
+
+  const isGuest = phoneLast4 !== undefined
+
+  const pickupArea = usePincodeLookup({
+    pincode: pickupPincode,
+    getCity: () => pickupCity,
+    setCity: (city) => setPickupCity(city),
+    getState: () => pickupState,
+    setState: (state) => setPickupState(state as IndianState),
+  })
+
+  useEffect(() => {
+    if (!open || isGuest) return
+    let cancelled = false
+    listMyAddresses()
+      .then((list) => {
+        if (cancelled) return
+        setSavedAddresses(list)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [open, isGuest])
 
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const allLines = useMemo(() => {
@@ -148,7 +192,6 @@ export function RequestReturn({
 
   // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to request a return;
   // signed-in owners on /account/orders/[code] omit phoneLast4 and are recognised by their session.
-  const isGuest = phoneLast4 !== undefined
   const phoneDigits = normalizeIndianPhone(phone)
   const phoneError =
     isGuest && phone.trim() && !phoneDigits
@@ -157,6 +200,44 @@ export function RequestReturn({
         ? "Doesn't match the number you looked up"
         : undefined
   const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
+
+  const pickupPhoneDigits = normalizeIndianPhone(pickupPhone)
+  const newPickupErrors = {
+    name: pickupMode === "new" && pickupName.trim().length < LIMITS.personName.min ? "Enter contact name" : undefined,
+    phone: pickupMode === "new" && !pickupPhoneDigits ? "Enter a valid 10-digit mobile number" : undefined,
+    pincode:
+      pickupMode === "new"
+        ? !/^\d{6}$/.test(pickupPincode.trim())
+          ? "Enter a valid 6-digit pincode"
+          : pickupArea.error ?? undefined
+        : undefined,
+    city: pickupMode === "new" && pickupCity.trim().length < LIMITS.city.min ? "Enter city / district" : undefined,
+    state: pickupMode === "new" && !pickupState ? "Select state" : undefined,
+    address: pickupMode === "new" && pickupAddressLine.trim().length < LIMITS.address.min ? "Enter full pickup address (at least 8 characters)" : undefined,
+  }
+  const hasNewPickupError =
+    pickupMode === "new" &&
+    Boolean(
+      newPickupErrors.name ||
+        newPickupErrors.phone ||
+        newPickupErrors.pincode ||
+        newPickupErrors.city ||
+        newPickupErrors.state ||
+        newPickupErrors.address
+    )
+  const savedPickupMissing = pickupMode === "saved" && !savedAddresses.some((a) => a.id === selectedAddressId)
+
+  const resolvedPickupSummary = (() => {
+    if (pickupMode === "saved") {
+      const chosen = savedAddresses.find((a) => a.id === selectedAddressId)
+      if (!chosen) return undefined
+      return `${chosen.label}: ${chosen.fullName} (+91 ${chosen.phone}), ${chosen.address}, ${chosen.city} - ${chosen.pincode}`
+    }
+    if (pickupMode === "new" && !hasNewPickupError && pickupPhoneDigits && pickupState) {
+      return `${pickupName.trim()} (+91 ${pickupPhoneDigits}), ${pickupAddressLine.trim()}, ${joinCityState(pickupCity.trim(), pickupState)} - ${pickupPincode.trim()}`
+    }
+    return undefined
+  })()
 
   const reasonOptions =
     resolutionType === "exchange"
@@ -198,7 +279,23 @@ export function RequestReturn({
       nextFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
       return
     }
+    if (hasNewPickupError || savedPickupMissing) {
+      pickupBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      return
+    }
     startTransition(async () => {
+      if (pickupMode === "new" && saveNewPickupAddress && !isGuest && pickupPhoneDigits && pickupState) {
+        await saveAddress(null, {
+          label: newAddressLabel,
+          fullName: pickupName.trim(),
+          phone: pickupPhoneDigits,
+          address: pickupAddressLine.trim(),
+          city: pickupCity.trim(),
+          state: pickupState,
+          pincode: pickupPincode.trim(),
+          isDefault: false,
+        }).catch(() => null)
+      }
       const rawPref = exchangePreference.trim()
       const formattedPref =
         resolutionType === "exchange"
@@ -219,6 +316,7 @@ export function RequestReturn({
         details: details.trim() || undefined,
         resolutionType,
         exchangePreference: formattedPref,
+        pickupAddress: resolvedPickupSummary,
       })
       if (!res.ok) {
         const nextFieldErrors: Record<string, string> = {}
@@ -232,15 +330,7 @@ export function RequestReturn({
       const submittedKind = resolutionType === "exchange" ? (exchangeKind === "replacement" ? "replacement" : "exchange") : "refund"
       later(() => {
         setOpen(false)
-        setQty({})
-        setResolutionType("refund")
-        setExchangeKind("")
-        setExchangePreference("")
-        setReason("")
-        setDetails("")
-        setPhone("")
-        setSubmitted(false)
-        setServerFieldErrors({})
+        resetFormState()
         toast.success(
           submittedKind === "replacement"
             ? "Replacement request sent. We'll review it and update you here."
@@ -254,19 +344,37 @@ export function RequestReturn({
     })
   }
 
+  const resetFormState = () => {
+    setQty({})
+    setResolutionType("refund")
+    setExchangeKind("")
+    setExchangePreference("")
+    setReason("")
+    setDetails("")
+    setPhone("")
+    setPickupMode("order")
+    setShowPickupPicker(false)
+    setSelectedAddressId("")
+    setPickupName(orderDelivery?.name ?? "")
+    setPickupPhone(orderDelivery?.phone ?? "")
+    setPickupAddressLine("")
+    setPickupCity("")
+    setPickupState("")
+    setPickupPincode("")
+    setSaveNewPickupAddress(false)
+    setNewAddressLabel("Home")
+    setSubmitted(false)
+    setServerFieldErrors({})
+  }
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
     setOpen(nextOpen)
     if (!nextOpen) {
-      setQty({})
-      setResolutionType("refund")
-      setExchangeKind("")
-      setExchangePreference("")
-      setReason("")
-      setDetails("")
-      setPhone("")
-      setSubmitted(false)
-      setServerFieldErrors({})
+      resetFormState()
+    } else {
+      setPickupName(orderDelivery?.name ?? "")
+      setPickupPhone(orderDelivery?.phone ?? "")
     }
   }
 
@@ -355,6 +463,7 @@ export function RequestReturn({
               <button
                 data-ui="store/RequestReturn/button"
                 type="button"
+                aria-pressed={resolutionType === "refund"}
                 onClick={() => {
                   setResolutionType("refund")
                   if (reason && !(RETURN_REASONS as readonly string[]).includes(reason)) setReason("")
@@ -379,6 +488,7 @@ export function RequestReturn({
               <button
                 data-ui="store/RequestReturn/button-2"
                 type="button"
+                aria-pressed={resolutionType === "exchange"}
                 onClick={() => {
                   setResolutionType("exchange")
                   const targetReasons = exchangeKind === "replacement" ? REPLACEMENT_REASONS : EXCHANGE_REASONS
@@ -538,7 +648,7 @@ export function RequestReturn({
                 label={reason === OTHER_REASON ? "Please tell us the reason" : "Additional details (optional)"}
                 required={reason === OTHER_REASON}
                 rows={2}
-                maxLength={LIMITS.returnDetail.max}
+                maxLength={pickupMode === "order" ? LIMITS.returnDetail.max : 140}
                 value={details}
                 onChange={(e) => {
                   setDetails(e.target.value)
@@ -554,6 +664,238 @@ export function RequestReturn({
                     : undefined)
                 }
               />
+
+              {/* Pickup address selection (Order delivery address / Saved addresses / New pickup address) */}
+              <div ref={pickupBoxRef} data-ui="store/RequestReturn/div-6" className="space-y-3 rounded-xl border bg-muted/25 p-3.5">
+                <div data-ui="store/RequestReturn/div-flex" className="flex flex-wrap items-center justify-between gap-2">
+                  <p data-ui="store/RequestReturn/p-flex-2" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <MapPinIcon className="size-4 text-primary" aria-hidden /> Pickup address
+                  </p>
+                  {!showPickupPicker && (
+                    <button
+                      data-ui="store/RequestReturn/button-change-add-address"
+                      type="button"
+                      onClick={() => setShowPickupPicker(true)}
+                      className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                    >
+                      Change / add address
+                    </button>
+                  )}
+                </div>
+
+                {!showPickupPicker && pickupMode === "order" ? (
+                  <div data-ui="store/RequestReturn/div-7" className="rounded-lg border bg-card p-3 text-xs">
+                    <span data-ui="store/RequestReturn/span-10" className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      Order delivery address
+                    </span>
+                    {orderDelivery ? (
+                      <>
+                        <p data-ui="store/RequestReturn/p-5" className="mt-1.5 font-semibold text-foreground">
+                          {orderDelivery.name} · +91 {orderDelivery.phone}
+                        </p>
+                        <p data-ui="store/RequestReturn/p-6" className="mt-0.5 text-muted-foreground">
+                          {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                        </p>
+                      </>
+                    ) : (
+                      <p data-ui="store/RequestReturn/p-7" className="mt-1.5 text-muted-foreground">
+                        Pickup will be scheduled at the original delivery address on this order. Currently at a different location? Tap <strong data-ui="store/RequestReturn/strong-2" className="font-medium text-foreground">Change / add address</strong> above.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div data-ui="store/RequestReturn/div-8" className="space-y-2.5">
+                    {/* Option 1: Original order delivery address */}
+                    <button
+                      data-ui="store/RequestReturn/button-3"
+                      type="button"
+                      onClick={() => {
+                        setPickupMode("order")
+                        setShowPickupPicker(false)
+                      }}
+                      className={cn(
+                        "flex w-full items-start gap-2.5 rounded-xl border bg-card p-3 text-left text-xs transition-colors",
+                        pickupMode === "order" ? "border-primary ring-1 ring-primary/30" : "hover:bg-muted/60"
+                      )}
+                    >
+                      <span data-ui="store/RequestReturn/span-11"
+                        className={cn(
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                          pickupMode === "order" ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                        )}
+                        aria-hidden
+                      >
+                        {pickupMode === "order" && <CheckIcon className="size-2.5" />}
+                      </span>
+                      <span data-ui="store/RequestReturn/span-12" className="min-w-0 flex-1 space-y-0.5">
+                        <span data-ui="store/RequestReturn/span-13" className="block font-semibold text-foreground">Order delivery address</span>
+                        {orderDelivery ? (
+                          <span data-ui="store/RequestReturn/span-14" className="block text-muted-foreground">
+                            {orderDelivery.name} (+91 {orderDelivery.phone}) — {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                          </span>
+                        ) : (
+                          <span data-ui="store/RequestReturn/span-15" className="block text-muted-foreground">Same address where this order was delivered</span>
+                        )}
+                      </span>
+                    </button>
+
+                    {/* Option 2: Saved addresses from customer's address book */}
+                    {savedAddresses
+                      .filter(
+                        (a) =>
+                          !orderDelivery ||
+                          a.pincode.trim() !== orderDelivery.pincode.trim() ||
+                          a.address.trim().toLowerCase() !== orderDelivery.address.trim().toLowerCase()
+                      )
+                      .map((addr) => {
+                        const selected = pickupMode === "saved" && selectedAddressId === addr.id
+                        return (
+                          <button
+                            data-ui="store/RequestReturn/button-4"
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setPickupMode("saved")
+                              setSelectedAddressId(addr.id)
+                            }}
+                            className={cn(
+                              "flex w-full items-start gap-2.5 rounded-xl border bg-card p-3 text-left text-xs transition-colors",
+                              selected ? "border-primary ring-1 ring-primary/30" : "hover:bg-muted/60"
+                            )}
+                          >
+                            <span data-ui="store/RequestReturn/span-16"
+                              className={cn(
+                                "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                                selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                              )}
+                              aria-hidden
+                            >
+                              {selected && <CheckIcon className="size-2.5" />}
+                            </span>
+                            <span data-ui="store/RequestReturn/span-17" className="min-w-0 flex-1 space-y-0.5">
+                              <span data-ui="store/RequestReturn/span-flex" className="flex flex-wrap items-center gap-1.5 font-semibold text-foreground">
+                                <span data-ui="store/RequestReturn/span-18" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                  {addr.label}
+                                </span>
+                                {addr.fullName} · +91 {addr.phone}
+                              </span>
+                              <span data-ui="store/RequestReturn/span-19" className="block text-muted-foreground">
+                                {addr.address}, {addr.city} - {addr.pincode}
+                              </span>
+                            </span>
+                          </button>
+                        )
+                      })}
+
+                    {/* Option 3: Enter a new pickup address */}
+                    <button
+                      data-ui="store/RequestReturn/button-use-a-different-new-pi"
+                      type="button"
+                      onClick={() => setPickupMode("new")}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-xl border bg-card p-3 text-left text-xs font-semibold transition-colors",
+                        pickupMode === "new" ? "border-primary text-primary ring-1 ring-primary/30" : "text-foreground hover:bg-muted/60"
+                      )}
+                    >
+                      <PlusIcon className="size-4 shrink-0 text-primary" aria-hidden />
+                      Use a different / new pickup address
+                    </button>
+
+                    {pickupMode === "new" && (
+                      <div data-ui="store/RequestReturn/div-9" className="space-y-2.5 rounded-xl border bg-card p-3.5">
+                        <div data-ui="store/RequestReturn/div-grid-2" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+                          <TextField
+                            label="Contact name *"
+                            kind="personName"
+                            fieldSize="md"
+                            value={pickupName}
+                            onChange={(e) => setPickupName(e.target.value)}
+                            error={submitted ? newPickupErrors.name : undefined}
+                          />
+                          <TextField
+                            label="Mobile number *"
+                            kind="phone"
+                            leading="+91"
+                            fieldSize="md"
+                            value={pickupPhone}
+                            onChange={(e) => setPickupPhone(e.target.value)}
+                            error={submitted ? newPickupErrors.phone : undefined}
+                          />
+                        </div>
+                        <div data-ui="store/RequestReturn/div-grid-3" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+                          <TextField
+                            label="Pincode *"
+                            kind="pincode"
+                            fieldSize="md"
+                            value={pickupPincode}
+                            onChange={(e) => setPickupPincode(e.target.value)}
+                            hint={pickupArea.loading ? "Looking up pincode…" : undefined}
+                            error={submitted || pickupPincode.length === 6 ? newPickupErrors.pincode : undefined}
+                          />
+                          <TextField
+                            label="City / District *"
+                            kind="city"
+                            fieldSize="md"
+                            value={pickupCity}
+                            onChange={(e) => setPickupCity(e.target.value)}
+                            error={submitted ? newPickupErrors.city : undefined}
+                          />
+                        </div>
+                        <SelectField
+                          label="State *"
+                          placeholder="Select state"
+                          fieldSize="md"
+                          value={pickupState}
+                          onValueChange={(val) => setPickupState(val as IndianState)}
+                          options={STATE_OPTIONS}
+                          error={submitted ? newPickupErrors.state : undefined}
+                        />
+                        <TextAreaField
+                          label="Full pickup address *"
+                          rows={2}
+                          maxLength={120}
+                          placeholder="House / flat no., building, street, area & landmark"
+                          value={pickupAddressLine}
+                          onChange={(e) => setPickupAddressLine(e.target.value)}
+                          error={submitted ? newPickupErrors.address : undefined}
+                        />
+                        {!isGuest && savedAddresses.length < 10 && (
+                          <div data-ui="store/RequestReturn/div-10" className="space-y-2 pt-1">
+                            <label data-ui="store/RequestReturn/label-save-this-address-to-m" className="flex items-center gap-2 text-xs font-medium text-foreground">
+                              <input data-ui="store/RequestReturn/input-checkbox"
+                                type="checkbox"
+                                checked={saveNewPickupAddress}
+                                onChange={(e) => setSaveNewPickupAddress(e.target.checked)}
+                                className="size-4 rounded border-border accent-primary"
+                              />
+                              Save this address to my address book
+                            </label>
+                            {saveNewPickupAddress && (
+                              <div data-ui="store/RequestReturn/div-flex-2" className="flex flex-wrap items-center gap-1.5 pl-6">
+                                {ADDRESS_LABELS.map((lbl) => (
+                                  <button data-ui="store/RequestReturn/button-5"
+                                    key={lbl}
+                                    type="button"
+                                    onClick={() => setNewAddressLabel(lbl)}
+                                    className={cn(
+                                      "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                                      newAddressLabel === lbl
+                                        ? "border-primary bg-primary text-primary-foreground"
+                                        : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    {lbl}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {isGuest && (
                 <TextField
                   label="Your full mobile number"
@@ -679,6 +1021,7 @@ export function ReturnRequestsPanel({
           const isExchange = r.resolutionType === "exchange"
           const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
           const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
+          const { details: cleanDetails, pickupAddress } = splitReturnDetails(r.details)
           return (
             <li data-ui="store/ReturnRequestsPanel/li" key={r.id} className="space-y-2 rounded-xl border p-3.5">
               <div data-ui="store/ReturnRequestsPanel/div-flex" className="flex flex-wrap items-center justify-between gap-2">
@@ -721,11 +1064,20 @@ export function ReturnRequestsPanel({
               )}
               <p data-ui="store/ReturnRequestsPanel/p-2" className="text-sm text-muted-foreground">
                 Reason: {r.reason}
-                {r.details ? ` — ${r.details}` : ""}
+                {cleanDetails ? ` — ${cleanDetails}` : ""}
               </p>
+              {pickupAddress && (
+                <p data-ui="store/ReturnRequestsPanel/p-flex" className="flex items-start gap-1.5 rounded-lg border bg-muted/35 px-3 py-2 text-xs text-foreground">
+                  <MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+                  <span data-ui="store/ReturnRequestsPanel/span-5">
+                    <span data-ui="store/ReturnRequestsPanel/span-6" className="font-semibold">Pickup address: </span>
+                    {pickupAddress}
+                  </span>
+                </p>
+              )}
               {r.adminNote && (
                 <p data-ui="store/ReturnRequestsPanel/p-3" className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <span data-ui="store/ReturnRequestsPanel/span-5" className="font-semibold">{r.status === "rejected" ? "Why: " : "From the shop: "}</span>
+                  <span data-ui="store/ReturnRequestsPanel/span-7" className="font-semibold">{r.status === "rejected" ? "Why: " : "From the shop: "}</span>
                   {r.adminNote}
                 </p>
               )}

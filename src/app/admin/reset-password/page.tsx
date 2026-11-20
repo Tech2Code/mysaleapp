@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { ResetPasswordForm } from "@/components/admin/password-reset-forms"
 import { LogoMark } from "@/components/shared/logo"
-import { getCurrentUser, hasRecentPasswordRecovery, isAdminUser } from "@/features/auth/guards"
+import { getCurrentUser, hasValidPasswordResetCookie, isAdminUser } from "@/features/auth/guards"
 
 export const metadata: Metadata = { title: "Set a new password" }
 
@@ -17,8 +17,7 @@ async function Gate() {
   ])
   if (!user) redirect("/admin/forgot-password?error=expired")
   if (!admin) redirect("/admin/login?error=not-admin")
-  const hasResetCookie = cookieStore.get("kk_pw_reset")?.value === "1"
-  if (!hasResetCookie && !hasRecentPasswordRecovery(user)) {
+  if (!hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
     redirect("/admin/forgot-password?error=expired")
   }
   return <ResetPasswordForm />

@@ -10,5 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
-  return <div data-ui="layout:/admin" className="min-h-dvh bg-muted/40">{children}</div>
+  return <div data-ui="layout:/admin" data-slot="admin-layout" className="min-h-dvh bg-muted/40">{children}</div>
 }

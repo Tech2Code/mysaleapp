@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
+import { hasValidPasswordResetCookie, signAdminPinCookie } from "@/features/auth/guards"
 import { syncWishlistForUser } from "@/features/wishlist/actions"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
@@ -207,6 +208,9 @@ export async function signOutCustomer(): Promise<ActionResult> {
   const cookieStore = await cookies()
   cookieStore.delete("kk_cust_pw_reset")
   cookieStore.delete("kk_acct_reactivated")
+  revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
+  revalidatePath("/", "layout")
   return { ok: true }
 }
 
@@ -238,6 +242,7 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
     cookies(),
     getServerSupabase(),
   ])
+  const nextPath = safeNextPath(parsed.data.next ?? null, "/")
   cookieStore.set("kk_recovery_intent", "customer", {
     httpOnly: true,
     sameSite: "lax",
@@ -245,8 +250,11 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
     maxAge: 3600,
     path: "/",
   })
+  const callbackUrl = origin
+    ? `${origin}/auth/callback?flow=recovery${nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""}`
+    : undefined
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: origin ? `${origin}/auth/callback` : undefined,
+    redirectTo: callbackUrl,
   })
   if (error) {
     const msg = error.message.toLowerCase()
@@ -275,10 +283,7 @@ export async function resetCustomerPassword(
   } = await supabase.auth.getUser()
   if (!user) return fail("This reset link has expired. Please request a new one.")
 
-  const hasResetCookie = cookieStore.get("kk_cust_pw_reset")?.value === "1"
-  const recoverySentMs = user.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
-  const hasRecentRecovery = !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < 60 * 60 * 1000
-  if (!hasResetCookie && !hasRecentRecovery) {
+  if (!hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)) {
     return fail("This reset link has expired. Please request a new one.")
   }
 
@@ -361,7 +366,7 @@ export async function signInAdmin(input: unknown): Promise<ActionResult<{ user: 
 
   const cookieStore = await cookies()
   cookieStore.delete("kk_pw_reset")
-  cookieStore.set("kk_admin_pin_at", String(Date.now()), {
+  cookieStore.set("kk_admin_pin_at", signAdminPinCookie(user.id, Date.now()), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

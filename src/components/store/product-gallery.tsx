@@ -60,6 +60,8 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
 
       <div
         data-ui="store/ProductGallery/div-relative"
+        role={list.length > 1 ? "region" : undefined}
+        aria-label={list.length > 1 ? `${name} photo ${safeIndex + 1} of ${list.length}` : undefined}
         tabIndex={list.length > 1 ? 0 : undefined}
         onKeyDown={(e) => {
           if (list.length <= 1) return

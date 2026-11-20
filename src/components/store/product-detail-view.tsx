@@ -57,7 +57,7 @@ export function ProductDetailView({
       icon: RotateCcwIcon,
       text:
         returnDays > 0
-          ? `${returnDays}-${returnDays === 1 ? "day" : "day"} return & exchange window after delivery`
+          ? `${returnDays}-day return & exchange window after delivery`
           : "Non-returnable item (damaged-in-transit help on WhatsApp)",
     },
     { icon: ShieldCheckIcon, text: "Pay securely by UPI · No cash on delivery" },

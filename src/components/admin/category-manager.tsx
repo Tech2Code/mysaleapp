@@ -43,6 +43,7 @@ function CategoryDialog({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+  const [slugTouched, setSlugTouched] = useState(Boolean(category))
   const form = useForm<CategoryInput, unknown, CategoryValues>({
     resolver: zodResolver(categorySchema),
     values: {
@@ -96,11 +97,20 @@ function CategoryDialog({
               error={errors.name?.message}
               {...form.register("name", {
                 onChange: (e) => {
-                  if (!category) form.setValue("slug", slugify(e.target.value))
+                  if (!category && !slugTouched) form.setValue("slug", slugify(e.target.value))
                 },
               })}
             />
-            <TextField label="URL slug" kind="slug" fieldSize="md" className="font-mono text-sm" error={errors.slug?.message} {...form.register("slug")} />
+            <TextField
+              label="URL slug"
+              kind="slug"
+              fieldSize="md"
+              className="font-mono text-sm"
+              error={errors.slug?.message}
+              {...form.register("slug", {
+                onChange: () => setSlugTouched(true),
+              })}
+            />
             <TextAreaField
               label="Description" maxLength={LIMITS.categoryDescription.max}
               rows={3}

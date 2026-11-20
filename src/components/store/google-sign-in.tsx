@@ -415,7 +415,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     }
   }
 
-  const perks = mode === "signin" ? SIGN_IN_PERKS : SIGN_UP_PERKS
+  const perks = mode === "signup" ? SIGN_UP_PERKS : SIGN_IN_PERKS
 
   return (
     <div
@@ -446,17 +446,17 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           <div data-ui="store/GoogleSignIn/div-flex" className="flex items-center gap-3">
             <LogoMark className="size-11 text-xl" />
             <span data-ui="store/GoogleSignIn/span" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              {mode === "signin" ? "Welcome back" : "New customer"}
+              {mode === "signup" ? "New customer" : mode === "forgot" || mode === "reset-password" ? "Account recovery" : "Welcome back"}
             </span>
           </div>
 
           <h1 data-ui="store/GoogleSignIn/h1" className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {mode === "signin" ? `Welcome to ${shopName}` : `Join ${shopName}`}
+            {mode === "signup" ? `Join ${shopName}` : `Welcome to ${shopName}`}
           </h1>
           <p data-ui="store/GoogleSignIn/p" className="mt-2 text-sm/relaxed text-muted-foreground">
-            {mode === "signin"
-              ? "Sign in with your email and password or one-tap Google login to manage your orders and saved items."
-              : "Create your account with your basic details once so every future order is faster and easier."}
+            {mode === "signup"
+              ? "Create your account with your basic details once so every future order is faster and easier."
+              : "Sign in with your email and password or one-tap Google login to manage your orders and saved items."}
           </p>
 
           <ul data-ui="store/GoogleSignIn/ul" className="mt-7 space-y-4">
@@ -486,39 +486,39 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       {/* Right Column: Toggle + Form + Google OAuth */}
       <div data-ui="store/GoogleSignIn/div-flex-2" className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
         <div data-ui="store/GoogleSignIn/div-3" className="space-y-4">
-          <div
-            data-ui="store/GoogleSignIn/div-account-access"
-            role="tablist"
-            aria-label="Account access"
-            className="grid grid-cols-2 rounded-full border bg-muted/60 p-1 text-sm font-medium"
-          >
-            <button
-              data-ui="store/GoogleSignIn/button-sign-in"
-              type="button"
-              role="tab"
-              aria-selected={mode === "signin"}
-              onClick={() => switchMode("signin")}
-              className={cn(
-                "h-9 rounded-full transition",
-                mode === "signin" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-              )}
+          {mode !== "reset-password" && (
+            <div
+              data-ui="store/GoogleSignIn/div-account-access"
+              role="group"
+              aria-label="Account access"
+              className="grid grid-cols-2 rounded-full border bg-muted/60 p-1 text-sm font-medium"
             >
-              Sign in
-            </button>
-            <button
-              data-ui="store/GoogleSignIn/button-create-account"
-              type="button"
-              role="tab"
-              aria-selected={mode === "signup"}
-              onClick={() => switchMode("signup")}
-              className={cn(
-                "h-9 rounded-full transition",
-                mode === "signup" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Create account
-            </button>
-          </div>
+              <button
+                data-ui="store/GoogleSignIn/button-sign-in"
+                type="button"
+                aria-pressed={mode === "signin"}
+                onClick={() => switchMode("signin")}
+                className={cn(
+                  "h-9 rounded-full transition",
+                  mode === "signin" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Sign in
+              </button>
+              <button
+                data-ui="store/GoogleSignIn/button-create-account"
+                type="button"
+                aria-pressed={mode === "signup"}
+                onClick={() => switchMode("signup")}
+                className={cn(
+                  "h-9 rounded-full transition",
+                  mode === "signup" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Create account
+              </button>
+            </div>
+          )}
 
           {problem && (
             <p data-ui="store/GoogleSignIn/p-5" role="alert" className="rounded-xl bg-muted p-3 text-sm">
@@ -725,24 +725,28 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
             </form>
           )}
 
-          <div data-ui="store/GoogleSignIn/div-flex-4" className="relative flex items-center py-1">
-            <div data-ui="store/GoogleSignIn/div-5" className="grow border-t border-border/70" />
-            <span data-ui="store/GoogleSignIn/span-5" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
-            <div data-ui="store/GoogleSignIn/div-6" className="grow border-t border-border/70" />
-          </div>
+          {mode !== "reset-password" && (
+            <>
+              <div data-ui="store/GoogleSignIn/div-flex-4" className="relative flex items-center py-1">
+                <div data-ui="store/GoogleSignIn/div-5" className="grow border-t border-border/70" />
+                <span data-ui="store/GoogleSignIn/span-5" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
+                <div data-ui="store/GoogleSignIn/div-6" className="grow border-t border-border/70" />
+              </div>
 
-          <Button
-            data-ui="store/GoogleSignIn/Button"
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={signInWithGoogle}
-            disabled={loadingGoogle || pending}
-            className="h-11 w-full rounded-full bg-card text-sm shadow-sm"
-          >
-            {loadingGoogle ? <Loader2Icon className="size-5 animate-spin" /> : <GoogleIcon />}
-            {loadingGoogle ? "Opening Google…" : "Continue with Google"}
-          </Button>
+              <Button
+                data-ui="store/GoogleSignIn/Button"
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={signInWithGoogle}
+                disabled={loadingGoogle || pending}
+                className="h-11 w-full rounded-full bg-card text-sm shadow-sm"
+              >
+                {loadingGoogle ? <Loader2Icon className="size-5 animate-spin" /> : <GoogleIcon />}
+                {loadingGoogle ? "Opening Google…" : "Continue with Google"}
+              </Button>
+            </>
+          )}
 
           <p data-ui="store/GoogleSignIn/p-10" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
             Signing in is optional —{" "}

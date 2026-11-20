@@ -2,19 +2,24 @@
 
 import { LayoutGridIcon, ListIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AdminPageHeader } from "@/components/admin/admin-page-header"
 import { ProductFlagSwitch, ProductRowActions } from "@/components/admin/product-row-actions"
+import { SearchField } from "@/components/form"
 import { ProductImage } from "@/components/store/product-image"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Product } from "@/features/products/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
+type StockFilter = "all" | "active" | "hidden" | "featured" | "low-stock" | "sold-out"
+
 /** The admin products page. The page passes real data; loading.tsx passes placeholders inside <Skeletonize>. */
 export function ProductsView({ products }: { products: Product[] }) {
   const [viewMode, setViewMode] = useState<"tiles" | "table">("table")
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<StockFilter>("all")
 
   useEffect(() => {
     try {
@@ -49,6 +54,35 @@ export function ProductsView({ products }: { products: Product[] }) {
       localStorage.setItem(key, mode)
     } catch {}
   }
+
+  const filterChips = useMemo(
+    () =>
+      [
+        { id: "all", label: "All", count: products.length },
+        { id: "active", label: "Active", count: products.filter((p) => p.isActive).length },
+        { id: "hidden", label: "Hidden", count: products.filter((p) => !p.isActive).length },
+        { id: "featured", label: "Featured", count: products.filter((p) => p.isFeatured).length },
+        { id: "low-stock", label: "Low stock (≤5)", count: products.filter((p) => p.stock > 0 && p.stock <= 5).length },
+        { id: "sold-out", label: "Sold out", count: products.filter((p) => p.stock === 0).length },
+      ] as const,
+    [products]
+  )
+
+  const filteredProducts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return products.filter((p) => {
+      if (filter === "active" && !p.isActive) return false
+      if (filter === "hidden" && p.isActive) return false
+      if (filter === "featured" && !p.isFeatured) return false
+      if (filter === "low-stock" && !(p.stock > 0 && p.stock <= 5)) return false
+      if (filter === "sold-out" && p.stock !== 0) return false
+      if (q) {
+        const hay = `${p.name} ${p.slug} ${p.category?.name ?? ""}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [products, filter, search])
 
   return (
     <>
@@ -92,27 +126,88 @@ export function ProductsView({ products }: { products: Product[] }) {
         }
       />
 
+      {products.length > 0 && (
+        <div data-ui="admin/ProductsView/div-flex-2" className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div data-ui="admin/ProductsView/div-filter-products" className="scroll-row flex items-center gap-1.5 overflow-x-auto" role="group" aria-label="Filter products">
+            {filterChips.map((chip) => {
+              const active = filter === chip.id
+              return (
+                <button data-ui="admin/ProductsView/button"
+                  key={chip.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(chip.id)}
+                  className={cn(
+                    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs leading-none font-medium transition-colors",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground shadow-2xs"
+                      : "bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  )}
+                >
+                  <span data-ui="admin/ProductsView/span-3">{chip.label}</span>
+                  <span data-ui="admin/ProductsView/span-4"
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold",
+                      active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {chip.count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div data-ui="admin/ProductsView/div" className="w-full sm:max-w-xs">
+            <SearchField
+              label="Search products"
+              fieldSize="md"
+              placeholder="Search products or category…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={search ? () => setSearch("") : undefined}
+            />
+          </div>
+        </div>
+      )}
+
       {products.length === 0 ? (
-        <div data-ui="admin/ProductsView/div" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
+        <div data-ui="admin/ProductsView/div-2" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
           <p data-ui="admin/ProductsView/p" className="font-medium">No products yet</p>
           <p data-ui="admin/ProductsView/p-2" className="mt-1 text-sm text-muted-foreground">Add your first product to start selling.</p>
         </div>
+      ) : filteredProducts.length === 0 ? (
+        <div data-ui="admin/ProductsView/div-3" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
+          <p data-ui="admin/ProductsView/p-3" className="font-medium">No products match your search or filter</p>
+          <p data-ui="admin/ProductsView/p-4" className="mt-1 text-sm text-muted-foreground">Try clearing the search query or switching to All products.</p>
+          <Button data-ui="admin/ProductsView/Button-show-all-products"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFilter("all")
+              setSearch("")
+            }}
+            className="mt-4 rounded-full"
+          >
+            Show all products
+          </Button>
+        </div>
       ) : viewMode === "tiles" ? (
         <div data-ui="admin/ProductsView/div-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-          {products.map((p) => (
+          {filteredProducts.map((p) => (
             <div
               key={p.id}
-              data-ui="admin/ProductsView/div-flex-2"
+              data-ui="admin/ProductsView/div-flex-3"
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md"
             >
-              <div data-ui="admin/ProductsView/div-2" className="space-y-3">
+              <div data-ui="admin/ProductsView/div-4" className="space-y-3">
                 <div data-ui="admin/ProductsView/div-relative" className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
                   <ProductImage src={p.images[0]} alt={p.name} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
-                  <div data-ui="admin/ProductsView/div-flex-3" className="absolute top-2 right-2 flex items-center gap-1">
-                    <span data-ui="admin/ProductsView/span-3"
+                  <div data-ui="admin/ProductsView/div-flex-4" className="absolute top-2 right-2 flex items-center gap-1">
+                    <span data-ui="admin/ProductsView/span-5"
                       className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-xs backdrop-blur-xs",
-                        p.stock === 0 ? "bg-destructive text-destructive-foreground" : p.stock <= 5 ? "bg-amber-500 text-white" : "bg-background/90 text-foreground"
+                        p.stock === 0 ? "bg-destructive-solid text-white" : p.stock <= 5 ? "bg-amber-500 text-white" : "bg-background/90 text-foreground"
                       )}
                     >
                       {p.stock === 0 ? "Sold out" : `${p.stock} in stock`}
@@ -120,10 +215,10 @@ export function ProductsView({ products }: { products: Product[] }) {
                   </div>
                 </div>
 
-                <div data-ui="admin/ProductsView/div-3" className="space-y-1">
-                  <div data-ui="admin/ProductsView/div-flex-4" className="flex items-center justify-between gap-2">
-                    <span data-ui="admin/ProductsView/span-4" className="truncate text-xs font-medium text-muted-foreground">{p.category?.name ?? "Uncategorized"}</span>
-                    <span data-ui="admin/ProductsView/span-5" className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
+                <div data-ui="admin/ProductsView/div-5" className="space-y-1">
+                  <div data-ui="admin/ProductsView/div-flex-5" className="flex items-center justify-between gap-2">
+                    <span data-ui="admin/ProductsView/span-6" className="truncate text-xs font-medium text-muted-foreground">{p.category?.name ?? "Uncategorized"}</span>
+                    <span data-ui="admin/ProductsView/span-7" className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
                   </div>
                   <Link data-ui="admin/ProductsView/Link"
                     href={`/admin/products/${p.id}`}
@@ -134,15 +229,15 @@ export function ProductsView({ products }: { products: Product[] }) {
                 </div>
               </div>
 
-              <div data-ui="admin/ProductsView/div-flex-5" className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
-                <div data-ui="admin/ProductsView/div-flex-6" className="flex items-center gap-3">
-                  <div data-ui="admin/ProductsView/div-flex-7" className="flex items-center gap-1.5" title="Store visibility">
+              <div data-ui="admin/ProductsView/div-flex-6" className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
+                <div data-ui="admin/ProductsView/div-flex-7" className="flex items-center gap-3">
+                  <div data-ui="admin/ProductsView/div-flex-8" className="flex items-center gap-1.5" title="Store visibility">
                     <ProductFlagSwitch productId={p.id} flag="isActive" value={p.isActive} label={`Show ${p.name} in store`} />
-                    <span data-ui="admin/ProductsView/span-6" className="text-[11px] font-medium text-muted-foreground">Active</span>
+                    <span data-ui="admin/ProductsView/span-8" className="text-[11px] font-medium text-muted-foreground">Active</span>
                   </div>
-                  <div data-ui="admin/ProductsView/div-flex-8" className="flex items-center gap-1.5" title="Home page feature">
+                  <div data-ui="admin/ProductsView/div-flex-9" className="flex items-center gap-1.5" title="Home page feature">
                     <ProductFlagSwitch productId={p.id} flag="isFeatured" value={p.isFeatured} label={`Feature ${p.name} on home page`} />
-                    <span data-ui="admin/ProductsView/span-7" className="text-[11px] font-medium text-muted-foreground">Featured</span>
+                    <span data-ui="admin/ProductsView/span-9" className="text-[11px] font-medium text-muted-foreground">Featured</span>
                   </div>
                 </div>
                 <ProductRowActions productId={p.id} name={p.name} />
@@ -151,7 +246,7 @@ export function ProductsView({ products }: { products: Product[] }) {
           ))}
         </div>
       ) : (
-        <div data-ui="admin/ProductsView/div-4" className="overflow-hidden rounded-2xl border bg-card">
+        <div data-ui="admin/ProductsView/div-6" className="overflow-hidden rounded-2xl border bg-card">
           <Table data-ui="admin/ProductsView/Table">
             <TableHeader data-ui="admin/ProductsView/TableHeader">
               <TableRow data-ui="admin/ProductsView/TableRow">
@@ -162,19 +257,19 @@ export function ProductsView({ products }: { products: Product[] }) {
                 <TableHead data-ui="admin/ProductsView/TableHead-active" className="text-center">Active</TableHead>
                 <TableHead data-ui="admin/ProductsView/TableHead-featured" className="hidden text-center sm:table-cell">Featured</TableHead>
                 <TableHead data-ui="admin/ProductsView/TableHead" className="pr-5 text-right">
-                  <span data-ui="admin/ProductsView/span-8" className="sr-only">Actions</span>
+                  <span data-ui="admin/ProductsView/span-10" className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody data-ui="admin/ProductsView/TableBody">
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <TableRow data-ui="admin/ProductsView/TableRow-2" key={p.id}>
                   <TableCell data-ui="admin/ProductsView/TableCell" className="pl-5">
                     <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3">
                       <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>
-                      <span data-ui="admin/ProductsView/span-9" className="max-w-56 truncate font-medium hover:text-primary">{p.name}</span>
+                      <span data-ui="admin/ProductsView/span-11" className="max-w-56 truncate font-medium hover:text-primary">{p.name}</span>
                     </Link>
                   </TableCell>
                   <TableCell data-ui="admin/ProductsView/TableCell-hidden" className="hidden text-sm text-muted-foreground md:table-cell">{p.category?.name ?? "—"}</TableCell>

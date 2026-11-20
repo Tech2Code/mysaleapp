@@ -91,7 +91,7 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
             </Suspense>
           }
         />
-        <main data-ui="layout:/admin/main" className="p-4 sm:p-6 lg:p-8">
+        <main data-ui="layout:/admin/main" data-slot="admin-main" className="p-4 sm:p-6 lg:p-8">
           <Suspense fallback={null}>
             <AdminGate />
           </Suspense>

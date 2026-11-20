@@ -102,7 +102,7 @@ function DrawerItem({
       <Link data-ui="store/DrawerItem/Link-relative"
         href={`/products/${item.slug}`}
         onClick={onNavigate}
-        className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted @container"
+        className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-muted @container sm:size-24"
       >
         <ProductImage src={item.image} alt={item.name} sizes="96px" className="transition-transform duration-500 hover:scale-105" />
       </Link>
@@ -123,7 +123,7 @@ function DrawerItem({
         </div>
         <p data-ui="store/DrawerItem/p" className="mt-0.5 text-xs text-muted-foreground">{formatPrice(item.price)} each</p>
 
-        <div data-ui="store/DrawerItem/div-flex-3" className="mt-auto flex items-center justify-between gap-2 pt-2">
+        <div data-ui="store/DrawerItem/div-flex-3" className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
           <QuantityStepper
             label={item.name}
             value={item.quantity}

@@ -16,9 +16,9 @@ import type { ReactNode } from "react"
  */
 export function Skeletonize({ children, label = "Loading" }: { children: ReactNode; label?: string }) {
   return (
-    <div data-ui="shared/Skeletonize" data-skeleton="" aria-busy="true" style={{ display: "contents" }}>
+    <div data-ui="shared/Skeletonize" data-skeleton="" aria-busy="true" className="contents">
       <span data-ui="shared/Skeletonize/span" role="status" className="sr-only">{label}…</span>
-      <div data-ui="shared/Skeletonize/div" aria-hidden inert style={{ display: "contents" }}>
+      <div data-ui="shared/Skeletonize/div" aria-hidden inert className="contents">
         {children}
       </div>
     </div>

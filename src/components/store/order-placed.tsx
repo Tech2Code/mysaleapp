@@ -47,21 +47,25 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   const user = useAuth((s) => s.user)
   const signedIn = Boolean(user)
   const urlCode = (useSearchParams().get("code") ?? "").toUpperCase()
-  const code = preview ? placeholderPlacedOrder().orderCode : urlCode
-  const myOrderHref = code ? `/account/orders/${encodeURIComponent(code)}` : "/account/orders"
-  const trackHref = `/track?code=${encodeURIComponent(code)}`
   // sessionStorage is read as an external store: null on the server, real value on the client.
   const raw = useSyncExternalStore(noopSubscribe, () => readSession(LAST_ORDER_KEY), () => null)
 
-  const order = useMemo<PlacedOrder | null>(() => {
-    if (preview) return placeholderPlacedOrder()
+  const parsedSession = useMemo<PlacedOrder | null>(() => {
     try {
-      const parsed = raw ? (JSON.parse(raw) as PlacedOrder) : null
-      return parsed?.orderCode === code ? parsed : null
+      return raw ? (JSON.parse(raw) as PlacedOrder) : null
     } catch {
       return null
     }
-  }, [raw, code, preview])
+  }, [raw])
+
+  const code = preview ? placeholderPlacedOrder().orderCode : (urlCode || parsedSession?.orderCode || "")
+  const myOrderHref = code ? `/account/orders/${encodeURIComponent(code)}` : "/account/orders"
+  const trackHref = code ? `/track?code=${encodeURIComponent(code)}` : "/track"
+
+  const order = useMemo<PlacedOrder | null>(() => {
+    if (preview) return placeholderPlacedOrder()
+    return parsedSession?.orderCode === code ? parsedSession : null
+  }, [parsedSession, code, preview])
 
   const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "submitted" }) : null)
   const [lookupFailed, setLookupFailed] = useState(false)
@@ -115,7 +119,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   const whatsappHref =
     order?.whatsappUrl && order.whatsappUrl.startsWith("https://wa.me/")
       ? order.whatsappUrl
-      : shopWhatsappLink(shop, `Hi! I placed order ${code}.`)
+      : shopWhatsappLink(shop, code ? `Hi! I placed order ${code}.` : "Hi! I placed an order.")
 
   return (
     <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">

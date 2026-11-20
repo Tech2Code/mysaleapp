@@ -6,7 +6,13 @@ import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { z } from "zod"
-import { assertAdmin, getCurrentUser, isAdminUser } from "@/features/auth/guards"
+import {
+  assertAdmin,
+  getCurrentUser,
+  hasValidPasswordResetCookie,
+  isAdminUser,
+  signAdminPinCookie,
+} from "@/features/auth/guards"
 import { siteConfig } from "@/config/site"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
@@ -130,7 +136,7 @@ export async function changeAdminPassword(input: unknown): Promise<ActionResult>
   const { error } = await supabase.auth.updateUser({ password: parsed.data.next })
   if (error) return fail("Could not change the password. Please try again.")
   await supabase.rpc("clear_admin_pin_lock")
-  await stampAdminPinUnlock(String(Date.now()))
+  await stampAdminPinUnlock(auth.user.id, Date.now())
   return { ok: true }
 }
 
@@ -166,7 +172,7 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   })
 
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: origin ? `${origin}/auth/callback` : undefined,
+    redirectTo: origin ? `${origin}/auth/callback?flow=recovery&next=${encodeURIComponent("/admin/reset-password")}` : undefined,
   })
   if (error) {
     const msg = error.message.toLowerCase()
@@ -188,10 +194,7 @@ export async function resetAdminPassword(input: unknown): Promise<ActionResult> 
   ])
   if (!user) return fail("This reset link has expired. Please request a new one.")
   if (!admin) return fail("Not authorised")
-  const hasResetCookie = cookieStore.get("kk_pw_reset")?.value === "1"
-  const recoverySentMs = user.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
-  const hasRecentRecovery = !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < 60 * 60 * 1000
-  if (!hasResetCookie && !hasRecentRecovery) {
+  if (!hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
     return fail("This reset link has expired. Please request a new one.")
   }
   const parsed = resetSchema.safeParse(input)
@@ -203,22 +206,16 @@ export async function resetAdminPassword(input: unknown): Promise<ActionResult> 
   await supabase.rpc("clear_admin_pin_lock")
   cookieStore.delete("kk_pw_reset")
   cookieStore.delete("kk_recovery_intent")
-  cookieStore.set("kk_admin_pin_at", String(Date.now()), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 7 * 24 * 60 * 60,
-    path: "/",
-  })
+  await stampAdminPinUnlock(user.id, Date.now())
   redirect("/admin")
 }
 
 const PIN_COOKIE_NAME = "kk_admin_pin_at"
 const PIN_COOKIE_MAX_AGE = 7 * 24 * 60 * 60
 
-async function stampAdminPinUnlock(value = String(Date.now())) {
+async function stampAdminPinUnlock(userId: string, value: "locked" | number = Date.now()) {
   const cookieStore = await cookies()
-  cookieStore.set(PIN_COOKIE_NAME, value, {
+  cookieStore.set(PIN_COOKIE_NAME, signAdminPinCookie(userId, value), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -244,7 +241,7 @@ export async function setAdminPin(input: unknown): Promise<ActionResult<{ unlock
   if (error) return fail("Could not save your PIN. Please try again.")
 
   const now = Date.now()
-  await stampAdminPinUnlock(String(now))
+  await stampAdminPinUnlock(auth.user.id, now)
   revalidatePath("/admin", "layout")
   return { ok: true, data: { unlockedAt: now } }
 }
@@ -286,7 +283,7 @@ export async function changeAdminPin(input: unknown): Promise<ActionResult<{ unl
   if (error) return fail("Could not update your PIN. Please try again.")
 
   const now = Date.now()
-  await stampAdminPinUnlock(String(now))
+  await stampAdminPinUnlock(auth.user.id, now)
   revalidatePath("/admin", "layout")
   return { ok: true, data: { unlockedAt: now } }
 }
@@ -342,7 +339,7 @@ export async function disableAdminPin(input?: unknown): Promise<ActionResult<{ u
   if (error) return fail("Could not turn off PIN lock. Please try again.")
 
   const now = Date.now()
-  await stampAdminPinUnlock(String(now))
+  await stampAdminPinUnlock(auth.user.id, now)
   revalidatePath("/admin", "layout")
   return { ok: true, data: { unlockedAt: now } }
 }
@@ -367,7 +364,7 @@ export async function verifyAdminPin(
   }
 
   const now = Date.now()
-  await stampAdminPinUnlock(String(now))
+  await stampAdminPinUnlock(auth.user.id, now)
   revalidatePath("/admin", "layout")
   return { ok: true, data: { unlockedAt: now } }
 }
@@ -406,7 +403,7 @@ export async function unlockAdminWithPassword(
   }
 
   const now = Date.now()
-  await stampAdminPinUnlock(String(now))
+  await stampAdminPinUnlock(auth.user.id, now)
   revalidatePath("/admin", "layout")
   return { ok: true, data: { unlockedAt: now, mode: nextMode } }
 }
@@ -415,7 +412,7 @@ export async function unlockAdminWithPassword(
 export async function lockAdminScreen(): Promise<ActionResult> {
   const auth = await assertAdmin({ allowWhenPinLocked: true })
   if (!auth.ok) return fail(auth.error)
-  await stampAdminPinUnlock("locked")
+  await stampAdminPinUnlock(auth.user.id, "locked")
   revalidatePath("/admin", "layout")
   return { ok: true }
 }

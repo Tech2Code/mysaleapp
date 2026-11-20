@@ -164,6 +164,7 @@ function TrackResult({
             returns={result.returns}
             requests={result.returnRequests}
             charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees, discountAmount: result.discountAmount }}
+            orderDelivery={result.delivery ?? null}
             window={result.returnWindow}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
             onDone={() => void refetch()}
@@ -319,6 +320,9 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   const refetch = async (phoneLast4?: string) => {
     if (!query) return
     const next = { code: query.code, phoneLast4: phoneLast4 ?? query.phoneLast4 }
+    if (phoneLast4) {
+      form.setValue("phoneLast4", phoneLast4)
+    }
     const res = await trackOrder(next)
     if (res.ok) {
       setResult(res.data)

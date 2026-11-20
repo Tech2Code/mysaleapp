@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
-import { getCurrentUser } from "@/features/auth/guards"
+import { getCurrentUser, hasValidPasswordResetCookie } from "@/features/auth/guards"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
@@ -40,7 +40,7 @@ export async function getMyProfile(opts?: { consumeReactivated?: boolean }): Pro
     .eq("id", user.id)
     .maybeSingle<ProfileRow>()
 
-  const inRecovery = cookieStore.get("kk_cust_pw_reset")?.value === "1"
+  const inRecovery = hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)
   let reactivated = false
   if (opts?.consumeReactivated && !inRecovery) {
     if (cookieStore.get("kk_acct_reactivated")?.value === "1") {
@@ -167,7 +167,7 @@ export async function changeCustomerPassword(input: unknown): Promise<ActionResu
   if (!user.email) return fail("This account has no email address to set a password for.")
 
   const [cookieStore, supabase] = await Promise.all([cookies(), getServerSupabase()])
-  const inRecovery = cookieStore.get("kk_cust_pw_reset")?.value === "1"
+  const inRecovery = hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)
   const providers = Array.isArray(user.app_metadata?.providers) ? (user.app_metadata.providers as string[]) : []
   const hasExistingPassword =
     !inRecovery &&
@@ -254,5 +254,8 @@ export async function deactivateMyAccount(input: unknown): Promise<ActionResult>
   await supabase.auth.signOut()
   cookieStore.delete("kk_cust_pw_reset")
   cookieStore.delete("kk_acct_reactivated")
+  revalidatePath("/account", "layout")
+  revalidatePath("/checkout")
+  revalidatePath("/", "layout")
   return { ok: true }
 }

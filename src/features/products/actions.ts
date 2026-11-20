@@ -368,6 +368,20 @@ export async function deleteProductReview(input: { reviewId: string; productId: 
   if (!user) return fail("Please sign in.")
   if (await limited("place-order", `review-del:${user.id}`)) return fail(RATE_LIMIT_MESSAGE)
 
+  const { data: target } = await supabase
+    .from("product_reviews")
+    .select("id, user_id")
+    .eq("id", input.reviewId)
+    .eq("product_id", input.productId)
+    .maybeSingle<{ id: string; user_id: string }>()
+
+  if (!target) return fail("Review not found.")
+
+  if (target.user_id !== user.id) {
+    const auth = await assertAdmin()
+    if (!auth.ok) return fail(auth.error)
+  }
+
   const { data: deleted, error } = await supabase
     .from("product_reviews")
     .delete()

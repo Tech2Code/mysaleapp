@@ -87,7 +87,7 @@ export function AccountMenu() {
               <span data-ui="store/AccountMenu/span" className="font-semibold text-primary">{user.name.charAt(0).toUpperCase()}</span>
             )
           ) : (
-            <UserRoundIcon className="size-4.6" />
+            <UserRoundIcon className="size-4.5" />
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent data-ui="store/AccountMenu/DropdownMenuContent" align="end" className="w-56 border border-border/80 bg-popover/98 shadow-xl">

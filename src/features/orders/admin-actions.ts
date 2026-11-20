@@ -308,6 +308,13 @@ export async function updateOrderPayment(input: unknown): Promise<ActionResult<{
       if (refundError.message.includes("BAD_AMOUNT")) return fail("That refund amount is not valid for this order.", { amount: ["Not a valid amount"] })
       return fail("Could not record the refund")
     }
+    await logAdminAction(supabase, {
+      actorId: auth.user.id,
+      action: "order.payment_refund",
+      targetType: "order",
+      targetId: p.orderId,
+      metadata: { amount: p.amount, reference: p.reference },
+    })
     revalidatePathsForAdmin(p.orderId)
     revalidatePathsForCustomer()
     return { ok: true, data: { confirmed: false } }
@@ -420,7 +427,7 @@ export async function updateAdminNote(input: unknown): Promise<ActionResult> {
     targetType: "order",
     targetId: parsed.data.orderId,
   })
-  revalidatePath(`/admin/orders/${parsed.data.orderId}`)
+  revalidatePathsForAdmin(parsed.data.orderId)
   return { ok: true }
 }
 

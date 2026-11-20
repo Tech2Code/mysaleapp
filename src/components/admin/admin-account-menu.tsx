@@ -89,7 +89,11 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
     setPinState(account.pinStatus)
   }
 
-  const [gateMode, setGateMode] = useState<"none" | "unlock" | "setup-prompt">("none")
+  const [gateMode, setGateMode] = useState<"none" | "unlock" | "setup-prompt">(() =>
+    account.pinStatus?.manualLock && account.pinStatus.mode === "enabled" && account.pinStatus.hasPin
+      ? "unlock"
+      : "none"
+  )
 
   useBlockWhile(pending)
   const showSuccess = useBusySuccess()
@@ -468,12 +472,12 @@ function AdminPinGateDialog({
 
   return (
     <>
-      {gateMode === "unlock" && (
-        <div data-ui="admin/AdminPinGateDialog/div-fixed"
-          aria-hidden
-          className="fixed inset-0 z-40 bg-background/85 backdrop-blur-xl"
-        />
-      )}
+      <div
+        data-ui="admin/AdminPinGateDialog/div-fixed"
+        data-admin-pin-locked=""
+        aria-hidden
+        className="fixed inset-0 z-40 bg-background/95 backdrop-blur-xl"
+      />
       <Dialog open onOpenChange={() => {}}>
         <DialogContent data-ui="admin/AdminPinGateDialog/DialogContent" showCloseButton={false} className="sm:max-w-md">
         {gateMode === "setup-prompt" ? (
@@ -648,6 +652,7 @@ function AdminPinGateDialog({
                     <button data-ui="admin/AdminPinGateDialog/button"
                       key={item.id}
                       type="button"
+                      aria-pressed={recoveryAction === item.id}
                       onClick={() => {
                         setRecoveryAction(item.id)
                         setPasswordError(null)

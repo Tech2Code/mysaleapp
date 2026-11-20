@@ -818,7 +818,17 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
         </div>
       )}
 
-      <Dialog open={createOpen} onOpenChange={(next) => !pending && setCreateOpen(next)}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(next) => {
+          if (pending) return
+          if (!next) {
+            form.reset()
+            form.clearErrors()
+          }
+          setCreateOpen(next)
+        }}
+      >
         <DialogContent data-ui="admin/PromoCodeManager/DialogContent" className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Create promo code</DialogTitle>
@@ -926,7 +936,11 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                 type="button"
                 variant="outline"
                 disabled={pending}
-                onClick={() => setCreateOpen(false)}
+                onClick={() => {
+                  form.reset()
+                  form.clearErrors()
+                  setCreateOpen(false)
+                }}
                 className="rounded-full"
               >
                 Cancel

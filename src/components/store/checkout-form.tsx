@@ -85,6 +85,7 @@ export function CheckoutForm({
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoPending, startPromoTransition] = useTransition()
   const fetchedForUser = useRef<string | null>(null)
+  const prevUserId = useRef<string | null>(user?.id ?? null)
   const wasSignedIn = useRef(signedIn)
 
   const form = useForm<CheckoutInput>({
@@ -185,15 +186,25 @@ export function CheckoutForm({
 
   // Signed-in customers: fallback if server did not preload addresses (or after sign-out/account switch)
   useEffect(() => {
-    if (!authReady || !user) return
-    if ((!clearedOnSignOut && initialAddresses.length > 0) || fetchedForUser.current === user.id) return
+    if (!authReady || !user) {
+      prevUserId.current = null
+      return
+    }
+    const switchedAccount = prevUserId.current !== null && prevUserId.current !== user.id
+    prevUserId.current = user.id
+    if (switchedAccount) {
+      fetchedForUser.current = null
+      form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
+    }
+    if ((!switchedAccount && !clearedOnSignOut && initialAddresses.length > 0) || fetchedForUser.current === user.id) return
     fetchedForUser.current = user.id
     let cancelled = false
     Promise.all([listMyAddresses(), getMyProfile()])
       .then(([list, profile]) => {
         if (cancelled) return
+        if (switchedAccount) setClearedOnSignOut(true)
         setClientAddresses(list)
-        if (form.formState.isDirty) return
+        if (!switchedAccount && form.formState.isDirty) return
         const first = list[0]
         if (first) {
           setSelected(first.id)
@@ -203,11 +214,17 @@ export function CheckoutForm({
             address: first.address,
             ...splitCityState(first.city),
             pincode: first.pincode,
-            note: form.getValues("note"),
+            note: switchedAccount ? "" : form.getValues("note"),
           })
         } else if (profile) {
           const current = form.getValues()
-          form.reset({ ...current, name: current.name || profile.fullName, phone: current.phone || profile.phone })
+          form.reset({
+            ...(switchedAccount
+              ? { address: "", city: "", state: NO_STATE, pincode: "", note: "" }
+              : current),
+            name: profile.fullName || (switchedAccount ? "" : current.name),
+            phone: profile.phone || (switchedAccount ? "" : current.phone),
+          })
         }
       })
       .catch(() => {
@@ -301,6 +318,32 @@ export function CheckoutForm({
       setPromoInput("")
       setPromoError(null)
       setPaymentRef("")
+      setPaymentRefError(null)
+      setValidatedCustomer(null)
+      setHasOrderNote(false)
+      const defaultAddr = addresses[0]
+      if (signedIn && defaultAddr) {
+        setSelected(defaultAddr.id)
+        form.reset({
+          name: defaultAddr.fullName,
+          phone: defaultAddr.phone,
+          address: defaultAddr.address,
+          ...splitCityState(defaultAddr.city),
+          pincode: defaultAddr.pincode,
+          note: "",
+        })
+      } else {
+        setSelected("new")
+        form.reset({
+          name: signedIn ? (initialProfile?.fullName ?? "") : "",
+          phone: signedIn ? (initialProfile?.phone ?? "") : "",
+          address: "",
+          city: "",
+          state: NO_STATE,
+          pincode: "",
+          note: "",
+        })
+      }
       try {
         sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(res.data))
       } catch {
@@ -673,7 +716,7 @@ export function CheckoutForm({
       <div
         data-ui="store/CheckoutForm/div-flex-7"
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-[data-skeleton]:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-data-skeleton:hidden"
       >
         <Button
           data-ui="store/CheckoutForm/Button-2"

@@ -8,6 +8,7 @@ import { ProfileForm } from "@/components/account/profile-form"
 import { CustomerOrdersFilterBar, type CustomerOrderFilters, type CustomerOrderRenderItem } from "@/components/admin/order-filters"
 import { CancellationNotice } from "@/components/shared/cancellation-notice"
 import { CopyButton } from "@/components/shared/copy-button"
+import { RefreshButton } from "@/components/shared/refresh-button"
 import { InvoiceDocument } from "@/components/shared/invoice-document"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
@@ -75,7 +76,13 @@ function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
   )
 }
 
-function MyOrdersEmpty({ isFiltered }: { isFiltered: boolean }) {
+function MyOrdersEmpty({
+  isFiltered,
+  showAllTimeButton = isFiltered,
+}: {
+  isFiltered: boolean
+  showAllTimeButton?: boolean
+}) {
   return (
     <div data-ui="account/MyOrdersEmpty" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
       <PackageIcon className="size-10 text-muted-foreground" />
@@ -84,11 +91,13 @@ function MyOrdersEmpty({ isFiltered }: { isFiltered: boolean }) {
       </p>
       <p data-ui="account/MyOrdersEmpty/p-2" className="max-w-sm text-sm text-muted-foreground">
         {isFiltered
-          ? "Try switching the status tab above, or select Full FY / All time to see older orders."
+          ? showAllTimeButton
+            ? "Try switching the status tab above, or select Full FY / All time to see older orders."
+            : "Try switching the status tab above or clearing your search query."
           : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
       </p>
       <div data-ui="account/MyOrdersEmpty/div-flex" className="flex flex-wrap justify-center gap-3">
-        {isFiltered && (
+        {showAllTimeButton && (
           <Link data-ui="account/MyOrdersEmpty/Link-view-all-time-orders" href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5")}>
             View all-time orders
           </Link>
@@ -179,8 +188,8 @@ export function MyOrdersView({
         today={filters?.today}
         statusCounts={statusCounts}
         items={items}
-        emptyPeriodNode={<MyOrdersEmpty isFiltered={isPeriodFiltered} />}
-        emptyTabNode={<MyOrdersEmpty isFiltered={true} />}
+        emptyPeriodNode={<MyOrdersEmpty isFiltered={isPeriodFiltered} showAllTimeButton={isPeriodFiltered} />}
+        emptyTabNode={<MyOrdersEmpty isFiltered={true} showAllTimeButton={isPeriodFiltered} />}
         skeletonNode={skeletonNode}
       />
     </section>
@@ -213,7 +222,8 @@ export function MyOrderView({
             </div>
             <p data-ui="account/MyOrderView/p" className="text-sm text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
           </div>
-          <div data-ui="account/MyOrderView/div-flex-3" className="flex flex-wrap items-center gap-3">
+          <div data-ui="account/MyOrderView/div-flex-3" className="flex flex-wrap items-center gap-2.5">
+            <RefreshButton />
             {order.status !== "cancelled" && (
               <Link data-ui="account/MyOrderView/Link-invoice" href={`/account/orders/${order.orderCode}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
                 <ReceiptTextIcon className="size-4" /> Invoice
@@ -268,6 +278,13 @@ export function MyOrderView({
                   returns={order.returns}
                   requests={order.returnRequests}
                   charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees, discountAmount: order.discountAmount }}
+                  orderDelivery={{
+                    name: order.customerName,
+                    phone: order.phone,
+                    address: order.address,
+                    city: order.city,
+                    pincode: order.pincode,
+                  }}
                   window={{ open: win.open, until: win.until ? win.until.toISOString() : null, days: win.days ?? shop.returnWindowDays }}
                   whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${order.orderCode}.`)}
                 />

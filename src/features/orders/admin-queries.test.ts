@@ -6,7 +6,13 @@ const mocks = vi.hoisted(() => ({ getServerSupabase: vi.fn() }))
 vi.mock("@/lib/supabase/server", () => ({ getServerSupabase: mocks.getServerSupabase }))
 vi.mock("@/features/auth/guards", () => ({ requireAdmin: vi.fn(async () => ({ id: "admin" })) }))
 
-import { listOrders } from "./admin-queries"
+import { getOrderFilterCounts, listOrders } from "./admin-queries"
+import {
+  hasValidPasswordResetCookie,
+  parseAdminPinCookie,
+  signAdminPinCookie,
+  signPasswordResetCookie,
+} from "@/lib/supabase/proxy"
 
 const NONE = "00000000-0000-0000-0000-000000000000"
 
@@ -120,5 +126,48 @@ describe("order views (dashboard tile and list share one filter)", () => {
     await listOrders({ year: "2025", month: "all", q: "KK-123" })
     c = ordersCall(s.calls)
     expect(c.ops.some(([m]) => m === "gte")).toBe(false)
+  })
+
+  it("getOrderFilterCounts scopes status and payment badge counts to the active period", async () => {
+    const { calls } = setup()
+    await getOrderFilterCounts({ year: "2025", month: "all" })
+    const orderCountCalls = calls.filter((c) => c.name === "orders" && !c.ops.some(([m]) => m === "in" && c.ops.some(([m2, a2]) => m2 === "in" && a2[0] === "id")))
+    expect(orderCountCalls.length).toBeGreaterThan(0)
+    expect(orderCountCalls.every((c) => c.ops.some(([m, a]) => m === "gte" && a[0] === "created_at"))).toBe(true)
+  })
+})
+
+describe("signed auth and PIN cookies", () => {
+  it("verifies signed password reset cookies and rejects forged or cross-user values", () => {
+    const token = signPasswordResetCookie("admin", "user-123")
+    expect(hasValidPasswordResetCookie(token, "admin", "user-123")).toBe(true)
+    expect(hasValidPasswordResetCookie("1", "admin", "user-123")).toBe(false)
+    expect(hasValidPasswordResetCookie(token, "customer", "user-123")).toBe(false)
+    expect(hasValidPasswordResetCookie(token, "admin", "other-user")).toBe(false)
+    const expired = signPasswordResetCookie("admin", "user-123", Date.now() - 20 * 60 * 1000)
+    expect(hasValidPasswordResetCookie(expired, "admin", "user-123")).toBe(false)
+  })
+
+  it("verifies signed admin PIN cookies and invalidates cookies issued before pinUpdatedAt", () => {
+    const now = Date.now()
+    const unlockedToken = signAdminPinCookie("admin-1", now)
+    expect(parseAdminPinCookie(unlockedToken, "admin-1")).toEqual({
+      valid: true,
+      manualLock: false,
+      unlockedAt: Math.floor(now),
+    })
+    const lockedToken = signAdminPinCookie("admin-1", "locked")
+    expect(parseAdminPinCookie(lockedToken, "admin-1")).toEqual({
+      valid: true,
+      manualLock: true,
+      unlockedAt: 0,
+    })
+    // Forged plaintext or wrong user is rejected
+    expect(parseAdminPinCookie("9999999999999", "admin-1").valid).toBe(false)
+    expect(parseAdminPinCookie("locked", "admin-1").valid).toBe(false)
+    expect(parseAdminPinCookie(unlockedToken, "admin-2").valid).toBe(false)
+    // Cookie older than pinUpdatedAt is rejected
+    const futureUpdate = new Date(now + 10_000).toISOString()
+    expect(parseAdminPinCookie(unlockedToken, "admin-1", futureUpdate).valid).toBe(false)
   })
 })

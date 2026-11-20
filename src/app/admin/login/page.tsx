@@ -15,7 +15,7 @@ export default async function AdminLoginPage() {
       <div data-ui="page:/admin/login/div" className="w-full max-w-sm rounded-4xl border bg-card p-6 sm:p-8 shadow-2xl shadow-black/5">
         <LogoMark className="size-12 text-2xl" />
         <h1 data-ui="page:/admin/login/h1-admin" className="mt-6 text-2xl font-semibold">{shop.shopName} Admin</h1>
-        <p data-ui="page:/admin/login/p" className="mt-1 mb-6 text-sm text-muted-foreground">Manage products and orders.</p>
+        <p data-ui="page:/admin/login/p" className="mt-1 mb-6 text-sm text-muted-foreground">Sign in to manage your store, catalogue, and orders.</p>
         <Suspense>
           <AdminLoginForm />
         </Suspense>

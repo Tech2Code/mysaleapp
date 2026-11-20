@@ -64,6 +64,7 @@ function CartLayout({
   onRemove?: (productId: string) => void
 }) {
   const totalItems = lines.reduce((n, l) => n + l.quantity, 0)
+  const availableItems = lines.filter((l) => l.available).reduce((n, l) => n + l.quantity, 0)
 
   return (
     <div data-ui="store/CartLayout" className="grid gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
@@ -97,7 +98,7 @@ function CartLayout({
               >
                 <Link data-ui="store/CartLayout/Link-relative"
                   href={`/products/${item.slug}`}
-                  className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-muted @container sm:size-28"
+                  className="relative size-20 shrink-0 overflow-hidden rounded-2xl bg-muted @container sm:size-28"
                 >
                   <ProductImage src={item.image} alt={item.name} sizes="112px" />
                 </Link>
@@ -132,7 +133,7 @@ function CartLayout({
                     </button>
                   </div>
                   {item.available && (
-                    <div data-ui="store/CartLayout/div-flex-4" className="mt-auto flex items-center justify-between">
+                    <div data-ui="store/CartLayout/div-flex-4" className="mt-auto flex flex-wrap items-center justify-between gap-2">
                       <QuantityStepper
                         label={item.name}
                         value={item.quantity}
@@ -153,11 +154,11 @@ function CartLayout({
         <h2 data-ui="store/CartLayout/h2-order-summary" className="flex items-baseline justify-between gap-3 text-xl font-semibold">
           Order summary
           <span data-ui="store/CartLayout/span-4" className="text-sm font-medium text-muted-foreground">
-            {lines.reduce((n, l) => n + l.quantity, 0)} item{lines.reduce((n, l) => n + l.quantity, 0) === 1 ? "" : "s"}
+            {availableItems} item{availableItems === 1 ? "" : "s"}
           </span>
         </h2>
         <FreeShippingBar subtotal={subtotal} />
-        <PriceBreakdown {...charges} />
+        <PriceBreakdown {...charges} itemCount={availableItems} />
         <p data-ui="store/CartLayout/p-3" className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
           <span data-ui="store/CartLayout/span-5" className="font-semibold text-foreground">Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
         </p>

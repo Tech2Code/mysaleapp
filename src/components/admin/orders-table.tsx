@@ -33,7 +33,17 @@ function writeSeenOrders(ids: Set<string>) {
 }
 
 /** The admin orders table/tiles view. Used by the page, by loading.tsx (placeholder rows) and while the filters reload. */
-export function OrdersTable({ orders }: { orders: Order[] }) {
+export function OrdersTable({
+  orders,
+  total,
+  page = 1,
+  pageSize = 20,
+}: {
+  orders: Order[]
+  total?: number
+  page?: number
+  pageSize?: number
+}) {
   const [viewMode, setViewMode] = useState<"tiles" | "table">("table")
   const [seenIds, setSeenIds] = useState<Set<string>>(() => new Set())
 
@@ -107,7 +117,9 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
       {/* View Switcher Bar */}
       <div data-ui="admin/OrdersTable/div-flex" className="flex items-center justify-between gap-3 px-1">
         <span data-ui="admin/OrdersTable/span" className="text-xs font-medium text-muted-foreground">
-          Showing {orders.length} order{orders.length === 1 ? "" : "s"}
+          {total && total > orders.length
+            ? `Showing ${(page - 1) * pageSize + 1}–${(page - 1) * pageSize + orders.length} of ${total} orders`
+            : `Showing ${orders.length} order${orders.length === 1 ? "" : "s"}`}
         </span>
         <div data-ui="admin/OrdersTable/div-view-format" className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
           <button data-ui="admin/OrdersTable/button-list-view"

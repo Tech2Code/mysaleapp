@@ -14,7 +14,7 @@ import { joinCityState } from "@/features/location/states"
 import { cancelReasonText } from "./reasons"
 import { mapRpcError } from "./rpc-errors"
 import { cancelOrderSchema, checkoutSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema, validatePromoSchema } from "./schema"
-import { effectiveReturnDays, returnWindow } from "./returns"
+import { composeReturnDetails, effectiveReturnDays, returnWindow } from "./returns"
 import { buildOrderMessage, shopWhatsappLink } from "./whatsapp"
 import type { ValidatedPromo } from "./pricing"
 import { mapFees, normalizePricing, type OrderPricing, type TrackedOrder } from "./types"
@@ -359,7 +359,7 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
     p_phone_last4: parsed.data.phoneLast4 ?? null,
     p_items: parsed.data.items,
     p_reason: parsed.data.reason,
-    p_details: parsed.data.details ?? null,
+    p_details: composeReturnDetails(parsed.data.details, parsed.data.pickupAddress) ?? null,
     // guests must give the full number (migration 0050); signed-in owners are recognised by their account
     p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
     p_resolution_type: parsed.data.resolutionType,

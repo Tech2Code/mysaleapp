@@ -104,9 +104,9 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
   const showSuccess = useBusySuccess()
   const later = useToastAfter(signingOut)
   return (
-    <div data-ui="admin/SidebarBody" className="flex h-full flex-col gap-6 p-4">
+    <div data-ui="admin/SidebarBody" className="flex h-full flex-col gap-6 overflow-y-auto p-4">
       {/* Same height as the top bar, so the two divider lines meet. */}
-      <div data-ui="admin/SidebarBody/div-flex" className="-mx-4 -mt-4 flex h-(--admin-topbar-h) shrink-0 items-center border-b border-sidebar-border px-5">
+      <div data-ui="admin/SidebarBody/div-flex" className="-mx-4 -mt-4 flex h-(--admin-topbar-h) shrink-0 items-center border-b border-sidebar-border px-5 pr-12 lg:pr-5">
         <Logo href="/admin" className="min-w-0 [&>span:last-child]:truncate" />
       </div>
       <nav data-ui="admin/SidebarBody/nav-admin" aria-label="Admin" className="flex flex-col gap-5">

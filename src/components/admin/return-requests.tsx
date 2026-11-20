@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeftRightIcon, BanIcon, CheckIcon, Loader2Icon, PackageOpenIcon, XIcon } from "lucide-react"
+import { ArrowLeftRightIcon, BanIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { decideReturnRequest, markReturnPickedUp, undoReturnStep } from "@/features/orders/admin-actions"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { requestStatusMeta, type ReturnStage } from "@/features/orders/returns"
+import { requestStatusMeta, splitReturnDetails, type ReturnStage } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, ReturnRequest } from "@/features/orders/types"
 import { buildReturnDecisionMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDate, formatDateTime } from "@/lib/format"
@@ -147,6 +147,16 @@ export function DecideDialog({
                   {request.exchangePreference}
                 </p>
               )}
+            </div>
+          )}
+          {splitReturnDetails(request.details).pickupAddress && (
+            <div data-ui="admin/DecideDialog/div-2" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-950 dark:text-amber-200">
+              <p data-ui="admin/DecideDialog/p-flex-2" className="flex items-center gap-1.5 font-semibold">
+                <MapPinIcon className="size-3.5 shrink-0" aria-hidden /> Alternate pickup address requested
+              </p>
+              <p data-ui="admin/DecideDialog/p-2" className="mt-1">
+                {splitReturnDetails(request.details).pickupAddress}
+              </p>
             </div>
           )}
           {approve && (
@@ -318,6 +328,7 @@ export function AdminReturnRequests({
           const isExchange = r.resolutionType === "exchange"
           const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
           const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
+          const { details: cleanDetails, pickupAddress } = splitReturnDetails(r.details)
           return (
             <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
               <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
@@ -361,17 +372,26 @@ export function AdminReturnRequests({
               <p data-ui="admin/AdminReturnRequests/p-2" className="text-sm">
                 <span data-ui="admin/AdminReturnRequests/span-5" className="text-muted-foreground">Reason: </span>
                 {r.reason}
-                {r.details && <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground"> — {r.details}</span>}
+                {cleanDetails && <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground"> — {cleanDetails}</span>}
               </p>
+              {pickupAddress && (
+                <p data-ui="admin/AdminReturnRequests/p-flex" className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-200">
+                  <MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+                  <span data-ui="admin/AdminReturnRequests/span-7">
+                    <span data-ui="admin/AdminReturnRequests/span-8" className="font-semibold">Alternate pickup address: </span>
+                    {pickupAddress}
+                  </span>
+                </p>
+              )}
               {r.adminNote && (
                 <p data-ui="admin/AdminReturnRequests/p-3" className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-7" className="font-semibold">Your note: </span>
+                  <span data-ui="admin/AdminReturnRequests/span-9" className="font-semibold">Your note: </span>
                   {r.adminNote}
                 </p>
               )}
               {r.status === "approved" && (
                 <p data-ui="admin/AdminReturnRequests/p-4" className="text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-8" className="text-muted-foreground">Pickup: </span>
+                  <span data-ui="admin/AdminReturnRequests/span-10" className="text-muted-foreground">Pickup: </span>
                   {r.pickedUpAt ? `successful on ${formatDateTime(r.pickedUpAt)}` : r.pickupDate ? `scheduled for ${formatDate(r.pickupDate)}` : "date not set"}
                 </p>
               )}

@@ -108,7 +108,11 @@ function ProfileFormInner({
     window.history.replaceState(null, "", window.location.pathname)
 
     if (errorDesc) {
-      const text = errorDesc.replace(/\+/g, " ")
+      const lower = errorDesc.toLowerCase()
+      const text =
+        lower.includes("expired") || lower.includes("invalid")
+          ? "That email confirmation link has expired or was already used. Please request the email change again."
+          : "Could not complete the email change. Please try again."
       queueMicrotask(() => setCallbackBanner({ tone: "error", text }))
       toast.error(text)
       return
@@ -122,13 +126,11 @@ function ProfileFormInner({
       return
     }
 
-    if (stepMessage) {
-      const isTwoStep = stepMessage.toLowerCase().includes("other email")
-      const text = isTwoStep
-        ? "First confirmation link accepted! Please also open your other email inbox (current or new email) and click the second confirmation link to finish changing your email."
-        : stepMessage.replace(/\+/g, " ")
+    if (stepMessage && (stepMessage === "email_step_1" || /other email|confirmation link/i.test(stepMessage))) {
+      const text =
+        "First confirmation link accepted! Please also open your other email inbox (current or new email) and click the second confirmation link to finish changing your email."
       queueMicrotask(() => setCallbackBanner({ tone: "success", text }))
-      toast.success(isTwoStep ? "Step 1 confirmed — check your other email inbox to finish" : text)
+      toast.success("Step 1 confirmed — check your other email inbox to finish")
     }
   }, [router])
 

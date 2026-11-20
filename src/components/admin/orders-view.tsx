@@ -53,7 +53,7 @@ export function OrdersView({
         returnCounts={returnCounts ?? filterCounts?.returns}
         filterCounts={filterCounts}
       >
-        <OrdersTable orders={orders} />
+        <OrdersTable orders={orders} total={total} page={page} />
 
         {pages > 1 && (
           <nav data-ui="admin/OrdersView/nav-pagination" className="mt-4 flex items-center justify-between" aria-label="Pagination">
