@@ -45,7 +45,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
 
   const qtyOf = (id: string) => {
     if (qty[id] !== undefined) return qty[id]
-    if (lines.length === 1 || (Object.keys(qty).length === 0 && lines[0]?.productId === id)) return "1"
+    if (lines[0]?.productId === id) return "1"
     return ""
   }
 

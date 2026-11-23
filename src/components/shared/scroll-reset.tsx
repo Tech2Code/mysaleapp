@@ -154,6 +154,9 @@ export function ScrollReset() {
 
         if (url.pathname !== window.location.pathname) {
           isTransitioning = true
+          window.setTimeout(() => {
+            if (committedPath === window.location.pathname) isTransitioning = false
+          }, 1500)
           pendingHash = url.hash
           if (url.hash) {
             viaHistory = false
@@ -193,6 +196,9 @@ export function ScrollReset() {
         }
         viaHistory = true
         isTransitioning = true
+        window.setTimeout(() => {
+          if (committedPath === window.location.pathname) isTransitioning = false
+        }, 1500)
       }
     }
 
@@ -209,6 +215,9 @@ export function ScrollReset() {
       }
       viaHistory = true
       isTransitioning = true
+      window.setTimeout(() => {
+        if (committedPath === window.location.pathname) isTransitioning = false
+      }, 1500)
     }
 
     const nav = (window as Window & { navigation?: EventTarget }).navigation
@@ -439,7 +448,12 @@ function holdAtPosition(targetY: number): () => void {
  * (`[data-skeleton]`) for the real DOM content.
  */
 function holdAtHash(hash: string): () => void {
-  const targetId = decodeURIComponent(hash.replace(/^#/, ""))
+  let targetId = ""
+  try {
+    targetId = decodeURIComponent(hash.replace(/^#/, ""))
+  } catch {
+    targetId = hash.replace(/^#/, "")
+  }
   if (!targetId) {
     isTransitioning = false
     return () => {}

@@ -97,13 +97,10 @@ export function ProductBrowser({
 
   // Leaving the page inside the debounce window must not lose the filter in history. Only write while we are
   // still on this page: once the router has pushed the next URL, replacing it would corrupt it.
-  const path = useRef(pathname)
-  useEffect(() => {
-    path.current = pathname
-  }, [pathname])
+  const mountedPathRef = useRef(pathname)
   useEffect(
     () => () => {
-      if (pending.current && window.location.pathname === path.current) writeUrl()
+      if (pending.current && window.location.pathname === mountedPathRef.current) writeUrl()
     },
     [writeUrl]
   )

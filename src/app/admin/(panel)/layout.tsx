@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
-import { AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
+import { AdminMobileBottomNav, AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { getAdminPinStatus, getCurrentUser, isAdminUser, requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
@@ -98,6 +98,7 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
           {children}
         </main>
       </div>
+      <AdminMobileBottomNav ordersBadge={badge} />
     </div>
   )
 }

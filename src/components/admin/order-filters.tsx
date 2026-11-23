@@ -87,6 +87,7 @@ export function OrdersBrowser({
   // Search as you type: wait for a short pause (and at least 2 characters, or empty to clear), then update the list.
   useEffect(() => {
     const rawTyped = query.trim()
+    if (rawTyped.length === 1) return
     const effective = rawTyped.length >= 2 ? rawTyped : ""
     if (effective === (applied.q ?? "").trim()) return
     const timer = setTimeout(() => {
@@ -220,7 +221,7 @@ export function OrdersBrowser({
           <button
             data-ui="admin/OrdersBrowser/button"
             type="button"
-            aria-expanded={mobileOpen || activeCategoryFilterCount > 0}
+            aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
             className={cn(
               "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors sm:hidden",
@@ -273,7 +274,7 @@ export function OrdersBrowser({
           data-ui="admin/OrdersBrowser/div-2"
           className={cn(
             "grid-cols-2 gap-2.5 border-t border-border/70 pt-3 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5",
-            mobileOpen || activeCategoryFilterCount > 0 ? "grid" : "hidden sm:flex"
+            mobileOpen ? "grid" : "hidden sm:flex"
           )}
         >
           <SelectField

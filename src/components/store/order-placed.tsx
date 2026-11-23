@@ -115,7 +115,12 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     }
   }, [order, preview, userId])
 
-  const headline = state ? (HEADLINE[state.paymentStatus] ?? HEADLINE.submitted) : HEADLINE.submitted
+  const headline = state
+    ? (HEADLINE[state.paymentStatus] ?? HEADLINE.submitted)
+    : {
+        title: "Order placed!",
+        text: "Thanks for shopping with us — we've received your order.",
+      }
   const whatsappHref =
     order?.whatsappUrl && order.whatsappUrl.startsWith("https://wa.me/")
       ? order.whatsappUrl

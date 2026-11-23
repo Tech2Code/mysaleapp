@@ -1,4 +1,4 @@
-import { ExternalLinkIcon, PlusIcon } from "lucide-react"
+import { ExternalLinkIcon, PlusIcon, SparklesIcon } from "lucide-react"
 import Link from "next/link"
 import { DashboardBody } from "@/components/admin/dashboard/dashboard-body"
 import { DashboardRangeShell } from "@/components/admin/dashboard-range"
@@ -16,7 +16,10 @@ export function DashboardView({ d, range, today }: { d: DashboardData; range: Pi
       <header data-ui="admin/DashboardView/header-flex" className="flex flex-wrap items-end justify-between gap-4">
         <div data-ui="admin/DashboardView/div">
           <p data-ui="admin/DashboardView/p" className="text-sm text-muted-foreground">{d.todayLabel}</p>
-          <h1 data-ui="admin/DashboardView/h1" className="mt-1 text-2xl font-semibold sm:text-3xl">{d.greeting} 👋</h1>
+          <h1 data-ui="admin/DashboardView/h1-flex" className="mt-1 flex items-center gap-2 text-2xl font-semibold sm:text-3xl">
+            <span data-ui="admin/DashboardView/span">{d.greeting}</span>
+            <SparklesIcon className="size-5 shrink-0 text-primary sm:size-6" aria-hidden />
+          </h1>
           <p data-ui="admin/DashboardView/p-2" className="mt-1 text-sm text-muted-foreground">
             {attentionTotal > 0
               ? `You have ${attentionTotal} thing${attentionTotal === 1 ? "" : "s"} that need attention.`

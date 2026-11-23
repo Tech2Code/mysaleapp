@@ -1,7 +1,18 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import {
+  EyeIcon,
+  FileTextIcon,
+  ImageIcon,
+  IndianRupeeIcon,
+  ListChecksIcon,
+  PlusIcon,
+  SearchIcon,
+  Trash2Icon,
+  TruckIcon,
+  type LucideIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useLayoutEffect, useRef, useState, useTransition, type ReactNode } from "react"
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form"
@@ -23,18 +34,83 @@ import {
 import type { Category, Product } from "@/features/products/types"
 import { formatWeightGrams } from "@/features/orders/pricing"
 import { formatPrice, slugify } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { ImageUploader } from "./image-uploader"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+function hasDirtyValue(val: unknown): boolean {
+  if (val === true) return true
+  if (Array.isArray(val)) return val.some(hasDirtyValue)
+  if (val && typeof val === "object") return Object.values(val).some(hasDirtyValue)
+  return false
+}
+
+function hasDirty(dirtyFields: Record<string, unknown>, ...keys: (keyof ProductInput)[]): boolean {
+  return keys.some((k) => hasDirtyValue(dirtyFields[k]))
+}
+
+function Section({
+  title,
+  description,
+  icon: Icon,
+  dirty = false,
+  children,
+}: {
+  title: string
+  description?: string
+  icon?: LucideIcon
+  dirty?: boolean
+  children: ReactNode
+}) {
   return (
-    <section data-ui="admin/Section" className="rounded-2xl border bg-card p-5 sm:p-6">
-      <h2 data-ui="admin/Section/h2" className="font-sans text-lg font-semibold">{title}</h2>
-      {description && <p data-ui="admin/Section/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
-      <div data-ui="admin/Section/div" className="mt-5 space-y-5">{children}</div>
+    <section
+      data-ui="admin/Section"
+      className={cn(
+        "overflow-hidden rounded-2xl border bg-card shadow-2xs transition-colors",
+        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
+      )}
+    >
+      <div data-ui="admin/Section/div"
+        className={cn(
+          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
+          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
+        )}
+      >
+        <div data-ui="admin/Section/div-flex" className="flex min-w-0 items-start gap-3">
+          {Icon && (
+            <span data-ui="admin/Section/span"
+              className={cn(
+                "mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl transition-colors",
+                dirty ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary"
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+            </span>
+          )}
+          <div data-ui="admin/Section/div-2" className="min-w-0">
+            <h2 data-ui="admin/Section/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+              {title}
+            </h2>
+            {description && (
+              <p data-ui="admin/Section/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+                {description}
+              </p>
+            )}
+          </div>
+        </div>
+        {dirty && (
+          <span data-ui="admin/Section/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
+            <span data-ui="admin/Section/span-2" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+            Edited
+          </span>
+        )}
+      </div>
+      <div data-ui="admin/Section/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+        {children}
+      </div>
     </section>
   )
 }
@@ -120,7 +196,15 @@ function ProductFormInner({
     resolver: zodResolver(productSchema),
     defaultValues: toFormValues(product),
   })
-  const { errors, isDirty } = form.formState
+  const { errors, isDirty, dirtyFields } = form.formState
+  const df = dirtyFields as Record<string, unknown>
+  const basicDirty = hasDirty(df, "name", "slug", "description")
+  const detailsDirty = hasDirty(df, "shortDescription", "highlights", "specs", "careInstructions")
+  const photosDirty = hasDirty(df, "images")
+  const seoDirty = hasDirty(df, "seoTitle", "seoDescription")
+  const visibilityDirty = hasDirty(df, "isActive", "isFeatured")
+  const pricingDirty = hasDirty(df, "price", "compareAtPrice", "stock", "categoryId")
+  const shippingDirty = hasDirty(df, "shippingClass", "weightGrams", "returnWindowDays")
 
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
   const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal, returnWindowVal] = useWatch({
@@ -183,11 +267,11 @@ function ProductFormInner({
   const previewDesc = (seoDescription as string) || (description as string)?.slice(0, 155) || "Product description…"
 
   return (
-    <form data-ui="admin/ProductFormInner" onSubmit={onSubmit} noValidate className="space-y-6">
-      <div data-ui="admin/ProductFormInner/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+    <form data-ui="admin/ProductFormInner" onSubmit={onSubmit} noValidate className="space-y-5">
+      <div data-ui="admin/ProductFormInner/div-grid" className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
         {/* ------------------------------------------------ main column */}
-        <div data-ui="admin/ProductFormInner/div" className="min-w-0 space-y-1">
-          <Section title="Basic details">
+        <div data-ui="admin/ProductFormInner/div" className="min-w-0 space-y-4 sm:space-y-5">
+          <Section title="Basic details" description="Title, storefront link and product story." icon={FileTextIcon} dirty={basicDirty}>
             <TextField
               label="Product name" maxLength={LIMITS.productName.max}
               fieldSize="md"
@@ -218,6 +302,8 @@ function ProductFormInner({
           <Section
             title="Product details"
             description="This is what customers read first. A good summary, a few highlights and key specs answer most questions."
+            icon={ListChecksIcon}
+            dirty={detailsDirty}
           >
             <TextAreaField
               label="Short summary" maxLength={LIMITS.shortDescription.max}
@@ -282,7 +368,7 @@ function ProductFormInner({
             />
           </Section>
 
-          <Section title="Photos" description="Up to 8 photos. The first one is the cover. Good photos sell!">
+          <Section title="Photos" description="Up to 8 photos. The first one is the cover. Good photos sell!" icon={ImageIcon} dirty={photosDirty}>
             <Controller
               control={form.control}
               name="images"
@@ -291,8 +377,8 @@ function ProductFormInner({
             {errors.images && <p data-ui="admin/ProductFormInner/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
           </Section>
 
-          <Section title="Search engine listing" description="How this product appears on Google. Leave blank to auto-fill.">
-            <div data-ui="admin/ProductFormInner/div-4" className="rounded-xl border bg-background p-4">
+          <Section title="Search engine listing" description="How this product appears on Google. Leave blank to auto-fill." icon={SearchIcon} dirty={seoDirty}>
+            <div data-ui="admin/ProductFormInner/div-4" className="rounded-xl border border-border/70 bg-muted/25 p-4">
               <p data-ui="admin/ProductFormInner/p-5" className="truncate text-xs text-muted-foreground">
                 {siteConfig.url.replace(/^https?:\/\//, "")} › products › {slug || "…"}
               </p>
@@ -317,8 +403,8 @@ function ProductFormInner({
         </div>
 
         {/* ------------------------------------------------ side column (settings for this product) */}
-        <div data-ui="admin/ProductFormInner/div-5" className="min-w-0 space-y-6">
-          <Section title="Visibility">
+        <div data-ui="admin/ProductFormInner/div-5" className="min-w-0 space-y-4 sm:space-y-5">
+          <Section title="Visibility" description="Control store and homepage placement." icon={EyeIcon} dirty={visibilityDirty}>
             <Controller
               control={form.control}
               name="isActive"
@@ -340,8 +426,8 @@ function ProductFormInner({
             />
           </Section>
 
-          <Section title="Pricing & stock">
-            <div data-ui="admin/ProductFormInner/div-grid-3" className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <Section title="Pricing & stock" description="Selling price, MRP, inventory & category." icon={IndianRupeeIcon} dirty={pricingDirty}>
+            <div data-ui="admin/ProductFormInner/div-grid-3" className="grid grid-cols-2 gap-3 sm:gap-4">
               <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
               <TextField
                 label="MRP" kind="money"
@@ -367,6 +453,8 @@ function ProductFormInner({
           <Section
             title="Shipping, parcel & returns"
             description="Declare the item's physical size, weight, and return window. Leave the return window blank to use the store default."
+            icon={TruckIcon}
+            dirty={shippingDirty}
           >
             <FormSelectField
               control={form.control}

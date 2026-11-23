@@ -84,11 +84,14 @@ function runBackgroundAccountSync(userId: string, skipWishlist = false) {
       }
     }
     if (wishRes && wishRes.ok) {
+      lastSyncedUserId = userId
       const nowIds = useWishlist.getState().ids
       const addedDuringSync = nowIds.filter((id) => !snapshot.has(id))
       const removedDuringSync = [...snapshot].filter((id) => !nowIds.includes(id))
       const merged = [...addedDuringSync, ...wishRes.data.filter((id) => !removedDuringSync.includes(id))]
       useWishlist.getState().replaceAll(merged, userId)
+    } else if (!skipWishlist && lastSyncedUserId === userId) {
+      lastSyncedUserId = null
     }
   }, 0)
 }

@@ -4,9 +4,9 @@ import { MegaphoneIcon } from "lucide-react"
 export function AnnouncementBar({ text }: { text: string | null }) {
   if (!text) return null
   return (
-    <div data-ui="store/AnnouncementBar" role="status" className="bg-primary px-4 py-2 text-center text-sm font-medium text-primary-foreground">
-      <span data-ui="store/AnnouncementBar/span-inline-flex" className="inline-flex items-center gap-2">
-        <MegaphoneIcon className="size-4 shrink-0" aria-hidden />
+    <div data-ui="store/AnnouncementBar" role="status" className="border-b border-primary/20 bg-primary px-4 py-1.5 text-center text-xs font-medium tracking-wide text-primary-foreground sm:text-[0.8125rem]">
+      <span data-ui="store/AnnouncementBar/span-inline-flex" className="inline-flex items-center gap-1.5">
+        <MegaphoneIcon className="size-3.5 shrink-0 opacity-90" aria-hidden />
         {text}
       </span>
     </div>

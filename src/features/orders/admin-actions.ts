@@ -531,17 +531,22 @@ export async function recordOrderReturn(input: unknown): Promise<ActionResult<{ 
     return fail(mapRpcError(error.message, "Could not record the return"))
   }
 
+  const out = (data ?? {}) as { restocked?: number; refundedAmount?: number; fullyRefunded?: boolean }
   await logAdminAction(supabase, {
     actorId: auth.user.id,
     action: "order.return_record",
     targetType: "order",
     targetId: orderId,
-    metadata: { refund, requestId: requestId ?? null },
+    metadata: {
+      refundRequested: refund,
+      refundedAmount: Number(out.refundedAmount ?? 0),
+      fullyRefunded: Boolean(out.fullyRefunded),
+      requestId: requestId ?? null,
+    },
   })
   updateTag(CACHE_TAGS.products) // restocked items are sellable again
   revalidatePathsForAdmin(orderId)
   revalidatePathsForCustomer()
-  const out = (data ?? {}) as { restocked?: number; refundedAmount?: number; fullyRefunded?: boolean }
   return {
     ok: true,
     data: {

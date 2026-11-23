@@ -1,5 +1,7 @@
+"use client"
+
 import { ChevronDownIcon } from "lucide-react"
-import { Children, cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from "react"
+import { Children, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from "react"
 
 type ItemProps = { title: string; children: ReactNode; defaultOpen?: boolean; name?: string }
 
@@ -8,8 +10,15 @@ type ItemProps = { title: string; children: ReactNode; defaultOpen?: boolean; na
  * Items inside an <Accordion> share a `name`, so the browser keeps only one open at a time.
  */
 export function AccordionItem({ title, children, defaultOpen = false, name }: ItemProps) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <details data-ui="shared/AccordionItem" name={name} open={defaultOpen} className="group border-b last:border-b-0">
+    <details
+      data-ui="shared/AccordionItem"
+      name={name}
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+      className="group border-b last:border-b-0"
+    >
       <summary data-ui="shared/AccordionItem/summary-flex" className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-sm font-semibold marker:hidden hover:text-primary">
         {title}
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180" aria-hidden />

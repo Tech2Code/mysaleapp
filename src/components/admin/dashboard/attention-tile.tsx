@@ -31,22 +31,22 @@ export function AttentionTile({
     <Link data-ui="admin/AttentionTile"
       href={href}
       className={cn(
-        "group flex items-center gap-4 rounded-2xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
-        active ? "shadow-xs" : "opacity-80"
+        "group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3 transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] sm:gap-4 sm:p-4",
+        active ? "shadow-xs" : "opacity-75"
       )}
     >
-      <span data-ui="admin/AttentionTile/span" className={cn("relative grid size-12 shrink-0 place-items-center rounded-2xl", TONES[tone])}>
+      <span data-ui="admin/AttentionTile/span" className={cn("relative grid size-10 shrink-0 place-items-center rounded-xl sm:size-11 sm:rounded-2xl", TONES[tone])}>
         {pulse && active && (
-          <span data-ui="admin/AttentionTile/span-absolute" aria-hidden className="absolute inset-0 animate-ping rounded-2xl bg-current opacity-20 animation-duration-[2.4s]" />
+          <span data-ui="admin/AttentionTile/span-absolute" aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-current ring-2 ring-card" />
         )}
-        <Icon className="relative size-5" aria-hidden />
+        <Icon className="relative size-4.5 sm:size-5" aria-hidden />
       </span>
       <div data-ui="admin/AttentionTile/div" className="min-w-0 flex-1">
-        <p data-ui="admin/AttentionTile/p" className="font-heading text-2xl leading-none font-semibold">{count}</p>
-        <p data-ui="admin/AttentionTile/p-2" className="mt-1 truncate text-sm font-medium">{label}</p>
-        <p data-ui="admin/AttentionTile/p-3" className="truncate text-xs text-muted-foreground">{active ? hint : "All clear"}</p>
+        <p data-ui="admin/AttentionTile/p" className="font-heading text-xl leading-none font-semibold tabular-nums sm:text-2xl">{count}</p>
+        <p data-ui="admin/AttentionTile/p-2" className="mt-1 truncate text-xs font-medium sm:text-sm">{label}</p>
+        <p data-ui="admin/AttentionTile/p-hidden" className="hidden truncate text-xs text-muted-foreground sm:block">{active ? hint : "All clear"}</p>
       </div>
-      <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
+      <ArrowRightIcon className="hidden size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" aria-hidden />
     </Link>
   )
 }

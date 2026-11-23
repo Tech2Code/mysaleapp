@@ -334,7 +334,10 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
 
   // Re-fetch automatically when auth user changes so signing in unlocks owner delivery/payment details immediately
   const userId = user?.id ?? null
+  const prevUserIdRef = useRef(userId)
   useEffect(() => {
+    if (prevUserIdRef.current === userId) return
+    prevUserIdRef.current = userId
     if (!query) return
     let cancelled = false
     trackOrder(query)

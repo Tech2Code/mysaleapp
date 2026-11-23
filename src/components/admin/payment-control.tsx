@@ -184,17 +184,19 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
     )
 
   const reject = () => {
-    if (reason.trim().length < 5) {
+    const trimmedReason = reason.trim()
+    if (trimmedReason.length < 5) {
       toast.error("Please enter a reason (at least 5 characters) for rejecting the payment.")
       return
     }
     run(
-      { status: "failed", method: order.paymentMethod ?? "upi", reference: order.paymentReference ?? "", amount: "", note: reason.trim() },
+      { status: "failed", method: order.paymentMethod ?? "upi", reference: order.paymentReference ?? "", amount: "", note: trimmedReason },
       () => {
         setAsk(null)
         setRejecting(false)
+        setReason("")
         later(() => toast.success("Payment rejected. The customer can submit it again.", {
-          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("failed", null, reason.trim() || null), "_blank", "noopener") },
+          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("failed", null, trimmedReason || null), "_blank", "noopener") },
         }))
       }
     )

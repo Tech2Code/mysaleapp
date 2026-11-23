@@ -311,8 +311,10 @@ export function DateField({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    disabled={Boolean(todayIso && ((min && todayIso < min) || (max && todayIso > max)))}
                     onClick={() => {
                       const today = todayIso || getTodayIso()
+                      if ((min && today < min) || (max && today > max)) return
                       const parsed = parseYearMonth(today)
                       if (parsed) {
                         setViewYear(parsed.year)
@@ -329,7 +331,10 @@ export function DateField({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={handleClear}
+                      onClick={() => {
+                        handleClear()
+                        setOpen(false)
+                      }}
                       className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                     >
                       Clear

@@ -32,7 +32,7 @@ export function StickySaveBar({
   return (
     <div data-ui="admin/StickySaveBar"
       className={cn(
-        "sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card/95 p-3 shadow-lg backdrop-blur sm:bottom-4 sm:px-4",
+        "sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/95 p-3 shadow-lg backdrop-blur sm:px-4 lg:bottom-4",
         className
       )}
     >

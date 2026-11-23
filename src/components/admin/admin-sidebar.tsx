@@ -5,6 +5,7 @@ import {
   LayoutDashboardIcon,
   LogOutIcon,
   MenuIcon,
+  MoreHorizontalIcon,
   PackageIcon,
   RocketIcon,
   SettingsIcon,
@@ -132,7 +133,7 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
         </button>
         <ConfirmDialog
           open={askSignOut}
-          onOpenChange={setAskSignOut}
+          onOpenChange={(next) => !signingOut && setAskSignOut(next)}
           title="Sign out?"
           description="You will need to sign in again to use the admin panel."
           confirmLabel="Sign out"
@@ -140,14 +141,24 @@ function SidebarBody({ onNavigate, ordersBadge }: { onNavigate?: () => void; ord
           pending={signingOut}
           onConfirm={() => {
             setAskSignOut(false)
-            onNavigate?.()
             startSignOut(async () => {
-              const res = await signOutAdmin()
-              applyClientSignOut()
-              await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-              showSuccess("Signed out")
-              later(() => toast.success("Signed out"))
-              router.replace(res.ok ? res.data.redirectTo : "/admin/login")
+              try {
+                const res = await signOutAdmin()
+                if (!res.ok) {
+                  toast.error(res.error ?? "Couldn't sign out. Please try again.")
+                  return
+                }
+                applyClientSignOut()
+                await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+                showSuccess("Signed out")
+                later(() => {
+                  onNavigate?.()
+                  toast.success("Signed out")
+                })
+                router.replace(res.data.redirectTo)
+              } catch {
+                toast.error("Couldn't sign out. Please try again.")
+              }
             })
           }}
         />
@@ -201,5 +212,105 @@ export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode;
         {account}
       </div>
     </div>
+  )
+}
+
+function AdminBottomTabs({
+  pathname,
+  ordersBadge,
+  onOpenMore,
+}: {
+  pathname: string | null
+  ordersBadge?: ReactNode
+  onOpenMore: () => void
+}) {
+  const tabs = [
+    { key: "dashboard", href: "/admin", label: "Home", icon: LayoutDashboardIcon, active: pathname === "/admin" },
+    { key: "orders", href: "/admin/orders", label: "Orders", icon: ShoppingCartIcon, active: pathname?.startsWith("/admin/orders") ?? false, badge: ordersBadge },
+    { key: "products", href: "/admin/products", label: "Products", icon: PackageIcon, active: pathname?.startsWith("/admin/products") ?? false },
+    { key: "categories", href: "/admin/categories", label: "Categories", icon: TagsIcon, active: pathname?.startsWith("/admin/categories") ?? false },
+  ]
+
+  const isMoreActive =
+    pathname !== null &&
+    (pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/account") || pathname.startsWith("/admin/launch"))
+
+  return (
+    <ul data-ui="admin/AdminBottomTabs" className="grid h-15.5 grid-cols-5 items-center px-1.5">
+      {tabs.map((tab) => {
+        const Icon = tab.icon
+        return (
+          <li data-ui="admin/AdminBottomTabs/li-flex" key={tab.key} className="flex justify-center">
+            <Link data-ui="admin/AdminBottomTabs/Link"
+              href={tab.href}
+              aria-current={tab.active ? "page" : undefined}
+              className={cn(
+                "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
+                tab.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span data-ui="admin/AdminBottomTabs/span" className={cn("relative grid h-7.5 w-12 place-items-center rounded-full", tab.active && "bg-primary/14 ring-1 ring-primary/20")}>
+                <Icon className={cn("size-5", tab.active && "stroke-[2.25]")} aria-hidden />
+                {tab.badge && (
+                  <span data-ui="admin/AdminBottomTabs/span-absolute" className="pointer-events-none absolute -top-1 -right-1 scale-75">{tab.badge}</span>
+                )}
+              </span>
+              <span data-ui="admin/AdminBottomTabs/span-2" className={cn("text-[0.68rem]/tight font-medium tracking-tight", tab.active ? "font-semibold text-primary" : "text-muted-foreground")}>
+                {tab.label}
+              </span>
+            </Link>
+          </li>
+        )
+      })}
+      <li data-ui="admin/AdminBottomTabs/li-flex-2" className="flex justify-center">
+        <button data-ui="admin/AdminBottomTabs/button"
+          type="button"
+          onClick={onOpenMore}
+          aria-pressed={isMoreActive}
+          className={cn(
+            "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
+            isMoreActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <span data-ui="admin/AdminBottomTabs/span-3" className={cn("grid h-7.5 w-12 place-items-center rounded-full", isMoreActive && "bg-primary/14 ring-1 ring-primary/20")}>
+            <MoreHorizontalIcon className={cn("size-5", isMoreActive && "stroke-[2.25]")} aria-hidden />
+          </span>
+          <span data-ui="admin/AdminBottomTabs/span-4" className={cn("text-[0.68rem]/tight font-medium tracking-tight", isMoreActive ? "font-semibold text-primary" : "text-muted-foreground")}>More</span>
+        </button>
+      </li>
+    </ul>
+  )
+}
+
+function AdminBottomTabsWithPath(props: { ordersBadge?: ReactNode; onOpenMore: () => void }) {
+  return <AdminBottomTabs {...props} pathname={usePathname()} />
+}
+
+/** Mobile & tablet app-like bottom navigation bar for Admin. */
+export function AdminMobileBottomNav({ ordersBadge }: { ordersBadge?: ReactNode }) {
+  const [moreOpen, setMoreOpen] = useState(false)
+
+  return (
+    <>
+      <nav
+        data-ui="admin/AdminMobileBottomNav/nav-admin-mobile-navigatio"
+        data-admin-bottom-bar
+        aria-label="Admin mobile navigation"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-6px_28px_-10px_rgb(0_0_0/0.14)] backdrop-blur-xl lg:hidden"
+      >
+        <Suspense fallback={<AdminBottomTabs pathname={null} ordersBadge={null} onOpenMore={() => setMoreOpen(true)} />}>
+          <AdminBottomTabsWithPath ordersBadge={ordersBadge} onOpenMore={() => setMoreOpen(true)} />
+        </Suspense>
+      </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent data-ui="admin/AdminMobileBottomNav/SheetContent" side="left" className="w-72 bg-sidebar p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Admin menu</SheetTitle>
+          </SheetHeader>
+          <SidebarBody onNavigate={() => setMoreOpen(false)} ordersBadge={ordersBadge} />
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

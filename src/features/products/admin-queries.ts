@@ -28,19 +28,21 @@ export async function listAllProducts(): Promise<Product[]> {
   return data.map(mapProduct)
 }
 
-export async function getProductForEdit(id: string): Promise<Product | null> {
+export async function getProductForEdit(idOrSlug: string): Promise<Product | null> {
   const adminCheck = requireAdmin()
-  if (!z.uuid().safeParse(id).success) {
+  const key = decodeURIComponent(idOrSlug).trim()
+  if (!key) {
     await adminCheck
     return null
   }
+  const isUuid = z.uuid().safeParse(key).success
   const supabase = await getServerSupabase()
   const [, { data, error }] = await Promise.all([
     adminCheck,
     supabase
       .from("products")
       .select(PRODUCT_SELECT)
-      .eq("id", id)
+      .eq(isUuid ? "id" : "slug", key)
       .maybeSingle<ProductRow>(),
   ])
   if (error) throw new Error(error.message)

@@ -27,12 +27,12 @@ export function ProductFlagSwitch({
   const router = useRouter()
   const [optimistic, setOptimistic] = useOptimistic(value)
   const [pending, startTransition] = useTransition()
-  useBlockWhile(pending)
   const later = useToastAfter(pending)
 
   return (
     <Switch
       checked={optimistic}
+      disabled={pending}
       aria-label={label}
       onCheckedChange={(checked) =>
         startTransition(async () => {
@@ -60,7 +60,7 @@ export function ProductFlagSwitch({
   )
 }
 
-export function ProductRowActions({ productId, name }: { productId: string; name: string }) {
+export function ProductRowActions({ productId, productSlug, name }: { productId: string; productSlug?: string; name: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -70,7 +70,7 @@ export function ProductRowActions({ productId, name }: { productId: string; name
   return (
     <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">
       <Link data-ui="admin/ProductRowActions/Link"
-        href={`/admin/products/${productId}`}
+        href={`/admin/products/${encodeURIComponent(productSlug ?? productId)}`}
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
         aria-label={`Edit ${name}`}
       >

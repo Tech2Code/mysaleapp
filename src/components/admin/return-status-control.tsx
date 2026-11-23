@@ -55,6 +55,12 @@ export function ReturnStatusControl({
 }) {
   const [choice, setChoice] = useState<Choice>("current")
   const [revertOpen, setRevertOpen] = useState(false)
+  const stateKey = `${requests.map((r) => `${r.id}:${r.status}:${r.pickedUpAt ?? ""}`).join(",")}|${returns.map((r) => `${r.id}:${r.refunded}`).join(",")}|${paymentStatus}`
+  const [prevStateKey, setPrevStateKey] = useState(stateKey)
+  if (stateKey !== prevStateKey) {
+    setPrevStateKey(stateKey)
+    if (choice !== "current") setChoice("current")
+  }
   const open = requests.find(isOpenRequest) ?? null
   const unrefunded = returns.filter((r) => !r.refunded && r.resolutionType !== "exchange")
 

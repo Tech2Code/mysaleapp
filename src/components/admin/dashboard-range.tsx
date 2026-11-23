@@ -58,11 +58,13 @@ export function DashboardRangeShell({
     })
 
   const applyCustom = (f: string, t: string) => {
-    if (f && t) go(`?from=${f}&to=${t}`)
+    if (f && t && f <= t) go(`?from=${f}&to=${t}`)
   }
 
   const onPickYear = (y: string) => {
     setFyYear(y)
+    setFrom("")
+    setTo("")
     if (y === currentFy) {
       setMonthSel(currentMonth)
       go("")
@@ -74,6 +76,10 @@ export function DashboardRangeShell({
 
   const onPickMonth = (m: string) => {
     setMonthSel(m)
+    if (m !== "custom") {
+      setFrom("")
+      setTo("")
+    }
     if (m === "all") go(fyYear === currentFy ? "?range=fy" : `?fy=${fyYear}`)
     else if (m === "custom") applyCustom(from, to)
     else if (m === currentMonth && fyYear === currentFy) go("")

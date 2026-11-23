@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMounted } from "@/hooks/use-mounted"
 import { calculateCharges } from "@/features/orders/pricing"
 import type { ShippingClass } from "@/features/products/types"
@@ -33,16 +33,21 @@ export function useLiveCart(products: LiveProduct[]) {
   const mounted = useMounted()
   const items = useCart((s) => s.items)
   const settings = useStoreSettings()
+  const [priceChangedIds, setPriceChangedIds] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     if (!mounted || products.length === 0 || items.length === 0) return
     const byId = new Map(products.map((p) => [p.id, p]))
     let changed = false
+    const newlyChanged: string[] = []
     const synced = items.map((item) => {
       const live = byId.get(item.productId)
       if (!live || live.stock <= 0) return item
       const nextQty = Math.min(item.quantity, live.stock)
       const nextImg = live.images[0] ?? item.image
+      if (live.price !== item.price) {
+        newlyChanged.push(item.productId)
+      }
       if (
         nextQty !== item.quantity ||
         live.stock !== item.maxQuantity ||
@@ -64,6 +69,15 @@ export function useLiveCart(products: LiveProduct[]) {
       }
       return item
     })
+    if (newlyChanged.length > 0) {
+      queueMicrotask(() => {
+        setPriceChangedIds((prev) => {
+          const next = new Set(prev)
+          for (const id of newlyChanged) next.add(id)
+          return next
+        })
+      })
+    }
     if (changed) {
       useCart.setState({ items: synced })
     }
@@ -85,7 +99,7 @@ export function useLiveCart(products: LiveProduct[]) {
         maxQuantity: live.stock,
         quantity: Math.min(item.quantity, live.stock),
         available: true,
-        priceChanged: live.price !== item.price,
+        priceChanged: priceChangedIds.has(item.productId) || live.price !== item.price,
         weightGrams: live.weightGrams,
         shippingClass: live.shippingClass,
       }
@@ -102,5 +116,5 @@ export function useLiveCart(products: LiveProduct[]) {
       charges,
       count: available.reduce((n, l) => n + l.quantity, 0),
     }
-  }, [items, products, mounted, settings])
+  }, [items, products, mounted, settings, priceChangedIds])
 }

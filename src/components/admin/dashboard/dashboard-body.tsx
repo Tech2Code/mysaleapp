@@ -32,7 +32,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
   return (
     <>
     {/* ------------------------------------------------ needs attention */}
-    <Stagger className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3" stagger={0.05}>
+    <Stagger className="mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3" stagger={0.05}>
       <StaggerItem>
         <AttentionTile
           href="/admin/orders?view=to-verify"
@@ -265,7 +265,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
             <ul data-ui="admin/DashboardBody/ul-3" className="space-y-3">
               {d.lowStock.map((p) => (
                 <li data-ui="admin/DashboardBody/li-3" key={p.id}>
-                  <Link data-ui="admin/DashboardBody/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3 hover:text-primary">
+                  <Link data-ui="admin/DashboardBody/Link-flex" href={`/admin/products/${encodeURIComponent(p.slug)}`} className="flex items-center gap-3 hover:text-primary">
                     <span data-ui="admin/DashboardBody/span-relative-2" className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                       <ProductImage src={p.image} alt={p.name} sizes="40px" />
                     </span>

@@ -149,10 +149,10 @@ export function RequestReturn({
     [allLines, windowByProduct, win.open, win.days]
   )
 
-  // Default the first returnable item to "1" when the customer hasn't edited quantities yet so single/multi-item orders are ready immediately.
+  // Default the first returnable item to "1" until the customer explicitly edits or clears it.
   const qtyOf = (id: string) => {
     if (qty[id] !== undefined) return qty[id]
-    if (lines.length === 1 || (Object.keys(qty).length === 0 && lines[0]?.productId === id)) return "1"
+    if (lines[0]?.productId === id) return "1"
     return ""
   }
 
@@ -308,66 +308,70 @@ export function RequestReturn({
       return
     }
     startTransition(async () => {
-      if (pickupMode === "new" && saveNewPickupAddress && !isGuest && pickupPhoneDigits && pickupState) {
-        const saveRes = await saveAddress(null, {
-          label: newAddressLabel,
-          fullName: pickupName.trim(),
-          phone: pickupPhoneDigits,
-          address: pickupAddressLine.trim(),
-          city: pickupCity.trim(),
-          state: pickupState,
-          pincode: pickupPincode.trim(),
-          isDefault: false,
-        }).catch(() => null)
-        if (saveRes && !saveRes.ok) {
-          toast.info(`Could not save address to address book: ${saveRes.error}`)
+      try {
+        const rawPref = exchangePreference.trim()
+        const formattedPref =
+          resolutionType === "exchange"
+            ? exchangeKind === "replacement"
+              ? rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
+                ? `Replacement: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
+                : rawPref
+              : rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
+                ? `Exchange: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
+                : rawPref
+            : undefined
+        const res = await requestReturn({
+          code: orderCode,
+          phoneLast4,
+          phone: isGuest ? phoneDigits ?? undefined : undefined,
+          items: payload,
+          reason,
+          details: details.trim() || undefined,
+          resolutionType,
+          exchangePreference: formattedPref,
+          pickupAddress: resolvedPickupSummary,
+        })
+        if (!res.ok) {
+          const nextFieldErrors: Record<string, string> = {}
+          for (const [k, msgs] of Object.entries(res.fieldErrors ?? {})) {
+            if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
+          }
+          setServerFieldErrors(nextFieldErrors)
+          toast.error(res.error)
+          return
         }
-      }
-      const rawPref = exchangePreference.trim()
-      const formattedPref =
-        resolutionType === "exchange"
-          ? exchangeKind === "replacement"
-            ? rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
-              ? `Replacement: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
-              : rawPref
-            : rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
-              ? `Exchange: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
-              : rawPref
-          : undefined
-      const res = await requestReturn({
-        code: orderCode,
-        phoneLast4,
-        phone: isGuest ? phoneDigits ?? undefined : undefined,
-        items: payload,
-        reason,
-        details: details.trim() || undefined,
-        resolutionType,
-        exchangePreference: formattedPref,
-        pickupAddress: resolvedPickupSummary,
-      })
-      if (!res.ok) {
-        const nextFieldErrors: Record<string, string> = {}
-        for (const [k, msgs] of Object.entries(res.fieldErrors ?? {})) {
-          if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
+        if (pickupMode === "new" && saveNewPickupAddress && !isGuest && pickupPhoneDigits && pickupState) {
+          const saveRes = await saveAddress(null, {
+            label: newAddressLabel,
+            fullName: pickupName.trim(),
+            phone: pickupPhoneDigits,
+            address: pickupAddressLine.trim(),
+            city: pickupCity.trim(),
+            state: pickupState,
+            pincode: pickupPincode.trim(),
+            isDefault: false,
+          }).catch(() => null)
+          if (saveRes && !saveRes.ok) {
+            toast.info(`Could not save address to address book: ${saveRes.error}`)
+          }
         }
-        setServerFieldErrors(nextFieldErrors)
-        toast.error(res.error)
-        return
+        const submittedKind = resolutionType === "exchange" ? (exchangeKind === "replacement" ? "replacement" : "exchange") : "refund"
+        later(() => {
+          setOpen(false)
+          resetFormState()
+          toast.success(
+            submittedKind === "replacement"
+              ? "Replacement request sent. We'll review it and update you here."
+              : submittedKind === "exchange"
+                ? "Exchange request sent. We'll review it and update you here."
+                : "Return request sent. We'll review it and update you here."
+          )
+        })
+        onDone?.()
+        router.refresh()
+      } catch {
+        toast.error("Couldn't submit your request. Please try again.")
       }
-      const submittedKind = resolutionType === "exchange" ? (exchangeKind === "replacement" ? "replacement" : "exchange") : "refund"
-      later(() => {
-        setOpen(false)
-        resetFormState()
-        toast.success(
-          submittedKind === "replacement"
-            ? "Replacement request sent. We'll review it and update you here."
-            : submittedKind === "exchange"
-              ? "Exchange request sent. We'll review it and update you here."
-              : "Return request sent. We'll review it and update you here."
-        )
-      })
-      onDone?.()
-      router.refresh()
     })
   }
 

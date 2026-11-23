@@ -5,7 +5,7 @@ import { CheckCircle2Icon, CopyIcon, Loader2Icon, MapPinIcon, PlusIcon, QrCodeIc
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
@@ -45,11 +45,12 @@ import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 
 export const LAST_ORDER_KEY = "kk-last-order"
+const EMPTY_ADDRESSES: Address[] = []
 
 /** `preview`: render the placeholder form as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
 export function CheckoutForm({
   products,
-  initialAddresses = [],
+  initialAddresses = EMPTY_ADDRESSES,
   initialProfile = null,
   preview = false,
 }: {
@@ -70,9 +71,10 @@ export function CheckoutForm({
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
   const [clientProfile, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
-  const [prevInitialAddresses, setPrevInitialAddresses] = useState(initialAddresses)
-  if (initialAddresses !== prevInitialAddresses) {
-    setPrevInitialAddresses(initialAddresses)
+  const initialAddressesKey = initialAddresses.map((a) => `${a.id}:${a.fullName}:${a.phone}:${a.address}:${a.city}:${a.pincode}`).join("|")
+  const [prevInitialAddressesKey, setPrevInitialAddressesKey] = useState(initialAddressesKey)
+  if (initialAddressesKey !== prevInitialAddressesKey) {
+    setPrevInitialAddressesKey(initialAddressesKey)
     if (!clearedOnSignOut) {
       setClientAddresses(null)
     }
@@ -92,10 +94,23 @@ export function CheckoutForm({
   const [promoInput, setPromoInput] = useState("")
   const [appliedPromo, setAppliedPromo] = useState<ValidatedPromo | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
+  const [redirecting, setRedirecting] = useState(false)
   const [promoPending, startPromoTransition] = useTransition()
   const fetchedForUser = useRef<string | null>(null)
   const prevUserId = useRef<string | null>(user?.id ?? null)
   const wasSignedIn = useRef(signedIn)
+
+  useLayoutEffect(() => {
+    return () => {
+      setPayDialogOpen(false)
+      setShowMobileQr(false)
+      setPaymentRef("")
+      setPaymentRefError(null)
+      setValidatedCustomer(null)
+      setPromoError(null)
+      setRedirecting(false)
+    }
+  }, [])
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -265,15 +280,20 @@ export function CheckoutForm({
     }
     setPromoError(null)
     startPromoTransition(async () => {
-      const res = await validatePromoCode({ code, subtotal: charges.subtotal })
-      if (!res.ok) {
-        setPromoError(res.error)
-        toast.error(res.error)
-        return
+      try {
+        const res = await validatePromoCode({ code, subtotal: charges.subtotal })
+        if (!res.ok) {
+          setPromoError(res.error)
+          toast.error(res.error)
+          return
+        }
+        setAppliedPromo(res.data)
+        setPromoInput("")
+        toast.success(`Promo code ${res.data.code} applied! You saved ${formatPrice(res.data.discountAmount)}.`)
+      } catch {
+        setPromoError("Couldn't validate promo code. Please try again.")
+        toast.error("Couldn't validate promo code. Please try again.")
       }
-      setAppliedPromo(res.data)
-      setPromoInput("")
-      toast.success(`Promo code ${res.data.code} applied! You saved ${formatPrice(res.data.discountAmount)}.`)
     })
   }
 
@@ -293,76 +313,81 @@ export function CheckoutForm({
     }
     setPaymentRefError(null)
     startTransition(async () => {
-      const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
-      const res = await placeOrder({
-        customer: validatedCustomer,
-        items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
-        paymentReference: parsedRef.data,
-        promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
-        // only offer to save when the customer typed a new address
-        saveAddress: signedIn && selected === "new" && saveAddress,
-      })
-      if (!res.ok) {
-        const refFieldMsg = res.fieldErrors?.paymentReference?.[0]
-        if (refFieldMsg) {
-          setPaymentRefError(refFieldMsg)
-          return
-        }
-        if (res.error.toLowerCase().includes("promo code")) {
-          setAppliedPromo(null)
-          setPromoError(res.error)
-          setPayDialogOpen(false)
+      try {
+        const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
+        const res = await placeOrder({
+          customer: validatedCustomer,
+          items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          paymentReference: parsedRef.data,
+          promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
+          // only offer to save when the customer typed a new address
+          saveAddress: signedIn && selected === "new" && saveAddress,
+        })
+        if (!res.ok) {
+          const refFieldMsg = res.fieldErrors?.paymentReference?.[0]
+          if (refFieldMsg) {
+            setPaymentRefError(refFieldMsg)
+            return
+          }
+          if (res.error.toLowerCase().includes("promo code")) {
+            setAppliedPromo(null)
+            setPromoError(res.error)
+            setPayDialogOpen(false)
+            toast.error(res.error)
+            return
+          }
+          for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+            const msg = messages?.[0]
+            if (msg && field in validatedCustomer) {
+              form.setError(field as keyof CheckoutInput, { message: msg })
+              setPayDialogOpen(false)
+            }
+          }
           toast.error(res.error)
           return
         }
-        for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
-          const msg = messages?.[0]
-          if (msg && field in validatedCustomer) {
-            form.setError(field as keyof CheckoutInput, { message: msg })
-            setPayDialogOpen(false)
-          }
+        setRedirecting(true)
+        setPayDialogOpen(false)
+        setAppliedPromo(null)
+        setPromoInput("")
+        setPromoError(null)
+        setPaymentRef("")
+        setPaymentRefError(null)
+        setValidatedCustomer(null)
+        setHasOrderNote(false)
+        const defaultAddr = addresses[0]
+        if (signedIn && defaultAddr) {
+          setSelected(defaultAddr.id)
+          form.reset({
+            name: defaultAddr.fullName,
+            phone: defaultAddr.phone,
+            address: defaultAddr.address,
+            ...splitCityState(defaultAddr.city),
+            pincode: defaultAddr.pincode,
+            note: "",
+          })
+        } else {
+          setSelected("new")
+          form.reset({
+            name: signedIn ? (activeProfile?.fullName ?? "") : "",
+            phone: signedIn ? (activeProfile?.phone ?? "") : "",
+            address: "",
+            city: "",
+            state: NO_STATE,
+            pincode: "",
+            note: "",
+          })
         }
-        toast.error(res.error)
-        return
-      }
-      setPayDialogOpen(false)
-      setAppliedPromo(null)
-      setPromoInput("")
-      setPromoError(null)
-      setPaymentRef("")
-      setPaymentRefError(null)
-      setValidatedCustomer(null)
-      setHasOrderNote(false)
-      const defaultAddr = addresses[0]
-      if (signedIn && defaultAddr) {
-        setSelected(defaultAddr.id)
-        form.reset({
-          name: defaultAddr.fullName,
-          phone: defaultAddr.phone,
-          address: defaultAddr.address,
-          ...splitCityState(defaultAddr.city),
-          pincode: defaultAddr.pincode,
-          note: "",
-        })
-      } else {
-        setSelected("new")
-        form.reset({
-          name: signedIn ? (activeProfile?.fullName ?? "") : "",
-          phone: signedIn ? (activeProfile?.phone ?? "") : "",
-          address: "",
-          city: "",
-          state: NO_STATE,
-          pincode: "",
-          note: "",
-        })
-      }
-      try {
-        sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(res.data))
+        try {
+          sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(res.data))
+        } catch {
+          // private mode: the success page falls back to the code in the URL
+        }
+        clearCart()
+        router.push(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
       } catch {
-        // private mode: the success page falls back to the code in the URL
+        toast.error("Couldn't place your order. Please check your connection and try again.")
       }
-      clearCart()
-      router.push(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
     })
   }
 
@@ -376,7 +401,7 @@ export function CheckoutForm({
     !placeholder && appliedPromo && baseCharges.subtotal < Math.max(appliedPromo.minOrderAmount, 2)
   )
 
-  if (!placeholder && available.length === 0) {
+  if (!placeholder && !redirecting && available.length === 0) {
     return (
       <div data-ui="store/CheckoutForm" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
         <p data-ui="store/CheckoutForm/p" className="font-heading text-2xl">Your cart is empty</p>
@@ -760,7 +785,17 @@ export function CheckoutForm({
         </Button>
       </div>
 
-      <Dialog open={payDialogOpen} onOpenChange={(next) => !pending && setPayDialogOpen(next)}>
+      <Dialog
+        open={payDialogOpen}
+        onOpenChange={(next) => {
+          if (pending) return
+          setPayDialogOpen(next)
+          if (!next) {
+            setPaymentRefError(null)
+            setShowMobileQr(false)
+          }
+        }}
+      >
         <DialogContent data-ui="store/CheckoutForm/DialogContent" mobileFullScreen className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Pay {formatPrice(shownCharges.total)} to place your order</DialogTitle>

@@ -50,6 +50,9 @@ export function ForgotPasswordForm() {
         <p data-ui="admin/ForgotPasswordForm/p">
           If <span data-ui="admin/ForgotPasswordForm/span" className="font-semibold">{sentTo}</span> is an admin account, a reset link is on its way. It works once and expires soon.
         </p>
+        <Button data-ui="admin/ForgotPasswordForm/Button-use-a-different-email" type="button" variant="outline" size="sm" onClick={() => setSentTo(null)}>
+          Use a different email
+        </Button>
       </div>
     )
   }

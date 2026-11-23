@@ -77,7 +77,7 @@ export function ImageUploader({
     const supabase = getBrowserSupabase()
     if (!files?.length || !supabase) return
 
-    const room = MAX_IMAGES - value.length
+    const room = MAX_IMAGES - latestValueRef.current.length
     const all = Array.from(files)
     const withinSize = all.filter((f) => f.size <= MAX_INPUT_BYTES)
     if (withinSize.length < all.length) toast.warning("Photos over 25 MB were skipped.")
@@ -104,6 +104,10 @@ export function ImageUploader({
           cacheControl: "31536000",
         })
         if (error) throw error
+        if (!mountedRef.current) {
+          void supabase.storage.from(BUCKET).remove([path])
+          return
+        }
         const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
         sessionPaths.current.set(publicUrl, path)
         urls.push(publicUrl)

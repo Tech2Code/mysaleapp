@@ -23,9 +23,9 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
   return (
     <article
       data-ui="store/ProductCard"
-      className="group relative flex h-full flex-col max-sm:rounded-2xl max-sm:border max-sm:border-border/75 max-sm:bg-card max-sm:p-2 max-sm:shadow-xs"
+      className="group relative flex h-full flex-col rounded-2xl border border-border/75 bg-card p-2 shadow-2xs transition-shadow duration-200 sm:border-transparent sm:bg-transparent sm:p-0 sm:shadow-none"
     >
-      <div data-ui="store/ProductCard/div-relative" className="relative aspect-4/5 overflow-hidden rounded-xl bg-muted sm:rounded-2xl @container">
+      <div data-ui="store/ProductCard/div-relative" className="relative aspect-4/5 overflow-hidden rounded-xl bg-muted ring-1 ring-border/40 sm:rounded-2xl @container">
         <Link data-ui="store/ProductCard/Link-absolute" href={`/products/${product.slug}`} prefetch={true} className="absolute inset-0" aria-label={product.name}>
           <ProductImage
             src={product.images[0]}
@@ -128,7 +128,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             <span className="text-[0.7rem] text-muted-foreground sm:text-xs">({reviewCount})</span>
           </div>
         )}
-        <div data-ui="store/ProductCard/div-flex-3" className="flex items-baseline gap-1.5 pt-0.5 sm:gap-2">
+        <div data-ui="store/ProductCard/div-flex-3" className="flex items-baseline gap-1.5 pt-0.5 tabular-nums sm:gap-2">
           <span data-ui="store/ProductCard/span-4" className="text-sm font-bold sm:text-base">{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
             <span data-ui="store/ProductCard/span-5" className="text-xs text-muted-foreground line-through sm:text-sm">

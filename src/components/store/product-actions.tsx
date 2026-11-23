@@ -785,8 +785,6 @@ export function ProductReviewsSection({
     })
   }
 
-  if (totalCount === 0) return null
-
   const avgRating =
     product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
       ? Number(product.ratingAvg)

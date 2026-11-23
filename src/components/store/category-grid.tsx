@@ -23,7 +23,7 @@ export function CategoryGrid({ categories }: { categories: (Category & { count: 
         >
           <Link data-ui="store/CategoryGrid/Link"
             href={`/category/${c.slug}`}
-            className={`group relative flex h-44 flex-col justify-between overflow-hidden rounded-3xl bg-linear-to-br p-4 ring-1 ring-black/5 transition-all duration-300 sm:h-52 sm:p-5 sm:hover:-translate-y-1 sm:hover:shadow-xl ${tints[i % tints.length]}`}
+            className={`group relative flex h-42 flex-col justify-between overflow-hidden rounded-2xl bg-linear-to-br p-4 ring-1 ring-border/70 transition-all duration-300 active:scale-[0.98] sm:h-52 sm:p-5 sm:hover:-translate-y-0.5 sm:hover:shadow-lg ${tints[i % tints.length]}`}
           >
             {c.imageUrl ? (
               <>

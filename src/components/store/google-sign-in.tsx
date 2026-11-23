@@ -251,6 +251,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       resetForm.reset({ next: "", confirm: "" })
       setConfirmationEmail(null)
       setResetLinkSentTo(null)
+      setProblem(null)
       setLoadingGoogle(false)
       setMode("signin")
     }
@@ -417,11 +418,16 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     }
     setLoadingGoogle(true)
     const targetNext = resolveNext()
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?flow=oauth&next=${encodeURIComponent(targetNext)}` },
-    })
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback?flow=oauth&next=${encodeURIComponent(targetNext)}` },
+      })
+      if (error) {
+        setLoadingGoogle(false)
+        toast.error("Could not start Google sign-in. Please try again.")
+      }
+    } catch {
       setLoadingGoogle(false)
       toast.error("Could not start Google sign-in. Please try again.")
     }

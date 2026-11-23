@@ -221,7 +221,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                     <span data-ui="admin/ProductsView/span-7" className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
                   </div>
                   <Link data-ui="admin/ProductsView/Link"
-                    href={`/admin/products/${p.id}`}
+                    href={`/admin/products/${encodeURIComponent(p.slug)}`}
                     className="block text-sm/snug font-medium text-foreground transition-colors line-clamp-2 hover:text-primary"
                   >
                     {p.name}
@@ -240,13 +240,19 @@ export function ProductsView({ products }: { products: Product[] }) {
                     <span data-ui="admin/ProductsView/span-9" className="text-[11px] font-medium text-muted-foreground">Featured</span>
                   </div>
                 </div>
-                <ProductRowActions productId={p.id} name={p.name} />
+                <ProductRowActions productId={p.id} productSlug={p.slug} name={p.name} />
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div data-ui="admin/ProductsView/div-6" className="overflow-hidden rounded-2xl border bg-card">
+        <div
+          data-ui="admin/ProductsView/div-products-table"
+          tabIndex={0}
+          role="region"
+          aria-label="Products table"
+          className="overflow-x-auto rounded-2xl border border-border/80 bg-card focus-visible:outline-2 focus-visible:outline-ring"
+        >
           <Table data-ui="admin/ProductsView/Table">
             <TableHeader data-ui="admin/ProductsView/TableHeader">
               <TableRow data-ui="admin/ProductsView/TableRow">
@@ -265,7 +271,7 @@ export function ProductsView({ products }: { products: Product[] }) {
               {filteredProducts.map((p) => (
                 <TableRow data-ui="admin/ProductsView/TableRow-2" key={p.id}>
                   <TableCell data-ui="admin/ProductsView/TableCell" className="pl-5">
-                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${p.id}`} className="flex items-center gap-3">
+                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${encodeURIComponent(p.slug)}`} className="flex items-center gap-3">
                       <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>
@@ -273,7 +279,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                     </Link>
                   </TableCell>
                   <TableCell data-ui="admin/ProductsView/TableCell-hidden" className="hidden text-sm text-muted-foreground md:table-cell">{p.category?.name ?? "—"}</TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-2" className="text-right font-medium">{formatPrice(p.price)}</TableCell>
+                  <TableCell data-ui="admin/ProductsView/TableCell-2" className="text-right font-medium tabular-nums">{formatPrice(p.price)}</TableCell>
                   <TableCell data-ui="admin/ProductsView/TableCell-3" className={cn("hidden text-right sm:table-cell", p.stock === 0 && "font-semibold text-destructive")}>
                     {p.stock === 0 ? "Sold out" : p.stock}
                   </TableCell>
@@ -284,7 +290,7 @@ export function ProductsView({ products }: { products: Product[] }) {
                     <ProductFlagSwitch productId={p.id} flag="isFeatured" value={p.isFeatured} label={`Feature ${p.name} on home page`} />
                   </TableCell>
                   <TableCell data-ui="admin/ProductsView/TableCell-5" className="pr-5">
-                    <ProductRowActions productId={p.id} name={p.name} />
+                    <ProductRowActions productId={p.id} productSlug={p.slug} name={p.name} />
                   </TableCell>
                 </TableRow>
               ))}

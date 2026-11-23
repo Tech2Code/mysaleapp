@@ -36,13 +36,13 @@ const BLOCKED_KEYS = new Set(["Escape", "Enter", " ", "Tab"])
 
 export function BusyOverlayProvider({ children }: { children: ReactNode }) {
   const [{ count, success }, setState] = useState<{ count: number; success: string | null }>({ count: 0, success: null })
-  const begin = useCallback(() => setState((s) => ({ ...s, count: s.count + 1 })), [])
+  const begin = useCallback(() => setState((s) => ({ count: s.count + 1, success: s.count === 0 ? null : s.success })), [])
   // The success message dies with the overlay, so it can never be left over for the next screen.
   const end = useCallback(
     () => setState((s) => ({ count: Math.max(0, s.count - 1), success: s.count <= 1 ? null : s.success })),
     []
   )
-  const succeed = useCallback((message: string) => setState((s) => ({ ...s, success: message })), [])
+  const succeed = useCallback((message: string) => setState((s) => (s.count === 0 ? s : { ...s, success: message })), [])
   const api = useMemo(() => ({ begin, end, succeed }), [begin, end, succeed])
   const busy = count > 0
 

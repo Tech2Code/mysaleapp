@@ -40,7 +40,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
             <TruckIcon className="size-3.5 text-primary shrink-0" />
           )}
           {unlocked ? (
-            <span data-ui="store/FreeShippingBar/span">You unlocked <strong data-ui="store/FreeShippingBar/strong">Free Delivery</strong> 🎉</span>
+            <span data-ui="store/FreeShippingBar/span">You unlocked <strong data-ui="store/FreeShippingBar/strong">Free Delivery</strong></span>
           ) : (
             <span data-ui="store/FreeShippingBar/span-2">
               Add <strong data-ui="store/FreeShippingBar/strong-2" className="text-foreground font-semibold">{formatPrice(remaining)}</strong> more for <strong data-ui="store/FreeShippingBar/strong-3" className="text-primary font-semibold">Free Delivery</strong>

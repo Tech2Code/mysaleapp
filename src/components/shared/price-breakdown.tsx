@@ -1,3 +1,4 @@
+import { SparklesIcon } from "lucide-react"
 import type { OrderFee } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -96,8 +97,9 @@ export function PriceBreakdown({
         </div>
 
         {totalSaved > 0 && (
-          <p data-ui="shared/PriceBreakdown/p" className="text-xs font-medium text-success">
-            You saved {formatPrice(totalSaved)} on this order 🎉
+          <p data-ui="shared/PriceBreakdown/p-inline-flex" className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+            <SparklesIcon className="size-3.5 shrink-0" aria-hidden />
+            <span data-ui="shared/PriceBreakdown/span-9">You saved {formatPrice(totalSaved)} on this order</span>
           </p>
         )}
 

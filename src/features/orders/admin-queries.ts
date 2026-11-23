@@ -262,7 +262,7 @@ export type DayPoint = { date: string; label: string; revenue: number; orders: n
 
 export type TopProduct = { productId: string; name: string; image: string | null; quantity: number; revenue: number }
 
-export type LowStockProduct = { id: string; name: string; stock: number; image: string | null }
+export type LowStockProduct = { id: string; slug: string; name: string; stock: number; image: string | null }
 
 export type DashboardData = {
   greeting: string
@@ -325,12 +325,12 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
       countOrdersInView(supabase, "return-refund-pending"),
       supabase
         .from("products")
-        .select("id, name, stock, images")
+        .select("id, slug, name, stock, images")
         .eq("is_active", true)
         .lte("stock", 5)
         .order("stock", { ascending: true })
         .limit(6)
-        .returns<{ id: string; name: string; stock: number; images: string[] | null }[]>(),
+        .returns<{ id: string; slug: string; name: string; stock: number; images: string[] | null }[]>(),
     ]),
   ])
   const failed = [statsRes, recentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes].find((r) => r.error)
@@ -364,7 +364,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 
   const hour = Number(new Intl.DateTimeFormat("en-IN", { hour: "numeric", hourCycle: "h23", timeZone: IST }).format(now))
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
-  const lowStock = (lowStockRes.data ?? []).map((p) => ({ id: p.id, name: p.name, stock: p.stock, image: p.images?.[0] ?? null }))
+  const lowStock = (lowStockRes.data ?? []).map((p) => ({ id: p.id, slug: p.slug, name: p.name, stock: p.stock, image: p.images?.[0] ?? null }))
 
   return {
     greeting,

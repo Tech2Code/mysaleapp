@@ -42,9 +42,9 @@ function NavItems({ pathname, tab }: { pathname: string | null; tab: string | nu
             href={l.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[11px]/tight font-medium transition-colors sm:flex-row sm:justify-start sm:gap-3 sm:px-4 sm:py-3 sm:text-sm",
+              "flex min-h-11 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[11px]/tight font-medium transition-colors active:scale-95 sm:flex-row sm:justify-start sm:gap-3 sm:px-4 sm:py-3 sm:text-sm",
               l.key === "settings" && "sm:hidden",
-              active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-card hover:bg-muted lg:bg-transparent"
+              active ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20" : "border border-border/60 bg-card hover:bg-muted lg:border-0 lg:bg-transparent"
             )}
           >
             <l.icon data-ui="account/NavItems/l.icon" className="size-4 shrink-0" />
@@ -84,12 +84,20 @@ function AccountSignOutCard() {
   const signOut = () =>
     startSignOut(async () => {
       setAskSignOut(false)
-      await signOutCustomer()
-      applyClientSignOut()
-      await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-      showSuccess("Signed out")
-      later(() => toast.success("Signed out successfully"))
-      router.replace("/")
+      try {
+        const res = await signOutCustomer()
+        if (!res.ok) {
+          toast.error(res.error ?? "Couldn't sign out. Please try again.")
+          return
+        }
+        applyClientSignOut()
+        await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+        showSuccess("Signed out")
+        later(() => toast.success("Signed out successfully"))
+        router.replace("/")
+      } catch {
+        toast.error("Couldn't sign out. Please try again.")
+      }
     })
 
   return (

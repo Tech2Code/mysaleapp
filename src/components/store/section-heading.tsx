@@ -24,12 +24,12 @@ export function SectionHeading({
         </h2>
       </div>
       {href && (
-        <Link data-ui="store/SectionHeading/Link-hidden"
+        <Link data-ui="store/SectionHeading/Link-inline-flex"
           href={href}
-          className="group hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-primary sm:inline-flex"
+          className="group inline-flex shrink-0 items-center gap-1 rounded-full border border-border/80 bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary sm:border-0 sm:bg-transparent sm:p-0 sm:text-sm sm:text-primary"
         >
           {linkLabel}
-          <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" />
+          <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5 sm:size-4" aria-hidden />
         </Link>
       )}
     </FadeIn>

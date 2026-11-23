@@ -1,4 +1,4 @@
-import { ExternalLinkIcon } from "lucide-react"
+import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react"
 import Link from "next/link"
 import { AccountSettings } from "@/components/admin/account-forms"
 import { AdminPageHeader } from "@/components/admin/admin-page-header"
@@ -23,6 +23,14 @@ import { cn } from "@/lib/utils"
 export function ProductFormView({ product, categories }: { product: Product | null; categories: Pick<Category, "id" | "name">[] }) {
   return (
     <>
+      <div data-ui="admin/ProductFormView/div" className="mb-3">
+        <Link data-ui="admin/ProductFormView/Link-all-products"
+          href="/admin/products"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeftIcon className="size-3.5" aria-hidden /> All products
+        </Link>
+      </div>
       {product ? (
         <AdminPageHeader
           title={product.name}

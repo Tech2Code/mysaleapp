@@ -254,7 +254,13 @@ export function OrdersTable({
           })}
         </div>
       ) : (
-        <div data-ui="admin/OrdersTable/div-12" className="overflow-hidden rounded-2xl border bg-card">
+        <div
+          data-ui="admin/OrdersTable/div-orders-table"
+          tabIndex={0}
+          role="region"
+          aria-label="Orders table"
+          className="overflow-x-auto rounded-2xl border border-border/80 bg-card focus-visible:outline-2 focus-visible:outline-ring"
+        >
           <Table data-ui="admin/OrdersTable/Table">
             <TableHeader data-ui="admin/OrdersTable/TableHeader">
               <TableRow data-ui="admin/OrdersTable/TableRow">
@@ -295,15 +301,15 @@ export function OrdersTable({
                       </div>
                     </TableCell>
                     <TableCell data-ui="admin/OrdersTable/TableCell-2">
-                      <div data-ui="admin/OrdersTable/div-13" className="font-medium">{o.customerName}</div>
-                      <div data-ui="admin/OrdersTable/div-14" className="text-xs text-muted-foreground">
+                      <div data-ui="admin/OrdersTable/div-12" className="font-medium">{o.customerName}</div>
+                      <div data-ui="admin/OrdersTable/div-13" className="text-xs text-muted-foreground">
                         {o.phone} · {o.city}
                       </div>
                     </TableCell>
                     <TableCell data-ui="admin/OrdersTable/TableCell-hidden" className="hidden max-w-72 text-sm md:table-cell">
                       <div data-ui="admin/OrdersTable/div-flex-9" className="flex flex-col gap-0.5">
                         {o.items.map((i, idx) => (
-                          <div data-ui="admin/OrdersTable/div-15" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
+                          <div data-ui="admin/OrdersTable/div-14" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
                             <span data-ui="admin/OrdersTable/span-12" className="text-foreground">{i.name}</span> <span data-ui="admin/OrdersTable/span-13" className="font-mono font-semibold">×{i.quantity}</span>
                           </div>
                         ))}
@@ -318,7 +324,7 @@ export function OrdersTable({
                     <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">
                       <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-4" className="text-right font-semibold">{formatPrice(o.total)}</TableCell>
+                    <TableCell data-ui="admin/OrdersTable/TableCell-4" className="text-right font-semibold tabular-nums">{formatPrice(o.total)}</TableCell>
                     <TableCell data-ui="admin/OrdersTable/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
                       {formatDateTime(o.createdAt)}
                     </TableCell>

@@ -34,7 +34,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="shared/ConfirmDialog/DialogContent" className="sm:max-w-md">
+      <DialogContent data-ui="shared/ConfirmDialog/DialogContent" showCloseButton={!pending} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

@@ -54,14 +54,14 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
             href={l.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative max-w-44 truncate rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-foreground/75 transition-colors hover:text-foreground",
-              active && "text-foreground"
+              "relative max-w-44 truncate rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground",
+              active && "font-semibold text-foreground"
             )}
           >
             {active && (
               <m.span data-ui="store/DesktopNavItems/m.span-absolute"
                 layoutId="nav-pill"
-                className="absolute inset-0 -z-10 rounded-full bg-secondary"
+                className="absolute inset-0 -z-10 rounded-full bg-secondary/90 ring-1 ring-border/70"
                 transition={{ type: "spring", stiffness: 400, damping: 32 }}
               />
             )}
@@ -215,11 +215,15 @@ export function Header({ categories }: { categories: NavCategory[] }) {
             data-search-trigger=""
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full")}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "rounded-full xl:w-auto xl:gap-2 xl:border xl:border-border/80 xl:bg-muted/45 xl:px-3.5 xl:text-xs xl:font-medium xl:text-muted-foreground xl:hover:bg-muted xl:hover:text-foreground"
+            )}
             aria-label="Search products"
             aria-expanded={searchOpen}
           >
-            <SearchIcon className="size-4.5" />
+            <SearchIcon className="size-4.5 xl:size-3.5" />
+            <span data-ui="store/Header/span-hidden" className="hidden xl:inline">Search…</span>
           </button>
           <ThemeToggle className="hidden sm:inline-flex" />
           <Suspense fallback={null}>

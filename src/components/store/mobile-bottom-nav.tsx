@@ -81,24 +81,24 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
       data-ui="store/BottomNavTabs"
       data-mobile-bottom-bar
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_-8px_rgb(0_0_0/0.12)] backdrop-blur-xl sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-6px_28px_-10px_rgb(0_0_0/0.14)] backdrop-blur-xl sm:hidden"
     >
-      <ul data-ui="store/BottomNavTabs/ul-grid" className="grid h-15 grid-cols-5 items-center px-1">
+      <ul data-ui="store/BottomNavTabs/ul-grid" className="grid h-15.5 grid-cols-5 items-center px-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon
           const content = (
             <>
-              <span data-ui="store/BottomNavTabs/span-grid" className="relative grid h-7 w-12 place-items-center rounded-full">
+              <span data-ui="store/BottomNavTabs/span-grid" className="relative grid h-7.5 w-12 place-items-center rounded-full">
                 {tab.active && (
                   <m.span
                     data-ui="store/BottomNavTabs/m.span-absolute"
                     layoutId="mobile-bottom-nav-pill"
-                    className="absolute inset-0 rounded-full bg-primary/15"
+                    className="absolute inset-0 rounded-full bg-primary/14 ring-1 ring-primary/20"
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
                 <span data-ui="store/BottomNavTabs/span-relative" className="relative">
-                  <Icon className={cn("size-5 transition-transform duration-150", tab.active && "scale-105 stroke-[2.25]")} />
+                  <Icon className={cn("size-5 transition-transform duration-150", tab.active && "scale-105 stroke-[2.25]")} aria-hidden />
                   {tab.badge ? <TabBadge count={tab.badge} /> : null}
                 </span>
               </span>
@@ -122,7 +122,7 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
                   href={tab.href}
                   aria-current={tab.active ? "page" : undefined}
                   className={cn(
-                    "flex w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
+                    "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
                     tab.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -133,8 +133,9 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
                   data-ui="store/BottomNavTabs/button"
                   type="button"
                   onClick={tab.onClick}
+                  aria-pressed={tab.active}
                   className={cn(
-                    "flex w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
+                    "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
                     tab.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   )}
                 >

@@ -59,29 +59,28 @@ export function HomeView({
 
         {/* CTA band */}
         <section data-ui="store/HomeView/section-4" className="container-page">
-          <FadeIn className="relative overflow-hidden rounded-4xl bg-linear-to-br from-primary via-[oklch(0.56_0.15_25)] to-[oklch(0.5_0.13_10)] px-6 py-14 text-center text-primary-foreground shadow-2xl shadow-primary/20 sm:px-12 sm:py-20">
-            <div data-ui="store/HomeView/div-absolute" aria-hidden className="absolute -top-20 -left-20 size-72 rounded-full bg-white/10 blur-2xl animate-blob" />
-            <div data-ui="store/HomeView/div-absolute-2" aria-hidden className="absolute -right-16 -bottom-24 size-80 rounded-full bg-white/10 blur-2xl animate-blob [animation-delay:-8s]" />
-            <h2 data-ui="store/HomeView/h2-looking-for-something-" className="relative mx-auto max-w-2xl text-3xl font-semibold sm:text-5xl">
+          <FadeIn className="relative overflow-hidden rounded-2xl border border-border/80 bg-foreground px-6 py-12 text-center text-background shadow-lg sm:rounded-3xl sm:px-12 sm:py-16 dark:bg-card dark:text-foreground">
+            <p data-ui="store/HomeView/p" className="text-xs font-semibold tracking-widest text-primary uppercase">Bespoke studio</p>
+            <h2 data-ui="store/HomeView/h2-looking-for-something-" className="relative mx-auto mt-2 max-w-2xl text-2xl font-semibold sm:text-4xl lg:text-5xl">
               Looking for something custom?
             </h2>
-            <p data-ui="store/HomeView/p-relative" className="relative mx-auto mt-4 max-w-xl text-primary-foreground/85 sm:text-lg">
+            <p data-ui="store/HomeView/p-relative" className="relative mx-auto mt-3 max-w-xl text-sm/relaxed text-background/75 sm:mt-4 sm:text-base/relaxed dark:text-muted-foreground">
               Personalised names, colours or bulk gifting — tell us what you have in mind and we&apos;ll make it by hand.
             </p>
-            <div data-ui="store/HomeView/div-flex" className="relative mt-8 flex flex-wrap justify-center gap-3">
+            <div data-ui="store/HomeView/div-flex" className="relative mt-7 flex flex-wrap justify-center gap-3">
               <a data-ui="store/HomeView/a-chat-with-us"
                 href={shopWhatsappLink(shop, `Hi ${shop.shopName}! I'd like a custom order.`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 font-semibold text-neutral-900 shadow-lg transition-transform hover:-translate-y-0.5"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-background px-6 text-sm font-semibold text-foreground shadow-sm transition-transform hover:-translate-y-0.5 dark:bg-primary dark:text-primary-foreground"
               >
-                <WhatsAppIcon className="size-5 text-whatsapp" /> Chat with us
+                <WhatsAppIcon className="size-4.5 text-whatsapp dark:text-primary-foreground" /> Chat with us
               </a>
               <Link data-ui="store/HomeView/Link-browse-all"
                 href="/products"
-                className="group inline-flex h-12 items-center gap-2 rounded-full border border-white/40 px-6 font-semibold transition-colors hover:bg-white/10"
+                className="group inline-flex h-11 items-center gap-2 rounded-full border border-background/25 px-6 text-sm font-semibold transition-colors hover:bg-background/10 dark:border-border dark:hover:bg-muted"
               >
-                Browse all <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" />
+                Browse all <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
               </Link>
             </div>
           </FadeIn>

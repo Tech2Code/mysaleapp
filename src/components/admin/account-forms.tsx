@@ -29,18 +29,55 @@ import {
 } from "@/features/auth/account-schema"
 import type { ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
-function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function Card({
+  title,
+  description,
+  dirty = false,
+  children,
+}: {
+  title: string
+  description: string
+  dirty?: boolean
+  children: ReactNode
+}) {
   return (
-    <section data-ui="admin/Card" className="mb-6 space-y-4 break-inside-avoid rounded-2xl border bg-card p-4 sm:space-y-5 sm:p-6">
-      <div data-ui="admin/Card/div">
-        <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
-        <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+    <section
+      data-ui="admin/Card"
+      className={cn(
+        "mb-5 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-2xs transition-colors",
+        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
+      )}
+    >
+      <div
+        data-ui="admin/Card/div"
+        className={cn(
+          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
+          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
+        )}
+      >
+        <div data-ui="admin/Card/div-2" className="min-w-0">
+          <h2 data-ui="admin/Card/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+            {title}
+          </h2>
+          <p data-ui="admin/Card/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+            {description}
+          </p>
+        </div>
+        {dirty && (
+          <span data-ui="admin/Card/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
+            <span data-ui="admin/Card/span" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+            Edited
+          </span>
+        )}
       </div>
-      {children}
+      <div data-ui="admin/Card/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+        {children}
+      </div>
     </section>
   )
 }
@@ -785,7 +822,7 @@ export function AccountSettings({
   }, [])
 
   return (
-    <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-6">
+    <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-5">
       <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
         <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
       </Card>

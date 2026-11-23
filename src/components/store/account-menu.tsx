@@ -57,12 +57,20 @@ export function AccountMenu() {
   const signOut = () =>
     startSignOut(async () => {
       setAskSignOut(false)
-      await signOutCustomer()
-      applyClientSignOut()
-      await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-      showSuccess("Signed out")
-      later(() => toast.success("Signed out successfully"))
-      router.replace("/")
+      try {
+        const res = await signOutCustomer()
+        if (!res.ok) {
+          toast.error(res.error ?? "Couldn't sign out. Please try again.")
+          return
+        }
+        applyClientSignOut()
+        await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+        showSuccess("Signed out")
+        later(() => toast.success("Signed out successfully"))
+        router.replace("/")
+      } catch {
+        toast.error("Couldn't sign out. Please try again.")
+      }
     })
 
   return (

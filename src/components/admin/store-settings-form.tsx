@@ -1,7 +1,22 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CopyIcon, Loader2Icon, PlusIcon, TicketPercentIcon, Trash2Icon } from "lucide-react"
+import {
+  BadgePercentIcon,
+  CopyIcon,
+  GlobeIcon,
+  IndianRupeeIcon,
+  Loader2Icon,
+  PhoneIcon,
+  PlusIcon,
+  ReceiptIcon,
+  ShoppingCartIcon,
+  StoreIcon,
+  TicketPercentIcon,
+  Trash2Icon,
+  TruckIcon,
+  type LucideIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
@@ -40,14 +55,75 @@ import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 
-function Card({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function hasDirtyValue(val: unknown): boolean {
+  if (val === true) return true
+  if (Array.isArray(val)) return val.some(hasDirtyValue)
+  if (val && typeof val === "object") return Object.values(val).some(hasDirtyValue)
+  return false
+}
+
+function hasDirty(dirtyFields: Record<string, unknown>, ...keys: (keyof StoreSettingsInput)[]): boolean {
+  return keys.some((k) => hasDirtyValue(dirtyFields[k]))
+}
+
+function Card({
+  title,
+  description,
+  icon: Icon,
+  dirty = false,
+  children,
+}: {
+  title: string
+  description: string
+  icon?: LucideIcon
+  dirty?: boolean
+  children: ReactNode
+}) {
   return (
-    <section data-ui="admin/Card" className="mb-6 space-y-5 break-inside-avoid rounded-2xl border bg-card p-5 sm:p-6">
-      <div data-ui="admin/Card/div">
-        <h2 data-ui="admin/Card/h2" className="font-sans text-lg font-semibold">{title}</h2>
-        <p data-ui="admin/Card/p" className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+    <section
+      data-ui="admin/Card"
+      className={cn(
+        "mb-5 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-2xs transition-colors",
+        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
+      )}
+    >
+      <div
+        data-ui="admin/Card/div"
+        className={cn(
+          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
+          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
+        )}
+      >
+        <div data-ui="admin/Card/div-flex" className="flex min-w-0 items-start gap-3">
+          {Icon && (
+            <span data-ui="admin/Card/span"
+              className={cn(
+                "mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl transition-colors",
+                dirty ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary"
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+            </span>
+          )}
+          <div data-ui="admin/Card/div-2" className="min-w-0">
+            <h2 data-ui="admin/Card/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+              {title}
+            </h2>
+            <p data-ui="admin/Card/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+              {description}
+            </p>
+          </div>
+        </div>
+        {dirty && (
+          <span data-ui="admin/Card/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
+            <span data-ui="admin/Card/span-2" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+            Edited
+          </span>
+        )}
       </div>
-      {children}
+      <div data-ui="admin/Card/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+        {children}
+      </div>
     </section>
   )
 }
@@ -128,7 +204,16 @@ function StoreSettingsFormInner({
     resolver: zodResolver(storeSettingsSchema),
     defaultValues: baseline,
   })
-  const { errors, isDirty } = form.formState
+  const { errors, isDirty, dirtyFields } = form.formState
+  const df = dirtyFields as Record<string, unknown>
+  const shopDirty = hasDirty(df, "shopName", "tagline", "description", "announcement", "highlightLine", "heroBadge")
+  const socialDirty = hasDirty(df, "instagramUrl", "facebookUrl")
+  const seoDirty = hasDirty(df, "keywords")
+  const contactDirty = hasDirty(df, "whatsappNumber", "phoneSameAsWhatsapp", "phone", "email", "city", "region")
+  const paymentDirty = hasDirty(df, "upiId", "upiPayeeName")
+  const taxDirty = hasDirty(df, "gstRegistered", "gstRate", "gstin", "priceNote", "legalName", "businessAddress")
+  const deliveryDirty = hasDirty(df, "deliveryFee", "freeDeliveryAbove", "fragileFee", "oversizedFee", "freeWeightGrams", "extraWeightFeePerKg")
+  const ordersDirty = hasDirty(df, "orderCodePrefix", "unpaidOrderExpiryHours", "returnWindowDays")
   const [pincode, setPincode] = useState("")
   const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal] = useWatch({
     control: form.control,
@@ -239,13 +324,15 @@ function StoreSettingsFormInner({
     )(e)
 
   return (
-    <form data-ui="admin/StoreSettingsFormInner" onSubmit={onSubmit} noValidate>
-      <div data-ui="admin/StoreSettingsFormInner/div" className="xl:columns-2 xl:gap-6">
+    <form data-ui="admin/StoreSettingsFormInner" onSubmit={onSubmit} noValidate className="space-y-5">
+      <div data-ui="admin/StoreSettingsFormInner/div" className="xl:columns-2 xl:gap-5">
         {/* ----------------------------------------------- column 1: your shop */}
         <div data-ui="admin/StoreSettingsFormInner/div-2" className="contents">
           <Card
             title="Shop profile"
             description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
+            icon={StoreIcon}
+            dirty={shopDirty}
           >
             <div data-ui="admin/StoreSettingsFormInner/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
@@ -281,7 +368,7 @@ function StoreSettingsFormInner({
             </div>
           </Card>
 
-          <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link.">
+          <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link." icon={GlobeIcon} dirty={socialDirty}>
             <div data-ui="admin/StoreSettingsFormInner/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
                 label="Instagram" kind="url"
@@ -305,6 +392,8 @@ function StoreSettingsFormInner({
           <Card
             title="Google & SEO"
             description="Helps people find your shop by name or by what you sell. Your website address comes from the deployment settings, not from here."
+            icon={BadgePercentIcon}
+            dirty={seoDirty}
           >
             <TextAreaField
               label="Search keywords" maxLength={LIMITS.keywords.max}
@@ -323,7 +412,7 @@ function StoreSettingsFormInner({
 
         {/* ----------------------------------------------- column 2: contact, money, orders */}
         <div data-ui="admin/StoreSettingsFormInner/div-4" className="contents">
-          <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message.">
+          <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message." icon={PhoneIcon} dirty={contactDirty}>
             <TextField
               label="WhatsApp number" kind="intlPhone"
               fieldSize="md"
@@ -388,6 +477,8 @@ function StoreSettingsFormInner({
           <Card
             title="Payment (UPI)"
             description="Customers pay this UPI ID at checkout and enter the UTR to place their order. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
+            icon={IndianRupeeIcon}
+            dirty={paymentDirty}
           >
             <div data-ui="admin/StoreSettingsFormInner/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
@@ -414,6 +505,8 @@ function StoreSettingsFormInner({
           <Card
             title="Tax & invoices"
             description="Not registered for GST? Leave this off: invoices are a Bill of Supply and no tax is shown. After you get a GSTIN, turn it on to switch to Tax Invoices."
+            icon={ReceiptIcon}
+            dirty={taxDirty}
           >
             <Controller
               control={form.control}
@@ -475,6 +568,8 @@ function StoreSettingsFormInner({
           <Card
             title="Delivery & handling charges"
             description="Centralised courier & packaging rules. Products only declare their weight and handling class — rates apply automatically per order."
+            icon={TruckIcon}
+            dirty={deliveryDirty}
           >
             <div data-ui="admin/StoreSettingsFormInner/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
               <TextField
@@ -539,37 +634,37 @@ function StoreSettingsFormInner({
             {deliveryPreview && <p data-ui="admin/StoreSettingsFormInner/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
           </Card>
 
-          <Card title="Orders" description="How your order numbers look, how long an order with a rejected UTR is kept before auto-cancellation, and the return window.">
-            <TextField
-              label="Order code prefix" kind="orderPrefix"
-              fieldSize="md"
-              className="font-mono uppercase"
-              maxLength={5}
-              containerClassName="sm:w-64"
-              hint={`New orders look like ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
-              error={errors.orderCodePrefix?.message}
-              {...form.register("orderCodePrefix")}
-            />
-            <TextField
-              label="Auto-cancel rejected payments after (hours)" kind="digits"
-              fieldSize="md"
-              inputMode="numeric"
-              maxLength={3}
-              containerClassName="sm:w-64"
-              hint="If a payment UTR is rejected and the customer doesn't submit a new UTR within this time, the order is cancelled and reserved stock goes back on sale. 0 = never."
-              error={errors.unpaidOrderExpiryHours?.message}
-              {...form.register("unpaidOrderExpiryHours")}
-            />
-            <TextField
-              label="Return & exchange window (days after delivery)" kind="digits"
-              fieldSize="md"
-              inputMode="numeric"
-              maxLength={2}
-              containerClassName="sm:w-64"
-              hint="How long customers can request a return or exchange after delivery (up to 90 days). 0 = returns & exchanges are turned off."
-              error={errors.returnWindowDays?.message}
-              {...form.register("returnWindowDays")}
-            />
+          <Card title="Orders" description="Order code format, rejected-UTR expiry, and the return window." icon={ShoppingCartIcon} dirty={ordersDirty}>
+            <div data-ui="admin/StoreSettingsFormInner/div-grid-11" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <TextField
+                label="Order code prefix" kind="orderPrefix"
+                fieldSize="md"
+                className="font-mono uppercase"
+                maxLength={5}
+                hint={`Preview: ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
+                error={errors.orderCodePrefix?.message}
+                {...form.register("orderCodePrefix")}
+              />
+              <TextField
+                label="Auto-cancel rejected UTR (hours)" kind="digits"
+                fieldSize="md"
+                inputMode="numeric"
+                maxLength={3}
+                hint="Time before an un-updated rejected UTR is cancelled and stock is released. 0 = never."
+                error={errors.unpaidOrderExpiryHours?.message}
+                {...form.register("unpaidOrderExpiryHours")}
+              />
+              <TextField
+                label="Return & exchange window (days)" kind="digits"
+                fieldSize="md"
+                inputMode="numeric"
+                maxLength={2}
+                containerClassName="sm:col-span-2 lg:col-span-1"
+                hint="Days after delivery to request a return or exchange (max 90). 0 = off."
+                error={errors.returnWindowDays?.message}
+                {...form.register("returnWindowDays")}
+              />
+            </div>
           </Card>
         </div>
       </div>
@@ -976,7 +1071,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(next) => !next && setDeleteTarget(null)}
+        onOpenChange={(next) => !next && !pending && setDeleteTarget(null)}
         title={`Delete promo code ${deleteTarget?.code ?? ""}?`}
         description={
           <>

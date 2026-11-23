@@ -197,11 +197,18 @@
   }
   body {
     overflow-anchor: none;
+    overflow-wrap: break-word;
     @apply bg-background text-foreground;
   }
   h1, h2, h3 {
     @apply font-heading tracking-tight;
     text-wrap: balance;
+  }
+  p, li {
+    text-wrap: pretty;
+  }
+  :where(a, code) {
+    overflow-wrap: anywhere;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
@@ -293,6 +300,10 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    padding-inline: 0.2em;
+    margin-inline: -0.2em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   .glass {
     @apply bg-background/70 backdrop-blur-xl supports-backdrop-filter:bg-background/55;
@@ -550,9 +561,14 @@ body:has([data-admin-pin-locked]) [data-slot="admin-main"] {
 [data-slot="dialog-content"]:has(> form > [data-slot="dialog-header"] + [data-slot="dialog-footer"]) { gap: 0; }
 [data-slot="dialog-header"]:has(+ [data-slot="dialog-footer"]) { margin-bottom: 0; border-bottom: 0; }
 
-/* Mobile bottom bar spacing: reserve footer bottom padding and scroll-padding-bottom on phones ONLY when a visible fixed bottom bar exists on the page */
+/* Mobile bottom bar spacing: reserve bottom padding and scroll-padding-bottom on phones/tablets ONLY when a visible fixed bottom bar exists */
 @media (max-width: 639.98px) {
   [data-slot="store-footer"] { padding-bottom: 0 !important; }
-  html:has([data-mobile-bottom-bar]:not([data-skeleton] *)) { scroll-padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)); }
-  body:has([data-mobile-bottom-bar]:not([data-skeleton] *)) [data-slot="store-footer"] { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom)) !important; }
+  html:has([data-mobile-bottom-bar]:not([data-skeleton] *)) { scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  body:has([data-mobile-bottom-bar]:not([data-skeleton] *)) [data-slot="store-footer"] { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 1023.98px) {
+  html:has([data-admin-bottom-bar]:not([data-skeleton] *)) { scroll-padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+  html:has([data-admin-bottom-bar]:not([data-skeleton] *)):has([data-ui="admin/StickySaveBar"]) { scroll-padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px)); }
+  body:has([data-admin-bottom-bar]:not([data-skeleton] *)) [data-slot="admin-main"] { padding-bottom: calc(5.25rem + env(safe-area-inset-bottom)) !important; }
 }
