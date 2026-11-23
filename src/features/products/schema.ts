@@ -31,6 +31,28 @@ export const SHIPPING_CLASS_OPTIONS: { value: ShippingClass; label: string }[] =
 
 export const MAX_HIGHLIGHTS = 6
 export const MAX_SPECS = 10
+export const MAX_REVIEW_ASPECTS = 8
+
+/** Comma-separated (or array) review aspect labels → normalized unique array in the database. */
+const reviewAspectList = z
+  .preprocess((x) => (Array.isArray(x) ? x.join(", ") : x ?? ""), z.string())
+  .pipe(z.string().max(400, "Too long"))
+  .transform((raw) => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const part of raw.split(",").map((s) => s.trim()).filter(Boolean)) {
+      const key = part.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(part)
+    }
+    return out
+  })
+  .pipe(
+    z
+      .array(z.string().max(40, "Keep each option under 40 characters"))
+      .max(MAX_REVIEW_ASPECTS, `Up to ${MAX_REVIEW_ASPECTS} options`)
+  )
 
 /** Suggested spec names for the product form. */
 export const SPEC_SUGGESTIONS = ["Material", "Size", "Weight", "Colour", "Made in", "Finish", "Includes", "Burn time"]
@@ -94,6 +116,7 @@ export const productSchema = z
       (v) => (typeof v === "string" && v.trim() === "" ? null : v),
       z.string().trim().max(LIMITS.careInstructions.max, `Keep it under ${LIMITS.careInstructions.max} characters`).nullable()
     ),
+    reviewAspects: reviewAspectList.default([]),
     isActive: z.boolean(),
     isFeatured: z.boolean(),
     seoTitle: z.string().trim().max(LIMITS.seoTitle.max, `Keep under ${LIMITS.seoTitle.max} characters`).nullable().optional(),
@@ -112,6 +135,7 @@ export const categorySchema = z.object({
   slug,
   description: z.string().trim().max(LIMITS.categoryDescription.max, `Keep it under ${LIMITS.categoryDescription.max} characters`).default(""),
   sort: v.wholeNumber(LIMITS.sortOrder.max, "Required"),
+  reviewAspects: reviewAspectList.default([]),
 })
 
 export type CategoryInput = z.input<typeof categorySchema>

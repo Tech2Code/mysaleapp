@@ -11,7 +11,7 @@ const NAMES = ["Hand-painted clay diya set", "Macrame wall hanging", "Scented so
 const CATEGORIES = ["Home decor", "Candles", "Gifts"]
 
 export function placeholderCategory(i = 0): Category {
-  return { id: `ph-cat-${i}`, name: CATEGORIES[i % CATEGORIES.length], slug: `ph-cat-${i}`, description: "A short description of this collection", imageUrl: null, sort: i }
+  return { id: `ph-cat-${i}`, name: CATEGORIES[i % CATEGORIES.length], slug: `ph-cat-${i}`, description: "A short description of this collection", imageUrl: null, sort: i, reviewAspects: [] }
 }
 
 export const placeholderCategories = (n = 5): Category[] => Array.from({ length: n }, (_, i) => placeholderCategory(i))
@@ -56,6 +56,7 @@ export function placeholderProduct(i = 0): Product {
       { label: "Care", value: "Wipe with a dry cloth" },
     ],
     careInstructions: "Wipe gently with a dry cloth.",
+    reviewAspects: [],
     isActive: true,
     isFeatured: false,
     seoTitle: null,

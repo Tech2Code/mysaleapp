@@ -5,6 +5,7 @@ export type Category = {
   description: string
   imageUrl: string | null
   sort: number
+  reviewAspects: string[]
 }
 
 /**
@@ -42,7 +43,7 @@ export type Product = {
   compareAtPrice: number | null
   images: string[]
   categoryId: string | null
-  category: { name: string; slug: string } | null
+  category: { name: string; slug: string; reviewAspects?: string[] } | null
   stock: number
   /** Unit parcel weight in grams (0 = light/standard item). Used for heavy-parcel courier slabs. */
   weightGrams: number
@@ -57,6 +58,8 @@ export type Product = {
   /** Material, size, weight… shown as a table. */
   specs: ProductSpec[]
   careInstructions: string | null
+  /** Optional per-product "Why do you love it?" review aspects (empty = inherit category or default). */
+  reviewAspects: string[]
   isActive: boolean
   isFeatured: boolean
   seoTitle: string | null
@@ -79,7 +82,7 @@ export type ProductRow = {
   compare_at_price: number | string | null
   images: string[] | null
   category_id: string | null
-  category: { name: string; slug: string } | null
+  category: { name: string; slug: string; review_aspects?: string[] | null } | null
   stock: number
   /** Added by migration 0046; optional so the app keeps working before it is applied. */
   weight_grams?: number | null
@@ -89,6 +92,7 @@ export type ProductRow = {
   highlights?: string[] | null
   specs?: ProductSpec[] | null
   care_instructions?: string | null
+  review_aspects?: string[] | null
   is_active: boolean
   is_featured: boolean
   seo_title: string | null
@@ -106,9 +110,10 @@ export type CategoryRow = {
   description: string
   image_url: string | null
   sort: number
+  review_aspects?: string[] | null
 }
 
-export const PRODUCT_SELECT = "*, category:categories(name, slug)"
+export const PRODUCT_SELECT = "*, category:categories(name, slug, review_aspects)"
 
 export function mapProduct(row: ProductRow): Product {
   const rawWeight = Number(row.weight_grams ?? 0)
@@ -121,7 +126,13 @@ export function mapProduct(row: ProductRow): Product {
     compareAtPrice: row.compare_at_price == null ? null : Number(row.compare_at_price),
     images: row.images ?? [],
     categoryId: row.category_id,
-    category: row.category,
+    category: row.category
+      ? {
+          name: row.category.name,
+          slug: row.category.slug,
+          reviewAspects: row.category.review_aspects ?? [],
+        }
+      : null,
     stock: row.stock,
     weightGrams: Number.isFinite(rawWeight) && rawWeight > 0 ? Math.trunc(rawWeight) : 0,
     shippingClass: isShippingClass(row.shipping_class) ? row.shipping_class : "standard",
@@ -133,6 +144,7 @@ export function mapProduct(row: ProductRow): Product {
     highlights: row.highlights ?? [],
     specs: row.specs ?? [],
     careInstructions: row.care_instructions ?? null,
+    reviewAspects: row.review_aspects ?? [],
     isActive: row.is_active,
     isFeatured: row.is_featured,
     seoTitle: row.seo_title,
@@ -152,6 +164,7 @@ export function mapCategory(row: CategoryRow): Category {
     description: row.description,
     imageUrl: row.image_url,
     sort: row.sort,
+    reviewAspects: row.review_aspects ?? [],
   }
 }
 

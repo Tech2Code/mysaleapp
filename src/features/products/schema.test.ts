@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { demoProducts } from "./demo-data"
-import { productReviewSchema, productSchema } from "./schema"
+import { categorySchema, productReviewSchema, productSchema } from "./schema"
 import { buildSearchText, parseSearchQuery, scoreProductSearch } from "./types"
 
 const base = {
@@ -42,6 +42,30 @@ describe("productSchema", () => {
     expect(productSchema.safeParse({ ...base, weightGrams: 50001 }).success).toBe(false)
     expect(productSchema.safeParse({ ...base, weightGrams: 12.5 }).success).toBe(false)
     expect(productSchema.safeParse({ ...base, shippingClass: "invalid" }).success).toBe(false)
+  })
+  it("normalizes reviewAspects from comma-separated string or array, dedupes case-insensitively, and enforces max 8", () => {
+    const first = productSchema.parse({ ...base, reviewAspects: " Fragrance , Burn Time, fragrance , , Packaging " })
+    expect(first.reviewAspects).toEqual(["Fragrance", "Burn Time", "Packaging"])
+    expect(productSchema.parse(first).reviewAspects).toEqual(["Fragrance", "Burn Time", "Packaging"])
+
+    const tooMany = Array.from({ length: 9 }, (_, i) => `Opt ${i + 1}`).join(", ")
+    expect(productSchema.safeParse({ ...base, reviewAspects: tooMany }).success).toBe(false)
+  })
+})
+
+describe("categorySchema", () => {
+  it("parses reviewAspects and defaults blank to empty array", () => {
+    const empty = categorySchema.parse({ name: "Candles", slug: "candles", description: "", sort: 1 })
+    expect(empty.reviewAspects).toEqual([])
+
+    const filled = categorySchema.parse({
+      name: "Candles",
+      slug: "candles",
+      description: "",
+      sort: 1,
+      reviewAspects: "Fragrance, Burn Time, Packaging",
+    })
+    expect(filled.reviewAspects).toEqual(["Fragrance", "Burn Time", "Packaging"])
   })
 })
 

@@ -124,6 +124,7 @@ function toFormValues(product: Product | null): ProductInput {
     highlights: (product?.highlights ?? []).join("\n"),
     specs: product?.specs ?? [],
     careInstructions: product?.careInstructions ?? "",
+    reviewAspects: (product?.reviewAspects ?? []).join(", "),
     price: product?.price ?? "",
     compareAtPrice: product?.compareAtPrice ?? "",
     images: product?.images ? [...product.images] : [],
@@ -199,7 +200,7 @@ function ProductFormInner({
   const { errors, isDirty, dirtyFields } = form.formState
   const df = dirtyFields as Record<string, unknown>
   const basicDirty = hasDirty(df, "name", "slug", "description")
-  const detailsDirty = hasDirty(df, "shortDescription", "highlights", "specs", "careInstructions")
+  const detailsDirty = hasDirty(df, "shortDescription", "highlights", "specs", "careInstructions", "reviewAspects")
   const photosDirty = hasDirty(df, "images")
   const seoDirty = hasDirty(df, "seoTitle", "seoDescription")
   const visibilityDirty = hasDirty(df, "isActive", "isFeatured")
@@ -365,6 +366,15 @@ function ProductFormInner({
               hint="Optional. Shown in a collapsible “Care” section."
               error={errors.careInstructions?.message}
               {...form.register("careInstructions")}
+            />
+            <TextField
+              label="Review aspects override"
+              fieldSize="md"
+              maxLength={400}
+              placeholder="e.g. Fragrance, Burn Time, Jar Quality"
+              hint="Optional comma-separated options for “Why do you love it?” (up to 8). Leave blank to use the category's aspects."
+              error={errors.reviewAspects?.message}
+              {...form.register("reviewAspects")}
             />
           </Section>
 

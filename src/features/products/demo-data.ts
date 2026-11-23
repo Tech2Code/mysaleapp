@@ -7,16 +7,16 @@ import type { Category, Product } from "./types"
 const now = "2026-01-01T00:00:00.000Z"
 
 export const demoCategories: Category[] = [
-  { id: "c1", name: "Home Decor", slug: "home-decor", description: "Handcrafted pieces that make a house feel like home.", imageUrl: null, sort: 1 },
-  { id: "c2", name: "Gifts", slug: "gifts", description: "Thoughtful handmade gifts for every occasion.", imageUrl: null, sort: 2 },
-  { id: "c3", name: "Candles", slug: "candles", description: "Hand-poured soy candles with natural fragrances.", imageUrl: null, sort: 3 },
-  { id: "c4", name: "Wall Art", slug: "wall-art", description: "Paintings, macramé and prints for your walls.", imageUrl: null, sort: 4 },
-  { id: "c5", name: "Jewellery", slug: "jewellery", description: "Handmade earrings, bracelets and necklaces.", imageUrl: null, sort: 5 },
+  { id: "c1", name: "Home Decor", slug: "home-decor", description: "Handcrafted pieces that make a house feel like home.", imageUrl: null, sort: 1, reviewAspects: ["Craftsmanship", "Colour & Finish", "Material Quality", "Sturdiness", "True to Size"] },
+  { id: "c2", name: "Gifts", slug: "gifts", description: "Thoughtful handmade gifts for every occasion.", imageUrl: null, sort: 2, reviewAspects: ["Gift Presentation", "Packaging", "Quality", "Uniqueness", "Value for Money"] },
+  { id: "c3", name: "Candles", slug: "candles", description: "Hand-poured soy candles with natural fragrances.", imageUrl: null, sort: 3, reviewAspects: ["Fragrance", "Burn Time", "Jar Quality", "Packaging", "Value for Money"] },
+  { id: "c4", name: "Wall Art", slug: "wall-art", description: "Paintings, macramé and prints for your walls.", imageUrl: null, sort: 4, reviewAspects: ["Craft & Detail", "Colour Accuracy", "Material Quality", "Finish", "Packaging"] },
+  { id: "c5", name: "Jewellery", slug: "jewellery", description: "Handmade earrings, bracelets and necklaces.", imageUrl: null, sort: 5, reviewAspects: ["Finish & Shine", "Comfort", "Light Weight", "Craftsmanship", "Skin Friendly"] },
 ]
 
 const cat = (slug: string) => {
   const c = demoCategories.find((x) => x.slug === slug)!
-  return { categoryId: c.id, category: { name: c.name, slug: c.slug } }
+  return { categoryId: c.id, category: { name: c.name, slug: c.slug, reviewAspects: c.reviewAspects } }
 }
 
 const base = {
@@ -27,6 +27,7 @@ const base = {
   highlights: [] as string[],
   specs: [] as Product["specs"],
   careInstructions: null,
+  reviewAspects: [] as string[],
   isActive: true,
   seoTitle: null,
   seoDescription: null,

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckCircle2Icon, Loader2Icon, MessageSquarePlusIcon, PackageXIcon, PencilIcon, ShoppingBagIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { TextAreaField } from "@/components/form"
@@ -164,29 +164,38 @@ const RATING_LABELS: Record<number, string> = {
   5: "Great",
 }
 
-const REVIEW_ASPECTS = [
-  "Colour",
-  "Comfort",
+const DEFAULT_REVIEW_ASPECTS = [
+  "Craftsmanship",
+  "Colour & Finish",
   "Material Quality",
-  "Light Weight",
-  "True to Specs",
+  "Packaging",
+  "Value for Money",
 ] as const
+
+function resolveReviewAspects(product?: {
+  reviewAspects?: readonly string[] | null
+  category?: { reviewAspects?: readonly string[] | null } | null
+}): readonly string[] {
+  if (product?.reviewAspects && product.reviewAspects.length > 0) return product.reviewAspects
+  if (product?.category?.reviewAspects && product.category.reviewAspects.length > 0) return product.category.reviewAspects
+  return DEFAULT_REVIEW_ASPECTS
+}
 
 const LOVED_PREFIX = "Loved: "
 const DISLIKED_PREFIX = "Disliked: "
 
-function parseLovedAspects(title?: string | null): Record<string, "up" | "down"> {
+function parseLovedAspects(title: string | null | undefined, aspects: readonly string[]): Record<string, "up" | "down"> {
   if (!title) return {}
   const out: Record<string, "up" | "down"> = {}
   const segments = title.split("|").map((s) => s.trim())
   for (const seg of segments) {
     if (seg.startsWith(LOVED_PREFIX)) {
       for (const part of seg.slice(LOVED_PREFIX.length).split(",").map((s) => s.trim())) {
-        if ((REVIEW_ASPECTS as readonly string[]).includes(part)) out[part] = "up"
+        if (aspects.includes(part)) out[part] = "up"
       }
     } else if (seg.startsWith(DISLIKED_PREFIX)) {
       for (const part of seg.slice(DISLIKED_PREFIX.length).split(",").map((s) => s.trim())) {
-        if ((REVIEW_ASPECTS as readonly string[]).includes(part)) out[part] = "down"
+        if (aspects.includes(part)) out[part] = "down"
       }
     }
   }
@@ -221,9 +230,9 @@ function extractAspectPills(title?: string | null): { liked: string[]; disliked:
   return { liked, disliked }
 }
 
-function formatLovedTitle(votes: Record<string, "up" | "down">, fallbackTitle?: string | null): string {
-  const liked = REVIEW_ASPECTS.filter((aspect) => votes[aspect] === "up")
-  const disliked = REVIEW_ASPECTS.filter((aspect) => votes[aspect] === "down")
+function formatLovedTitle(votes: Record<string, "up" | "down">, aspects: readonly string[], fallbackTitle?: string | null): string {
+  const liked = aspects.filter((aspect) => votes[aspect] === "up")
+  const disliked = aspects.filter((aspect) => votes[aspect] === "down")
   const parts: string[] = []
   if (liked.length > 0) parts.push(`${LOVED_PREFIX}${liked.join(", ")}`)
   if (disliked.length > 0) parts.push(`${DISLIKED_PREFIX}${disliked.join(", ")}`)
@@ -335,7 +344,7 @@ function ShareExperienceDialog({
 }: {
   open: boolean
   onOpenChange: (next: boolean) => void
-  product: { id: string; name: string; image?: string | null }
+  product: { id: string; name: string; image?: string | null; aspects?: readonly string[] }
   initialRating: number
   existingReview: ProductReview | null
   subtitle?: string
@@ -345,8 +354,9 @@ function ShareExperienceDialog({
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+  const aspects = product.aspects && product.aspects.length > 0 ? product.aspects : DEFAULT_REVIEW_ASPECTS
   const [aspectVotes, setAspectVotes] = useState<Record<string, "up" | "down">>(() =>
-    parseLovedAspects(existingReview?.title)
+    parseLovedAspects(existingReview?.title, aspects)
   )
 
   const form = useForm<ProductReviewInput, unknown, ProductReviewValues>({
@@ -371,9 +381,9 @@ function ShareExperienceDialog({
       comment: existingReview?.comment ?? "",
     })
     queueMicrotask(() => {
-      setAspectVotes(parseLovedAspects(existingReview?.title))
+      setAspectVotes(parseLovedAspects(existingReview?.title, aspects))
     })
-  }, [open, initialRating, existingReview, product.id, form])
+  }, [open, initialRating, existingReview, product.id, aspects, form])
 
   const toggleAspect = (aspect: string, vote: "up" | "down") => {
     setAspectVotes((prev) => {
@@ -388,7 +398,7 @@ function ShareExperienceDialog({
   }
 
   const onSubmit = form.handleSubmit((values) => {
-    const computedTitle = formatLovedTitle(aspectVotes, existingReview?.title)
+    const computedTitle = formatLovedTitle(aspectVotes, aspects, existingReview?.title)
     startTransition(async () => {
       const res = await submitProductReview({
         ...values,
@@ -469,7 +479,7 @@ function ShareExperienceDialog({
                 What did you love about it?
               </p>
               <ul data-ui="store/ShareExperienceDialog/ul" className="divide-y rounded-2xl border bg-card px-4">
-                {REVIEW_ASPECTS.map((aspect) => {
+                {aspects.map((aspect) => {
                   const vote = aspectVotes[aspect]
                   return (
                     <li
@@ -660,7 +670,11 @@ export function ProductReviewsSection({
   product,
   initialReviews = [],
 }: {
-  product: Pick<Product, "id" | "slug" | "name" | "ratingAvg" | "reviewCount"> & { images?: string[] }
+  product: Pick<Product, "id" | "slug" | "name" | "ratingAvg" | "reviewCount"> & {
+    images?: string[]
+    reviewAspects?: readonly string[] | null
+    category?: { reviewAspects?: readonly string[] | null } | null
+  }
   initialReviews?: ProductReview[]
 }) {
   const router = useRouter()
@@ -698,7 +712,17 @@ export function ProductReviewsSection({
     }
   }, [product.id])
 
+  const [allReviewsOpen, setAllReviewsOpen] = useState(false)
+  const [reviewSort, setReviewSort] = useState<"recent" | "highest" | "lowest">("recent")
+  const [starFilter, setStarFilter] = useState<number | null>(null)
+  const reviewsListRef = useRef<HTMLUListElement>(null)
   const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
+
+  useEffect(() => {
+    const el = reviewsListRef.current
+    if (!el) return
+    el.scrollTo({ left: 0, top: 0, behavior: "instant" })
+  }, [reviewSort, starFilter])
 
   useEffect(() => {
     const onReviewSync = (e: Event) => {
@@ -785,6 +809,8 @@ export function ProductReviewsSection({
     })
   }
 
+  if (totalCount === 0) return null
+
   const avgRating =
     product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
       ? Number(product.ratingAvg)
@@ -798,6 +824,15 @@ export function ProductReviewsSection({
     return { stars, count, pct }
   })
 
+  const displayedReviews = initialReviews
+    .filter((r) => starFilter === null || r.rating === starFilter)
+    .slice()
+    .sort((a, b) => {
+      if (reviewSort === "highest" && b.rating !== a.rating) return b.rating - a.rating
+      if (reviewSort === "lowest" && a.rating !== b.rating) return a.rating - b.rating
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
   return (
     <section
       data-ui="store/ProductReviewsSection"
@@ -805,9 +840,9 @@ export function ProductReviewsSection({
       className="container-page mt-12 scroll-mt-24 border-t pt-10 sm:mt-20 sm:pt-14"
       aria-labelledby="reviews-heading"
     >
-      <div data-ui="store/ProductReviewsSection/div-grid" className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-stretch lg:gap-8">
+      <div data-ui="store/ProductReviewsSection/div-grid" className="grid gap-5 rounded-3xl border bg-card p-5 sm:p-6 lg:grid-cols-[360px_1fr] lg:items-stretch lg:gap-8 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
         {/* Left summary + Rate your experience column (equal height with right column) */}
-        <div data-ui="store/ProductReviewsSection/div-flex" className="flex h-full flex-col justify-between gap-5 rounded-3xl border bg-card p-5 sm:p-6">
+        <div data-ui="store/ProductReviewsSection/div-flex" className="flex h-full flex-col justify-between gap-5 lg:rounded-3xl lg:border lg:bg-card lg:p-6">
           <div data-ui="store/ProductReviewsSection/div" className="space-y-5">
             <div data-ui="store/ProductReviewsSection/div-2">
               <p data-ui="store/ProductReviewsSection/p" className="text-xs font-semibold tracking-widest text-primary uppercase">
@@ -818,38 +853,55 @@ export function ProductReviewsSection({
               </h2>
             </div>
 
-            <div data-ui="store/ProductReviewsSection/div-flex-2" className="flex items-center gap-3.5">
-              <span data-ui="store/ProductReviewsSection/span" className="font-heading text-4xl font-bold tabular-nums">
-                {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
-              </span>
-              <div data-ui="store/ProductReviewsSection/div-3" className="space-y-1">
-                <StarRow rating={totalCount > 0 ? avgRating : 0} size="md" />
-                <p data-ui="store/ProductReviewsSection/p-2" className="text-xs text-muted-foreground">
-                  {totalCount > 0
-                    ? `Based on ${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
-                    : "No verified reviews yet — be the first!"}
-                </p>
-              </div>
-            </div>
-
-            <div data-ui="store/ProductReviewsSection/div-4" className="space-y-2 border-t pt-4">
-              {distribution.map((row) => (
-                <div data-ui="store/ProductReviewsSection/div-flex-3" key={row.stars} className="flex items-center gap-2.5 text-xs">
-                  <span data-ui="store/ProductReviewsSection/span-2" className="w-11 shrink-0 font-medium text-muted-foreground tabular-nums">
-                    {row.stars} star
-                  </span>
-                  <div data-ui="store/ProductReviewsSection/div-5" className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      data-ui="store/ProductReviewsSection/div-6"
-                      className="h-full rounded-full bg-amber-400 transition-all duration-300"
-                      style={{ width: `${row.pct}%` }}
-                    />
-                  </div>
-                  <span data-ui="store/ProductReviewsSection/span-3" className="w-7 shrink-0 text-right text-muted-foreground tabular-nums">
-                    {row.count}
-                  </span>
+            <div data-ui="store/ProductReviewsSection/div-grid-2" className="grid grid-cols-[auto_1fr] items-center gap-4 border-t pt-4 lg:block lg:space-y-4 lg:border-t-0 lg:pt-0">
+              <div data-ui="store/ProductReviewsSection/div-flex-2" className="flex flex-col items-start gap-1 lg:flex-row lg:items-center lg:gap-3.5">
+                <span data-ui="store/ProductReviewsSection/span" className="font-heading text-3xl font-bold tabular-nums lg:text-4xl">
+                  {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
+                </span>
+                <div data-ui="store/ProductReviewsSection/div-3" className="space-y-1">
+                  <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
+                  <p data-ui="store/ProductReviewsSection/p-2" className="text-[11px] text-muted-foreground lg:text-xs">
+                    {totalCount > 0
+                      ? `${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
+                      : "No verified reviews yet — be the first!"}
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              <div data-ui="store/ProductReviewsSection/div-4" className="space-y-1 border-l pl-4 lg:space-y-1.5 lg:border-t lg:border-l-0 lg:pt-4 lg:pl-0">
+                {distribution.map((row) => {
+                  const active = starFilter === row.stars
+                  return (
+                    <button
+                      data-ui="store/ProductReviewsSection/button"
+                      key={row.stars}
+                      type="button"
+                      disabled={row.count === 0}
+                      aria-pressed={active}
+                      onClick={() => setStarFilter((prev) => (prev === row.stars ? null : row.stars))}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-[11px] transition-colors lg:gap-2.5 lg:text-xs",
+                        row.count > 0 ? "cursor-pointer hover:bg-muted/60" : "cursor-default opacity-60",
+                        active && "bg-primary/10 ring-1 ring-primary/30"
+                      )}
+                    >
+                      <span data-ui="store/ProductReviewsSection/span-2" className="w-8 shrink-0 text-left font-medium text-muted-foreground tabular-nums lg:w-10">
+                        {row.stars}★
+                      </span>
+                      <div data-ui="store/ProductReviewsSection/div-5" className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted lg:h-2">
+                        <div
+                          data-ui="store/ProductReviewsSection/div-6"
+                          className="h-full rounded-full bg-amber-400 transition-all duration-300"
+                          style={{ width: `${row.pct}%` }}
+                        />
+                      </div>
+                      <span data-ui="store/ProductReviewsSection/span-3" className="w-5 shrink-0 text-right text-muted-foreground tabular-nums lg:w-7">
+                        {row.count}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -903,9 +955,9 @@ export function ProductReviewsSection({
         </div>
 
         {/* Right reviews list column (equal height card with left column) */}
-        <div data-ui="store/ProductReviewsSection/div-flex-4" className="flex h-full flex-col justify-between gap-4 overflow-hidden rounded-3xl border bg-card p-5 sm:p-6 lg:h-0 lg:min-h-full">
+        <div data-ui="store/ProductReviewsSection/div-flex-3" className="flex h-full min-w-0 flex-col justify-between gap-4 overflow-hidden border-t pt-5 lg:h-0 lg:min-h-full lg:rounded-3xl lg:border lg:bg-card lg:p-6">
           {initialReviews.length === 0 ? (
-            <div data-ui="store/ProductReviewsSection/div-flex-5" className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed bg-muted/25 px-6 py-12 text-center">
+            <div data-ui="store/ProductReviewsSection/div-flex-4" className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed bg-muted/25 px-6 py-12 text-center">
               <StarRow rating={5} size="md" />
               <p data-ui="store/ProductReviewsSection/p-5" className="mt-1 font-sans text-base font-semibold">
                 Be the first to review {product.name}
@@ -916,8 +968,8 @@ export function ProductReviewsSection({
             </div>
           ) : (
             <>
-              <div data-ui="store/ProductReviewsSection/div-flex-6" className="flex min-h-0 flex-1 flex-col gap-4">
-                <div data-ui="store/ProductReviewsSection/div-flex-7" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3.5">
+              <div data-ui="store/ProductReviewsSection/div-flex-5" className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+                <div data-ui="store/ProductReviewsSection/div-hidden" className="hidden shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3.5 lg:flex">
                   <div data-ui="store/ProductReviewsSection/div-10">
                     <h3 data-ui="store/ProductReviewsSection/h3-verified-customer-feed" className="font-sans text-base font-semibold">
                       Verified customer feedback
@@ -931,21 +983,66 @@ export function ProductReviewsSection({
                   </span>
                 </div>
 
+                {initialReviews.length > 1 && (
+                  <div data-ui="store/ProductReviewsSection/div-flex-6" className="no-scrollbar flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
+                    {(
+                      [
+                        { id: "recent", label: "Newest" },
+                        { id: "highest", label: "Highest" },
+                        { id: "lowest", label: "Lowest" },
+                      ] as const
+                    ).map((opt) => (
+                      <button data-ui="store/ProductReviewsSection/button-2"
+                        key={opt.id}
+                        type="button"
+                        aria-pressed={reviewSort === opt.id}
+                        onClick={() => setReviewSort(opt.id)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                          reviewSort === opt.id
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    {starFilter !== null && (
+                      <button data-ui="store/ProductReviewsSection/button-only"
+                        type="button"
+                        onClick={() => setStarFilter(null)}
+                        className="ml-auto shrink-0 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
+                      >
+                        {starFilter}★ only ✕
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {displayedReviews.length === 0 ? (
+                  <div data-ui="store/ProductReviewsSection/div-flex-7" className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/20 px-4 py-8 text-center">
+                    <p data-ui="store/ProductReviewsSection/p-8" className="text-sm font-medium text-muted-foreground">No {starFilter}★ reviews yet.</p>
+                    <Button data-ui="store/ProductReviewsSection/Button-show-all-reviews" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setStarFilter(null)}>
+                      Show all reviews
+                    </Button>
+                  </div>
+                ) : (
                 <ul
-                  data-ui="store/ProductReviewsSection/ul"
+                  ref={reviewsListRef}
+                  data-ui="store/ProductReviewsSection/ul-flex"
                   data-slot="reviews-list"
-                  className="max-h-96 min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-1 lg:max-h-none"
+                  className="no-scrollbar flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 lg:block lg:space-y-3.5 lg:overflow-x-visible lg:overflow-y-auto lg:pr-1 lg:pb-0"
                 >
-                  {initialReviews.map((review) => {
+                  {displayedReviews.map((review) => {
                     const isMine = Boolean(user && review.userId === user.id)
                     const canDelete = isMine || isAdmin
                     const aspectPills = extractAspectPills(review.title)
                     const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
                     return (
                       <li
-                        data-ui="store/ProductReviewsSection/li"
+                        data-ui="store/ProductReviewsSection/li-flex"
                         key={review.id}
-                        className="rounded-2xl border bg-background/60 p-4 transition-colors sm:p-5"
+                        className="flex w-[80vw] max-w-[310px] shrink-0 snap-start flex-col rounded-2xl border bg-background/60 p-4 transition-colors sm:p-5 lg:w-auto lg:max-w-none"
                       >
                         <div data-ui="store/ProductReviewsSection/div-flex-8" className="flex items-start justify-between gap-2">
                           <div data-ui="store/ProductReviewsSection/div-11" className="min-w-0 flex-1 space-y-1.5">
@@ -1025,26 +1122,38 @@ export function ProductReviewsSection({
                           </div>
                         )}
 
-                        <p data-ui="store/ProductReviewsSection/p-8" className="mt-3 text-sm/relaxed whitespace-pre-line text-foreground/90">
+                        <p data-ui="store/ProductReviewsSection/p-9" className="mt-3 line-clamp-4 text-sm/relaxed whitespace-pre-line text-foreground/90 lg:line-clamp-none">
                           {review.comment}
                         </p>
                       </li>
                     )
                   })}
                 </ul>
+                )}
+                {initialReviews.length > 1 && (
+                  <Button data-ui="store/ProductReviewsSection/Button-see-all"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAllReviewsOpen(true)}
+                    className="w-full rounded-full lg:hidden"
+                  >
+                    See all {initialReviews.length} reviews
+                  </Button>
+                )}
               </div>
 
-              <div data-ui="store/ProductReviewsSection/div-flex-13" className="mt-auto flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-dashed bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-                <span data-ui="store/ProductReviewsSection/span-flex" className="flex items-center gap-1.5">
-                  <CheckCircle2Icon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                  100% genuine reviews from verified delivered orders
+              <div data-ui="store/ProductReviewsSection/div-flex-13" className="mt-auto flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-muted/30 px-3.5 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-4">
+                <span data-ui="store/ProductReviewsSection/span-flex" className="flex items-start gap-1.5 leading-snug sm:items-center">
+                  <CheckCircle2Icon className="mt-0.5 size-3.5 shrink-0 text-emerald-600 sm:mt-0 dark:text-emerald-400" aria-hidden />
+                  <span data-ui="store/ProductReviewsSection/span-10">100% genuine reviews from verified delivered orders</span>
                 </span>
                 {(canReview || myReview) && (
                   <button
-                    data-ui="store/ProductReviewsSection/button"
+                    data-ui="store/ProductReviewsSection/button-3"
                     type="button"
                     onClick={() => openReviewModal()}
-                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                    className="shrink-0 pl-5 font-semibold text-primary underline-offset-4 hover:underline sm:pl-0"
                   >
                     {myReview ? "Update your review →" : "Add your review →"}
                   </button>
@@ -1055,6 +1164,95 @@ export function ProductReviewsSection({
         </div>
       </div>
 
+      {/* All Reviews Mobile Sheet / Dialog */}
+      <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
+        <DialogContent data-ui="store/ProductReviewsSection/DialogContent" mobileFullScreen className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Customer reviews ({totalCount})</DialogTitle>
+            <DialogDescription>
+              Verified buyer feedback for {product.name}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-3">
+            {initialReviews.length > 1 && (
+              <div data-ui="store/ProductReviewsSection/div-flex-14" className="no-scrollbar sticky -top-4 z-10 -mx-4 flex items-center gap-1.5 overflow-x-auto bg-popover/95 px-4 py-2.5 backdrop-blur-sm sm:-mx-5 sm:px-5">
+                {(
+                  [
+                    { id: "recent", label: "Newest" },
+                    { id: "highest", label: "Highest" },
+                    { id: "lowest", label: "Lowest" },
+                  ] as const
+                ).map((opt) => (
+                  <button data-ui="store/ProductReviewsSection/button-4"
+                    key={`all-sort-${opt.id}`}
+                    type="button"
+                    aria-pressed={reviewSort === opt.id}
+                    onClick={() => setReviewSort(opt.id)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      reviewSort === opt.id
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                {starFilter !== null && (
+                  <button data-ui="store/ProductReviewsSection/button-only-2"
+                    type="button"
+                    onClick={() => setStarFilter(null)}
+                    className="ml-auto shrink-0 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
+                  >
+                    {starFilter}★ only ✕
+                  </button>
+                )}
+              </div>
+            )}
+            {displayedReviews.map((review) => {
+              const aspectPills = extractAspectPills(review.title)
+              const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
+              return (
+                <div data-ui="store/ProductReviewsSection/div-12" key={`all-${review.id}`} className="rounded-2xl border bg-background/60 p-4">
+                  <div data-ui="store/ProductReviewsSection/div-flex-15" className="flex flex-wrap items-center gap-2">
+                    <StarRow rating={review.rating} />
+                    <span data-ui="store/ProductReviewsSection/span-11" className="rounded-md bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                      {RATING_LABELS[review.rating] ?? "Great"}
+                    </span>
+                    {hasCustomTitle && <span data-ui="store/ProductReviewsSection/span-12" className="text-sm font-semibold text-foreground">{review.title}</span>}
+                  </div>
+                  <div data-ui="store/ProductReviewsSection/div-flex-16" className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <span data-ui="store/ProductReviewsSection/span-13" className="font-medium text-foreground/85">{review.reviewerName}</span>
+                    {review.isVerifiedPurchase && (
+                      <span data-ui="store/ProductReviewsSection/span-inline-flex-4" className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2Icon className="size-3" aria-hidden /> Verified purchase
+                      </span>
+                    )}
+                    <span data-ui="store/ProductReviewsSection/span-14" aria-hidden>·</span>
+                    <span data-ui="store/ProductReviewsSection/span-15">{formatDate(review.createdAt)}</span>
+                  </div>
+                  {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
+                    <div data-ui="store/ProductReviewsSection/div-flex-17" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      {aspectPills.liked.map((pill) => (
+                        <span data-ui="store/ProductReviewsSection/span-inline-flex-5" key={`all-up-${pill}`} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                          <ThumbsUpIcon className="size-2.5" aria-hidden /> {pill}
+                        </span>
+                      ))}
+                      {aspectPills.disliked.map((pill) => (
+                        <span data-ui="store/ProductReviewsSection/span-inline-flex-6" key={`all-down-${pill}`} className="inline-flex items-center gap-1 rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium text-destructive">
+                          <ThumbsDownIcon className="size-2.5" aria-hidden /> {pill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p data-ui="store/ProductReviewsSection/p-10" className="mt-2.5 text-sm/relaxed whitespace-pre-line text-foreground/90">{review.comment}</p>
+                </div>
+              )
+            })}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
       {/* Share your experience Dialog */}
       <ShareExperienceDialog
         open={dialogOpen}
@@ -1063,6 +1261,7 @@ export function ProductReviewsSection({
           id: product.id,
           name: product.name,
           image: product.images?.[0] ?? null,
+          aspects: resolveReviewAspects(product),
         }}
         initialRating={draftRating || myReview?.rating || 5}
         existingReview={myReview}

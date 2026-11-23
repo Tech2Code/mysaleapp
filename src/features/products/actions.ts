@@ -35,6 +35,7 @@ function toRowWithStock(p: ProductValues) {
     highlights: p.highlights,
     specs: p.specs,
     care_instructions: p.careInstructions,
+    review_aspects: p.reviewAspects.length > 0 ? p.reviewAspects : null,
     is_active: p.isActive,
     is_featured: p.isFeatured,
     seo_title: p.seoTitle || null,
@@ -226,10 +227,18 @@ export async function saveCategory(id: string | null, input: unknown): Promise<A
     return fail("Please fix the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
   }
 
+  const categoryRow = {
+    name: parsed.data.name,
+    slug: parsed.data.slug,
+    description: parsed.data.description,
+    sort: parsed.data.sort,
+    review_aspects: parsed.data.reviewAspects.length > 0 ? parsed.data.reviewAspects : null,
+  }
+
   const supabase = await getServerSupabase()
   const { error } = id
-    ? await supabase.from("categories").update(parsed.data).eq("id", id)
-    : await supabase.from("categories").insert(parsed.data)
+    ? await supabase.from("categories").update(categoryRow).eq("id", id)
+    : await supabase.from("categories").insert(categoryRow)
   if (error) return fail(friendlyDbError(error.message, error.code))
 
   await logAdminAction(supabase, {

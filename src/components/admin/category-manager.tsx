@@ -51,12 +51,13 @@ function CategoryDialog({
       slug: category?.slug ?? "",
       description: category?.description ?? "",
       sort: category?.sort ?? nextSort,
+      reviewAspects: (category?.reviewAspects ?? []).join(", "),
     },
   })
   const { errors } = form.formState
-  const [nameVal, slugVal, descVal, sortVal] = useWatch({
+  const [nameVal, slugVal, descVal, sortVal, aspectsVal] = useWatch({
     control: form.control,
-    name: ["name", "slug", "description", "sort"],
+    name: ["name", "slug", "description", "sort", "reviewAspects"],
   })
 
   const hasChanges = !category
@@ -64,7 +65,8 @@ function CategoryDialog({
     : (nameVal ?? "").trim() !== category.name.trim() ||
       (slugVal ?? "").trim() !== category.slug.trim() ||
       (descVal ?? "").trim() !== (category.description ?? "").trim() ||
-      Number(sortVal) !== Number(category.sort)
+      Number(sortVal) !== Number(category.sort) ||
+      String(aspectsVal ?? "").trim() !== (category.reviewAspects ?? []).join(", ")
 
   const onSubmit = form.handleSubmit((values) => {
     if (category && !hasChanges) return
@@ -72,7 +74,7 @@ function CategoryDialog({
       const res = await saveCategory(category?.id ?? null, values)
       if (!res.ok) {
         for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
-          if (msgs?.[0] && (field === "name" || field === "slug" || field === "description" || field === "sort")) {
+          if (msgs?.[0] && (field === "name" || field === "slug" || field === "description" || field === "sort" || field === "reviewAspects")) {
             form.setError(field, { message: msgs[0] })
           }
         }
@@ -131,6 +133,15 @@ function CategoryDialog({
               containerClassName="w-40"
               error={errors.sort?.message}
               {...form.register("sort")}
+            />
+            <TextField
+              label="Review aspects"
+              fieldSize="md"
+              maxLength={400}
+              placeholder="e.g. Fragrance, Burn Time, Packaging"
+              hint="Comma-separated options for “Why do you love it?” (up to 8). Leave blank for defaults."
+              error={errors.reviewAspects?.message}
+              {...form.register("reviewAspects")}
             />
           </DialogBody>
           <DialogFooter>
