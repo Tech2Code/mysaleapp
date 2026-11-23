@@ -151,7 +151,7 @@ export function AdminReturnOrder({
       >
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" className="sm:max-w-lg">
+      <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" mobileFullScreen className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return for {orderCode}</DialogTitle>
           <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>

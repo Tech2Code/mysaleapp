@@ -414,9 +414,9 @@ function ShareExperienceDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="store/ShareExperienceDialog/DialogContent" className="sm:max-w-lg">
+      <DialogContent data-ui="store/ShareExperienceDialog/DialogContent" mobileFullScreen className="sm:max-w-lg">
         <DialogHeader>
-          <div data-ui="store/ShareExperienceDialog/div-flex" className="flex flex-wrap items-center justify-between gap-2 pr-8">
+          <div data-ui="store/ShareExperienceDialog/div-flex" className="flex flex-wrap items-center justify-between gap-2 sm:pr-8">
             <DialogTitle className="text-lg font-semibold">Share your experience</DialogTitle>
             <span
               data-ui="store/ShareExperienceDialog/span"
@@ -430,7 +430,7 @@ function ShareExperienceDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form data-ui="store/ShareExperienceDialog/form" onSubmit={onSubmit} noValidate>
+        <form data-ui="store/ShareExperienceDialog/form-flex" onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <DialogBody className="space-y-5">
             {/* Product context strip */}
             <div data-ui="store/ShareExperienceDialog/div-flex-2" className="flex items-center gap-3 rounded-2xl border bg-muted/35 p-3">

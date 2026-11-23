@@ -82,7 +82,7 @@ export function AccountMenu() {
         >
           {user ? (
             user.avatarUrl ? (
-              <Image data-ui="store/AccountMenu/Image" src={user.avatarUrl} alt="" width={36} height={36} className="size-full overflow-hidden rounded-full object-cover" />
+              <Image data-ui="store/AccountMenu/Image" src={user.avatarUrl} alt="" width={36} height={36} sizes="36px" className="size-full overflow-hidden rounded-full object-cover" />
             ) : (
               <span data-ui="store/AccountMenu/span" className="font-semibold text-primary">{user.name.charAt(0).toUpperCase()}</span>
             )
@@ -109,9 +109,16 @@ export function AccountMenu() {
               <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-3" onClick={() => router.push("/account/profile?tab=addresses")}>
                 <MapPinIcon /> Addresses
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-4" onClick={() => router.push("/account/profile?tab=settings")}>
+              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-4" className="sm:hidden" onClick={() => router.push("/account/profile?tab=settings")}>
                 <SettingsIcon /> Settings
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="sm:hidden" />
+              <div data-ui="store/AccountMenu/div" className="px-2 py-1.5 sm:hidden">
+                <p data-ui="store/AccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  Theme
+                </p>
+                <ThemeSegmentedControl />
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-5" variant="destructive" onClick={() => setAskSignOut(true)}>
                 <LogOutIcon /> Sign out
@@ -125,9 +132,9 @@ export function AccountMenu() {
               <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-7" onClick={() => router.push("/track")}>
                 <PackageSearchIcon /> Track order
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div data-ui="store/AccountMenu/div" className="px-2 py-1.5">
-                <p data-ui="store/AccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <DropdownMenuSeparator className="sm:hidden" />
+              <div data-ui="store/AccountMenu/div-2" className="px-2 py-1.5 sm:hidden">
+                <p data-ui="store/AccountMenu/p-2" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                   Settings · Theme
                 </p>
                 <ThemeSegmentedControl />

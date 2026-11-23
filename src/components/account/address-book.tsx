@@ -112,7 +112,7 @@ function AddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="account/AddressDialog/DialogContent" className="sm:max-w-lg">
+      <DialogContent data-ui="account/AddressDialog/DialogContent" mobileFullScreen className="sm:max-w-lg">
         <form data-ui="account/AddressDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{address ? "Edit address" : "Add a new address"}</DialogTitle>

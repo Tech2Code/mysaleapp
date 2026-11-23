@@ -202,7 +202,7 @@ export function ProductsView({ products }: { products: Product[] }) {
             >
               <div data-ui="admin/ProductsView/div-4" className="space-y-3">
                 <div data-ui="admin/ProductsView/div-relative" className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
-                  <ProductImage src={p.images[0]} alt={p.name} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" />
+                  <ProductImage src={p.images[0]} alt={p.name} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
                   <div data-ui="admin/ProductsView/div-flex-4" className="absolute top-2 right-2 flex items-center gap-1">
                     <span data-ui="admin/ProductsView/span-5"
                       className={cn(

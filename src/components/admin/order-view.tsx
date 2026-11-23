@@ -60,7 +60,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
         </div>
         <span data-ui="admin/AdminOrderView/span" className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</span>
         {order.status !== "cancelled" && (
-          <Link data-ui="admin/AdminOrderView/Link-invoice" href={`/admin/orders/${order.id}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
+          <Link data-ui="admin/AdminOrderView/Link-invoice" href={`/admin/orders/${encodeURIComponent(order.orderCode)}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
             <ReceiptTextIcon className="size-4" /> Invoice
           </Link>
         )}

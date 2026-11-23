@@ -28,8 +28,9 @@ export function ProductImage({
   priority?: boolean
   className?: string
 }) {
-  // Remember WHICH src failed, so a changed src (gallery thumbnail) starts fresh without an effect.
+  // Remember WHICH src failed/loaded, so a changed src (gallery thumbnail) starts fresh without an effect.
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
   const mounted = useRef(false)
   useEffect(() => {
     mounted.current = true
@@ -40,6 +41,7 @@ export function ProductImage({
 
   // Inline `data:` URIs come from skeleton placeholders (`placeholderProduct`); render the lightweight CSS tile instead of mounting/preloading next/image.
   if (src && !src.startsWith("data:") && failedSrc !== src) {
+    const isLoaded = Boolean(priority) || loadedSrc === src
     return (
       <Image data-ui="store/ProductImage"
         src={src}
@@ -47,10 +49,20 @@ export function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        onLoad={() => {
+          if (mounted.current) setLoadedSrc(src)
+        }}
         onError={() => {
           if (mounted.current) setFailedSrc(src)
         }}
-        className={cn("object-cover text-transparent", className)}
+        className={cn(
+          "object-cover text-transparent transition-[opacity,transform] duration-300",
+          isLoaded ? "opacity-100" : "opacity-0",
+          className
+        )}
       />
     )
   }

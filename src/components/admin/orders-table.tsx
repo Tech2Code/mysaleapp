@@ -170,7 +170,7 @@ export function OrdersTable({
                     <div data-ui="admin/OrdersTable/div-3">
                       <div data-ui="admin/OrdersTable/div-flex-3" className="flex flex-wrap items-center gap-2">
                         <Link data-ui="admin/OrdersTable/Link"
-                          href={`/admin/orders/${o.id}`}
+                          href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                           onClick={() => markSeen(o.id)}
                           className="font-mono text-base font-bold text-primary hover:underline"
                         >
@@ -242,7 +242,7 @@ export function OrdersTable({
                 {/* Card Footer: View order link */}
                 <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
                   <Link data-ui="admin/OrdersTable/Link-manage-order"
-                    href={`/admin/orders/${o.id}`}
+                    href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                     onClick={() => markSeen(o.id)}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                   >
@@ -276,7 +276,7 @@ export function OrdersTable({
                       <div data-ui="admin/OrdersTable/div-flex-8" className="flex flex-wrap items-center gap-2">
                         <Link
                           data-ui="admin/OrdersTable/Link-2"
-                          href={`/admin/orders/${o.id}`}
+                          href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                           onClick={() => markSeen(o.id)}
                           className="font-mono font-semibold text-primary group-hover:underline"
                         >

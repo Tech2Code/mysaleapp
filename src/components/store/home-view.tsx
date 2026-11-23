@@ -44,7 +44,7 @@ export function HomeView({
         {bestsellers.length > 0 && (
           <section data-ui="store/HomeView/section-2" className="container-page" aria-labelledby="featured-title">
             <SectionHeading id="featured-title" eyebrow="Loved by customers" title="Bestsellers" href="/products" />
-            <ProductGrid products={bestsellers} />
+            <ProductGrid products={bestsellers} priorityCount={0} />
           </section>
         )}
 

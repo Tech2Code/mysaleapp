@@ -89,7 +89,7 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="admin/CategoryDialog/DialogContent" className="sm:max-w-md">
+      <DialogContent data-ui="admin/CategoryDialog/DialogContent" mobileFullScreen className="sm:max-w-md">
         <form data-ui="admin/CategoryDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>

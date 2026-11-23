@@ -197,7 +197,7 @@ export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode;
         >
           <ExternalLinkIcon /> View store
         </Link>
-        <ThemeToggle />
+        <ThemeToggle className="hidden sm:inline-flex" />
         {account}
       </div>
     </div>

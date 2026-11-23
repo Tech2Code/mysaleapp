@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
@@ -14,7 +14,7 @@ export function ThemeToggle() {
     <Button data-ui="shared/ThemeToggle"
       variant="ghost"
       size="icon"
-      className="rounded-full"
+      className={cn("rounded-full", className)}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle dark mode"
     >

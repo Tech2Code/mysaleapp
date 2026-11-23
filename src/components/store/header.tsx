@@ -8,6 +8,7 @@ import { ScrollLink } from "@/components/shared/scroll-link"
 import { usePathname } from "next/navigation"
 import { Suspense, useState } from "react"
 import { Logo } from "@/components/shared/logo"
+import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useMounted } from "@/hooks/use-mounted"
@@ -220,6 +221,7 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           >
             <SearchIcon className="size-4.5" />
           </button>
+          <ThemeToggle className="hidden sm:inline-flex" />
           <Suspense fallback={null}>
             <MobileHeaderShortcuts
               mounted={mounted}

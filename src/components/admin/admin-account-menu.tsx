@@ -9,6 +9,7 @@ import { TextField } from "@/components/form"
 import { applyClientSignOut } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -342,7 +343,7 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
           aria-label={`Account: ${account.email}`}
         >
           {account.avatarUrl ? (
-            <Image data-ui="admin/AdminAccountMenu/Image" src={account.avatarUrl} alt="" width={36} height={36} className="size-full object-cover" />
+            <Image data-ui="admin/AdminAccountMenu/Image" src={account.avatarUrl} alt="" width={36} height={36} sizes="36px" className="size-full object-cover" />
           ) : (
             <span data-ui="admin/AdminAccountMenu/span" className="text-sm leading-none font-semibold text-primary">{initial}</span>
           )}
@@ -370,6 +371,13 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
               <LockIcon /> Lock screen now
             </DropdownMenuItem>
           )}
+          <DropdownMenuSeparator className="sm:hidden" />
+          <div data-ui="admin/AdminAccountMenu/div" className="px-2 py-1.5 sm:hidden">
+            <p data-ui="admin/AdminAccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              Settings · Theme
+            </p>
+            <ThemeSegmentedControl />
+          </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
             <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}

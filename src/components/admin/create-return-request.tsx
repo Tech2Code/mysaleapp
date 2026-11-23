@@ -161,7 +161,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       <DialogTrigger data-ui="admin/CreateReturnRequest/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
         Create return request
       </DialogTrigger>
-      <DialogContent data-ui="admin/CreateReturnRequest/DialogContent" className="sm:max-w-lg">
+      <DialogContent data-ui="admin/CreateReturnRequest/DialogContent" mobileFullScreen className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Return or exchange request for {orderCode}</DialogTitle>
           <DialogDescription>For a customer who asked outside the app. The return window is ignored. You approve it next, with a pickup date.</DialogDescription>

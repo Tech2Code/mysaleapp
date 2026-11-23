@@ -844,14 +844,14 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
           setCreateOpen(next)
         }}
       >
-        <DialogContent data-ui="admin/PromoCodeManager/DialogContent" className="sm:max-w-lg">
+        <DialogContent data-ui="admin/PromoCodeManager/DialogContent" mobileFullScreen className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Create promo code</DialogTitle>
             <DialogDescription>
               Customers can apply this code at checkout. You can disable or delete it anytime.
             </DialogDescription>
           </DialogHeader>
-          <form data-ui="admin/PromoCodeManager/form" onSubmit={onCreateSubmit} noValidate>
+          <form data-ui="admin/PromoCodeManager/form-flex" onSubmit={onCreateSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <DialogBody className="space-y-4">
               <div data-ui="admin/PromoCodeManager/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
                 <TextField

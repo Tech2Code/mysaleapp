@@ -24,5 +24,5 @@ async function AdminInvoiceDetails({ params }: { params: Promise<{ id: string }>
   const [order, shop] = await Promise.all([getOrderById(id), getStoreSettings()])
   if (!order || order.status === "cancelled") notFound()
 
-  return <InvoicePageView order={order} shop={shop} backHref={`/admin/orders/${order.id}`} />
+  return <InvoicePageView order={order} shop={shop} backHref={`/admin/orders/${encodeURIComponent(order.orderCode)}`} />
 }

@@ -31,6 +31,8 @@ export function CategoryGrid({ categories }: { categories: (Category & { count: 
                   src={c.imageUrl}
                   alt=""
                   fill
+                  loading="lazy"
+                  decoding="async"
                   sizes="(min-width: 1024px) 20vw, (min-width: 768px) 24vw, 44vw"
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />

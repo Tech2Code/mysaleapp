@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeftRightIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, PlusIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowLeftRightIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, PencilIcon, PlusIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
@@ -70,7 +70,8 @@ export function RequestReturn({
   const [details, setDetails] = useState("")
   const [phone, setPhone] = useState("")
   const [pickupMode, setPickupMode] = useState<"order" | "saved" | "new">("order")
-  const [showPickupPicker, setShowPickupPicker] = useState(false)
+  const [dialogView, setDialogView] = useState<"main" | "pickup-list" | "pickup-new">("main")
+  const [pickupSubmitted, setPickupSubmitted] = useState(false)
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>("")
   const [pickupName, setPickupName] = useState(orderDelivery?.name ?? "")
@@ -210,58 +211,50 @@ export function RequestReturn({
   const phoneMissing = isGuest && (!phoneDigits || Boolean(phoneError))
 
   const pickupPhoneDigits = normalizeIndianPhone(pickupPhone)
-  const newPickupErrors = {
+  const rawNewPickupErrors = {
     name:
-      pickupMode === "new"
-        ? pickupName.trim().length < LIMITS.personName.min
-          ? "Enter contact name"
-          : !PATTERNS.personName.test(pickupName.trim())
-            ? "Use letters, spaces and basic punctuation only"
-            : undefined
-        : undefined,
-    phone: pickupMode === "new" && !pickupPhoneDigits ? "Enter a valid 10-digit mobile number" : undefined,
-    pincode:
-      pickupMode === "new"
-        ? !/^\d{6}$/.test(pickupPincode.trim())
-          ? "Enter a valid 6-digit pincode"
-          : pickupArea.error ?? undefined
-        : undefined,
+      pickupName.trim().length < LIMITS.personName.min
+        ? "Enter contact name"
+        : !PATTERNS.personName.test(pickupName.trim())
+          ? "Use letters, spaces and basic punctuation only"
+          : undefined,
+    phone: !pickupPhoneDigits ? "Enter a valid 10-digit mobile number" : undefined,
+    pincode: !/^\d{6}$/.test(pickupPincode.trim())
+      ? "Enter a valid 6-digit pincode"
+      : pickupArea.error ?? undefined,
     city:
-      pickupMode === "new"
-        ? pickupCity.trim().length < LIMITS.city.min
-          ? "Enter city / district"
-          : !PATTERNS.city.test(pickupCity.trim())
-            ? "Letters, spaces and basic punctuation only"
-            : undefined
-        : undefined,
-    state: pickupMode === "new" && !pickupState ? "Select state" : undefined,
+      pickupCity.trim().length < LIMITS.city.min
+        ? "Enter city / district"
+        : !PATTERNS.city.test(pickupCity.trim())
+          ? "Letters, spaces and basic punctuation only"
+          : undefined,
+    state: !pickupState ? "Select state" : undefined,
     address:
-      pickupMode === "new" && pickupAddressLine.trim().length < LIMITS.address.min
+      pickupAddressLine.trim().length < LIMITS.address.min
         ? `Enter full pickup address (at least ${LIMITS.address.min} characters)`
         : undefined,
   }
-  const hasNewPickupError =
-    pickupMode === "new" &&
-    Boolean(
-      newPickupErrors.name ||
-        newPickupErrors.phone ||
-        newPickupErrors.pincode ||
-        newPickupErrors.city ||
-        newPickupErrors.state ||
-        newPickupErrors.address
-    )
+  const hasRawNewPickupError = Boolean(
+    rawNewPickupErrors.name ||
+      rawNewPickupErrors.phone ||
+      rawNewPickupErrors.pincode ||
+      rawNewPickupErrors.city ||
+      rawNewPickupErrors.state ||
+      rawNewPickupErrors.address
+  )
+  const hasNewPickupError = pickupMode === "new" && hasRawNewPickupError
   const savedPickupMissing = pickupMode === "saved" && !savedAddresses.some((a) => a.id === selectedAddressId)
+  const chosenSavedAddress = savedAddresses.find((a) => a.id === selectedAddressId)
 
   const resolvedPickupSummary = (() => {
     if (pickupMode === "saved") {
-      const chosen = savedAddresses.find((a) => a.id === selectedAddressId)
-      if (!chosen) return undefined
-      const prefix = `${chosen.label}: ${chosen.fullName.slice(0, 40)} (+91 ${chosen.phone}), `
-      const suffix = `, ${chosen.city.slice(0, 40)} - ${chosen.pincode}`
+      if (!chosenSavedAddress) return undefined
+      const prefix = `${chosenSavedAddress.label}: ${chosenSavedAddress.fullName.slice(0, 40)} (+91 ${chosenSavedAddress.phone}), `
+      const suffix = `, ${chosenSavedAddress.city.slice(0, 40)} - ${chosenSavedAddress.pincode}`
       const maxAddr = Math.max(30, 215 - prefix.length - suffix.length)
-      return `${prefix}${chosen.address.slice(0, maxAddr)}${suffix}`
+      return `${prefix}${chosenSavedAddress.address.slice(0, maxAddr)}${suffix}`
     }
-    if (pickupMode === "new" && !hasNewPickupError && pickupPhoneDigits && pickupState) {
+    if (pickupMode === "new" && !hasRawNewPickupError && pickupPhoneDigits && pickupState) {
       const prefix = `${pickupName.trim().slice(0, 40)} (+91 ${pickupPhoneDigits}), `
       const suffix = `, ${joinCityState(pickupCity.trim(), pickupState).slice(0, 45)} - ${pickupPincode.trim()}`
       const maxAddr = Math.max(30, 215 - prefix.length - suffix.length)
@@ -387,7 +380,8 @@ export function RequestReturn({
     setDetails("")
     setPhone("")
     setPickupMode("order")
-    setShowPickupPicker(false)
+    setDialogView("main")
+    setPickupSubmitted(false)
     setSelectedAddressId("")
     setPickupName(orderDelivery?.name ?? "")
     setPickupPhone(orderDelivery?.phone ?? "")
@@ -425,17 +419,328 @@ export function RequestReturn({
           {win.days}-day return &amp; exchange window open until <strong data-ui="store/RequestReturn/strong" className="font-medium text-foreground">{formatDate(win.until)}</strong>
         </span>
       )}
-      <DialogContent data-ui="store/RequestReturn/DialogContent" className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Return or exchange items from {orderCode}</DialogTitle>
-          <DialogDescription>
-            Choose what you want to send back and whether you want a refund or an exchange/replacement.
-            {win.until ? ` You can request a return or exchange until ${formatDate(win.until)}.` : ""}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent data-ui="store/RequestReturn/DialogContent" mobileFullScreen className="sm:max-w-lg">
+        {dialogView === "pickup-list" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Choose pickup address</DialogTitle>
+              <DialogDescription>
+                Select where our courier should pick up the item(s) for {orderCode}, or add a new pickup address.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div
+                data-ui="store/RequestReturn/div-pickup-address"
+                role="radiogroup"
+                aria-label="Pickup address"
+                className="space-y-2.5"
+              >
+                {/* Option 1: Original order delivery address */}
+                <button
+                  data-ui="store/RequestReturn/button"
+                  type="button"
+                  role="radio"
+                  aria-checked={pickupMode === "order"}
+                  onClick={() => {
+                    setPickupMode("order")
+                    setDialogView("main")
+                  }}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-2xl border bg-card p-3.5 text-left text-xs transition-all",
+                    pickupMode === "order" ? "border-primary bg-primary/4 ring-1 ring-primary/30" : "hover:bg-muted/60"
+                  )}
+                >
+                  <span
+                    data-ui="store/RequestReturn/span-2"
+                    className={cn(
+                      "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                      pickupMode === "order" ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                    )}
+                    aria-hidden
+                  >
+                    {pickupMode === "order" && <CheckIcon className="size-2.5" />}
+                  </span>
+                  <span data-ui="store/RequestReturn/span-3" className="min-w-0 flex-1 space-y-1">
+                    <span data-ui="store/RequestReturn/span-flex" className="flex flex-wrap items-center gap-1.5 font-semibold text-foreground">
+                      <span data-ui="store/RequestReturn/span-4" className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Order delivery address
+                      </span>
+                      {orderDelivery && <span data-ui="store/RequestReturn/span-5">{orderDelivery.name} · +91 {orderDelivery.phone}</span>}
+                    </span>
+                    {orderDelivery ? (
+                      <span data-ui="store/RequestReturn/span-6" className="block text-muted-foreground">
+                        {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                      </span>
+                    ) : (
+                      <span data-ui="store/RequestReturn/span-7" className="block text-muted-foreground">
+                        Same address where this order was delivered
+                      </span>
+                    )}
+                  </span>
+                </button>
 
-        <DialogBody>
-          <ul ref={itemsListRef} data-ui="store/RequestReturn/ul" className="space-y-3">
+                {/* Option 2: Saved addresses from customer's address book */}
+                {savedAddresses
+                  .filter(
+                    (a) =>
+                      !orderDelivery ||
+                      a.pincode.trim() !== orderDelivery.pincode.trim() ||
+                      a.address.trim().toLowerCase() !== orderDelivery.address.trim().toLowerCase()
+                  )
+                  .map((addr) => {
+                    const selected = pickupMode === "saved" && selectedAddressId === addr.id
+                    return (
+                      <button
+                        data-ui="store/RequestReturn/button-2"
+                        key={addr.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => {
+                          setPickupMode("saved")
+                          setSelectedAddressId(addr.id)
+                          setDialogView("main")
+                        }}
+                        className={cn(
+                          "flex w-full items-start gap-3 rounded-2xl border bg-card p-3.5 text-left text-xs transition-all",
+                          selected ? "border-primary bg-primary/4 ring-1 ring-primary/30" : "hover:bg-muted/60"
+                        )}
+                      >
+                        <span
+                          data-ui="store/RequestReturn/span-8"
+                          className={cn(
+                            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                            selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                          )}
+                          aria-hidden
+                        >
+                          {selected && <CheckIcon className="size-2.5" />}
+                        </span>
+                        <span data-ui="store/RequestReturn/span-9" className="min-w-0 flex-1 space-y-1">
+                          <span data-ui="store/RequestReturn/span-flex-2" className="flex flex-wrap items-center gap-1.5 font-semibold text-foreground">
+                            <span data-ui="store/RequestReturn/span-10" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
+                              {addr.label}
+                            </span>
+                            {addr.fullName} · +91 {addr.phone}
+                          </span>
+                          <span data-ui="store/RequestReturn/span-11" className="block text-muted-foreground">
+                            {addr.address}, {addr.city} - {addr.pincode}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+
+                {/* Option 3: Custom address already entered in this session */}
+                {!hasRawNewPickupError && pickupPhoneDigits && pickupState && (
+                  <button
+                    data-ui="store/RequestReturn/button-3"
+                    type="button"
+                    role="radio"
+                    aria-checked={pickupMode === "new"}
+                    onClick={() => {
+                      setPickupMode("new")
+                      setDialogView("main")
+                    }}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-2xl border bg-card p-3.5 text-left text-xs transition-all",
+                      pickupMode === "new" ? "border-primary bg-primary/4 ring-1 ring-primary/30" : "hover:bg-muted/60"
+                    )}
+                  >
+                    <span
+                      data-ui="store/RequestReturn/span-12"
+                      className={cn(
+                        "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                        pickupMode === "new" ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
+                      )}
+                      aria-hidden
+                    >
+                      {pickupMode === "new" && <CheckIcon className="size-2.5" />}
+                    </span>
+                    <span data-ui="store/RequestReturn/span-13" className="min-w-0 flex-1 space-y-1">
+                      <span data-ui="store/RequestReturn/span-flex-3" className="flex flex-wrap items-center gap-1.5 font-semibold text-foreground">
+                        <span data-ui="store/RequestReturn/span-14" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {saveNewPickupAddress ? newAddressLabel : "New address"}
+                        </span>
+                        {pickupName.trim()} · +91 {pickupPhoneDigits}
+                      </span>
+                      <span data-ui="store/RequestReturn/span-15" className="block text-muted-foreground">
+                        {pickupAddressLine.trim()}, {joinCityState(pickupCity.trim(), pickupState)} - {pickupPincode.trim()}
+                      </span>
+                    </span>
+                  </button>
+                )}
+
+                {/* Button to open Step 3: Add New Pickup Address inside the same modal */}
+                <button
+                  data-ui="store/RequestReturn/button-add-a-new-pickup-addre"
+                  type="button"
+                  onClick={() => {
+                    setPickupSubmitted(false)
+                    setDialogView("pickup-new")
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-3.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                >
+                  <PlusIcon className="size-4 shrink-0" aria-hidden />
+                  Add a new pickup address
+                </button>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                data-ui="store/RequestReturn/Button-back-to-return-details"
+                type="button"
+                variant="outline"
+                onClick={() => setDialogView("main")}
+                className="gap-1.5 rounded-full"
+              >
+                <ArrowLeftIcon className="size-4" /> Back to return details
+              </Button>
+            </DialogFooter>
+          </>
+        ) : dialogView === "pickup-new" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add new pickup address</DialogTitle>
+              <DialogDescription>
+                Enter the address where our courier should collect the item(s) for {orderCode}.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div data-ui="store/RequestReturn/div" className="space-y-2">
+                <div data-ui="store/RequestReturn/div-grid" className="grid gap-x-3 gap-y-1.5 sm:grid-cols-2">
+                  <TextField
+                    label="Contact name *"
+                    kind="personName"
+                    fieldSize="md"
+                    value={pickupName}
+                    onChange={(e) => setPickupName(e.target.value)}
+                    error={pickupSubmitted ? rawNewPickupErrors.name : undefined}
+                  />
+                  <TextField
+                    label="Mobile number *"
+                    kind="phone"
+                    leading="+91"
+                    fieldSize="md"
+                    value={pickupPhone}
+                    onChange={(e) => setPickupPhone(e.target.value)}
+                    error={pickupSubmitted ? rawNewPickupErrors.phone : undefined}
+                  />
+                </div>
+                <div data-ui="store/RequestReturn/div-grid-2" className="grid gap-x-3 gap-y-1.5 sm:grid-cols-2">
+                  <TextField
+                    label="Pincode *"
+                    kind="pincode"
+                    fieldSize="md"
+                    value={pickupPincode}
+                    onChange={(e) => setPickupPincode(e.target.value)}
+                    hint={pickupArea.loading ? "Looking up pincode…" : undefined}
+                    error={pickupSubmitted || pickupPincode.length === 6 ? rawNewPickupErrors.pincode : undefined}
+                  />
+                  <TextField
+                    label="City / District *"
+                    kind="city"
+                    fieldSize="md"
+                    value={pickupCity}
+                    onChange={(e) => setPickupCity(e.target.value)}
+                    error={pickupSubmitted ? rawNewPickupErrors.city : undefined}
+                  />
+                </div>
+                <SelectField
+                  label="State *"
+                  placeholder="Select state"
+                  fieldSize="md"
+                  value={pickupState}
+                  onValueChange={(val) => setPickupState(val as IndianState)}
+                  options={STATE_OPTIONS}
+                  error={pickupSubmitted ? rawNewPickupErrors.state : undefined}
+                />
+                <TextAreaField
+                  label="Full pickup address *"
+                  rows={2}
+                  maxLength={120}
+                  placeholder="House / flat no., building, street, area & landmark"
+                  value={pickupAddressLine}
+                  onChange={(e) => setPickupAddressLine(e.target.value)}
+                  error={pickupSubmitted ? rawNewPickupErrors.address : undefined}
+                />
+                {!isGuest && savedAddresses.length < 10 && (
+                  <div data-ui="store/RequestReturn/div-2" className="space-y-2 rounded-xl border bg-muted/30 p-3">
+                    <label data-ui="store/RequestReturn/label-save-this-address-to-m" className="flex cursor-pointer items-center gap-2 text-xs font-medium text-foreground">
+                      <input
+                        data-ui="store/RequestReturn/input-checkbox"
+                        type="checkbox"
+                        checked={saveNewPickupAddress}
+                        onChange={(e) => setSaveNewPickupAddress(e.target.checked)}
+                        className="size-4 rounded border-border accent-primary"
+                      />
+                      Save this address to my address book
+                    </label>
+                    {saveNewPickupAddress && (
+                      <div data-ui="store/RequestReturn/div-flex" className="flex flex-wrap items-center gap-1.5 pl-6">
+                        {ADDRESS_LABELS.map((lbl) => (
+                          <button
+                            data-ui="store/RequestReturn/button-4"
+                            key={lbl}
+                            type="button"
+                            onClick={() => setNewAddressLabel(lbl)}
+                            className={cn(
+                              "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
+                              newAddressLabel === lbl
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "bg-background text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {lbl}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </DialogBody>
+            <DialogFooter className="sm:justify-between">
+              <Button
+                data-ui="store/RequestReturn/Button-back"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPickupSubmitted(false)
+                  setDialogView("pickup-list")
+                }}
+                className="gap-1.5 rounded-full"
+              >
+                <ArrowLeftIcon className="size-4" /> Back
+              </Button>
+              <Button
+                data-ui="store/RequestReturn/Button-use-this-address"
+                type="button"
+                onClick={() => {
+                  setPickupSubmitted(true)
+                  if (hasRawNewPickupError) return
+                  setPickupMode("new")
+                  setPickupSubmitted(false)
+                  setDialogView("main")
+                }}
+                className="gap-1.5 rounded-full"
+              >
+                <CheckIcon className="size-4" /> Use this address
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Return or exchange items from {orderCode}</DialogTitle>
+              <DialogDescription>
+                Choose what you want to send back and whether you want a refund or an exchange/replacement.
+                {win.until ? ` You can request a return or exchange until ${formatDate(win.until)}.` : ""}
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogBody>
+              <ul ref={itemsListRef} data-ui="store/RequestReturn/ul" className="space-y-3">
             {allLines.map((i) => {
               const max = left.get(i.productId) ?? 0
               const itemWin = windowByProduct.get(i.productId)
@@ -449,7 +754,7 @@ export function RequestReturn({
                     !eligible && "bg-muted/40 opacity-75"
                   )}
                 >
-                  <div data-ui="store/RequestReturn/div" className="space-y-0.5 sm:pt-1">
+                  <div data-ui="store/RequestReturn/div-3" className="space-y-0.5 sm:pt-1">
                     <p data-ui="store/RequestReturn/p" className="text-sm font-medium">{i.name}</p>
                     <p data-ui="store/RequestReturn/p-2" className="text-xs text-muted-foreground">
                       {itemWin && itemWin.days <= 0
@@ -489,13 +794,13 @@ export function RequestReturn({
             })}
           </ul>
 
-          <div data-ui="store/RequestReturn/div-2" className="space-y-2">
+          <div data-ui="store/RequestReturn/div-4" className="space-y-2">
             <p data-ui="store/RequestReturn/p-3" className="text-sm font-medium text-foreground">
               What would you prefer? *
             </p>
-            <div data-ui="store/RequestReturn/div-grid" className="grid gap-2.5 sm:grid-cols-2">
+            <div data-ui="store/RequestReturn/div-grid-3" className="grid gap-2.5 sm:grid-cols-2">
               <button
-                data-ui="store/RequestReturn/button"
+                data-ui="store/RequestReturn/button-5"
                 type="button"
                 aria-pressed={resolutionType === "refund"}
                 onClick={() => {
@@ -510,17 +815,17 @@ export function RequestReturn({
                 )}
               >
                 <WalletIcon className={cn("mt-0.5 size-4 shrink-0", resolutionType === "refund" ? "text-primary" : "text-muted-foreground")} aria-hidden />
-                <span data-ui="store/RequestReturn/span-2" className="space-y-0.5">
-                  <span data-ui="store/RequestReturn/span-3" className="block text-sm font-semibold">
+                <span data-ui="store/RequestReturn/span-16" className="space-y-0.5">
+                  <span data-ui="store/RequestReturn/span-17" className="block text-sm font-semibold">
                     Refund
                   </span>
-                  <span data-ui="store/RequestReturn/span-4" className="block text-xs text-muted-foreground">
+                  <span data-ui="store/RequestReturn/span-18" className="block text-xs text-muted-foreground">
                     Get the item price refunded after pickup
                   </span>
                 </span>
               </button>
               <button
-                data-ui="store/RequestReturn/button-2"
+                data-ui="store/RequestReturn/button-6"
                 type="button"
                 aria-pressed={resolutionType === "exchange"}
                 onClick={() => {
@@ -539,11 +844,11 @@ export function RequestReturn({
                 )}
               >
                 <ArrowLeftRightIcon className={cn("mt-0.5 size-4 shrink-0", resolutionType === "exchange" ? "text-primary" : "text-muted-foreground")} aria-hidden />
-                <span data-ui="store/RequestReturn/span-5" className="space-y-0.5">
-                  <span data-ui="store/RequestReturn/span-6" className="block text-sm font-semibold">
+                <span data-ui="store/RequestReturn/span-19" className="space-y-0.5">
+                  <span data-ui="store/RequestReturn/span-20" className="block text-sm font-semibold">
                     Exchange / Replacement
                   </span>
-                  <span data-ui="store/RequestReturn/span-7" className="block text-xs text-muted-foreground">
+                  <span data-ui="store/RequestReturn/span-21" className="block text-xs text-muted-foreground">
                     Swap for another size, colour, or piece
                   </span>
                 </span>
@@ -552,7 +857,7 @@ export function RequestReturn({
           </div>
 
           {resolutionType === "exchange" && (
-            <div ref={exchangeBoxRef} data-ui="store/RequestReturn/div-3" className="space-y-3 rounded-xl border bg-muted/30 p-3.5">
+            <div ref={exchangeBoxRef} data-ui="store/RequestReturn/div-5" className="space-y-3 rounded-xl border bg-muted/30 p-3.5">
               <SelectField
                 label="Would you like an exchange or a replacement? *"
                 placeholder="Choose Exchange or Replacement"
@@ -627,18 +932,18 @@ export function RequestReturn({
           )}
 
           {showLowerFields && (
-            <div ref={nextFieldsRef} data-ui="store/RequestReturn/div-4" className="space-y-4">
+            <div ref={nextFieldsRef} data-ui="store/RequestReturn/div-6" className="space-y-4">
               {estimate.length > 0 && (
-                <div data-ui="store/RequestReturn/div-5" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
+                <div data-ui="store/RequestReturn/div-7" className="space-y-1 rounded-xl bg-muted/60 p-3 text-sm">
                   <p data-ui="store/RequestReturn/p-flex" className="flex items-baseline justify-between gap-3 font-semibold">
-                    <span data-ui="store/RequestReturn/span-8">
+                    <span data-ui="store/RequestReturn/span-22">
                       {resolutionType === "exchange"
                         ? exchangeKind === "replacement"
                           ? "Replacement item value"
                           : "Exchange item value"
                         : "You will get back"}
                     </span>
-                    <span data-ui="store/RequestReturn/span-9">{formatPrice(estimateTotal)}</span>
+                    <span data-ui="store/RequestReturn/span-23">{formatPrice(estimateTotal)}</span>
                   </p>
                   <p data-ui="store/RequestReturn/p-4" className="text-xs text-muted-foreground">
                     {resolutionType === "exchange"
@@ -699,236 +1004,97 @@ export function RequestReturn({
                 }
               />
 
-              {/* Pickup address selection (Order delivery address / Saved addresses / New pickup address) */}
-              <div ref={pickupBoxRef} data-ui="store/RequestReturn/div-6" className="space-y-3 rounded-xl border bg-muted/25 p-3.5">
-                <div data-ui="store/RequestReturn/div-flex" className="flex flex-wrap items-center justify-between gap-2">
+              {/* Pickup address summary card (switches the modal screen to choose or add an address) */}
+              <div ref={pickupBoxRef} data-ui="store/RequestReturn/div-8" className="space-y-2.5 rounded-2xl border bg-muted/25 p-3.5">
+                <div data-ui="store/RequestReturn/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
                   <p data-ui="store/RequestReturn/p-flex-2" className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     <MapPinIcon className="size-4 text-primary" aria-hidden /> Pickup address
                   </p>
-                  {!showPickupPicker && (
+                  <div data-ui="store/RequestReturn/div-flex-3" className="flex items-center gap-2">
+                    {pickupMode === "new" && (
+                      <button
+                        data-ui="store/RequestReturn/button-edit"
+                        type="button"
+                        onClick={() => {
+                          setPickupSubmitted(false)
+                          setDialogView("pickup-new")
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                      >
+                        <PencilIcon className="size-3" aria-hidden /> Edit
+                      </button>
+                    )}
                     <button
                       data-ui="store/RequestReturn/button-change-add-address"
                       type="button"
-                      onClick={() => setShowPickupPicker(true)}
-                      className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                      onClick={() => {
+                        setPickupSubmitted(false)
+                        setDialogView("pickup-list")
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/8 px-3 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
                     >
                       Change / add address
                     </button>
-                  )}
+                  </div>
                 </div>
 
-                {!showPickupPicker && pickupMode === "order" ? (
-                  <div data-ui="store/RequestReturn/div-7" className="rounded-lg border bg-card p-3 text-xs">
-                    <span data-ui="store/RequestReturn/span-10" className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                      Order delivery address
-                    </span>
-                    {orderDelivery ? (
-                      <>
-                        <p data-ui="store/RequestReturn/p-5" className="mt-1.5 font-semibold text-foreground">
-                          {orderDelivery.name} · +91 {orderDelivery.phone}
-                        </p>
-                        <p data-ui="store/RequestReturn/p-6" className="mt-0.5 text-muted-foreground">
-                          {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
-                        </p>
-                      </>
-                    ) : (
-                      <p data-ui="store/RequestReturn/p-7" className="mt-1.5 text-muted-foreground">
-                        Pickup will be scheduled at the original delivery address on this order. Currently at a different location? Tap <strong data-ui="store/RequestReturn/strong-2" className="font-medium text-foreground">Change / add address</strong> above.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div data-ui="store/RequestReturn/div-8" className="space-y-2.5">
-                    {/* Option 1: Original order delivery address */}
-                    <button
-                      data-ui="store/RequestReturn/button-3"
-                      type="button"
-                      onClick={() => {
-                        setPickupMode("order")
-                        setShowPickupPicker(false)
-                      }}
-                      className={cn(
-                        "flex w-full items-start gap-2.5 rounded-xl border bg-card p-3 text-left text-xs transition-colors",
-                        pickupMode === "order" ? "border-primary ring-1 ring-primary/30" : "hover:bg-muted/60"
-                      )}
-                    >
-                      <span data-ui="store/RequestReturn/span-11"
-                        className={cn(
-                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
-                          pickupMode === "order" ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
-                        )}
-                        aria-hidden
-                      >
-                        {pickupMode === "order" && <CheckIcon className="size-2.5" />}
-                      </span>
-                      <span data-ui="store/RequestReturn/span-12" className="min-w-0 flex-1 space-y-0.5">
-                        <span data-ui="store/RequestReturn/span-13" className="block font-semibold text-foreground">Order delivery address</span>
-                        {orderDelivery ? (
-                          <span data-ui="store/RequestReturn/span-14" className="block text-muted-foreground">
-                            {orderDelivery.name} (+91 {orderDelivery.phone}) — {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
-                          </span>
-                        ) : (
-                          <span data-ui="store/RequestReturn/span-15" className="block text-muted-foreground">Same address where this order was delivered</span>
-                        )}
-                      </span>
-                    </button>
-
-                    {/* Option 2: Saved addresses from customer's address book */}
-                    {savedAddresses
-                      .filter(
-                        (a) =>
-                          !orderDelivery ||
-                          a.pincode.trim() !== orderDelivery.pincode.trim() ||
-                          a.address.trim().toLowerCase() !== orderDelivery.address.trim().toLowerCase()
-                      )
-                      .map((addr) => {
-                        const selected = pickupMode === "saved" && selectedAddressId === addr.id
-                        return (
-                          <button
-                            data-ui="store/RequestReturn/button-4"
-                            key={addr.id}
-                            type="button"
-                            onClick={() => {
-                              setPickupMode("saved")
-                              setSelectedAddressId(addr.id)
-                            }}
-                            className={cn(
-                              "flex w-full items-start gap-2.5 rounded-xl border bg-card p-3 text-left text-xs transition-colors",
-                              selected ? "border-primary ring-1 ring-primary/30" : "hover:bg-muted/60"
-                            )}
-                          >
-                            <span data-ui="store/RequestReturn/span-16"
-                              className={cn(
-                                "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
-                                selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
-                              )}
-                              aria-hidden
-                            >
-                              {selected && <CheckIcon className="size-2.5" />}
-                            </span>
-                            <span data-ui="store/RequestReturn/span-17" className="min-w-0 flex-1 space-y-0.5">
-                              <span data-ui="store/RequestReturn/span-flex" className="flex flex-wrap items-center gap-1.5 font-semibold text-foreground">
-                                <span data-ui="store/RequestReturn/span-18" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                  {addr.label}
-                                </span>
-                                {addr.fullName} · +91 {addr.phone}
-                              </span>
-                              <span data-ui="store/RequestReturn/span-19" className="block text-muted-foreground">
-                                {addr.address}, {addr.city} - {addr.pincode}
-                              </span>
-                            </span>
-                          </button>
-                        )
-                      })}
-
-                    {/* Option 3: Enter a new pickup address */}
-                    <button
-                      data-ui="store/RequestReturn/button-use-a-different-new-pi"
-                      type="button"
-                      onClick={() => setPickupMode("new")}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-xl border bg-card p-3 text-left text-xs font-semibold transition-colors",
-                        pickupMode === "new" ? "border-primary text-primary ring-1 ring-primary/30" : "text-foreground hover:bg-muted/60"
-                      )}
-                    >
-                      <PlusIcon className="size-4 shrink-0 text-primary" aria-hidden />
-                      Use a different / new pickup address
-                    </button>
-
-                    {pickupMode === "new" && (
-                      <div data-ui="store/RequestReturn/div-9" className="space-y-2.5 rounded-xl border bg-card p-3.5">
-                        <div data-ui="store/RequestReturn/div-grid-2" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-                          <TextField
-                            label="Contact name *"
-                            kind="personName"
-                            fieldSize="md"
-                            value={pickupName}
-                            onChange={(e) => setPickupName(e.target.value)}
-                            error={submitted ? newPickupErrors.name : undefined}
-                          />
-                          <TextField
-                            label="Mobile number *"
-                            kind="phone"
-                            leading="+91"
-                            fieldSize="md"
-                            value={pickupPhone}
-                            onChange={(e) => setPickupPhone(e.target.value)}
-                            error={submitted ? newPickupErrors.phone : undefined}
-                          />
-                        </div>
-                        <div data-ui="store/RequestReturn/div-grid-3" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-                          <TextField
-                            label="Pincode *"
-                            kind="pincode"
-                            fieldSize="md"
-                            value={pickupPincode}
-                            onChange={(e) => setPickupPincode(e.target.value)}
-                            hint={pickupArea.loading ? "Looking up pincode…" : undefined}
-                            error={submitted || pickupPincode.length === 6 ? newPickupErrors.pincode : undefined}
-                          />
-                          <TextField
-                            label="City / District *"
-                            kind="city"
-                            fieldSize="md"
-                            value={pickupCity}
-                            onChange={(e) => setPickupCity(e.target.value)}
-                            error={submitted ? newPickupErrors.city : undefined}
-                          />
-                        </div>
-                        <SelectField
-                          label="State *"
-                          placeholder="Select state"
-                          fieldSize="md"
-                          value={pickupState}
-                          onValueChange={(val) => setPickupState(val as IndianState)}
-                          options={STATE_OPTIONS}
-                          error={submitted ? newPickupErrors.state : undefined}
-                        />
-                        <TextAreaField
-                          label="Full pickup address *"
-                          rows={2}
-                          maxLength={120}
-                          placeholder="House / flat no., building, street, area & landmark"
-                          value={pickupAddressLine}
-                          onChange={(e) => setPickupAddressLine(e.target.value)}
-                          error={submitted ? newPickupErrors.address : undefined}
-                        />
-                        {!isGuest && savedAddresses.length < 10 && (
-                          <div data-ui="store/RequestReturn/div-10" className="space-y-2 pt-1">
-                            <label data-ui="store/RequestReturn/label-save-this-address-to-m" className="flex items-center gap-2 text-xs font-medium text-foreground">
-                              <input data-ui="store/RequestReturn/input-checkbox"
-                                type="checkbox"
-                                checked={saveNewPickupAddress}
-                                onChange={(e) => setSaveNewPickupAddress(e.target.checked)}
-                                className="size-4 rounded border-border accent-primary"
-                              />
-                              Save this address to my address book
-                            </label>
-                            {saveNewPickupAddress && (
-                              <div data-ui="store/RequestReturn/div-flex-2" className="flex flex-wrap items-center gap-1.5 pl-6">
-                                {ADDRESS_LABELS.map((lbl) => (
-                                  <button data-ui="store/RequestReturn/button-5"
-                                    key={lbl}
-                                    type="button"
-                                    onClick={() => setNewAddressLabel(lbl)}
-                                    className={cn(
-                                      "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-colors",
-                                      newAddressLabel === lbl
-                                        ? "border-primary bg-primary text-primary-foreground"
-                                        : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                                    )}
-                                  >
-                                    {lbl}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                <div data-ui="store/RequestReturn/div-9" className="rounded-xl border bg-card p-3 text-xs">
+                  {pickupMode === "saved" && chosenSavedAddress ? (
+                    <>
+                      <div data-ui="store/RequestReturn/div-flex-4" className="flex flex-wrap items-center gap-1.5">
+                        <span data-ui="store/RequestReturn/span-24" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {chosenSavedAddress.label}
+                        </span>
+                        <span data-ui="store/RequestReturn/span-25" className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                          Alternate pickup address
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <p data-ui="store/RequestReturn/p-5" className="mt-1.5 font-semibold text-foreground">
+                        {chosenSavedAddress.fullName} · +91 {chosenSavedAddress.phone}
+                      </p>
+                      <p data-ui="store/RequestReturn/p-6" className="mt-0.5 text-muted-foreground">
+                        {chosenSavedAddress.address}, {chosenSavedAddress.city} - {chosenSavedAddress.pincode}
+                      </p>
+                    </>
+                  ) : pickupMode === "new" && !hasRawNewPickupError && pickupPhoneDigits && pickupState ? (
+                    <>
+                      <div data-ui="store/RequestReturn/div-flex-5" className="flex flex-wrap items-center gap-1.5">
+                        <span data-ui="store/RequestReturn/span-26" className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {saveNewPickupAddress ? newAddressLabel : "New address"}
+                        </span>
+                        <span data-ui="store/RequestReturn/span-27" className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                          Alternate pickup address
+                        </span>
+                      </div>
+                      <p data-ui="store/RequestReturn/p-7" className="mt-1.5 font-semibold text-foreground">
+                        {pickupName.trim()} · +91 {pickupPhoneDigits}
+                      </p>
+                      <p data-ui="store/RequestReturn/p-8" className="mt-0.5 text-muted-foreground">
+                        {pickupAddressLine.trim()}, {joinCityState(pickupCity.trim(), pickupState)} - {pickupPincode.trim()}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <span data-ui="store/RequestReturn/span-28" className="inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Order delivery address
+                      </span>
+                      {orderDelivery ? (
+                        <>
+                          <p data-ui="store/RequestReturn/p-9" className="mt-1.5 font-semibold text-foreground">
+                            {orderDelivery.name} · +91 {orderDelivery.phone}
+                          </p>
+                          <p data-ui="store/RequestReturn/p-10" className="mt-0.5 text-muted-foreground">
+                            {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                          </p>
+                        </>
+                      ) : (
+                        <p data-ui="store/RequestReturn/p-11" className="mt-1.5 text-muted-foreground">
+                          Pickup will be scheduled at the original delivery address on this order. Currently at a different location? Tap <strong data-ui="store/RequestReturn/strong-2" className="font-medium text-foreground">Change / add address</strong> above.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
               {isGuest && (
                 <TextField
@@ -955,15 +1121,17 @@ export function RequestReturn({
               )}
             </div>
           )}
-        </DialogBody>
-        <DialogFooter>
-          <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <XIcon className="size-4" /> Close
-          </Button>
-          <Button data-ui="store/RequestReturn/Button" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} {submitButtonLabel}
-          </Button>
-        </DialogFooter>
+            </DialogBody>
+            <DialogFooter>
+              <Button data-ui="store/RequestReturn/Button-close" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
+                <XIcon className="size-4" /> Close
+              </Button>
+              <Button data-ui="store/RequestReturn/Button" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
+                {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} {submitButtonLabel}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )

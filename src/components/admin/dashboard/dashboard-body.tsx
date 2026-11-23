@@ -171,7 +171,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
               {d.recent.map((o) => (
                 <li data-ui="admin/DashboardBody/li" key={o.id}>
                   <Link data-ui="admin/DashboardBody/Link-grid"
-                    href={`/admin/orders/${o.id}`}
+                    href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                     className="grid items-center gap-x-3 gap-y-2 p-4 transition-colors hover:bg-muted/50 sm:grid-cols-[auto_1fr_auto] sm:px-6"
                   >
                     <div data-ui="admin/DashboardBody/div-flex-2" className="flex items-center gap-3 sm:contents">

@@ -761,7 +761,7 @@ export function CheckoutForm({
       </div>
 
       <Dialog open={payDialogOpen} onOpenChange={(next) => !pending && setPayDialogOpen(next)}>
-        <DialogContent data-ui="store/CheckoutForm/DialogContent" className="sm:max-w-md">
+        <DialogContent data-ui="store/CheckoutForm/DialogContent" mobileFullScreen className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Pay {formatPrice(shownCharges.total)} to place your order</DialogTitle>
             <DialogDescription>

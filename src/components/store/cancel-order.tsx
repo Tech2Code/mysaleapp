@@ -126,7 +126,7 @@ export function CancelOrder({
       >
         <BanIcon className="size-4" /> Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="store/CancelOrder/DialogContent" className="sm:max-w-md">
+      <DialogContent data-ui="store/CancelOrder/DialogContent" mobileFullScreen className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>

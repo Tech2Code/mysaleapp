@@ -184,8 +184,8 @@ export function DeliveryEditor({
 
       {editable && (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogContent data-ui="store/DeliveryEditor/DialogContent" className="sm:max-w-lg">
-            <form data-ui="store/DeliveryEditor/form" onSubmit={onSubmit} noValidate>
+          <DialogContent data-ui="store/DeliveryEditor/DialogContent" mobileFullScreen className="sm:max-w-lg">
+            <form data-ui="store/DeliveryEditor/form-flex" onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <DialogHeader>
                 <DialogTitle>Edit delivery details</DialogTitle>
                 <DialogDescription>Order {orderCode}. You can change this until we confirm the order.</DialogDescription>

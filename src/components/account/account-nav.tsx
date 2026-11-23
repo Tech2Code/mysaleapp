@@ -43,6 +43,7 @@ function NavItems({ pathname, tab }: { pathname: string | null; tab: string | nu
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[11px]/tight font-medium transition-colors sm:flex-row sm:justify-start sm:gap-3 sm:px-4 sm:py-3 sm:text-sm",
+              l.key === "settings" && "sm:hidden",
               active ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "bg-card hover:bg-muted lg:bg-transparent"
             )}
           >

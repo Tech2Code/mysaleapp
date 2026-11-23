@@ -13,6 +13,7 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, updateTag: 
 vi.mock("@/features/products/queries", () => ({ CACHE_TAGS: { products: "products" } }))
 
 import { cancelOrderAsAdmin, decideReturnRequest, recordOrderReturn, updateOrderPayment, updateOrderStatus } from "./admin-actions"
+import { todayIST } from "@/lib/validation/dates"
 
 const ID = "11111111-1111-4111-8111-111111111111"
 /** What the admin form sends: blank strings for untouched fields. */
@@ -289,6 +290,6 @@ describe("recordOrderReturn / decideReturnRequest", () => {
     expect(await decideReturnRequest({ requestId: ID, approve: true })).toMatchObject({ ok: false, fieldErrors: { pickupDate: ["Pick the pickup date"] } })
     expect(calls).toHaveLength(0)
     setup(null, { rpc: { error: { message: "NOT_PENDING" } } })
-    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: "2026-11-20" })).toMatchObject({ error: "This request was already decided or withdrawn." })
+    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: todayIST() })).toMatchObject({ error: "This request was already decided or withdrawn." })
   })
 })

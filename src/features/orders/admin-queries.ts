@@ -235,20 +235,23 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   return { orders: data.map(mapOrder), total: count ?? 0, page }
 }
 
-export async function getOrderById(id: string): Promise<OrderWithHistory | null> {
+export async function getOrderById(idOrCode: string): Promise<OrderWithHistory | null> {
   const adminCheck = requireAdmin()
-  if (!z.uuid().safeParse(id).success) {
+  const raw = decodeURIComponent(idOrCode ?? "").trim()
+  const isUuid = z.uuid().safeParse(raw).success
+  const upperCode = raw.toUpperCase()
+  const isOrderCode = !isUuid && /^[A-Z0-9-]{4,24}$/.test(upperCode)
+  if (!isUuid && !isOrderCode) {
     await adminCheck
     return null
   }
   const supabase = await getServerSupabase()
+  const query = supabase
+    .from("orders")
+    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)")
   const [, { data, error }] = await Promise.all([
     adminCheck,
-    supabase
-      .from("orders")
-      .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)")
-      .eq("id", id)
-      .maybeSingle<OrderRow>(),
+    (isUuid ? query.eq("id", raw) : query.eq("order_code", upperCode)).maybeSingle<OrderRow>(),
   ])
   if (error) throw new Error(error.message)
   return data ? mapOrderWithHistory(data) : null
