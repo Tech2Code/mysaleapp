@@ -25,6 +25,7 @@ import { slugify } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-views.module.css"
 
 type Row = Category & { productCount: number }
 
@@ -91,13 +92,13 @@ function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="admin/CategoryDialog/DialogContent" mobileFullScreen className="sm:max-w-md">
-        <form data-ui="admin/CategoryDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+      <DialogContent mobileFullScreen className={styles.dialogSmMax}>
+        <form onSubmit={onSubmit} noValidate className={styles.dialogForm}>
           <DialogHeader>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
           </DialogHeader>
-          <DialogBody className="space-y-2">
+          <DialogBody className={styles.dialogBodyStack}>
             <TextField
               label="Name" maxLength={LIMITS.categoryName.max}
               fieldSize="md"
@@ -112,7 +113,7 @@ function CategoryDialog({
               label="URL slug"
               kind="slug"
               fieldSize="md"
-              className="font-mono text-sm"
+              className={styles.monoInput}
               error={errors.slug?.message}
               {...form.register("slug", {
                 onChange: () => setSlugTouched(true),
@@ -130,7 +131,7 @@ function CategoryDialog({
               fieldSize="md"
               inputMode="numeric"
               hint="Lower numbers show first"
-              containerClassName="w-40"
+              containerClassName={styles.sortFieldContainer}
               error={errors.sort?.message}
               {...form.register("sort")}
             />
@@ -145,11 +146,11 @@ function CategoryDialog({
             />
           </DialogBody>
           <DialogFooter>
-            <Button data-ui="admin/CategoryDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
-              <XIcon className="size-4" /> Cancel
+            <Button type="button" variant="outline" disabled={pending} onClick={() => onOpenChange(false)} className={styles.pillBtnGap}>
+              <XIcon className={styles.iconMd} /> Cancel
             </Button>
-            <Button data-ui="admin/CategoryDialog/Button-save" type="submit" disabled={pending || !hasChanges} className="gap-1.5 rounded-full">
-              {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save
+            <Button type="submit" disabled={pending || !hasChanges} className={styles.pillBtnGap}>
+              {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />} Save
             </Button>
           </DialogFooter>
         </form>
@@ -195,33 +196,33 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
 
   return (
     <>
-      <div data-ui="admin/CategoryManager/div-flex" className="mb-4 flex justify-end">
-        <Button data-ui="admin/CategoryManager/Button-add-category"
+      <div className={styles.topActionRow}>
+        <Button
           size="sm"
-          className="h-9 rounded-lg px-3.5 text-xs font-semibold"
+          className={styles.addCategoryBtn}
           onClick={() => {
             setEditing(null)
             setOpen(true)
           }}
         >
-          <PlusIcon className="size-3.5" /> Add category
+          <PlusIcon className={styles.iconSm} /> Add category
         </Button>
       </div>
 
-      <ul data-ui="admin/CategoryManager/ul" className="adminCard divide-y divide-border/70 overflow-hidden rounded-xl border">
-        {categories.length === 0 && <li data-ui="admin/CategoryManager/li" className="p-7 sm:p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
+      <ul className={`adminCard ${styles.categoryList}`}>
+        {categories.length === 0 && <li className={styles.categoryEmpty}>No categories yet.</li>}
         {categories.map((c) => (
-          <li data-ui="admin/CategoryManager/li-flex" key={c.id} className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-muted/35">
-            <span data-ui="admin/CategoryManager/span-grid" className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted font-heading text-base font-semibold text-foreground">
+          <li key={c.id} className={styles.categoryItem}>
+            <span className={styles.categoryAvatar}>
               {c.name.charAt(0)}
             </span>
-            <div data-ui="admin/CategoryManager/div" className="min-w-0 flex-1">
-              <p data-ui="admin/CategoryManager/p" className="font-medium">{c.name}</p>
-              <p data-ui="admin/CategoryManager/p-2" className="truncate text-xs text-muted-foreground">
+            <div className={styles.categoryInfo}>
+              <p className={styles.categoryName}>{c.name}</p>
+              <p className={styles.categoryMeta}>
                 /category/{c.slug} · {c.productCount} product{c.productCount === 1 ? "" : "s"} · order {c.sort}
               </p>
             </div>
-            <Button data-ui="admin/CategoryManager/Button"
+            <Button
               variant="ghost"
               size="icon-sm"
               aria-label={`Edit ${c.name}`}
@@ -232,15 +233,15 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
             >
               <PencilIcon />
             </Button>
-            <Button data-ui="admin/CategoryManager/Button-2"
+            <Button
               variant="ghost"
               size="icon-sm"
               aria-label={`Delete ${c.name}`}
-              className="text-destructive hover:bg-destructive/10"
+              className={styles.deleteBtn}
               disabled={deletingId === c.id}
               onClick={() => setToDelete(c)}
             >
-              {deletingId === c.id ? <Loader2Icon className="animate-spin" /> : <Trash2Icon />}
+              {deletingId === c.id ? <Loader2Icon className={styles.spinIcon} /> : <Trash2Icon />}
             </Button>
           </li>
         ))}

@@ -13,6 +13,7 @@ import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
 import { FreeShippingBar } from "./cart-drawer"
+import styles from "./cart.module.css"
 import { useLiveCart, type LiveCartLine, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
@@ -33,12 +34,12 @@ export function CartView({ products, preview = false }: { products: LiveProduct[
 
   if (lines.length === 0) {
     return (
-      <div data-ui="store/CartView" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-        <div data-ui="store/CartView/div-grid" className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
-          <ShoppingBagIcon className="size-8 text-primary" />
+      <div className={styles.cartEmptyBox}>
+        <div className={styles.emptyIconCircle}>
+          <ShoppingBagIcon className={styles.emptyCartBagIcon} />
         </div>
-        <p data-ui="store/CartView/p" className="font-heading text-2xl">Your cart is empty</p>
-        <Link data-ui="store/CartView/Link-start-shopping" href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
+        <p className={styles.emptyCartTitle}>Your cart is empty</p>
+        <Link href="/products" className={cn(buttonVariants({ size: "lg" }), styles.emptyCartBtn)}>
           Start shopping
         </Link>
       </div>
@@ -67,53 +68,53 @@ function CartLayout({
   const availableItems = lines.filter((l) => l.available).reduce((n, l) => n + l.quantity, 0)
 
   return (
-    <div data-ui="store/CartLayout" className="grid gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
-      <div data-ui="store/CartLayout/div" className="space-y-4 rounded-3xl border bg-card p-4 sm:p-6">
-        <div data-ui="store/CartLayout/div-flex" className="flex items-center justify-between gap-2">
-          <h2 data-ui="store/CartLayout/h2-cart-items" className="flex items-center gap-2.5 text-xl font-semibold">
+    <div className={styles.cartLayoutGrid}>
+      <div className={styles.cartItemsPanel}>
+        <div className={styles.panelHeaderRow}>
+          <h2 className={styles.panelHeading}>
             Cart items
-            <span data-ui="store/CartLayout/span" className="rounded-full bg-secondary px-2.5 py-0.5 font-sans text-xs font-semibold text-foreground/80">
+            <span className={styles.itemCountPill}>
               {totalItems} item{totalItems === 1 ? "" : "s"}
             </span>
           </h2>
-          <Link data-ui="store/CartLayout/Link-continue-shopping" href="/products" className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+          <Link href="/products" className={styles.continueShoppingLink}>
             Continue shopping
           </Link>
         </div>
 
         {hasUnavailable && (
-          <p data-ui="store/CartLayout/p-flex" className="flex items-center gap-2 rounded-2xl bg-destructive/10 p-4 text-sm font-medium text-destructive">
-            <AlertTriangleIcon className="size-4 shrink-0" />
+          <p className={styles.unavailableAlert}>
+            <AlertTriangleIcon className={styles.alertIcon} />
             Some items are sold out or no longer available. Please remove them to continue.
           </p>
         )}
-        <ul data-ui="store/CartLayout/ul" className="space-y-3">
+        <ul className={styles.cartLinesList}>
           <AnimatePresence initial={false}>
             {lines.map((item) => (
-              <m.li data-ui="store/CartLayout/m.li"
+              <m.li
                 key={item.productId}
                 layout
                 exit={{ opacity: 0, x: -40 }}
-                className={cn("flex gap-4 rounded-2xl border bg-background/60 p-3 sm:p-4", !item.available && "opacity-60")}
+                className={cn(styles.cartLineRow, !item.available && styles.cartLineUnavailable)}
               >
-                <Link data-ui="store/CartLayout/Link-relative"
+                <Link
                   href={`/products/${item.slug}`}
-                  className="relative size-20 shrink-0 overflow-hidden rounded-2xl bg-muted @container sm:size-28"
+                  className={styles.lineThumbLink}
                 >
                   <ProductImage src={item.image} alt={item.name} sizes="112px" />
                 </Link>
-                <div data-ui="store/CartLayout/div-flex-2" className="flex min-w-0 flex-1 flex-col gap-2">
-                  <div data-ui="store/CartLayout/div-flex-3" className="flex items-start justify-between gap-2">
-                    <div data-ui="store/CartLayout/div-2">
-                      <Link data-ui="store/CartLayout/Link" href={`/products/${item.slug}`} className="font-semibold hover:text-primary">
+                <div className={styles.lineBody}>
+                  <div className={styles.lineHeader}>
+                    <div className={styles.lineTitleGroup}>
+                      <Link href={`/products/${item.slug}`} className={styles.lineNameLink}>
                         {item.name}
                       </Link>
-                      <p data-ui="store/CartLayout/p" className="text-sm text-muted-foreground">
+                      <p className={styles.linePriceSub}>
                         {item.available ? formatPrice(item.price) : "Unavailable"}
-                        {item.priceChanged && <span data-ui="store/CartLayout/span-2" className="ml-2 text-xs text-primary">(price updated)</span>}
+                        {item.priceChanged && <span className={styles.priceChangedTag}>(price updated)</span>}
                       </p>
                       {item.available && (item.shippingClass !== "standard" || item.weightGrams > 0) && (
-                        <p data-ui="store/CartLayout/p-2" className="mt-1 inline-block rounded-lg bg-secondary/70 px-2 py-1 text-xs text-muted-foreground">
+                        <p className={styles.shippingClassPill}>
                           {[
                             item.shippingClass === "oversized" ? "Large / bulky" : item.shippingClass === "fragile" ? "Fragile" : null,
                             item.weightGrams > 0 ? `${formatWeightGrams(item.weightGrams)} each` : null,
@@ -123,24 +124,24 @@ function CartLayout({
                         </p>
                       )}
                     </div>
-                    <button data-ui="store/CartLayout/button"
+                    <button
                       type="button"
                       onClick={() => onRemove?.(item.productId)}
-                      className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      className={styles.lineRemoveBtn}
                       aria-label={`Remove ${item.name}`}
                     >
-                      <Trash2Icon className="size-4" />
+                      <Trash2Icon className={styles.trashIcon} />
                     </button>
                   </div>
                   {item.available && (
-                    <div data-ui="store/CartLayout/div-flex-4" className="mt-auto flex flex-wrap items-center justify-between gap-2">
+                    <div className={styles.lineFooter}>
                       <QuantityStepper
                         label={item.name}
                         value={item.quantity}
                         max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
                         onChange={(q) => onQuantity?.(item.productId, q)}
                       />
-                      <span data-ui="store/CartLayout/span-3" className="text-lg font-bold">{formatPrice(item.price * item.quantity)}</span>
+                      <span className={styles.lineSubtotalText}>{formatPrice(item.price * item.quantity)}</span>
                     </div>
                   )}
                 </div>
@@ -150,29 +151,29 @@ function CartLayout({
         </ul>
       </div>
 
-      <aside data-ui="store/CartLayout/aside" className="h-fit space-y-4 rounded-3xl border bg-card p-6 lg:sticky-store">
-        <h2 data-ui="store/CartLayout/h2-order-summary" className="flex items-baseline justify-between gap-3 text-xl font-semibold">
+      <aside className={styles.summarySidebar}>
+        <h2 className={styles.summaryHeading}>
           Order summary
-          <span data-ui="store/CartLayout/span-4" className="text-sm font-medium text-muted-foreground">
+          <span className={styles.summaryItemCount}>
             {availableItems} item{availableItems === 1 ? "" : "s"}
           </span>
         </h2>
         <FreeShippingBar subtotal={subtotal} />
         <PriceBreakdown {...charges} itemCount={availableItems} />
-        <p data-ui="store/CartLayout/p-3" className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-          <span data-ui="store/CartLayout/span-5" className="font-semibold text-foreground">Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
+        <p className={styles.upiNoteBox}>
+          <span className={styles.upiNoteStrong}>Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
         </p>
-        <Link data-ui="store/CartLayout/Link-proceed-to-checkout"
+        <Link
           href="/checkout"
           aria-disabled={hasUnavailable}
           tabIndex={hasUnavailable ? -1 : undefined}
           className={cn(
             buttonVariants({ size: "lg" }),
-            "group h-12 w-full rounded-full text-base shadow-lg shadow-primary/25",
-            hasUnavailable && "pointer-events-none opacity-50"
+            styles.proceedCheckoutBtn,
+            hasUnavailable && styles.proceedCheckoutDisabled
           )}
         >
-          Proceed to checkout <ArrowRightIcon className="transition-transform group-hover:translate-x-1" />
+          Proceed to checkout <ArrowRightIcon className={styles.proceedArrow} />
         </Link>
       </aside>
     </div>

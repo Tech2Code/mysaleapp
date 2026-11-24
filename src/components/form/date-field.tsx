@@ -6,6 +6,7 @@ import { Popover } from "@base-ui/react/popover"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { describedBy, FieldShell, FIELD_HEIGHT, type FieldSize } from "./field-shell"
+import styles from "./form.module.css"
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -177,44 +178,43 @@ export function DateField({
       className={containerClassName}
       noErrorSpace={noErrorSpace}
     >
-      {name && <input data-ui="form/DateField/input-hidden" type="hidden" name={name} value={value || ""} />}
+      {name && <input type="hidden" name={name} value={value || ""} />}
       <Popover.Root open={open} onOpenChange={handleOpenChange}>
-        <div data-ui="form/DateField/div-relative" className="relative">
+        <div className={styles.relativeWrap}>
           <Popover.Trigger
-            data-ui="form/DateField/Trigger"
+
             id={id}
             disabled={disabled}
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy(id, error, hint)}
             onBlur={onBlur}
             className={cn(
-              "flex w-full min-w-0 max-w-full items-center justify-between rounded-xl border border-input bg-background px-3 text-left text-sm shadow-xs transition-colors outline-none",
+              styles.dateTrigger,
               FIELD_HEIGHT[fieldSize],
-              clearable && value && !disabled && "pr-14",
-              "hover:border-foreground/20 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20",
-              error && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
-              disabled && "cursor-not-allowed opacity-50",
+              clearable && value && !disabled && styles.dateTriggerClearable,
+              error && styles.dateTriggerError,
+              disabled && styles.dateTriggerDisabled,
               className
             )}
           >
             <span
-              data-ui="form/DateField/span"
+
               title={value ? formatDisplayDate(value) : placeholder}
-              className={cn("block min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}
+              className={cn(styles.dateValueSpan, !value && styles.datePlaceholder)}
             >
               {value ? formatDisplayDate(value) : placeholder}
             </span>
-            <CalendarIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <CalendarIcon className={styles.calendarSvg} aria-hidden />
           </Popover.Trigger>
           {clearable && value && !disabled && (
             <button
-              data-ui="form/DateField/button-clear-date"
+
               type="button"
               aria-label="Clear date"
               onClick={handleClear}
-              className="absolute top-1/2 right-8 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className={styles.clearDateBtn}
             >
-              <XIcon className="size-3.5" aria-hidden />
+              <XIcon className={styles.icon14} aria-hidden />
             </button>
           )}
 
@@ -223,53 +223,53 @@ export function DateField({
               side="bottom"
               align="start"
               sideOffset={4}
-              className="isolate z-50 outline-none"
+              className={styles.datePositioner}
             >
               <Popover.Popup
-                data-ui="form/DateField/Popover"
-                className="z-50 w-72 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border/80 bg-popover p-3 text-popover-foreground shadow-2xl backdrop-blur-md outline-none duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+
+                className={styles.datePopup}
               >
                 {/* Header: Month / Year + Navigation */}
-                <div data-ui="form/DateField/div-flex" className="flex items-center justify-between gap-1 pb-2">
-                  <Button data-ui="form/DateField/Button-previous-month"
+                <div className={styles.calHeaderRow}>
+                  <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     onClick={prevMonth}
                     aria-label="Previous month"
-                    className="size-7 rounded-lg"
+                    className={styles.monthNavBtn}
                   >
-                    <ChevronLeftIcon className="size-4" />
+                    <ChevronLeftIcon className={styles.icon16} />
                   </Button>
-                  <span data-ui="form/DateField/span-2" className="text-sm font-semibold">
+                  <span className={styles.monthYearTitle}>
                     {MONTH_NAMES[viewMonth]} {viewYear}
                   </span>
-                  <Button data-ui="form/DateField/Button-next-month"
+                  <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     onClick={nextMonth}
                     aria-label="Next month"
-                    className="size-7 rounded-lg"
+                    className={styles.monthNavBtn}
                   >
-                    <ChevronRightIcon className="size-4" />
+                    <ChevronRightIcon className={styles.icon16} />
                   </Button>
                 </div>
 
                 {/* Weekday headers */}
-                <div data-ui="form/DateField/div-grid" className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground py-1 border-y">
+                <div className={styles.weekdaysGrid}>
                   {WEEKDAYS.map((day) => (
-                    <span data-ui="form/DateField/span-3" key={day} className="py-0.5">
+                    <span key={day} className={styles.weekdayCell}>
                       {day}
                     </span>
                   ))}
                 </div>
 
                 {/* Days Grid */}
-                <div data-ui="form/DateField/div-grid-2" className="grid grid-cols-7 gap-1 pt-2">
+                <div className={styles.daysGrid}>
                   {calendarDays.map((day, idx) => {
                     if (day === null) {
-                      return <div data-ui="form/DateField/div" key={`empty-${idx}`} className="size-8" />
+                      return <div key={`empty-${idx}`} className={styles.emptyDaySlot} />
                     }
                     const mStr = String(viewMonth + 1).padStart(2, "0")
                     const dStr = String(day).padStart(2, "0")
@@ -281,7 +281,7 @@ export function DateField({
                     const isDayDisabled = isBeforeMin || isAfterMax
 
                     return (
-                      <button data-ui="form/DateField/button"
+                      <button
                         key={iso}
                         type="button"
                         disabled={isDayDisabled}
@@ -290,13 +290,11 @@ export function DateField({
                         aria-current={isToday ? "date" : undefined}
                         onClick={() => handleSelect(iso)}
                         className={cn(
-                          "size-8 rounded-full text-xs font-medium transition-colors flex items-center justify-center",
+                          styles.dayCellBtn,
                           isSelected
-                            ? "bg-primary text-primary-foreground font-semibold"
-                            : isToday
-                            ? "border border-primary text-primary font-semibold hover:bg-primary/10"
-                            : "hover:bg-muted text-foreground",
-                          isDayDisabled && "opacity-30 cursor-not-allowed hover:bg-transparent"
+                            ? styles.dayCellSelected
+                            : isToday && styles.dayCellToday,
+                          isDayDisabled && styles.dayCellDisabled
                         )}
                       >
                         {day}
@@ -306,8 +304,8 @@ export function DateField({
                 </div>
 
                 {/* Footer Quick Actions */}
-                <div data-ui="form/DateField/div-flex-2" className="flex items-center justify-between border-t mt-2 pt-2 text-xs">
-                  <Button data-ui="form/DateField/Button-today"
+                <div className={styles.calFooterRow}>
+                  <Button
                     type="button"
                     variant="ghost"
                     size="sm"
@@ -322,12 +320,12 @@ export function DateField({
                       }
                       handleSelect(today)
                     }}
-                    className="h-7 px-2 text-xs text-primary hover:text-primary font-medium"
+                    className={styles.todayActionBtn}
                   >
                     Today
                   </Button>
                   {value && (
-                    <Button data-ui="form/DateField/Button-clear"
+                    <Button
                       type="button"
                       variant="ghost"
                       size="sm"
@@ -335,7 +333,7 @@ export function DateField({
                         handleClear()
                         setOpen(false)
                       }}
-                      className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                      className={styles.clearActionBtn}
                     >
                       Clear
                     </Button>

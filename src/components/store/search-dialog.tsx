@@ -8,7 +8,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { SearchField } from "@/components/form"
 import { getSearchDiscovery, searchProducts, type SearchDiscovery, type SearchHit, type SearchResult } from "@/features/products/search-actions"
 import { discountPercent, formatPrice } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { ProductImage } from "./product-image"
+import styles from "./search-dialog.module.css"
 
 type Category = { name: string; slug: string }
 
@@ -51,7 +53,7 @@ function SearchMiniCard({
 
   return (
     <Link
-      data-ui="store/SearchMiniCard"
+
       href={href}
       onClick={(e) => {
         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -61,32 +63,32 @@ function SearchMiniCard({
           onClose()
         }
       }}
-      className="group flex items-center gap-2.5 rounded-xl border border-border/75 bg-card p-1.5 transition-colors hover:border-primary/40 hover:bg-muted/40"
+      className={styles.miniCardLink}
     >
-      <div data-ui="store/SearchMiniCard/div-relative" className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted sm:size-12 @container">
+      <div className={styles.miniThumbBox}>
         <ProductImage
           src={hit.image}
           alt={hit.name}
           sizes="48px"
-          className={`transition-transform duration-300 ease-out group-hover:scale-105 ${!hit.inStock ? "opacity-60 grayscale" : ""}`}
+          className={cn(styles.miniThumbImg, !hit.inStock && styles.miniThumbSoldOut)}
         />
       </div>
 
-      <div data-ui="store/SearchMiniCard/div" className="min-w-0 flex-1">
-        <span data-ui="store/SearchMiniCard/span" className="block truncate font-sans text-xs font-semibold text-foreground group-hover:text-primary">
+      <div className={styles.miniInfoCol}>
+        <span className={styles.miniTitle}>
           {hit.name}
         </span>
-        <div data-ui="store/SearchMiniCard/div-flex" className="mt-0.5 flex flex-wrap items-center gap-1 tabular-nums">
-          <span data-ui="store/SearchMiniCard/span-2" className="text-xs font-bold text-foreground">
+        <div className={styles.miniPriceRow}>
+          <span className={styles.miniCurrentPrice}>
             {formatPrice(hit.price)}
           </span>
           {hit.compareAtPrice && hit.compareAtPrice > hit.price && (
-            <span data-ui="store/SearchMiniCard/span-hidden" className="hidden text-[10px] text-muted-foreground line-through sm:inline">
+            <span className={styles.miniComparePrice}>
               {formatPrice(hit.compareAtPrice)}
             </span>
           )}
           {off && (
-            <span data-ui="store/SearchMiniCard/span-3" className="rounded-full bg-primary/12 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-primary sm:text-[10px]">
+            <span className={styles.miniOffBadge}>
               {off}% off
             </span>
           )}
@@ -323,38 +325,38 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
 
   return (
     <>
-      <div data-ui="store/SearchDialog/div-fixed"
+      <div
         data-slot="dialog-overlay"
         data-open=""
-        className="fixed inset-0 z-50 hidden bg-black/25 transition-opacity sm:block supports-backdrop-filter:backdrop-blur-[2px]"
+        className={styles.dialogBackdrop}
         onClick={close}
         aria-hidden="true"
       />
       <div
         ref={dropdownRef}
-        data-ui="store/SearchDialog/div-search-products"
+
         role="dialog"
         aria-modal="true"
         aria-label="Search products"
-        className="fixed inset-0 z-60 flex h-dvh w-screen flex-col overflow-hidden bg-background p-3.5 sm:inset-x-0 sm:top-[calc(var(--store-header-h)+8px)] sm:bottom-auto sm:mx-auto sm:h-auto sm:max-h-[calc(100dvh-5rem)] sm:w-[calc(100%-1.5rem)] sm:max-w-xl sm:rounded-2xl sm:border sm:bg-card sm:p-4 sm:shadow-2xl animate-in fade-in-0 duration-150"
+        className={styles.dialogModal}
       >
-        <div data-ui="store/SearchDialog/div-flex" className="flex shrink-0 items-center gap-2 border-b pb-2.5 mb-2.5 sm:border-b-0 sm:pb-0">
-          <button data-ui="store/SearchDialog/button-back"
+        <div className={styles.topBar}>
+          <button
             type="button"
             onClick={close}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:hidden"
+            className={styles.mobileBackBtn}
             aria-label="Back"
           >
-            <ArrowLeftIcon className="size-5" />
+            <ArrowLeftIcon className={styles.backSvg} />
           </button>
           <form
-            data-ui="store/SearchDialog/form"
+
             role="search"
             onSubmit={(e) => {
               e.preventDefault()
               seeAll()
             }}
-            className="flex-1"
+            className={styles.searchForm}
           >
             <SearchField
               label="Search products"
@@ -363,56 +365,57 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               autoFocus
               autoComplete="off"
               pill
+              className={styles.desktopInputSurface}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onClear={() => setQuery("")}
             />
           </form>
-          <button data-ui="store/SearchDialog/button-close-search"
+          <button
             type="button"
             onClick={close}
-            className="hidden size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors sm:flex"
+            className={styles.desktopCloseBtn}
             aria-label="Close search"
           >
-            <XIcon className="size-4.5" />
+            <XIcon className={styles.closeSvg} />
           </button>
         </div>
 
-        <div data-ui="store/SearchDialog/div" aria-live="polite" className="min-h-16 flex-1 space-y-3 overflow-y-auto">
+        <div aria-live="polite" className={styles.resultsScrollArea}>
           {!canSearch && (
             <>
               {recentSearches.length > 0 && (
-                <div data-ui="store/SearchDialog/div-2" className="space-y-1.5">
-                  <div data-ui="store/SearchDialog/div-flex-2" className="flex items-center justify-between">
-                    <p data-ui="store/SearchDialog/p-flex" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                      <ClockIcon className="size-3" aria-hidden /> Recent searches
+                <div className={styles.discoverySection}>
+                  <div className={styles.sectionHeaderRow}>
+                    <p className={styles.sectionLabel}>
+                      <ClockIcon className={styles.labelIcon} aria-hidden /> Recent searches
                     </p>
-                    <button data-ui="store/SearchDialog/button-clear-all"
+                    <button
                       type="button"
                       onClick={clearRecentTerms}
-                      className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      className={styles.clearAllBtn}
                     >
-                      <Trash2Icon className="size-3" aria-hidden /> Clear all
+                      <Trash2Icon className={styles.trashSvg} aria-hidden /> Clear all
                     </button>
                   </div>
-                  <ul data-ui="store/SearchDialog/ul-flex" className="flex flex-wrap gap-1.5">
+                  <ul className={styles.chipsList}>
                     {recentSearches.map((term) => (
-                      <li data-ui="store/SearchDialog/li-inline-flex" key={term} className="inline-flex items-center rounded-full border bg-muted/40 text-xs font-medium transition-colors hover:bg-muted">
-                        <button data-ui="store/SearchDialog/button-inline-flex"
+                      <li key={term} className={styles.recentChipItem}>
+                        <button
                           type="button"
                           onClick={() => setQuery(term)}
-                          className="inline-flex h-7 items-center gap-1 pl-2.5 pr-1 text-foreground"
+                          className={styles.recentTermBtn}
                         >
-                          <ClockIcon className="size-3 text-muted-foreground" aria-hidden />
-                          <span data-ui="store/SearchDialog/span">{term}</span>
+                          <ClockIcon className={styles.clockSvg} aria-hidden />
+                          <span>{term}</span>
                         </button>
-                        <button data-ui="store/SearchDialog/button-inline-flex-2"
+                        <button
                           type="button"
                           onClick={() => removeRecentTerm(term)}
                           aria-label={`Remove ${term} from recent searches`}
-                          className="inline-flex size-5 mr-0.5 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+                          className={styles.removeTermBtn}
                         >
-                          <XIcon className="size-3" />
+                          <XIcon className={styles.xMiniSvg} />
                         </button>
                       </li>
                     ))}
@@ -421,26 +424,26 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               )}
 
               {(categories.length > 0 || (discovery?.trendingTerms && discovery.trendingTerms.length > 0)) && (
-                <div data-ui="store/SearchDialog/div-3" className="space-y-1.5">
-                  <p data-ui="store/SearchDialog/p-flex-2" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <FlameIcon className="size-3 text-primary" aria-hidden /> Trending &amp; categories
+                <div className={styles.discoverySection}>
+                  <p className={styles.sectionLabel}>
+                    <FlameIcon className={styles.labelAccentIcon} aria-hidden /> Trending &amp; categories
                   </p>
-                  <ul data-ui="store/SearchDialog/ul-flex-2" className="flex flex-wrap gap-1.5">
+                  <ul className={styles.chipsList}>
                     {discovery?.trendingTerms.map((term) => (
-                      <li data-ui="store/SearchDialog/li" key={`trend-${term}`}>
-                        <button data-ui="store/SearchDialog/button-inline-flex-3"
+                      <li key={`trend-${term}`}>
+                        <button
                           type="button"
                           onClick={() => setQuery(term)}
-                          className="inline-flex h-7 items-center gap-1 rounded-full border border-primary/25 bg-primary/8 px-2.5 text-xs font-medium text-foreground hover:bg-primary/15 transition-colors"
+                          className={styles.trendingChipBtn}
                         >
-                          <FlameIcon className="size-3 text-primary" aria-hidden />
+                          <FlameIcon className={styles.flameSvg} aria-hidden />
                           {term}
                         </button>
                       </li>
                     ))}
-                    <li data-ui="store/SearchDialog/li-2">
+                    <li>
                       <Link
-                        data-ui="store/SearchDialog/Link-all-products"
+
                         href="/products"
                         onClick={(e) => {
                           if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -450,15 +453,15 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                             close()
                           }
                         }}
-                        className="inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium hover:bg-muted transition-colors"
+                        className={styles.categoryPillLink}
                       >
                         All products
                       </Link>
                     </li>
                     {categories.map((c) => (
-                      <li data-ui="store/SearchDialog/li-3" key={c.slug}>
+                      <li key={c.slug}>
                         <Link
-                          data-ui="store/SearchDialog/Link-inline-flex"
+
                           href={`/category/${c.slug}`}
                           onClick={(e) => {
                             if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -468,7 +471,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                               close()
                             }
                           }}
-                          className="inline-flex h-7 items-center rounded-full border px-2.5 text-xs font-medium hover:bg-muted transition-colors"
+                          className={styles.categoryPillLink}
                         >
                           {c.name}
                         </Link>
@@ -479,12 +482,12 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
               )}
 
               {discovery && discovery.recommended.length > 0 && (
-                <div data-ui="store/SearchDialog/div-4" className="space-y-1.5">
-                  <div data-ui="store/SearchDialog/div-flex-3" className="flex items-center justify-between">
-                    <p data-ui="store/SearchDialog/p-flex-3" className="flex items-center gap-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                      <SparklesIcon className="size-3 text-primary" aria-hidden /> Trending &amp; recommended
+                <div className={styles.discoverySection}>
+                  <div className={styles.sectionHeaderRow}>
+                    <p className={styles.sectionLabel}>
+                      <SparklesIcon className={styles.labelAccentIcon} aria-hidden /> Trending &amp; recommended
                     </p>
-                    <Link data-ui="store/SearchDialog/Link-view-all"
+                    <Link
                       href="/products"
                       onClick={(e) => {
                         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -494,12 +497,12 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                           close()
                         }
                       }}
-                      className="text-xs font-semibold text-primary hover:underline"
+                      className={styles.viewAllLink}
                     >
                       View all
                     </Link>
                   </div>
-                  <div data-ui="store/SearchDialog/div-grid" className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                  <div className={styles.recommendedGrid}>
                     {discovery.recommended.slice(0, 4).map((hit) => (
                       <SearchMiniCard
                         key={hit.id}
@@ -518,31 +521,31 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
           )}
 
           {canSearch && !shown && (
-            <p data-ui="store/SearchDialog/p-flex-4" className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-              <Loader2Icon className="size-4 animate-spin" aria-hidden /> Searching…
+            <p className={styles.searchingRow}>
+              <Loader2Icon className={styles.spinSvg} aria-hidden /> Searching…
             </p>
           )}
 
           {shown && shown.hits.length === 0 && (
-            <div data-ui="store/SearchDialog/div-flex-4" className="flex flex-col items-center gap-2 py-10 sm:py-6 text-center">
-              <SearchXIcon className="size-8 text-muted-foreground" aria-hidden />
-              <p data-ui="store/SearchDialog/p" className="text-sm font-medium">No products match “{trimmed}”</p>
-              <p data-ui="store/SearchDialog/p-2" className="text-xs text-muted-foreground">Try a shorter word, or browse a category.</p>
+            <div className={styles.noResultsBox}>
+              <SearchXIcon className={styles.noResultsSvg} aria-hidden />
+              <p className={styles.noResultsTitle}>No products match “{trimmed}”</p>
+              <p className={styles.noResultsHint}>Try a shorter word, or browse a category.</p>
             </div>
           )}
 
           {shown && shown.hits.length > 0 && (
             <>
               {shown.isFallback && (
-                <div data-ui="store/SearchDialog/div-5" className="rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  No exact match for <span data-ui="store/SearchDialog/span-2" className="font-semibold text-foreground">“{trimmed}”</span> — showing popular &amp; similar picks:
+                <div className={styles.fallbackNotice}>
+                  No exact match for <span className={styles.fallbackTerm}>“{trimmed}”</span> — showing popular &amp; similar picks:
                 </div>
               )}
-              <ul data-ui="store/SearchDialog/ul" className="divide-y divide-border/60">
+              <ul className={styles.hitsList}>
                 {shown.hits.map((h) => (
-                  <li data-ui="store/SearchDialog/li-4" key={h.id}>
+                  <li key={h.id} className={styles.hitItem}>
                     <Link
-                      data-ui="store/SearchDialog/Link-flex"
+
                       href={`/products/${h.slug}`}
                       onClick={(e) => {
                         if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
@@ -553,22 +556,22 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                           close()
                         }
                       }}
-                      className="flex items-center gap-3 py-2 sm:py-1.5 px-1 rounded-lg hover:bg-muted/50 transition-colors"
+                      className={styles.hitRowLink}
                     >
-                      <span data-ui="store/SearchDialog/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
+                      <span className={styles.hitThumbBox}>
                         <ProductImage src={h.image} alt={h.name} sizes="44px" />
                       </span>
-                      <span data-ui="store/SearchDialog/span-3" className="min-w-0 flex-1">
-                        <span data-ui="store/SearchDialog/span-4" className="block truncate text-sm font-medium">{h.name}</span>
-                        <span data-ui="store/SearchDialog/span-5" className="block truncate text-xs text-muted-foreground">
+                      <span className={styles.hitTextCol}>
+                        <span className={styles.hitNameText}>{h.name}</span>
+                        <span className={styles.hitMetaText}>
                           {h.category ?? "Product"}
                           {!h.inStock ? " · Out of stock" : ""}
                         </span>
                       </span>
-                      <span data-ui="store/SearchDialog/span-6" className="shrink-0 text-sm font-semibold tabular-nums">
+                      <span className={styles.hitPriceCol}>
                         {formatPrice(h.price)}
                         {h.compareAtPrice && h.compareAtPrice > h.price && (
-                          <span data-ui="store/SearchDialog/span-7" className="ml-1.5 text-xs font-normal text-muted-foreground line-through">{formatPrice(h.compareAtPrice)}</span>
+                          <span className={styles.hitStrikePrice}>{formatPrice(h.compareAtPrice)}</span>
                         )}
                       </span>
                     </Link>
@@ -576,20 +579,20 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                 ))}
               </ul>
               <button
-                data-ui="store/SearchDialog/button-flex"
+
                 type="button"
                 onClick={() => (shown.isFallback ? navigateFromSearch("/products") : seeAll())}
-                className="mt-2 flex h-9.5 w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+                className={styles.seeAllBtn}
               >
                 {shown.isFallback ? (
-                  <>Browse all products <ArrowRightIcon className="size-3.5" aria-hidden /></>
+                  <>Browse all products <ArrowRightIcon className={styles.arrowSvg} aria-hidden /></>
                 ) : (
-                  <>See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className="size-3.5" aria-hidden /></>
+                  <>See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className={styles.arrowSvg} aria-hidden /></>
                 )}
               </button>
             </>
           )}
-          {loading && shown && <span data-ui="store/SearchDialog/span-8" className="sr-only">Updating results</span>}
+          {loading && shown && <span className={styles.srOnlyStatus}>Updating results</span>}
         </div>
       </div>
     </>

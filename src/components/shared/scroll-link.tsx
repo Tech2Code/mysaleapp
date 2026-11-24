@@ -22,5 +22,5 @@ export function ScrollLink({ href, onClick, ...props }: ComponentProps<typeof Li
       window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" })
     }
   }
-  return <Link data-ui="shared/ScrollLink" href={href} onClick={handleClick} {...props} />
+  return <Link href={href} onClick={handleClick} {...props} />
 }

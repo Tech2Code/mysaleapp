@@ -44,6 +44,12 @@ export async function getLaunchOverview(): Promise<{ counts: LaunchCounts; check
     { settings: true, label: "City / District", done: Boolean(settings.city?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },
     ...(settings.gstRegistered ? [{ settings: true, label: "GST details", done: gstActive(settings), href: "/admin/settings", hint: "GST is on but the GSTIN or rate is missing" }] : []),
     { label: "At least one product", done: counts.products > 0, href: "/admin/products/new", hint: "Your store is empty" },
+    {
+      label: "Privacy, Terms & Refund policies",
+      done: Boolean(settings.email?.trim() && settings.city?.trim() && settings.shopName !== DEFAULT_SETTINGS.shopName),
+      href: "/privacy",
+      hint: "Set your Shop name, Contact email, and City in Settings so your legal pages show your real business details",
+    },
     { label: "Your admin login email", done: true, href: "/admin/account", hint: "Change it under My account" },
   ]
 

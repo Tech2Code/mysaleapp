@@ -1,0 +1,63 @@
+/* Section: Customer Account Menu Dropdown */
+@keyframes widgetSlideUp { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.skeletonAvatar { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); }
+.userIconSvg { width: 18px; height: 18px; }
+.menuTrigger { position: relative; display: grid; place-items: center; border-radius: 9999px; transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.menuTriggerSignedIn { width: 36px; height: 36px; background-color: var(--card); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 28%, transparent), var(--store-elevation-sm); }
+.menuTriggerSignedIn:hover { transform: translateY(-1px); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 58%, transparent), var(--store-elevation-md); }
+.menuTriggerGuest { width: 36px; height: 36px; }
+.menuTrigger .avatarImg { width: 100%; height: 100%; overflow: hidden; border-radius: 9999px; object-fit: cover; padding: 2px; }
+.menuTrigger .avatarInitial { font-weight: 600; color: var(--primary); }
+.menuDropdown { width: 224px; border: 0; background-color: var(--popover); box-shadow: var(--store-elevation-md); }
+.menuDropdown .userLabelGroup { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.userLabelGroup .userNameText { display: block; font-size: 14px; font-weight: 600; color: var(--foreground); }
+.userLabelGroup .userEmailText { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menuDropdown .mobileOnlyItem { display: flex; }
+.menuDropdown .mobileOnlySep { display: block; }
+.menuDropdown .mobileThemeSection { padding: 6px 8px; }
+.mobileThemeSection .themeSectionHeading { margin: 0 0 6px 0; padding: 0 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; color: var(--muted-foreground); text-transform: uppercase; }
+/* Section: PWA Install Prompt Banner & Footer Button (Crisp White Pill Surface) */
+.installBanner { position: fixed; left: 12px; right: 12px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 40; margin: 0 auto; max-width: 448px; border-radius: 20px; border: 0; background-color: var(--card); padding: 16px; box-shadow: var(--store-elevation-md); animation: widgetSlideUp 320ms cubic-bezier(0.22, 1, 0.36, 1); }
+.installBanner .dismissBtn { position: absolute; top: 8px; right: 8px; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.installBanner .dismissBtn:hover { background-color: var(--muted); color: var(--foreground); }
+.dismissBtn .closeSvg { width: 16px; height: 16px; }
+.installBanner .bannerHeaderRow { display: flex; align-items: flex-start; gap: 12px; padding-right: 24px; }
+.bannerHeaderRow .logoMarkBox { width: 44px; height: 44px; flex-shrink: 0; font-size: 20px; }
+.bannerHeaderRow .bannerTextCol { min-width: 0; }
+.bannerTextCol .bannerTitle { margin: 0; font-size: 14px; line-height: 19px; font-weight: 600; color: var(--foreground); }
+.bannerTextCol .bannerDesc { margin: 2px 0 0 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.installBanner .manualStepsList { margin: 12px 0 0 0; display: flex; flex-direction: column; gap: 8px; border-radius: 12px; background-color: var(--store-section-tint, var(--secondary)); padding: 12px; font-size: 12px; line-height: 17px; list-style: none; }
+.manualStepsList .stepRow { display: flex; align-items: center; gap: 8px; }
+.stepRow .stepSvg { width: 16px; height: 16px; flex-shrink: 0; color: var(--primary); }
+.stepRow .stepStrong { font-weight: 600; }
+.installBanner .installActionBtn { margin-top: 12px; height: 40px; width: 100%; border-radius: 9999px; }
+.footerInstallBtn { display: inline-flex; height: 40px; align-items: center; gap: 8px; border-radius: 9999px; border: 0; background-color: var(--card); padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--foreground); box-shadow: var(--store-elevation-sm); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.footerInstallBtn:hover { background-color: var(--card); color: var(--primary); transform: translateY(-2px); box-shadow: var(--store-elevation-md); }
+.footerInstallBtn:active { transform: translateY(0) scale(0.98); }
+.footerInstallBtn .downloadSvg { width: 16px; height: 16px; color: var(--primary); }
+/* Section: Quantity Stepper Pill */
+.stepperGroup { display: inline-flex; align-items: center; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); }
+:global(.dark) .stepperGroup { background-color: var(--secondary); }
+.stepperGroupLg { padding: 2px; }
+.stepperGroup .stepBtn { display: grid; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 150ms cubic-bezier(0.22, 1, 0.36, 1); }
+.stepperGroup .stepBtn:hover { background-color: var(--muted); }
+.stepperGroup .stepBtn:active:not(:disabled) { transform: scale(0.92); }
+.stepperGroup .stepBtn:disabled { opacity: 0.4; }
+.stepperGroup .stepBtn:disabled:hover { background-color: transparent; }
+.stepperGroup .stepBtnSm { width: 32px; height: 32px; }
+.stepperGroup .stepBtnLg { width: 44px; height: 44px; }
+.stepperGroup .stepBtnAtMax { opacity: 0.4; }
+.stepperGroup .stepBtnAtMax:hover { background-color: transparent; }
+.stepBtn .stepSvg { width: 14px; height: 14px; }
+.stepperGroup .qtyReadout { min-width: 32px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.stepperGroup .qtyReadoutLg { min-width: 40px; font-size: 18px; line-height: 24px; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .skeletonAvatar { width: 40px; height: 40px; }
+  .menuTriggerSignedIn { width: 40px; height: 40px; }
+  .menuTriggerGuest { width: 40px; height: 40px; }
+  .menuDropdown .mobileOnlyItem { display: none; }
+  .menuDropdown .mobileOnlySep { display: none; }
+  .menuDropdown .mobileThemeSection { display: none; }
+  .installBanner { right: auto; left: 24px; bottom: 24px; margin: 0; }
+}

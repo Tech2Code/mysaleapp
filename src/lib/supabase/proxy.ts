@@ -90,7 +90,8 @@ export async function updateSession(request: NextRequest) {
 
   // If Supabase falls back to the Site URL root (e.g. /?code=... or /?error=access_denied&error_code=otp_expired),
   // forward immediately to /auth/callback so the user lands on the proper UI with a clean URL.
-  if (pathname !== "/auth/callback" && request.method === "GET") {
+  // Never intercept /order-placed?code=... or /track?code=... where `code` is an order code!
+  if (pathname === "/" && request.method === "GET") {
     const hasAuthCallbackParams =
       searchParams.has("code") ||
       searchParams.has("token_hash") ||
@@ -101,9 +102,7 @@ export async function updateSession(request: NextRequest) {
       callbackUrl.pathname = "/auth/callback"
       return NextResponse.redirect(callbackUrl)
     }
-    if (pathname === "/") {
-      return NextResponse.next({ request })
-    }
+    return NextResponse.next({ request })
   } else if (pathname === "/") {
     return NextResponse.next({ request })
   }

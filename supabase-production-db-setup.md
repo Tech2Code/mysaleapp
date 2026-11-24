@@ -11,7 +11,7 @@ Jab aap future me **Live Production App ke liye alag Supabase Database** banana 
 Aapke code me kisi bhi file me Supabase URL hardcode nahi hai:
 - **Supabase Config**: [`src/lib/supabase/config.ts`](file:///d:/nextApps/mysaleapp/src/lib/supabase/config.ts) — `NEXT_PUBLIC_SUPABASE_URL` aur `NEXT_PUBLIC_SUPABASE_ANON_KEY` read karta hai.
 - **Image & CSP Whitelist**: [`next.config.ts`](file:///d:/nextApps/mysaleapp/next.config.ts#L3-L61) — Build time par `NEXT_PUBLIC_SUPABASE_URL` se automatic naye Supabase project ka hostname nikal kar Content-Security-Policy (`img-src`, `connect-src`) aur Next.js Image Optimization (`remotePatterns`) me allow kar deta hai.
-- **Database Schema**: [`supabase/migrations/`](file:///d:/nextApps/mysaleapp/supabase/migrations) — Aapki saari tables, RLS policies, triggers, storage buckets (`products`), aur RPC functions `0001_init.sql` se `0059_security_and_rpc_hardening.sql` me saved hain.
+- **Database Schema**: [`supabase/migrations/`](file:///d:/nextApps/mysaleapp/supabase/migrations) — Aapki saari tables, RLS policies, triggers, storage buckets (`products`), aur RPC functions `0001_init.sql` se `0060_review_aspects.sql` me saved hain.
 
 | Environment | Kahan Chalta Hai? | Kaunsa Env Use Hota Hai? | Kaunsa Supabase DB? |
 |---|---|---|---|
@@ -44,9 +44,9 @@ Jab naya project ready ho jaye:
 
 ---
 
-## STEP 3: Saari 59 SQL Migrations Naye Production DB me Push Karein
+## STEP 3: Saari 60 SQL Migrations Naye Production DB me Push Karein
 
-Aapko naye database me ek bhi table ya function haath se banane ki zaroorat nahi hai! [`supabase/migrations/`](file:///d:/nextApps/mysaleapp/supabase/migrations) folder me `0001` se `0059` tak sab kuch maujood hai.
+Aapko naye database me ek bhi table ya function haath se banane ki zaroorat nahi hai! [`supabase/migrations/`](file:///d:/nextApps/mysaleapp/supabase/migrations) folder me `0001` se `0060` tak sab kuch maujood hai.
 
 Apne VS Code terminal (`d:\nextApps\mysaleapp`) me yeh commands ek-ek karke chalayein:
 
@@ -67,14 +67,14 @@ npx supabase link --project-ref YOUR_NEW_PROD_PROJECT_REF
 ```powershell
 npm run db:dry
 ```
-- Yeh dikhayega ki `0001_init.sql` se lekar `0059_security_and_rpc_hardening.sql` tak saari migrations naye DB par apply hone ke liye ready hain.
+- Yeh dikhayega ki `0001_init.sql` se lekar `0060_review_aspects.sql` tak saari migrations naye DB par apply hone ke liye ready hain.
 
 ### 3.4 Saari Migrations Live DB Par Push Karein
 ```powershell
 npm run db:push
 ```
 - **Bas 10–20 seconds me** aapke naye Production Database me:
-  - Saari tables (`products`, `categories`, `orders`, `order_status_history`, `order_admin_notes`, `order_returns`, `return_requests`, `profiles`, `addresses`, `wishlists`, `admins`, `store_settings`, `rate_limits`)
+  - Saari tables (`products`, `categories`, `orders`, `order_status_history`, `order_admin_notes`, `order_returns`, `return_requests`, `product_reviews`, `promo_codes`, `profiles`, `addresses`, `wishlists`, `admins`, `store_settings`, `rate_limits`)
   - Saari RLS security policies aur triggers
   - Saare RPC functions (`create_order`, `submit_payment`, `track_order`, `revert_order_status`, etc.)
   - Aur `products` Storage Bucket

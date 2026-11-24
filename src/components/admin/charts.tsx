@@ -1,5 +1,6 @@
 import { useId } from "react"
 import { cn } from "@/lib/utils"
+import styles from "./admin-core.module.css"
 
 /**
  * Tiny dependency-free SVG charts. They render on the server (no chart library, no client JavaScript),
@@ -42,7 +43,7 @@ export function Sparkline({
   const area = `${line} L${w},${h} L0,${h} Z`
 
   return (
-    <svg data-ui="admin/Sparkline" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} className={cn("h-9 w-full text-primary", className)} preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} className={cn(styles.sparklineSvg, className)} preserveAspectRatio="none">
       <defs>
         <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="currentColor" stopOpacity="0.28" />

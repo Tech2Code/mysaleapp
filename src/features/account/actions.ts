@@ -8,8 +8,9 @@ import { z } from "zod"
 import { siteConfig } from "@/config/site"
 import { getCurrentUser, hasValidPasswordResetCookie } from "@/features/auth/guards"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
+import { getStoreSettings } from "@/features/settings/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
-import { normalizeIndianPhone } from "@/lib/format"
+import { formatDate, formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { customerPasswordSchema, deactivateAccountSchema, profileSchema, type Profile } from "./schema"
@@ -261,4 +262,229 @@ export async function deactivateMyAccount(input: unknown): Promise<ActionResult>
   revalidatePath("/checkout")
   revalidatePath("/", "layout")
   return { ok: true }
+}
+
+export type AccountDataExport = {
+  exportedAt: string
+  fileName: string
+  htmlReport: string
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
+ * Exports all personal data belonging to the signed-in customer as a clean, human-readable,
+ * printable HTML Account Statement (with a built-in "Print / Save as PDF" button) so any customer
+ * can open and read their data effortlessly on mobile or desktop.
+ */
+export async function exportMyAccountData(): Promise<ActionResult<AccountDataExport>> {
+  const user = await getCurrentUser()
+  if (!user) return fail("Please sign in to download your account data.")
+
+  if (await limited("track-order", `export:${user.id}`)) {
+    return fail(RATE_LIMIT_MESSAGE)
+  }
+
+  const [supabase, shop] = await Promise.all([getServerSupabase(), getStoreSettings()])
+  const [profileRes, addressesRes, wishlistRes, ordersRes, reviewsRes] = await Promise.all([
+    supabase.from("profiles").select("full_name, phone, avatar_url, updated_at").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("addresses")
+      .select("label, full_name, phone, address, city, pincode, is_default, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("wishlists").select("product_id, created_at, products(name)").eq("user_id", user.id),
+    supabase
+      .from("orders")
+      .select(
+        "order_code, status, payment_status, payment_reference, subtotal, shipping_fee, discount_amount, total, refunded_amount, items, customer_name, phone, address, city, pincode, created_at"
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("product_reviews")
+      .select("rating, title, comment, created_at, products(name)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+  ])
+
+  const metaName = cleanMetaName(user.user_metadata?.full_name) ?? cleanMetaName(user.user_metadata?.name) ?? ""
+  const metaPhone = typeof user.user_metadata?.phone === "string" ? (normalizeIndianPhone(user.user_metadata.phone) ?? "") : ""
+  const fullName = cleanMetaName(profileRes.data?.full_name) ?? metaName ?? "Customer"
+  const phone = (profileRes.data?.phone as string | null) ?? metaPhone ?? "—"
+  const email = user.email ?? "—"
+  const createdAt = user.created_at ? formatDate(user.created_at) : "—"
+  const termsAcceptedAt =
+    typeof user.user_metadata?.terms_accepted_at === "string" ? formatDate(user.user_metadata.terms_accepted_at) : "Accepted at sign-in"
+  const exportedIso = new Date().toISOString()
+  const exportedLabel = formatDate(exportedIso)
+
+  const addresses = (addressesRes.data ?? []) as {
+    label: string
+    full_name: string
+    phone: string
+    address: string
+    city: string
+    pincode: string
+    is_default: boolean
+  }[]
+
+  const orders = (ordersRes.data ?? []) as {
+    order_code: string
+    status: string
+    payment_status: string
+    payment_reference: string | null
+    total: number
+    refunded_amount: number | null
+    items: { name?: string; quantity?: number; price?: number }[] | null
+    created_at: string
+  }[]
+
+  const reviews = (reviewsRes.data ?? []) as {
+    rating: number
+    title: string | null
+    comment: string
+    created_at: string
+    products: { name?: string } | { name?: string }[] | null
+  }[]
+
+  const wishlist = (wishlistRes.data ?? []) as {
+    created_at: string
+    products: { name?: string } | { name?: string }[] | null
+  }[]
+
+  const productNameFromJoin = (rel: { name?: string } | { name?: string }[] | null): string => {
+    if (!rel) return "Product"
+    if (Array.isArray(rel)) return rel[0]?.name ?? "Product"
+    return rel.name ?? "Product"
+  }
+
+  const addressRows =
+    addresses.length === 0
+      ? `<p class="empty">No saved addresses on file.</p>`
+      : `<table><thead><tr><th>Label</th><th>Recipient</th><th>Phone</th><th>Address</th><th>Pincode</th></tr></thead><tbody>${addresses
+          .map(
+            (a) =>
+              `<tr><td><strong>${escapeHtml(a.label)}</strong>${a.is_default ? ' <span class="badge">Default</span>' : ""}</td><td>${escapeHtml(a.full_name)}</td><td>${escapeHtml(a.phone)}</td><td>${escapeHtml(a.address)}, ${escapeHtml(a.city)}</td><td>${escapeHtml(a.pincode)}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+
+  const orderRows =
+    orders.length === 0
+      ? `<p class="empty">No orders placed yet.</p>`
+      : `<table><thead><tr><th>Order Code</th><th>Date</th><th>Items</th><th>Order Status</th><th>Payment</th><th>Total</th></tr></thead><tbody>${orders
+          .map((o) => {
+            const itemSummary = Array.isArray(o.items)
+              ? o.items.map((i) => `${escapeHtml(i.name ?? "Item")} × ${Number(i.quantity ?? 1)}`).join("<br/>")
+              : "—"
+            const refundText = Number(o.refunded_amount ?? 0) > 0 ? `<br/><small>Refunded: ${escapeHtml(formatPrice(Number(o.refunded_amount)))}</small>` : ""
+            return `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(formatDate(o.created_at))}</td><td>${itemSummary}</td><td>${escapeHtml(o.status)}</td><td>${escapeHtml(o.payment_status)}${o.payment_reference ? `<br/><small>UTR: ${escapeHtml(o.payment_reference)}</small>` : ""}</td><td><strong>${escapeHtml(formatPrice(Number(o.total)))}</strong>${refundText}</td></tr>`
+          })
+          .join("")}</tbody></table>`
+
+  const reviewRows =
+    reviews.length === 0
+      ? `<p class="empty">No product reviews submitted yet.</p>`
+      : `<table><thead><tr><th>Product</th><th>Rating</th><th>Review</th><th>Date</th></tr></thead><tbody>${reviews
+          .map(
+            (r) =>
+              `<tr><td><strong>${escapeHtml(productNameFromJoin(r.products))}</strong></td><td>${"★".repeat(Math.max(1, Math.min(5, r.rating)))}${"☆".repeat(5 - Math.max(1, Math.min(5, r.rating)))} (${r.rating}/5)</td><td>${r.title ? `<strong>${escapeHtml(r.title)}</strong><br/>` : ""}${escapeHtml(r.comment)}</td><td>${escapeHtml(formatDate(r.created_at))}</td></tr>`
+          )
+          .join("")}</tbody></table>`
+
+  const wishlistRows =
+    wishlist.length === 0
+      ? `<p class="empty">No items currently saved in wishlist.</p>`
+      : `<ul>${wishlist
+          .map((w) => `<li><strong>${escapeHtml(productNameFromJoin(w.products))}</strong> — saved on ${escapeHtml(formatDate(w.created_at))}</li>`)
+          .join("")}</ul>`
+
+  const htmlReport = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(shop.shopName)} — My Account Data Summary</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px 16px; background: #F4F6F9; color: #0B3550; line-height: 1.5; }
+    .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .header { background: #FFFFFF; border-radius: 18px; padding: 24px; border: 1px solid rgba(11,53,80,0.10); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+    h1 { margin: 0; font-size: 22px; color: #0B3550; }
+    .sub { margin: 4px 0 0 0; font-size: 13px; color: #4E6172; }
+    .printBtn { background: #FF6B5A; color: #FFFFFF; border: 0; border-radius: 9999px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .card { background: #FFFFFF; border-radius: 18px; padding: 22px 24px; border: 1px solid rgba(11,53,80,0.10); }
+    h2 { margin: 0 0 14px 0; font-size: 16px; color: #0B3550; border-bottom: 1px solid rgba(11,53,80,0.08); padding-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .fieldLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #4E6172; }
+    .fieldValue { font-size: 14px; font-weight: 600; color: #0B3550; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    th { background: #EDF2F7; padding: 10px 12px; font-weight: 600; border-bottom: 1px solid rgba(11,53,80,0.10); }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(11,53,80,0.08); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    .badge { display: inline-block; background: #FFE8E5; color: #FF6B5A; border-radius: 9999px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+    .empty { margin: 0; font-size: 13px; color: #4E6172; }
+    ul { margin: 0; padding-left: 18px; font-size: 13px; }
+    li { margin-bottom: 6px; }
+    @media print { body { background: #FFFFFF; padding: 0; } .printBtn { display: none; } .card, .header { box-shadow: none; break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>${escapeHtml(shop.shopName)} — Personal Account Data Summary</h1>
+        <p class="sub">Generated on ${escapeHtml(exportedLabel)} for ${escapeHtml(email)}</p>
+      </div>
+      <button type="button" class="printBtn" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+
+    <div class="card">
+      <h2>1. Profile &amp; Account Details</h2>
+      <div class="grid">
+        <div><div class="fieldLabel">Full Name</div><div class="fieldValue">${escapeHtml(fullName)}</div></div>
+        <div><div class="fieldLabel">Email Address</div><div class="fieldValue">${escapeHtml(email)}</div></div>
+        <div><div class="fieldLabel">Mobile Number</div><div class="fieldValue">${escapeHtml(phone)}</div></div>
+        <div><div class="fieldLabel">Account Created</div><div class="fieldValue">${escapeHtml(createdAt)}</div></div>
+        <div><div class="fieldLabel">Terms &amp; Privacy</div><div class="fieldValue">${escapeHtml(termsAcceptedAt)}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Saved Delivery Addresses (${addresses.length})</h2>
+      ${addressRows}
+    </div>
+
+    <div class="card">
+      <h2>3. Order History (${orders.length})</h2>
+      ${orderRows}
+    </div>
+
+    <div class="card">
+      <h2>4. Submitted Product Reviews (${reviews.length})</h2>
+      ${reviewRows}
+    </div>
+
+    <div class="card">
+      <h2>5. Saved Wishlist Items (${wishlist.length})</h2>
+      ${wishlistRows}
+    </div>
+  </div>
+</body>
+</html>`
+
+  return {
+    ok: true,
+    data: {
+      exportedAt: exportedIso,
+      fileName: `my-account-data-${exportedIso.slice(0, 10)}.html`,
+      htmlReport,
+    },
+  }
 }

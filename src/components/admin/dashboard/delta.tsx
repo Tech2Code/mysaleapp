@@ -1,4 +1,5 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react"
+import styles from "@/components/admin/admin-core.module.css"
 import { cn } from "@/lib/utils"
 
 /** % change vs the previous period. null = nothing to compare with. */
@@ -11,7 +12,7 @@ export function Delta({ value, show = true }: { value: number | null; show?: boo
   if (!show) return null
   if (value === null) {
     return (
-      <span data-ui="admin/Delta" className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+      <span className={styles.deltaNewBadge}>
         New
       </span>
     )
@@ -20,16 +21,14 @@ export function Delta({ value, show = true }: { value: number | null; show?: boo
   const Icon = up ? ArrowUpRightIcon : ArrowDownRightIcon
   return (
     <span
-      data-ui="admin/Delta"
+
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold",
-        up
-          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
-          : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"
+        styles.deltaBadge,
+        up ? styles.deltaUp : styles.deltaDown
       )}
     >
-      <Icon className="size-3" aria-hidden />
-      {Math.abs(value)}%<span data-ui="admin/Delta/span" className="sr-only"> {up ? "up" : "down"} from the previous period</span>
+      <Icon className={styles.icon12} aria-hidden />
+      {Math.abs(value)}%<span className={styles.srOnly}> {up ? "up" : "down"} from the previous period</span>
     </span>
   )
 }

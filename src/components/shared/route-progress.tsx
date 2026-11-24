@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react"
 import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 type ProgressApi = { start: () => void; done: () => void }
 
@@ -131,11 +132,11 @@ export function RouteProgressProvider({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <RouteChangeWatcher onChange={finishClick} />
       </Suspense>
-      <div data-ui="shared/RouteProgressProvider/div-fixed" aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-100 h-0.75 overflow-hidden">
-        <div data-ui="shared/RouteProgressProvider/div"
+      <div aria-hidden className={styles.routeProgressTrack}>
+        <div
           className={cn(
-            "size-full origin-left rounded-r-full bg-primary transition-[transform,opacity] ease-out will-change-transform",
-            visible ? "opacity-100 duration-200" : "opacity-0 duration-300"
+            styles.routeProgressBar,
+            visible ? styles.routeProgressVisible : styles.routeProgressHidden
           )}
           style={{ transform: `scaleX(${width / 100})` }}
         />

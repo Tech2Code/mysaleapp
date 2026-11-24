@@ -45,7 +45,9 @@ import {
 import { signOutAdmin } from "@/features/auth/actions"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
+import styles from "./admin-core.module.css"
 
 export type AdminAccount = {
   name: string
@@ -338,48 +340,48 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          data-ui="admin/AdminAccountMenu/DropdownMenuTrigger-grid"
-          className="grid size-9 place-items-center overflow-hidden rounded-full bg-secondary ring-2 ring-primary/20 transition hover:ring-primary/50"
+
+          className={styles.accountTriggerBtn}
           aria-label={`Account: ${account.email}`}
         >
           {account.avatarUrl ? (
-            <Image data-ui="admin/AdminAccountMenu/Image" src={account.avatarUrl} alt="" width={36} height={36} sizes="36px" className="size-full object-cover" />
+            <Image src={account.avatarUrl} alt="" width={36} height={36} sizes="36px" className={styles.avatarImg} />
           ) : (
-            <span data-ui="admin/AdminAccountMenu/span" className="text-sm leading-none font-semibold text-primary">{initial}</span>
+            <span className={styles.avatarInitial}>{initial}</span>
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent data-ui="admin/AdminAccountMenu/DropdownMenuContent" align="end" className="w-64">
+        <DropdownMenuContent align="end" className={styles.accountDropdown}>
           <DropdownMenuGroup>
-            <DropdownMenuLabel className="space-y-1 py-2">
-              <span data-ui="admin/AdminAccountMenu/span-2" className="block truncate text-sm font-semibold text-foreground">{account.name}</span>
-              <span data-ui="admin/AdminAccountMenu/span-3" className="block truncate">{account.email}</span>
-              <span data-ui="admin/AdminAccountMenu/span-inline-flex" className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[0.7rem] font-semibold text-primary">
-                <ShieldCheckIcon className="size-3" aria-hidden /> Administrator
+            <DropdownMenuLabel className={styles.accountLabelGroup}>
+              <span className={styles.accountName}>{account.name}</span>
+              <span className={styles.accountEmail}>{account.email}</span>
+              <span className={styles.accountRolePill}>
+                <ShieldCheckIcon className={styles.icon12} aria-hidden /> Administrator
               </span>
-              {account.lastSignIn && <span data-ui="admin/AdminAccountMenu/span-4" className="block pt-1 text-[0.7rem]">Signed in {account.lastSignIn}</span>}
+              {account.lastSignIn && <span className={styles.accountSignInTime}>Signed in {account.lastSignIn}</span>}
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem" onClick={() => router.push("/admin/account")}>
+          <DropdownMenuItem onClick={() => router.push("/admin/account")}>
             <UserRoundCogIcon /> My account & PIN
           </DropdownMenuItem>
-          <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-2" onClick={() => router.push("/admin/settings")}>
+          <DropdownMenuItem onClick={() => router.push("/admin/settings")}>
             <SettingsIcon /> Store settings
           </DropdownMenuItem>
           {pinState.mode === "enabled" && pinState.hasPin && (
-            <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-3" disabled={pending} onClick={handleLockScreenNow}>
+            <DropdownMenuItem disabled={pending} onClick={handleLockScreenNow}>
               <LockIcon /> Lock screen now
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator className="sm:hidden" />
-          <div data-ui="admin/AdminAccountMenu/div" className="px-2 py-1.5 sm:hidden">
-            <p data-ui="admin/AdminAccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          <DropdownMenuSeparator className={styles.mobileOnlySep} />
+          <div className={styles.mobileThemeSection}>
+            <p className={styles.mobileThemeLabel}>
               Settings · Theme
             </p>
             <ThemeSegmentedControl />
           </div>
           <DropdownMenuSeparator />
-          <DropdownMenuItem data-ui="admin/AdminAccountMenu/DropdownMenuItem-4" variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
+          <DropdownMenuItem variant="destructive" disabled={pending} onClick={() => setAskSignOut(true)}>
             <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -555,18 +557,18 @@ function AdminPinGateDialog({
   return (
     <>
       <div
-        data-ui="admin/AdminPinGateDialog/div-fixed"
+
         data-admin-pin-locked=""
         aria-hidden
-        className="fixed inset-0 z-40 bg-background/95 backdrop-blur-xl"
+        className={styles.pinLockBackdrop}
       />
       <Dialog open onOpenChange={() => {}}>
-        <DialogContent data-ui="admin/AdminPinGateDialog/DialogContent" showCloseButton={false} className="sm:max-w-md">
+        <DialogContent showCloseButton={false} className={styles.pinDialogContent}>
         {gateMode === "setup-prompt" ? (
-          <form data-ui="admin/AdminPinGateDialog/form-flex" onSubmit={submitFirstTimeSetup} noValidate className="flex flex-col">
+          <form onSubmit={submitFirstTimeSetup} noValidate className={styles.pinDialogForm}>
             <DialogHeader showCloseButton={false}>
-              <div data-ui="admin/AdminPinGateDialog/div-flex" className="flex items-center gap-2 text-primary">
-                <KeyRoundIcon className="size-5 shrink-0" aria-hidden />
+              <div className={styles.pinHeaderRow}>
+                <KeyRoundIcon className={styles.icon20} aria-hidden />
                 <DialogTitle>Set a 4-digit Quick PIN?</DialogTitle>
               </div>
               <DialogDescription>
@@ -574,7 +576,7 @@ function AdminPinGateDialog({
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
-              <div data-ui="admin/AdminPinGateDialog/div-grid" className="grid gap-3 sm:grid-cols-2">
+              <div className={styles.twoColGrid3}>
                 <TextField
                   label="4-digit PIN"
                   kind="adminPin"
@@ -606,41 +608,41 @@ function AdminPinGateDialog({
                 />
               </div>
             </DialogBody>
-            <DialogFooter className="sm:justify-between">
-              <Button data-ui="admin/AdminPinGateDialog/Button-don-apos-t-use-pin"
+            <DialogFooter className={styles.pinDialogFooter}>
+              <Button
                 type="button"
                 variant="ghost"
                 disabled={pending}
                 onClick={handleSkipPinSetup}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
                 Don&apos;t use PIN
               </Button>
-              <Button data-ui="admin/AdminPinGateDialog/Button-save-4-digit-pin"
+              <Button
                 type="submit"
                 disabled={pending || pin.length !== 4 || confirmPin.length !== 4}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
-                {pending && <Loader2Icon className="animate-spin" />} Save 4-digit PIN
+                {pending && <Loader2Icon className={styles.spinIcon} />} Save 4-digit PIN
               </Button>
             </DialogFooter>
           </form>
         ) : !forgotMode ? (
-          <form data-ui="admin/AdminPinGateDialog/form-flex-2"
+          <form
             onSubmit={(e) => {
               e.preventDefault()
               submitPinUnlock(pin)
             }}
             noValidate
-            className="flex flex-col"
+            className={styles.pinDialogForm}
           >
             <DialogHeader showCloseButton={false}>
-              <div data-ui="admin/AdminPinGateDialog/div-flex-2" className="flex items-center gap-2 text-primary">
-                <LockIcon className="size-5 shrink-0" aria-hidden />
+              <div className={styles.pinHeaderRow}>
+                <LockIcon className={styles.icon20} aria-hidden />
                 <DialogTitle>Admin screen locked</DialogTitle>
               </div>
               <DialogDescription>
-                Signed in as <span data-ui="admin/AdminPinGateDialog/span" className="font-medium text-foreground">{email}</span>. Enter your 4-digit PIN to continue for the next 12 hours.
+                Signed in as <span className={styles.emailHighlight}>{email}</span>. Enter your 4-digit PIN to continue for the next 12 hours.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -662,8 +664,8 @@ function AdminPinGateDialog({
                   }
                 }}
               />
-              <div data-ui="admin/AdminPinGateDialog/div-flex-3" className="flex items-center justify-between pt-1">
-                <button data-ui="admin/AdminPinGateDialog/button-forgot-pin-unlock-or-r"
+              <div className={styles.forgotPinRow}>
+                <button
                   type="button"
                   onClick={() => {
                     setForgotMode(true)
@@ -671,40 +673,40 @@ function AdminPinGateDialog({
                     setNewPinError(null)
                     setNewPinConfirmError(null)
                   }}
-                  className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                  className={styles.textPrimaryLinkBtn}
                 >
                   Forgot PIN? Unlock or reset with password
                 </button>
               </div>
             </DialogBody>
-            <DialogFooter className="sm:justify-between">
-              <Button data-ui="admin/AdminPinGateDialog/Button-sign-out"
+            <DialogFooter className={styles.pinDialogFooter}>
+              <Button
                 type="button"
                 variant="outline"
                 disabled={pending}
                 onClick={onSignOut}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
                 <LogOutIcon /> Sign out
               </Button>
-              <Button data-ui="admin/AdminPinGateDialog/Button-unlock"
+              <Button
                 type="submit"
                 disabled={pending || pin.length !== 4}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
-                {pending && <Loader2Icon className="animate-spin" />} Unlock
+                {pending && <Loader2Icon className={styles.spinIcon} />} Unlock
               </Button>
             </DialogFooter>
           </form>
         ) : (
-          <form data-ui="admin/AdminPinGateDialog/form-flex-3" onSubmit={submitPasswordRecovery} noValidate className="flex flex-col">
+          <form onSubmit={submitPasswordRecovery} noValidate className={styles.pinDialogForm}>
             <DialogHeader showCloseButton={false}>
-              <div data-ui="admin/AdminPinGateDialog/div-flex-4" className="flex items-center gap-2 text-primary">
-                <KeyRoundIcon className="size-5 shrink-0" aria-hidden />
+              <div className={styles.pinHeaderRow}>
+                <KeyRoundIcon className={styles.icon20} aria-hidden />
                 <DialogTitle>Unlock or reset PIN with password</DialogTitle>
               </div>
               <DialogDescription>
-                Verify your account password for <span data-ui="admin/AdminPinGateDialog/span-2" className="font-medium text-foreground">{email}</span> to set a new PIN, unlock, or turn PIN lock off.
+                Verify your account password for <span className={styles.emailHighlight}>{email}</span> to set a new PIN, unlock, or turn PIN lock off.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -721,9 +723,9 @@ function AdminPinGateDialog({
                 }}
                 error={passwordError ?? undefined}
               />
-              <div data-ui="admin/AdminPinGateDialog/div" className="space-y-1.5">
-                <span data-ui="admin/AdminPinGateDialog/span-3" className="block text-xs font-medium text-muted-foreground">After verifying password:</span>
-                <div data-ui="admin/AdminPinGateDialog/div-grid-2" className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted p-1">
+              <div className={styles.recoveryOptionsWrap}>
+                <span className={styles.recoveryLabel}>After verifying password:</span>
+                <div className={styles.recoveryTabsGrid}>
                   {(
                     [
                       { id: "reset", label: "Set new PIN" },
@@ -731,7 +733,7 @@ function AdminPinGateDialog({
                       { id: "disable", label: "Don't use PIN" },
                     ] as const
                   ).map((item) => (
-                    <button data-ui="admin/AdminPinGateDialog/button"
+                    <button
                       key={item.id}
                       type="button"
                       aria-pressed={recoveryAction === item.id}
@@ -741,11 +743,10 @@ function AdminPinGateDialog({
                         setNewPinError(null)
                         setNewPinConfirmError(null)
                       }}
-                      className={`rounded-lg px-2 py-1.5 text-xs font-medium transition ${
-                        recoveryAction === item.id
-                          ? "bg-background text-foreground shadow-xs"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={cn(
+                        styles.recoveryTabBtn,
+                        recoveryAction === item.id && styles.recoveryTabActive
+                      )}
                     >
                       {item.label}
                     </button>
@@ -753,7 +754,7 @@ function AdminPinGateDialog({
                 </div>
               </div>
               {recoveryAction === "reset" && (
-                <div data-ui="admin/AdminPinGateDialog/div-grid-3" className="grid gap-3 sm:grid-cols-2">
+                <div className={styles.twoColGrid3}>
                   <TextField
                     label="New 4-digit PIN"
                     kind="adminPin"
@@ -786,8 +787,8 @@ function AdminPinGateDialog({
                 </div>
               )}
             </DialogBody>
-            <DialogFooter className="sm:justify-between">
-              <Button data-ui="admin/AdminPinGateDialog/Button-back-to-pin"
+            <DialogFooter className={styles.pinDialogFooter}>
+              <Button
                 type="button"
                 variant="ghost"
                 disabled={pending}
@@ -797,12 +798,12 @@ function AdminPinGateDialog({
                   setNewPinError(null)
                   setNewPinConfirmError(null)
                 }}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
                 Back to PIN
               </Button>
-              <Button data-ui="admin/AdminPinGateDialog/Button" type="submit" disabled={pending || !password} className="rounded-full">
-                {pending && <Loader2Icon className="animate-spin" />}
+              <Button type="submit" disabled={pending || !password} className={styles.roundedFullBtn}>
+                {pending && <Loader2Icon className={styles.spinIcon} />}
                 {recoveryAction === "reset"
                   ? "Save new PIN & unlock"
                   : recoveryAction === "disable"

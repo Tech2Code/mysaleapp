@@ -12,6 +12,7 @@ import type { Product, ProductCardData, ProductReview } from "@/features/product
 import { priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
 import { discountPercent, formatPrice } from "@/lib/format"
+import styles from "./product-detail.module.css"
 
 /** Breadcrumb trail (also used for the page's structured data). */
 export function productCrumbs(product: Pick<Product, "name" | "category">): { name: string; href?: string }[] {
@@ -74,50 +75,50 @@ export function ProductDetailView({
 
   return (
     <>
-      <div data-ui="store/ProductDetailView/div" className="container-page pt-3 pb-2 sm:pt-6 sm:pb-4">
+      <div className={styles.crumbsBar}>
         <Breadcrumbs items={crumbs} />
       </div>
 
-      <div data-ui="store/ProductDetailView/div-grid" className="container-page grid gap-4 sm:gap-8 lg:grid-cols-2 lg:items-start lg:gap-16">
-        <FadeIn y={16} className="min-w-0 lg:sticky-store">
+      <div className={styles.detailGrid}>
+        <FadeIn y={16} className={styles.galleryColumn}>
           <ProductGallery images={product.images} name={product.name} />
         </FadeIn>
 
-        <FadeIn y={16} delay={0.1} className="min-w-0">
+        <FadeIn y={16} delay={0.1} className={styles.infoColumn}>
           {product.category && (
-            <p data-ui="store/ProductDetailView/p" className="text-sm font-semibold tracking-widest text-primary uppercase">{product.category.name}</p>
+            <p className={styles.categoryEyebrow}>{product.category.name}</p>
           )}
-          <h1 data-ui="store/ProductDetailView/h1" className="mt-2 text-3xl/tight  font-semibold sm:text-4xl lg:text-5xl">{product.name}</h1>
+          <h1 className={styles.productHeading}>{product.name}</h1>
 
-          <div data-ui="store/ProductDetailView/div-flex" className="mt-3 flex flex-wrap items-baseline gap-3 sm:mt-5">
-            <span data-ui="store/ProductDetailView/span" className="font-heading text-3xl font-semibold">{formatPrice(product.price)}</span>
+          <div className={styles.priceHeaderRow}>
+            <span className={styles.mainPriceText}>{formatPrice(product.price)}</span>
             {product.compareAtPrice && (
-              <span data-ui="store/ProductDetailView/span-2" className="text-lg text-muted-foreground line-through">{formatPrice(product.compareAtPrice)}</span>
+              <span className={styles.comparePriceText}>{formatPrice(product.compareAtPrice)}</span>
             )}
             {off && (
-              <span data-ui="store/ProductDetailView/span-3" className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">Save {off}%</span>
+              <span className={styles.saveBadge}>Save {off}%</span>
             )}
             {(product.reviewCount ?? 0) > 0 && (
               <a
-                data-ui="store/ProductDetailView/a-inline-flex"
+
                 href="#customer-reviews"
-                className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 text-xs font-semibold text-foreground transition-colors hover:border-primary/40"
+                className={styles.reviewsAnchorPill}
               >
-                <StarIcon className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
-                <span data-ui="store/ProductDetailView/span-4" className="tabular-nums">{Number(product.ratingAvg ?? 0).toFixed(1)}</span>
-                <span data-ui="store/ProductDetailView/span-5" className="text-muted-foreground">({product.reviewCount})</span>
+                <StarIcon className={styles.starGoldIcon} aria-hidden />
+                <span className={styles.ratingScoreText}>{Number(product.ratingAvg ?? 0).toFixed(1)}</span>
+                <span className={styles.ratingCountText}>({product.reviewCount})</span>
               </a>
             )}
           </div>
-          {taxNote && <p data-ui="store/ProductDetailView/p-2" className="mt-1 text-xs text-muted-foreground">{taxNote}</p>}
+          {taxNote && <p className={styles.taxNoteText}>{taxNote}</p>}
 
-          {summary && <p data-ui="store/ProductDetailView/p-3" className="mt-3 leading-relaxed text-muted-foreground sm:mt-5">{summary}</p>}
+          {summary && <p className={styles.summaryText}>{summary}</p>}
 
           {product.highlights.length > 0 && (
-            <ul data-ui="store/ProductDetailView/ul-highlights" className="mt-4 space-y-2 sm:mt-5 sm:space-y-2.5" aria-label="Highlights">
+            <ul className={styles.highlightsList} aria-label="Highlights">
               {product.highlights.map((h, idx) => (
-                <li data-ui="store/ProductDetailView/li-flex" key={`${idx}-${h}`} className="flex items-start gap-2.5 text-sm">
-                  <CheckCircle2Icon className="mt-0.5 size-4.5 shrink-0 text-success" aria-hidden />
+                <li key={`${idx}-${h}`} className={styles.highlightItem}>
+                  <CheckCircle2Icon className={styles.checkIcon} aria-hidden />
                   {h}
                 </li>
               ))}
@@ -125,64 +126,64 @@ export function ProductDetailView({
           )}
 
           {surcharges.length > 0 && (
-            <div data-ui="store/ProductDetailView/div-2" className="mt-4 rounded-2xl border border-amber-200 sm:mt-5 bg-amber-50/70 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/20">
-              <p data-ui="store/ProductDetailView/p-flex" className="flex items-center gap-2 font-semibold">
-                <InfoIcon className="size-4" aria-hidden /> Special shipping &amp; handling
+            <div className={styles.surchargesBox}>
+              <p className={styles.surchargeHeading}>
+                <InfoIcon className={styles.infoIcon} aria-hidden /> Special shipping &amp; handling
               </p>
-              <ul data-ui="store/ProductDetailView/ul" className="mt-2 space-y-2">
+              <ul className={styles.surchargeList}>
                 {surcharges.map((f, idx) => (
-                  <li data-ui="store/ProductDetailView/li" key={`${idx}-${f.label}`}>
-                    <span data-ui="store/ProductDetailView/span-6" className="font-medium">
+                  <li key={`${idx}-${f.label}`}>
+                    <span className={styles.surchargeLabel}>
                       {f.label}: {formatPrice(f.amount)}
                     </span>
-                    <span data-ui="store/ProductDetailView/span-7" className="block text-muted-foreground">{f.reason}</span>
+                    <span className={styles.surchargeReason}>{f.reason}</span>
                   </li>
                 ))}
               </ul>
-              <p data-ui="store/ProductDetailView/p-4" className="mt-2 text-xs text-muted-foreground">Calculated across your whole order at checkout, never compounded per item.</p>
+              <p className={styles.surchargeFooterNote}>Calculated across your whole order at checkout, never compounded per item.</p>
             </div>
           )}
 
-          <div data-ui="store/ProductDetailView/div-3" className="mt-5 sm:mt-8">
+          <div className={styles.actionsMount}>
             <ProductActions product={product} />
           </div>
 
           {/* Trust row: compact, directly under the buttons (where the doubt is). */}
-          <ul data-ui="store/ProductDetailView/ul-2" className="mt-4 divide-y rounded-2xl border bg-card px-4 text-sm sm:mt-6">
+          <ul className={styles.perksCard}>
             {perks.map((p) => (
-              <li data-ui="store/ProductDetailView/li-flex-2" key={p.text} className="flex items-center gap-3 py-2.5 sm:py-3">
-                <span data-ui="store/ProductDetailView/span-grid" className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-primary">
-                  <p.icon data-ui="store/ProductDetailView/p.icon" className="size-4" />
+              <li key={p.text} className={styles.perkRow}>
+                <span className={styles.perkIconCircle}>
+                  <p.icon className={styles.perkIcon} />
                 </span>
                 {p.text}
               </li>
             ))}
           </ul>
 
-          <section data-ui="store/ProductDetailView/section" className="mt-7 border-t pt-6 sm:mt-10 sm:pt-8" aria-labelledby="details-title">
-            <h2 data-ui="store/ProductDetailView/h2-about-this-piece" id="details-title" className="text-xl font-semibold sm:text-2xl">
+          <section className={styles.aboutSection} aria-labelledby="details-title">
+            <h2 id="details-title" className={styles.subHeading}>
               About this piece
             </h2>
-            <ReadMore length={product.description.length} className="mt-3">
-              <div data-ui="store/ProductDetailView/div-4" className="space-y-3 leading-relaxed whitespace-pre-line text-muted-foreground">{product.description}</div>
+            <ReadMore length={product.description.length} className={styles.readMoreWrap}>
+              <div className={styles.descriptionProse}>{product.description}</div>
             </ReadMore>
           </section>
 
           {product.specs.length > 0 && (
-            <section data-ui="store/ProductDetailView/section-2" className="mt-6 sm:mt-8" aria-labelledby="specs-title">
-              <h2 data-ui="store/ProductDetailView/h2-details" id="specs-title" className="text-xl font-semibold sm:text-2xl">Details</h2>
-              <dl data-ui="store/ProductDetailView/dl" className="mt-3 divide-y rounded-2xl border bg-card px-4 sm:px-5">
+            <section className={styles.specsSection} aria-labelledby="specs-title">
+              <h2 id="specs-title" className={styles.subHeading}>Details</h2>
+              <dl className={styles.specsCard}>
                 {product.specs.map((s, idx) => (
-                  <div data-ui="store/ProductDetailView/div-grid-2" key={`${idx}-${s.label}`} className="grid grid-cols-[7rem_1fr] gap-4 py-3 text-sm sm:grid-cols-[9rem_1fr]">
-                    <dt data-ui="store/ProductDetailView/dt" className="text-muted-foreground">{s.label}</dt>
-                    <dd data-ui="store/ProductDetailView/dd" className="font-medium">{s.value}</dd>
+                  <div key={`${idx}-${s.label}`} className={styles.specRow}>
+                    <dt className={styles.specTerm}>{s.label}</dt>
+                    <dd className={styles.specValue}>{s.value}</dd>
                   </div>
                 ))}
               </dl>
             </section>
           )}
 
-          <div data-ui="store/ProductDetailView/div-5" className="mt-6 sm:mt-8">
+          <div className={styles.accordionMount}>
             <Accordion>
               {product.careInstructions && <AccordionItem title="Care instructions">{product.careInstructions}</AccordionItem>}
               <AccordionItem title="Delivery">{freeDelivery} We pack every order by hand and share the courier and tracking details with you once it ships.</AccordionItem>
@@ -207,7 +208,7 @@ export function ProductDetailView({
       <ProductReviewsSection product={product} initialReviews={reviews} />
 
       {related.length > 0 && (
-        <section data-ui="store/ProductDetailView/section-3" className="container-page mt-12 sm:mt-24" aria-labelledby="related-title">
+        <section className={styles.relatedSection} aria-labelledby="related-title">
           <SectionHeading id="related-title" eyebrow="You may also like" title="More you may like" href="/products" />
           <ProductGrid products={related} priorityCount={0} />
         </section>

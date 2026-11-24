@@ -13,6 +13,7 @@ import type { ChecklistItem } from "@/features/settings/launch-queries"
 import { cn } from "@/lib/utils"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-views.module.css"
 
 const COUNT_LABEL: Record<ResetScope, (c: LaunchCounts) => string> = {
   orders: (c) => `${c.orders} order${c.orders === 1 ? "" : "s"}`,
@@ -61,77 +62,74 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
     })
 
   return (
-    <div data-ui="admin/LaunchPanel" className="grid gap-4 xl:grid-cols-2 xl:items-stretch">
-      <section data-ui="admin/LaunchPanel/section" className="adminCard space-y-4 rounded-xl border p-4 sm:p-5">
-        <div data-ui="admin/LaunchPanel/div">
-          <h2 data-ui="admin/LaunchPanel/h2-ready-to-launch" className="font-sans text-lg font-semibold">Ready to launch?</h2>
-          <p data-ui="admin/LaunchPanel/p" className="mt-0.5 text-sm text-muted-foreground">
+    <div className={styles.launchGrid}>
+      <section className={cn("adminCard", styles.launchCard)}>
+        <div>
+          <h2 className={styles.launchTitle}>Ready to launch?</h2>
+          <p className={styles.launchSub}>
             {ready ? "Everything is in place. You can go live." : "Finish these before sharing the store link."}
           </p>
         </div>
         {placeholders.length > 0 && (
-          <div data-ui="admin/LaunchPanel/div-2" role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
-            <p data-ui="admin/LaunchPanel/p-flex" className="flex items-center gap-2 font-semibold">
-              <TriangleAlertIcon className="size-4 shrink-0" aria-hidden /> Placeholder settings found
+          <div role="alert" className={styles.placeholderAlert}>
+            <p className={styles.alertHeading}>
+              <TriangleAlertIcon className={styles.iconMd} aria-hidden /> Placeholder settings found
             </p>
-            <p data-ui="admin/LaunchPanel/p-2" className="mt-1">
+            <p className={styles.alertBody}>
               {placeholders.map((p) => p.label).join(", ")} still hold starter or empty values that customers would see.{" "}
-              <Link data-ui="admin/LaunchPanel/Link-open-settings" href="/admin/settings" className="font-semibold underline underline-offset-2">Open Settings</Link>
+              <Link href="/admin/settings" className={styles.alertLink}>Open Settings</Link>
             </p>
           </div>
         )}
-        <ul data-ui="admin/LaunchPanel/ul" className="divide-y rounded-xl border">
+        <ul className={styles.checklist}>
           {checklist.map((c) => (
-            <li data-ui="admin/LaunchPanel/li" key={c.label}>
-              <Link data-ui="admin/LaunchPanel/Link-flex" href={c.href} className="flex items-center gap-3 p-3.5 transition-colors hover:bg-muted/50">
+            <li key={c.label} className={styles.checklistItem}>
+              <Link href={c.href} className={styles.checklistLink}>
                 {c.done ? (
-                  <CheckCircle2Icon className="size-5 shrink-0 text-success" aria-hidden />
+                  <CheckCircle2Icon className={styles.iconDone} aria-hidden />
                 ) : (
-                  <CircleDashedIcon className="size-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                  <CircleDashedIcon className={styles.iconTodo} aria-hidden />
                 )}
-                <span data-ui="admin/LaunchPanel/span" className="min-w-0 flex-1">
-                  <span data-ui="admin/LaunchPanel/span-2" className="block text-sm font-medium">{c.label}</span>
-                  {!c.done && <span data-ui="admin/LaunchPanel/span-3" className="block text-xs text-muted-foreground">{c.hint}</span>}
+                <span className={styles.checklistText}>
+                  <span className={styles.checklistLabel}>{c.label}</span>
+                  {!c.done && <span className={styles.checklistHint}>{c.hint}</span>}
                 </span>
-                <span data-ui="admin/LaunchPanel/span-4" className="sr-only">{c.done ? "Done" : "To do"}</span>
+                <span className={styles.srOnly}>{c.done ? "Done" : "To do"}</span>
               </Link>
             </li>
           ))}
         </ul>
       </section>
 
-      <section data-ui="admin/LaunchPanel/section-2" className="adminCard space-y-4 rounded-xl border border-destructive/30 p-4 sm:p-5">
-        <div data-ui="admin/LaunchPanel/div-3">
-          <h2 data-ui="admin/LaunchPanel/h2-clear-test-data" className="flex items-center gap-2 font-sans text-lg font-semibold text-destructive">
-            <TriangleAlertIcon className="size-5" aria-hidden /> Clear test data
+      <section className={cn("adminCard", styles.launchCard, styles.launchCardDanger)}>
+        <div>
+          <h2 className={styles.launchDangerTitle}>
+            <TriangleAlertIcon className={styles.iconLg} aria-hidden /> Clear test data
           </h2>
-          <p data-ui="admin/LaunchPanel/p-3" className="mt-0.5 text-sm text-muted-foreground">
+          <p className={styles.launchSub}>
             Testing is done? Remove the practice data and start fresh. Your shop settings and admin login are never touched. This can&apos;t be undone.
           </p>
         </div>
 
-        <fieldset data-ui="admin/LaunchPanel/fieldset" className="space-y-2">
-          <legend data-ui="admin/LaunchPanel/legend-what-to-clear" className="sr-only">What to clear</legend>
+        <fieldset className={styles.scopeFieldset}>
+          <legend className={styles.srOnly}>What to clear</legend>
           {RESET_SCOPES.map((s) => (
-            <label data-ui="admin/LaunchPanel/label"
+            <label
               key={s}
-              className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors",
-                scopes.includes(s) ? "border-destructive/50 bg-destructive/5" : "hover:bg-muted/50"
-              )}
+              className={cn(styles.scopeLabel, scopes.includes(s) && styles.scopeLabelSelected)}
             >
-              <input data-ui="admin/LaunchPanel/input-checkbox"
+              <input
                 type="checkbox"
                 checked={scopes.includes(s)}
                 onChange={() => toggle(s)}
-                className="mt-1 size-4 shrink-0 accent-(--destructive)"
+                className={styles.scopeCheckbox}
               />
-              <span data-ui="admin/LaunchPanel/span-5" className="min-w-0 flex-1">
-                <span data-ui="admin/LaunchPanel/span-flex" className="flex flex-wrap items-baseline justify-between gap-x-3">
-                  <span data-ui="admin/LaunchPanel/span-6" className="text-sm font-semibold">{RESET_SCOPE_INFO[s].label}</span>
-                  <span data-ui="admin/LaunchPanel/span-7" className="text-xs text-muted-foreground">Now: {COUNT_LABEL[s](counts)}</span>
+              <span className={styles.scopeContent}>
+                <span className={styles.scopeTop}>
+                  <span className={styles.scopeName}>{RESET_SCOPE_INFO[s].label}</span>
+                  <span className={styles.scopeCount}>Now: {COUNT_LABEL[s](counts)}</span>
                 </span>
-                <span data-ui="admin/LaunchPanel/span-8" className="block text-xs text-muted-foreground">{RESET_SCOPE_INFO[s].description}</span>
+                <span className={styles.scopeDesc}>{RESET_SCOPE_INFO[s].description}</span>
               </span>
             </label>
           ))}
@@ -150,8 +148,8 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
           placeholder={RESET_CONFIRM_WORD}
           error={confirmError ?? undefined}
         />
-        <Button data-ui="admin/LaunchPanel/Button-clear-selected-data" type="button" variant="destructive" disabled={!canRun} onClick={run} className="rounded-full">
-          {pending && <Loader2Icon className="animate-spin" />} Clear selected data
+        <Button type="button" variant="destructive" disabled={!canRun} onClick={run} className={styles.pillBtn}>
+          {pending && <Loader2Icon className={styles.spinIcon} />} Clear selected data
         </Button>
       </section>
     </div>

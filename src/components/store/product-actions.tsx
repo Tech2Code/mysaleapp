@@ -31,6 +31,7 @@ import { MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
 import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
 import { WishlistButton } from "./wishlist-button"
+import styles from "./product-actions.module.css"
 
 export function ProductActions({
   product,
@@ -75,20 +76,20 @@ export function ProductActions({
 
   if (soldOut) {
     return (
-      <div data-ui="store/ProductActions" className="space-y-3 sm:space-y-4">
-        <p data-ui="store/ProductActions/p-flex" role="status" className="flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
-          <PackageXIcon className="mt-0.5 size-4 shrink-0" />
-          <span data-ui="store/ProductActions/span">
+      <div className={styles.actionsStack}>
+        <p role="status" className={styles.soldOutBanner}>
+          <PackageXIcon className={styles.pkgXSvg} />
+          <span>
             Sold out for now — handmade pieces take time. Save it to your wishlist and check back soon.
           </span>
         </p>
-        <div data-ui="store/ProductActions/div-flex" className="flex gap-3">
-          <Button data-ui="store/ProductActions/Button-sold-out" size="lg" variant="outline" disabled className="h-13 flex-1 rounded-full text-base">
-            <ShoppingBagIcon className="size-5" /> Sold out
+        <div className={styles.soldOutRow}>
+          <Button size="lg" variant="outline" disabled className={styles.soldOutBtn}>
+            <ShoppingBagIcon className={styles.bagSvg20} /> Sold out
           </Button>
-          <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-13" />
+          <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn52} />
         </div>
-        <Button data-ui="store/ProductActions/Button-buy-now" size="lg" disabled className="h-13 w-full rounded-full text-base">
+        <Button size="lg" disabled className={styles.soldOutBuyBtn}>
           Buy now
         </Button>
       </div>
@@ -96,60 +97,60 @@ export function ProductActions({
   }
 
   return (
-    <div data-ui="store/ProductActions" className="space-y-3 sm:space-y-4">
+    <div className={styles.actionsStack}>
       {product.stock <= 5 && (
-        <p data-ui="store/ProductActions/p" className="text-sm font-medium text-destructive">
+        <p className={styles.lowStockAlert}>
           Only {product.stock} {product.stock === 1 ? "item" : "items"} left in stock
         </p>
       )}
       {/* Row 1: quantity | add to cart, 50 / 50. Row 2: buy now (the rest of the row) + wishlist. Every control is h-13. */}
-      <div data-ui="store/ProductActions/div-grid" className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-2 sm:gap-3">
-        <QuantityStepper label={product.name} value={qty} max={max} onChange={setChosen} size="lg" className="h-12 w-full justify-between sm:h-13" />
-        <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-12 shrink-0 sm:hidden" />
-        <Button data-ui="store/ProductActions/Button-add-to-cart"
+      <div className={styles.stepperAndCartGrid}>
+        <QuantityStepper label={product.name} value={qty} max={max} onChange={setChosen} size="lg" className={styles.stepperControl} />
+        <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.mobileWishlistBtn} />
+        <Button
           size="lg"
           variant="outline"
-          className="hidden h-13 min-w-0 rounded-full px-3 text-sm sm:inline-flex sm:text-base"
+          className={styles.desktopAddToCartBtn}
           onClick={addToCart}
         >
-          <ShoppingBagIcon className="size-5" /> Add to cart
+          <ShoppingBagIcon className={styles.bagSvg20} /> Add to cart
         </Button>
       </div>
-      <div data-ui="store/ProductActions/div-hidden" className="hidden gap-2 sm:flex sm:gap-3">
-        <Button data-ui="store/ProductActions/Button"
+      <div className={styles.desktopBuyNowRow}>
+        <Button
           size="lg"
-          className="h-14 min-w-0 flex-1 flex-col gap-0.5 rounded-full bg-whatsapp-solid py-1.5 text-white shadow-lg shadow-whatsapp/25 tabular-nums hover:bg-whatsapp-solid/90"
+          className={styles.buyNowWhatsappBtn}
           onClick={buyNow}
         >
-          <span data-ui="store/ProductActions/span-2" className="text-sm/tight font-semibold">Buy now</span>
-          <span data-ui="store/ProductActions/span-3" className="text-base/tight font-extrabold tracking-tight">{formatPrice(product.price * qty)}</span>
+          <span className={styles.buyBtnTopText}>Buy now</span>
+          <span className={styles.buyBtnPriceLg}>{formatPrice(product.price * qty)}</span>
         </Button>
-        <WishlistButton productId={product.id} productName={product.name} size="lg" className="size-14 shrink-0" />
+        <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn56} />
       </div>
 
       {/* Native Android e-commerce sticky bottom buy bar on phones */}
       <div
-        data-ui="store/ProductActions/div-grid-2"
+
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2.5 border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-data-skeleton:hidden"
+        className={cn(styles.mobileBuyBar, "glass")}
       >
         <Button
-          data-ui="store/ProductActions/Button-add-to-cart-2"
+
           size="lg"
           variant="outline"
-          className="h-13 min-w-0 rounded-full px-3 text-sm font-semibold active:scale-97"
+          className={styles.mobileCartBtn}
           onClick={addToCart}
         >
-          <ShoppingBagIcon className="size-4.5" /> Add to cart
+          <ShoppingBagIcon className={styles.bagSvg18} /> Add to cart
         </Button>
         <Button
-          data-ui="store/ProductActions/Button-2"
+
           size="lg"
-          className="h-13 min-w-0 flex-col gap-0.5 rounded-full bg-whatsapp-solid px-3 py-1.5 text-white shadow-md shadow-whatsapp/25 tabular-nums active:scale-97 hover:bg-whatsapp-solid/90"
+          className={styles.mobileBuyBtn}
           onClick={buyNow}
         >
-          <span data-ui="store/ProductActions/span-4" className="text-sm/tight font-semibold">Buy now</span>
-          <span data-ui="store/ProductActions/span-5" className="text-sm/tight font-extrabold tracking-tight">{formatPrice(product.price * qty)}</span>
+          <span className={styles.buyBtnTopText}>Buy now</span>
+          <span className={styles.buyBtnPriceSm}>{formatPrice(product.price * qty)}</span>
         </Button>
       </div>
     </div>
@@ -246,17 +247,17 @@ function formatLovedTitle(votes: Record<string, "up" | "down">, aspects: readonl
 }
 
 function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
-  const iconClass = size === "md" ? "size-4.5" : "size-3.5"
+  const iconClass = size === "md" ? styles.starMd : styles.starSm
   return (
-    <span data-ui="store/StarRow" className="inline-flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+    <span className={styles.starRow} aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <StarIcon
           key={star}
           className={cn(
             iconClass,
             star <= Math.round(rating)
-              ? "fill-amber-400 text-amber-400"
-              : "fill-muted text-muted-foreground/30"
+              ? styles.starActive
+              : styles.starEmpty
           )}
           aria-hidden
         />
@@ -278,12 +279,12 @@ function InteractiveStarPicker({
 }) {
   const [hovered, setHovered] = useState<number | null>(null)
   const activeRating = hovered ?? value
-  const starSize = size === "lg" ? "size-9 sm:size-10" : size === "md" ? "size-6 sm:size-7" : "size-5"
+  const starSize = size === "lg" ? styles.pickerSvgLg : size === "md" ? styles.pickerSvgMd : styles.pickerSvgSm
 
   return (
     <div
-      data-ui="store/InteractiveStarPicker"
-      className="grid grid-cols-5 gap-1 sm:gap-2"
+
+      className={styles.starPickerGrid}
       onMouseLeave={() => setHovered(null)}
     >
       {[1, 2, 3, 4, 5].map((star) => {
@@ -291,7 +292,7 @@ function InteractiveStarPicker({
         const isCurrent = star === activeRating
         return (
           <button
-            data-ui="store/InteractiveStarPicker/button"
+
             key={star}
             type="button"
             disabled={disabled}
@@ -300,28 +301,27 @@ function InteractiveStarPicker({
             onMouseEnter={() => setHovered(star)}
             onClick={() => onSelect(star)}
             className={cn(
-              "group flex flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-transform active:scale-92 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-              isCurrent && "scale-105"
+              styles.starPickBtn,
+              isCurrent && styles.starPickBtnCurrent
             )}
           >
             <StarIcon
               className={cn(
                 starSize,
-                "transition-all duration-150",
                 active
-                  ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_6px_rgb(251_191_36/0.35)]"
-                  : "fill-muted/70 text-muted-foreground/35 group-hover:text-amber-300"
+                  ? styles.pickerSvgActive
+                  : styles.pickerSvgIdle
               )}
             />
             <span
-              data-ui="store/InteractiveStarPicker/span"
+
               className={cn(
-                "text-[11px]/tight transition-colors",
+                styles.pickerLabel,
                 isCurrent
-                  ? "font-bold text-foreground"
+                  ? styles.pickerLabelCurrent
                   : active
-                    ? "font-medium text-foreground/80"
-                    : "font-medium text-muted-foreground"
+                    ? styles.pickerLabelActive
+                    : styles.pickerLabelIdle
               )}
             >
               {RATING_LABELS[star]}
@@ -424,102 +424,98 @@ function ShareExperienceDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="store/ShareExperienceDialog/DialogContent" mobileFullScreen className="sm:max-w-lg">
+      <DialogContent mobileFullScreen className={styles.dialogModalLg}>
         <DialogHeader>
-          <div data-ui="store/ShareExperienceDialog/div-flex" className="flex flex-wrap items-center justify-between gap-2 sm:pr-8">
-            <DialogTitle className="text-lg font-semibold">Share your experience</DialogTitle>
+          <div className={styles.dialogTitleRow}>
+            <DialogTitle className={styles.dialogTitleText}>Share your experience</DialogTitle>
             <span
-              data-ui="store/ShareExperienceDialog/span"
-              className="rounded-md bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+
+              className={styles.twoMinBadge}
             >
               Only takes 2 min
             </span>
           </div>
-          <DialogDescription className="sr-only">
+          <DialogDescription className={styles.srOnly}>
             Rate {product.name} and share details of what you loved about this product.
           </DialogDescription>
         </DialogHeader>
 
-        <form data-ui="store/ShareExperienceDialog/form-flex" onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DialogBody className="space-y-5">
+        <form onSubmit={onSubmit} noValidate className={styles.reviewDialogForm}>
+          <DialogBody className={styles.reviewDialogBody}>
             {/* Product context strip */}
-            <div data-ui="store/ShareExperienceDialog/div-flex-2" className="flex items-center gap-3 rounded-2xl border bg-muted/35 p-3">
+            <div className={styles.productContextStrip}>
               {product.image !== undefined && (
-                <div data-ui="store/ShareExperienceDialog/div-relative" className="relative size-12 shrink-0 overflow-hidden rounded-xl border bg-muted @container">
+                <div className={styles.contextThumb}>
                   <ProductImage src={product.image ?? null} alt={product.name} sizes="48px" />
                 </div>
               )}
-              <div data-ui="store/ShareExperienceDialog/div" className="min-w-0 flex-1">
-                <p data-ui="store/ShareExperienceDialog/p" className="line-clamp-1 text-sm font-semibold text-foreground">
+              <div className={styles.contextInfoCol}>
+                <p className={styles.contextTitle}>
                   {product.name}
                 </p>
-                <p data-ui="store/ShareExperienceDialog/p-2" className="mt-0.5 text-xs text-muted-foreground">
+                <p className={styles.contextSub}>
                   {subtitle}
                 </p>
               </div>
             </div>
 
             {/* 5 labeled interactive stars */}
-            <div data-ui="store/ShareExperienceDialog/div-2" className="rounded-2xl border bg-card px-3 py-3.5">
+            <div className={styles.starPickerBox}>
               <InteractiveStarPicker
                 size="lg"
                 value={selectedRating}
                 onSelect={(star) => form.setValue("rating", star, { shouldValidate: true, shouldDirty: true })}
               />
               {errors.rating?.message && (
-                <p data-ui="store/ShareExperienceDialog/p-3" className="mt-2 text-center text-xs font-medium text-destructive">
+                <p className={styles.ratingErrorMsg}>
                   {errors.rating.message}
                 </p>
               )}
             </div>
 
             {/* What did you love about it? */}
-            <div data-ui="store/ShareExperienceDialog/div-3" className="space-y-2.5">
-              <p data-ui="store/ShareExperienceDialog/p-4" className="text-sm font-semibold text-foreground">
+            <div className={styles.aspectsSection}>
+              <p className={styles.aspectsHeading}>
                 What did you love about it?
               </p>
-              <ul data-ui="store/ShareExperienceDialog/ul" className="divide-y rounded-2xl border bg-card px-4">
+              <ul className={styles.aspectsList}>
                 {aspects.map((aspect) => {
                   const vote = aspectVotes[aspect]
                   return (
                     <li
-                      data-ui="store/ShareExperienceDialog/li-flex"
+
                       key={aspect}
-                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                      className={styles.aspectRow}
                     >
-                      <span data-ui="store/ShareExperienceDialog/span-2" className="text-muted-foreground">
+                      <span className={styles.aspectLabel}>
                         {aspect}
                       </span>
-                      <div data-ui="store/ShareExperienceDialog/div-flex-3" className="flex items-center gap-2">
+                      <div className={styles.voteBtnsGroup}>
                         <button
-                          data-ui="store/ShareExperienceDialog/button"
+
                           type="button"
                           aria-label={`Liked ${aspect}`}
                           aria-pressed={vote === "up"}
                           onClick={() => toggleAspect(aspect, "up")}
                           className={cn(
-                            "grid size-8 place-items-center rounded-full border transition-colors",
-                            vote === "up"
-                              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                              : "border-transparent text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+                            styles.voteCircleBtn,
+                            vote === "up" && styles.voteUpActive
                           )}
                         >
-                          <ThumbsUpIcon className="size-4" />
+                          <ThumbsUpIcon className={styles.thumbSvg} />
                         </button>
                         <button
-                          data-ui="store/ShareExperienceDialog/button-2"
+
                           type="button"
                           aria-label={`Disliked ${aspect}`}
                           aria-pressed={vote === "down"}
                           onClick={() => toggleAspect(aspect, "down")}
                           className={cn(
-                            "grid size-8 place-items-center rounded-full border transition-colors",
-                            vote === "down"
-                              ? "border-destructive/40 bg-destructive/12 text-destructive"
-                              : "border-transparent text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+                            styles.voteCircleBtn,
+                            vote === "down" && styles.voteDownActive
                           )}
                         >
-                          <ThumbsDownIcon className="size-4" />
+                          <ThumbsDownIcon className={styles.thumbSvg} />
                         </button>
                       </div>
                     </li>
@@ -539,15 +535,15 @@ function ShareExperienceDialog({
             />
           </DialogBody>
 
-          <DialogFooter className="sm:flex-col">
+          <DialogFooter className={styles.dialogColFooter}>
             <Button
-              data-ui="store/ShareExperienceDialog/Button"
+
               type="submit"
               size="lg"
               disabled={pending}
-              className="w-full rounded-xl text-base font-semibold"
+              className={styles.submitReviewBtn}
             >
-              {pending && <Loader2Icon className="animate-spin" />}
+              {pending && <Loader2Icon className={styles.spinSvg} />}
               {existingReview ? "Update review" : "Submit"}
             </Button>
           </DialogFooter>
@@ -621,28 +617,28 @@ export function OrderItemReviewWidget({
   }
 
   return (
-    <div data-ui="store/OrderItemReviewWidget" className="mt-2.5 rounded-2xl border bg-muted/35 p-3">
-      <div data-ui="store/OrderItemReviewWidget/div-flex" className="flex flex-wrap items-center justify-between gap-2">
-        <div data-ui="store/OrderItemReviewWidget/div">
-          <p data-ui="store/OrderItemReviewWidget/p" className="text-[11px] font-semibold tracking-wider text-primary uppercase">
+    <div className={styles.orderReviewWidget}>
+      <div className={styles.widgetHeaderRow}>
+        <div>
+          <p className={styles.widgetKicker}>
             Rate your experience
           </p>
-          <p data-ui="store/OrderItemReviewWidget/p-2" className="text-xs font-medium text-foreground/85">
+          <p className={styles.widgetTitle}>
             {myReview ? "Your product rating (tap a star to edit)" : "Rate a product"}
           </p>
         </div>
         {myReview && (
           <Link
-            data-ui="store/OrderItemReviewWidget/Link-view-reviews"
+
             href={`/products/${item.slug}#customer-reviews`}
-            className="text-[11px] font-semibold text-primary underline-offset-4 hover:underline"
+            className={styles.viewReviewsLink}
           >
             View reviews →
           </Link>
         )}
       </div>
 
-      <div data-ui="store/OrderItemReviewWidget/div-2" className="mt-2">
+      <div className={styles.widgetPickerWrap}>
         <InteractiveStarPicker
           size="sm"
           value={myReview?.rating ?? draftRating}
@@ -835,32 +831,32 @@ export function ProductReviewsSection({
 
   return (
     <section
-      data-ui="store/ProductReviewsSection"
+
       id="customer-reviews"
-      className="container-page mt-12 scroll-mt-24 border-t pt-10 sm:mt-20 sm:pt-14"
+      className={cn("container-page", styles.reviewsSection)}
       aria-labelledby="reviews-heading"
     >
-      <div data-ui="store/ProductReviewsSection/div-grid" className="grid gap-5 rounded-3xl border bg-card p-5 sm:p-6 lg:grid-cols-[360px_1fr] lg:items-stretch lg:gap-8 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
+      <div className={styles.reviewsOuterGrid}>
         {/* Left summary + Rate your experience column (equal height with right column) */}
-        <div data-ui="store/ProductReviewsSection/div-flex" className="flex h-full flex-col justify-between gap-5 lg:rounded-3xl lg:border lg:bg-card lg:p-6">
-          <div data-ui="store/ProductReviewsSection/div" className="space-y-5">
-            <div data-ui="store/ProductReviewsSection/div-2">
-              <p data-ui="store/ProductReviewsSection/p" className="text-xs font-semibold tracking-widest text-primary uppercase">
+        <div className={styles.summaryLeftCard}>
+          <div className={styles.summaryTopStack}>
+            <div>
+              <p className={styles.kickerAccent}>
                 Verified buyers
               </p>
-              <h2 data-ui="store/ProductReviewsSection/h2-customer-reviews" id="reviews-heading" className="mt-1 text-2xl font-semibold">
+              <h2 id="reviews-heading" className={styles.sectionHeading}>
                 Customer reviews
               </h2>
             </div>
 
-            <div data-ui="store/ProductReviewsSection/div-grid-2" className="grid grid-cols-[auto_1fr] items-center gap-4 border-t pt-4 lg:block lg:space-y-4 lg:border-t-0 lg:pt-0">
-              <div data-ui="store/ProductReviewsSection/div-flex-2" className="flex flex-col items-start gap-1 lg:flex-row lg:items-center lg:gap-3.5">
-                <span data-ui="store/ProductReviewsSection/span" className="font-heading text-3xl font-bold tabular-nums lg:text-4xl">
+            <div className={styles.scoreAndBarsGrid}>
+              <div className={styles.scoreBigBox}>
+                <span className={styles.avgNumber}>
                   {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
                 </span>
-                <div data-ui="store/ProductReviewsSection/div-3" className="space-y-1">
+                <div className={styles.starsAndCountCol}>
                   <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
-                  <p data-ui="store/ProductReviewsSection/p-2" className="text-[11px] text-muted-foreground lg:text-xs">
+                  <p className={styles.verifiedCountText}>
                     {totalCount > 0
                       ? `${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
                       : "No verified reviews yet — be the first!"}
@@ -868,34 +864,34 @@ export function ProductReviewsSection({
                 </div>
               </div>
 
-              <div data-ui="store/ProductReviewsSection/div-4" className="space-y-1 border-l pl-4 lg:space-y-1.5 lg:border-t lg:border-l-0 lg:pt-4 lg:pl-0">
+              <div className={styles.distributionList}>
                 {distribution.map((row) => {
                   const active = starFilter === row.stars
                   return (
                     <button
-                      data-ui="store/ProductReviewsSection/button"
+
                       key={row.stars}
                       type="button"
                       disabled={row.count === 0}
                       aria-pressed={active}
                       onClick={() => setStarFilter((prev) => (prev === row.stars ? null : row.stars))}
                       className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-[11px] transition-colors lg:gap-2.5 lg:text-xs",
-                        row.count > 0 ? "cursor-pointer hover:bg-muted/60" : "cursor-default opacity-60",
-                        active && "bg-primary/10 ring-1 ring-primary/30"
+                        styles.distRowBtn,
+                        row.count > 0 ? styles.distRowInteractive : styles.distRowDisabled,
+                        active && styles.distRowActive
                       )}
                     >
-                      <span data-ui="store/ProductReviewsSection/span-2" className="w-8 shrink-0 text-left font-medium text-muted-foreground tabular-nums lg:w-10">
+                      <span className={styles.distStarLabel}>
                         {row.stars}★
                       </span>
-                      <div data-ui="store/ProductReviewsSection/div-5" className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted lg:h-2">
+                      <div className={styles.distBarTrack}>
                         <div
-                          data-ui="store/ProductReviewsSection/div-6"
-                          className="h-full rounded-full bg-amber-400 transition-all duration-300"
+
+                          className={styles.distBarFill}
                           style={{ width: `${row.pct}%` }}
                         />
                       </div>
-                      <span data-ui="store/ProductReviewsSection/span-3" className="w-5 shrink-0 text-right text-muted-foreground tabular-nums lg:w-7">
+                      <span className={styles.distCountNum}>
                         {row.count}
                       </span>
                     </button>
@@ -906,15 +902,15 @@ export function ProductReviewsSection({
           </div>
 
           {/* Rate your experience -> Rate a product -> 5 interactive stars */}
-          <div data-ui="store/ProductReviewsSection/div-7" className="mt-auto space-y-3 border-t pt-4">
-            <div data-ui="store/ProductReviewsSection/div-8" className="rounded-2xl border bg-muted/35 p-3.5">
-              <p data-ui="store/ProductReviewsSection/p-3" className="text-xs font-semibold tracking-wider text-primary uppercase">
+          <div className={styles.rateBottomBlock}>
+            <div className={styles.rateWidgetBox}>
+              <p className={styles.rateKicker}>
                 Rate your experience
               </p>
-              <p data-ui="store/ProductReviewsSection/p-4" className="mt-0.5 text-xs font-medium text-muted-foreground">
+              <p className={styles.rateSub}>
                 {myReview ? "Your rating — tap any star to edit your review" : "Rate a product"}
               </p>
-              <div data-ui="store/ProductReviewsSection/div-9" className="mt-2.5">
+              <div className={styles.ratePickerMargin}>
                 <InteractiveStarPicker
                   size="md"
                   disabled={!reviewStateReady}
@@ -926,27 +922,27 @@ export function ProductReviewsSection({
 
             {!reviewStateReady ? null : !user ? (
               <Link
-                data-ui="store/ProductReviewsSection/Link-sign-in-to-write-a-rev"
+
                 href={`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full rounded-full")}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.fullPillBtn)}
               >
                 Sign in to write a review
               </Link>
             ) : canReview || myReview ? (
               <Button
-                data-ui="store/ProductReviewsSection/Button"
+
                 type="button"
                 variant={myReview ? "outline" : "default"}
                 onClick={() => openReviewModal()}
-                className="w-full rounded-full"
+                className={styles.fullPillBtn}
               >
                 {myReview ? (
                   <>
-                    <PencilIcon className="size-4" /> Edit your review
+                    <PencilIcon className={styles.icon16} /> Edit your review
                   </>
                 ) : (
                   <>
-                    <MessageSquarePlusIcon className="size-4" /> Write a customer review
+                    <MessageSquarePlusIcon className={styles.icon16} /> Write a customer review
                   </>
                 )}
               </Button>
@@ -955,36 +951,36 @@ export function ProductReviewsSection({
         </div>
 
         {/* Right reviews list column (equal height card with left column) */}
-        <div data-ui="store/ProductReviewsSection/div-flex-3" className="flex h-full min-w-0 flex-col justify-between gap-4 overflow-hidden border-t pt-5 lg:h-0 lg:min-h-full lg:rounded-3xl lg:border lg:bg-card lg:p-6">
+        <div className={styles.reviewsRightCard}>
           {initialReviews.length === 0 ? (
-            <div data-ui="store/ProductReviewsSection/div-flex-4" className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-2xl border border-dashed bg-muted/25 px-6 py-12 text-center">
+            <div className={styles.emptyReviewsCard}>
               <StarRow rating={5} size="md" />
-              <p data-ui="store/ProductReviewsSection/p-5" className="mt-1 font-sans text-base font-semibold">
+              <p className={styles.emptyTitle}>
                 Be the first to review {product.name}
               </p>
-              <p data-ui="store/ProductReviewsSection/p-6" className="max-w-md text-xs/relaxed text-muted-foreground">
+              <p className={styles.emptySub}>
                 Select a star under &ldquo;Rate your experience&rdquo; to share what you loved about this handmade piece.
               </p>
             </div>
           ) : (
             <>
-              <div data-ui="store/ProductReviewsSection/div-flex-5" className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-                <div data-ui="store/ProductReviewsSection/div-hidden" className="hidden shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3.5 lg:flex">
-                  <div data-ui="store/ProductReviewsSection/div-10">
-                    <h3 data-ui="store/ProductReviewsSection/h3-verified-customer-feed" className="font-sans text-base font-semibold">
+              <div className={styles.reviewsContentFlex}>
+                <div className={styles.desktopListHeader}>
+                  <div>
+                    <h3 className={styles.feedbackTitle}>
                       Verified customer feedback
                     </h3>
-                    <p data-ui="store/ProductReviewsSection/p-7" className="text-xs text-muted-foreground">
+                    <p className={styles.feedbackSub}>
                       Real experiences shared by customers after delivery
                     </p>
                   </div>
-                  <span data-ui="store/ProductReviewsSection/span-4" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary tabular-nums">
+                  <span className={styles.totalCountBadge}>
                     {totalCount} {totalCount === 1 ? "review" : "reviews"}
                   </span>
                 </div>
 
                 {initialReviews.length > 1 && (
-                  <div data-ui="store/ProductReviewsSection/div-flex-6" className="no-scrollbar flex shrink-0 items-center gap-1.5 overflow-x-auto pb-0.5">
+                  <div className={cn("no-scrollbar", styles.sortPillsRow)}>
                     {(
                       [
                         { id: "recent", label: "Newest" },
@@ -992,26 +988,24 @@ export function ProductReviewsSection({
                         { id: "lowest", label: "Lowest" },
                       ] as const
                     ).map((opt) => (
-                      <button data-ui="store/ProductReviewsSection/button-2"
+                      <button
                         key={opt.id}
                         type="button"
                         aria-pressed={reviewSort === opt.id}
                         onClick={() => setReviewSort(opt.id)}
                         className={cn(
-                          "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                          reviewSort === opt.id
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                          styles.sortChipBtn,
+                          reviewSort === opt.id && styles.sortChipBtnActive
                         )}
                       >
                         {opt.label}
                       </button>
                     ))}
                     {starFilter !== null && (
-                      <button data-ui="store/ProductReviewsSection/button-only"
+                      <button
                         type="button"
                         onClick={() => setStarFilter(null)}
-                        className="ml-auto shrink-0 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
+                        className={styles.clearStarFilterBtn}
                       >
                         {starFilter}★ only ✕
                       </button>
@@ -1020,18 +1014,18 @@ export function ProductReviewsSection({
                 )}
 
                 {displayedReviews.length === 0 ? (
-                  <div data-ui="store/ProductReviewsSection/div-flex-7" className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/20 px-4 py-8 text-center">
-                    <p data-ui="store/ProductReviewsSection/p-8" className="text-sm font-medium text-muted-foreground">No {starFilter}★ reviews yet.</p>
-                    <Button data-ui="store/ProductReviewsSection/Button-show-all-reviews" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setStarFilter(null)}>
+                  <div className={styles.noStarFilterBox}>
+                    <p className={styles.noFilterMsg}>No {starFilter}★ reviews yet.</p>
+                    <Button type="button" variant="outline" size="sm" className={styles.pillBtn} onClick={() => setStarFilter(null)}>
                       Show all reviews
                     </Button>
                   </div>
                 ) : (
                 <ul
                   ref={reviewsListRef}
-                  data-ui="store/ProductReviewsSection/ul-flex"
+
                   data-slot="reviews-list"
-                  className="no-scrollbar flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-1 lg:block lg:space-y-3.5 lg:overflow-x-visible lg:overflow-y-auto lg:pr-1 lg:pb-0"
+                  className={cn("no-scrollbar", styles.reviewsCarouselUl)}
                 >
                   {displayedReviews.map((review) => {
                     const isMine = Boolean(user && review.userId === user.id)
@@ -1040,59 +1034,59 @@ export function ProductReviewsSection({
                     const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
                     return (
                       <li
-                        data-ui="store/ProductReviewsSection/li-flex"
+
                         key={review.id}
-                        className="flex w-[80vw] max-w-[310px] shrink-0 snap-start flex-col rounded-2xl border bg-background/60 p-4 transition-colors sm:p-5 lg:w-auto lg:max-w-none"
+                        className={styles.reviewCardItem}
                       >
-                        <div data-ui="store/ProductReviewsSection/div-flex-8" className="flex items-start justify-between gap-2">
-                          <div data-ui="store/ProductReviewsSection/div-11" className="min-w-0 flex-1 space-y-1.5">
-                            <div data-ui="store/ProductReviewsSection/div-flex-9" className="flex flex-wrap items-center gap-2">
+                        <div className={styles.reviewCardTopRow}>
+                          <div className={styles.reviewMetaCol}>
+                            <div className={styles.reviewRatingTitleRow}>
                               <StarRow rating={review.rating} />
-                              <span data-ui="store/ProductReviewsSection/span-5" className="rounded-md bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                              <span className={styles.ratingWordBadge}>
                                 {RATING_LABELS[review.rating] ?? "Great"}
                               </span>
                               {hasCustomTitle && (
-                                <span data-ui="store/ProductReviewsSection/span-6" className="text-sm font-semibold text-foreground">
+                                <span className={styles.customReviewTitle}>
                                   {review.title}
                                 </span>
                               )}
                             </div>
-                            <div data-ui="store/ProductReviewsSection/div-flex-10" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                              <span data-ui="store/ProductReviewsSection/span-7" className="font-medium text-foreground/85">
+                            <div className={styles.reviewerBylineRow}>
+                              <span className={styles.reviewerName}>
                                 {review.reviewerName}
                               </span>
                               {review.isVerifiedPurchase && (
-                                <span data-ui="store/ProductReviewsSection/span-inline-flex" className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
-                                  <CheckCircle2Icon className="size-3" aria-hidden /> Verified purchase
+                                <span className={styles.verifiedBadgePill}>
+                                  <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified purchase
                                 </span>
                               )}
-                              <span data-ui="store/ProductReviewsSection/span-8" aria-hidden>·</span>
-                              <span data-ui="store/ProductReviewsSection/span-9">{formatDate(review.createdAt)}</span>
+                              <span aria-hidden>·</span>
+                              <span>{formatDate(review.createdAt)}</span>
                             </div>
                           </div>
 
                           {(isMine || canDelete) && (
-                            <div data-ui="store/ProductReviewsSection/div-flex-11" className="-mt-1 -mr-1 flex shrink-0 items-center gap-0.5">
+                            <div className={styles.reviewOwnerBtns}>
                               {isMine && (
                                 <button
-                                  data-ui="store/ProductReviewsSection/button-edit-your-review"
+
                                   type="button"
                                   aria-label="Edit your review"
                                   onClick={() => openReviewModal(review.rating)}
-                                  className="grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                  className={styles.ownerIconBtn}
                                 >
-                                  <PencilIcon className="size-3.5" />
+                                  <PencilIcon className={styles.icon14} />
                                 </button>
                               )}
                               {canDelete && (
                                 <button
-                                  data-ui="store/ProductReviewsSection/button-delete-review"
+
                                   type="button"
                                   aria-label="Delete review"
                                   onClick={() => setDeleteTarget(review)}
-                                  className="grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                  className={cn(styles.ownerIconBtn, styles.ownerDeleteBtn)}
                                 >
-                                  <Trash2Icon className="size-3.5" />
+                                  <Trash2Icon className={styles.icon14} />
                                 </button>
                               )}
                             </div>
@@ -1100,29 +1094,29 @@ export function ProductReviewsSection({
                         </div>
 
                         {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
-                          <div data-ui="store/ProductReviewsSection/div-flex-12" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          <div className={styles.aspectPillsWrap}>
                             {aspectPills.liked.map((pill) => (
                               <span
-                                data-ui="store/ProductReviewsSection/span-inline-flex-2"
+
                                 key={`up-${pill}`}
-                                className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                                className={styles.likedAspectPill}
                               >
-                                <ThumbsUpIcon className="size-2.5" aria-hidden /> {pill}
+                                <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
                               </span>
                             ))}
                             {aspectPills.disliked.map((pill) => (
                               <span
-                                data-ui="store/ProductReviewsSection/span-inline-flex-3"
+
                                 key={`down-${pill}`}
-                                className="inline-flex items-center gap-1 rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium text-destructive"
+                                className={styles.dislikedAspectPill}
                               >
-                                <ThumbsDownIcon className="size-2.5" aria-hidden /> {pill}
+                                <ThumbsDownIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
                               </span>
                             ))}
                           </div>
                         )}
 
-                        <p data-ui="store/ProductReviewsSection/p-9" className="mt-3 line-clamp-4 text-sm/relaxed whitespace-pre-line text-foreground/90 lg:line-clamp-none">
+                        <p className={styles.reviewCommentText}>
                           {review.comment}
                         </p>
                       </li>
@@ -1131,29 +1125,29 @@ export function ProductReviewsSection({
                 </ul>
                 )}
                 {initialReviews.length > 1 && (
-                  <Button data-ui="store/ProductReviewsSection/Button-see-all"
+                  <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setAllReviewsOpen(true)}
-                    className="w-full rounded-full lg:hidden"
+                    className={styles.seeAllMobileBtn}
                   >
                     See all {initialReviews.length} reviews
                   </Button>
                 )}
               </div>
 
-              <div data-ui="store/ProductReviewsSection/div-flex-13" className="mt-auto flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-muted/30 px-3.5 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-4">
-                <span data-ui="store/ProductReviewsSection/span-flex" className="flex items-start gap-1.5 leading-snug sm:items-center">
-                  <CheckCircle2Icon className="mt-0.5 size-3.5 shrink-0 text-emerald-600 sm:mt-0 dark:text-emerald-400" aria-hidden />
-                  <span data-ui="store/ProductReviewsSection/span-10">100% genuine reviews from verified delivered orders</span>
+              <div className={styles.genuineFooterBanner}>
+                <span className={styles.genuineTextRow}>
+                  <CheckCircle2Icon className={styles.emeraldCheckSvg} aria-hidden />
+                  <span>100% genuine reviews from verified delivered orders</span>
                 </span>
                 {(canReview || myReview) && (
                   <button
-                    data-ui="store/ProductReviewsSection/button-3"
+
                     type="button"
                     onClick={() => openReviewModal()}
-                    className="shrink-0 pl-5 font-semibold text-primary underline-offset-4 hover:underline sm:pl-0"
+                    className={styles.addUpdateLinkBtn}
                   >
                     {myReview ? "Update your review →" : "Add your review →"}
                   </button>
@@ -1166,16 +1160,16 @@ export function ProductReviewsSection({
 
       {/* All Reviews Mobile Sheet / Dialog */}
       <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
-        <DialogContent data-ui="store/ProductReviewsSection/DialogContent" mobileFullScreen className="sm:max-w-lg">
+        <DialogContent mobileFullScreen className={styles.dialogModalLg}>
           <DialogHeader>
             <DialogTitle>Customer reviews ({totalCount})</DialogTitle>
             <DialogDescription>
               Verified buyer feedback for {product.name}
             </DialogDescription>
           </DialogHeader>
-          <DialogBody className="space-y-3">
+          <DialogBody className={styles.allReviewsModalBody}>
             {initialReviews.length > 1 && (
-              <div data-ui="store/ProductReviewsSection/div-flex-14" className="no-scrollbar sticky -top-4 z-10 -mx-4 flex items-center gap-1.5 overflow-x-auto bg-popover/95 px-4 py-2.5 backdrop-blur-sm sm:-mx-5 sm:px-5">
+              <div className={cn("no-scrollbar", styles.stickyModalSortBar, styles.sortPillsRow)}>
                 {(
                   [
                     { id: "recent", label: "Newest" },
@@ -1183,26 +1177,24 @@ export function ProductReviewsSection({
                     { id: "lowest", label: "Lowest" },
                   ] as const
                 ).map((opt) => (
-                  <button data-ui="store/ProductReviewsSection/button-4"
+                  <button
                     key={`all-sort-${opt.id}`}
                     type="button"
                     aria-pressed={reviewSort === opt.id}
                     onClick={() => setReviewSort(opt.id)}
                     className={cn(
-                      "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                      reviewSort === opt.id
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                      styles.sortChipBtn,
+                      reviewSort === opt.id && styles.sortChipBtnActive
                     )}
                   >
                     {opt.label}
                   </button>
                 ))}
                 {starFilter !== null && (
-                  <button data-ui="store/ProductReviewsSection/button-only-2"
+                  <button
                     type="button"
                     onClick={() => setStarFilter(null)}
-                    className="ml-auto shrink-0 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/15"
+                    className={styles.clearStarFilterBtn}
                   >
                     {starFilter}★ only ✕
                   </button>
@@ -1213,39 +1205,39 @@ export function ProductReviewsSection({
               const aspectPills = extractAspectPills(review.title)
               const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
               return (
-                <div data-ui="store/ProductReviewsSection/div-12" key={`all-${review.id}`} className="rounded-2xl border bg-background/60 p-4">
-                  <div data-ui="store/ProductReviewsSection/div-flex-15" className="flex flex-wrap items-center gap-2">
+                <div key={`all-${review.id}`} className={styles.allReviewsItemCard}>
+                  <div className={styles.reviewRatingTitleRow}>
                     <StarRow rating={review.rating} />
-                    <span data-ui="store/ProductReviewsSection/span-11" className="rounded-md bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                    <span className={styles.ratingWordBadge}>
                       {RATING_LABELS[review.rating] ?? "Great"}
                     </span>
-                    {hasCustomTitle && <span data-ui="store/ProductReviewsSection/span-12" className="text-sm font-semibold text-foreground">{review.title}</span>}
+                    {hasCustomTitle && <span className={styles.customReviewTitle}>{review.title}</span>}
                   </div>
-                  <div data-ui="store/ProductReviewsSection/div-flex-16" className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                    <span data-ui="store/ProductReviewsSection/span-13" className="font-medium text-foreground/85">{review.reviewerName}</span>
+                  <div className={cn(styles.reviewerBylineRow, styles.bylineMargin)}>
+                    <span className={styles.reviewerName}>{review.reviewerName}</span>
                     {review.isVerifiedPurchase && (
-                      <span data-ui="store/ProductReviewsSection/span-inline-flex-4" className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2Icon className="size-3" aria-hidden /> Verified purchase
+                      <span className={styles.verifiedBadgePill}>
+                        <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified purchase
                       </span>
                     )}
-                    <span data-ui="store/ProductReviewsSection/span-14" aria-hidden>·</span>
-                    <span data-ui="store/ProductReviewsSection/span-15">{formatDate(review.createdAt)}</span>
+                    <span aria-hidden>·</span>
+                    <span>{formatDate(review.createdAt)}</span>
                   </div>
                   {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
-                    <div data-ui="store/ProductReviewsSection/div-flex-17" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    <div className={styles.aspectPillsWrap}>
                       {aspectPills.liked.map((pill) => (
-                        <span data-ui="store/ProductReviewsSection/span-inline-flex-5" key={`all-up-${pill}`} className="inline-flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                          <ThumbsUpIcon className="size-2.5" aria-hidden /> {pill}
+                        <span key={`all-up-${pill}`} className={styles.likedAspectPill}>
+                          <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
                         </span>
                       ))}
                       {aspectPills.disliked.map((pill) => (
-                        <span data-ui="store/ProductReviewsSection/span-inline-flex-6" key={`all-down-${pill}`} className="inline-flex items-center gap-1 rounded-full border border-destructive/25 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-medium text-destructive">
-                          <ThumbsDownIcon className="size-2.5" aria-hidden /> {pill}
+                        <span key={`all-down-${pill}`} className={styles.dislikedAspectPill}>
+                          <ThumbsDownIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
                         </span>
                       ))}
                     </div>
                   )}
-                  <p data-ui="store/ProductReviewsSection/p-10" className="mt-2.5 text-sm/relaxed whitespace-pre-line text-foreground/90">{review.comment}</p>
+                  <p className={styles.fullCommentText}>{review.comment}</p>
                 </div>
               )
             })}
@@ -1279,7 +1271,7 @@ export function ProductReviewsSection({
         title="Delete this review?"
         description={
           <>
-            This will permanently remove the review by <strong data-ui="store/ProductReviewsSection/strong" className="font-semibold text-foreground">{deleteTarget?.reviewerName}</strong> and recalculate the product&apos;s rating.
+            This will permanently remove the review by <strong className={styles.strongFg}>{deleteTarget?.reviewerName}</strong> and recalculate the product&apos;s rating.
           </>
         }
         confirmLabel="Delete review"

@@ -6,7 +6,7 @@ import type { ReactNode } from "react"
  */
 export default function StoreTemplate({ children }: { children: ReactNode }) {
   return (
-    <div data-ui="page:/(store)/template/div">
+    <div>
       {children}
     </div>
   )

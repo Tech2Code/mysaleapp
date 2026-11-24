@@ -26,6 +26,7 @@ import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./order-status.module.css"
 
 function deliveryStatusFootnote(editable: boolean, status?: OrderStatus): { text: string; locked: boolean } | null {
   if (editable || status === "pending") {
@@ -155,37 +156,37 @@ export function DeliveryEditor({
   const footnote = deliveryStatusFootnote(editable, status)
 
   return (
-    <section data-ui="store/DeliveryEditor" aria-labelledby="delivery-title" className="rounded-3xl border bg-card p-5 text-sm sm:p-6">
-      <div data-ui="store/DeliveryEditor/div-flex" className="mb-2 flex items-center justify-between gap-3">
-        <h3 data-ui="store/DeliveryEditor/h3-delivery-address" id="delivery-title" className="font-sans text-lg font-semibold">
+    <section aria-labelledby="delivery-title" className={styles.deliverySectionCard}>
+      <div className={styles.deliveryTopRow}>
+        <h3 id="delivery-title" className={styles.deliveryHeading}>
           Delivery address
         </h3>
         {editable && (
-          <Button data-ui="store/DeliveryEditor/Button-edit" variant="outline" size="sm" className="rounded-full" onClick={() => setOpen(true)}>
+          <Button variant="outline" size="sm" className={styles.editBtn} onClick={() => setOpen(true)}>
             <PencilIcon /> Edit
           </Button>
         )}
       </div>
 
-      <p data-ui="store/DeliveryEditor/p" className="font-medium">
+      <p className={styles.recipientLine}>
         {delivery.name} · +91 {delivery.phone}
       </p>
-      <p data-ui="store/DeliveryEditor/p-2" className="text-muted-foreground">
+      <p className={styles.addressLine}>
         {delivery.address}, {delivery.city} - {delivery.pincode}
       </p>
-      {delivery.note && <p data-ui="store/DeliveryEditor/p-3" className="mt-2 text-muted-foreground">Note: {delivery.note}</p>}
+      {delivery.note && <p className={styles.noteLine}>Note: {delivery.note}</p>}
 
       {footnote && (
-        <p data-ui="store/DeliveryEditor/p-flex" className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-          {footnote.locked && <LockIcon className="mt-0.5 size-3.5 shrink-0" />}
-          <span data-ui="store/DeliveryEditor/span">{footnote.text}</span>
+        <p className={styles.footnoteRow}>
+          {footnote.locked && <LockIcon className={styles.lockSvg} />}
+          <span>{footnote.text}</span>
         </p>
       )}
 
       {editable && (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-          <DialogContent data-ui="store/DeliveryEditor/DialogContent" mobileFullScreen className="sm:max-w-lg">
-            <form data-ui="store/DeliveryEditor/form-flex" onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <DialogContent mobileFullScreen className={styles.deliveryDialogMax}>
+            <form onSubmit={onSubmit} noValidate className={styles.deliveryEditForm}>
               <DialogHeader>
                 <DialogTitle>Edit delivery details</DialogTitle>
                 <DialogDescription>Order {orderCode}. You can change this until we confirm the order.</DialogDescription>
@@ -202,7 +203,7 @@ export function DeliveryEditor({
                   {...form.register("phone")}
                 />
                 <TextAreaField label="Full address" maxLength={LIMITS.address.max} rows={3} error={errors.address?.message} {...form.register("address")} />
-                <div data-ui="store/DeliveryEditor/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                <div className={styles.deliveryCityGrid}>
                   <TextField
                     label="Pincode" kind="pincode"
                     inputMode="numeric"
@@ -212,16 +213,16 @@ export function DeliveryEditor({
                     {...form.register("pincode")}
                   />
                   <TextField label="City / District" kind="city" error={errors.city?.message} {...form.register("city")} />
-                  <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
+                  <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.stateSpanFull} />
                 </div>
                 <TextAreaField label="Note (optional)" maxLength={LIMITS.note.max} rows={2} error={errors.note?.message} {...form.register("note")} />
               </DialogBody>
               <DialogFooter>
-                <Button data-ui="store/DeliveryEditor/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-                  <XIcon className="size-4" /> Cancel
+                <Button type="button" variant="outline" size="lg" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.dialogPillBtn}>
+                  <XIcon className={styles.btnIcon} /> Cancel
                 </Button>
-                <Button data-ui="store/DeliveryEditor/Button-save-changes" type="submit" size="lg" disabled={pending || !hasChanges} className="gap-1.5 rounded-full">
-                  {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save changes
+                <Button type="submit" size="lg" disabled={pending || !hasChanges} className={styles.dialogPillBtn}>
+                  {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.btnIcon} />} Save changes
                 </Button>
               </DialogFooter>
             </form>

@@ -3,6 +3,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 /**
  * A horizontally scrolling row with snap points. Touch: swipe. Desktop: arrow buttons that appear only
@@ -36,33 +37,33 @@ export function Carousel({ children, label, className }: { children: ReactNode; 
   const overflowing = !(edge.start && edge.end)
 
   return (
-    <div data-ui="shared/Carousel" className={cn("relative", className)} role="region" aria-roledescription="carousel" aria-label={label}>
-      <ul data-ui="shared/Carousel/ul-flex"
+    <div className={cn(styles.carouselRegion, className)} role="region" aria-roledescription="carousel" aria-label={label}>
+      <ul
         ref={track}
         onScroll={measure}
-        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto scroll-smooth px-4 py-2 scrollbar-none sm:mx-0 sm:scroll-px-0 sm:gap-4 sm:px-0 [&::-webkit-scrollbar]:hidden"
+        className={styles.carouselTrack}
       >
         {children}
       </ul>
       {overflowing && (
         <>
-          <button data-ui="shared/Carousel/button-previous"
+          <button
             type="button"
             onClick={() => page(-1)}
             disabled={edge.start}
             aria-label="Previous"
-            className="absolute top-1/2 -left-3 hidden size-10 -translate-y-1/2 place-items-center rounded-full border bg-background text-foreground shadow-lg transition-opacity hover:bg-secondary disabled:pointer-events-none disabled:opacity-0 md:grid"
+            className={cn(styles.carouselArrowBtn, styles.carouselArrowPrev)}
           >
-            <ChevronLeftIcon className="size-5" />
+            <ChevronLeftIcon className={styles.arrowIcon20} />
           </button>
-          <button data-ui="shared/Carousel/button-next"
+          <button
             type="button"
             onClick={() => page(1)}
             disabled={edge.end}
             aria-label="Next"
-            className="absolute top-1/2 -right-3 hidden size-10 -translate-y-1/2 place-items-center rounded-full border bg-background text-foreground shadow-lg transition-opacity hover:bg-secondary disabled:pointer-events-none disabled:opacity-0 md:grid"
+            className={cn(styles.carouselArrowBtn, styles.carouselArrowNext)}
           >
-            <ChevronRightIcon className="size-5" />
+            <ChevronRightIcon className={styles.arrowIcon20} />
           </button>
         </>
       )}

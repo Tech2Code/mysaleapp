@@ -2,6 +2,7 @@ import { BanIcon, CheckCircle2Icon, HourglassIcon, PackageOpenIcon, TruckIcon, U
 import { stageLabel, type ReturnStage, type ReturnStageKey } from "@/features/orders/returns"
 import { cn } from "@/lib/utils"
 import { TONES } from "./status-badge"
+import styles from "./shared.module.css"
 
 const ICONS: Record<ReturnStageKey, LucideIcon> = {
   requested: HourglassIcon,
@@ -34,10 +35,10 @@ export function ReturnStageBadge({
   const Icon = ICONS[stage.key]
   return (
     <span
-      data-ui="shared/ReturnStageBadge"
-      className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap", TONES[stage.tone], className)}
+
+      className={cn(styles.badgePillBase, TONES[stage.tone], className)}
     >
-      <Icon className="size-3.5" aria-hidden />
+      <Icon className={styles.icon14} aria-hidden />
       {stageLabel(stage, audience)}
     </span>
   )

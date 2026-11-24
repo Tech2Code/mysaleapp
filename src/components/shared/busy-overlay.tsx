@@ -2,15 +2,17 @@
 
 import { Loader2Icon } from "lucide-react"
 import { SuccessTick } from "@/components/shared/success-tick"
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 type BusyApi = { begin: () => void; end: () => void; succeed: (message: string) => void }
 
 const BusyContext = createContext<BusyApi>({ begin() {}, end() {}, succeed() {} })
 
 /**
- * Turns the "Please wait…" pill into a green tick + message, on the same overlay and in the same spot.
- * Call it once the action worked (e.g. right before router.replace). It clears itself when the overlay closes.
+ * Turns the "Please wait…" pill into an animated green tick + message, on the same overlay and in the same spot.
+ * Call it once the action worked (e.g. right before router.replace). Holds briefly so the tick animation finishes cleanly.
  */
 export function useBusySuccess() {
   return useContext(BusyContext).succeed
@@ -33,22 +35,60 @@ export function useBlockWhile(active: boolean) {
 }
 
 const BLOCKED_KEYS = new Set(["Escape", "Enter", " ", "Tab"])
+const SUCCESS_HOLD_MS = 620
 
 export function BusyOverlayProvider({ children }: { children: ReactNode }) {
-  const [{ count, success }, setState] = useState<{ count: number; success: string | null }>({ count: 0, success: null })
-  const begin = useCallback(() => setState((s) => ({ count: s.count + 1, success: s.count === 0 ? null : s.success })), [])
-  // The success message dies with the overlay, so it can never be left over for the next screen.
-  const end = useCallback(
-    () => setState((s) => ({ count: Math.max(0, s.count - 1), success: s.count <= 1 ? null : s.success })),
-    []
-  )
-  const succeed = useCallback((message: string) => setState((s) => (s.count === 0 ? s : { ...s, success: message })), [])
-  const api = useMemo(() => ({ begin, end, succeed }), [begin, end, succeed])
-  const busy = count > 0
+  const [{ count, success, lingering }, setState] = useState<{
+    count: number
+    success: string | null
+    lingering: boolean
+  }>({ count: 0, success: null, lingering: false })
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Keyboard must not reach dialogs or buttons underneath (Esc would close a dialog mid-save).
+  const clearHoldTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
+
+  const begin = useCallback(() => {
+    clearHoldTimer()
+    setState((s) => ({ count: s.count + 1, success: s.count === 0 ? null : s.success, lingering: false }))
+  }, [clearHoldTimer])
+
+  const end = useCallback(() => {
+    setState((s) => {
+      const nextCount = Math.max(0, s.count - 1)
+      if (nextCount > 0) return { ...s, count: nextCount }
+      if (s.success && timerRef.current) {
+        return { count: 0, success: s.success, lingering: true }
+      }
+      return { count: 0, success: null, lingering: false }
+    })
+  }, [])
+
+  const succeed = useCallback(
+    (message: string) => {
+      clearHoldTimer()
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null
+        setState((s) => (s.count === 0 ? { count: 0, success: null, lingering: false } : s))
+      }, SUCCESS_HOLD_MS)
+      setState((s) => (s.count === 0 && !s.lingering ? s : { ...s, success: message }))
+    },
+    [clearHoldTimer]
+  )
+
+  useEffect(() => () => clearHoldTimer(), [clearHoldTimer])
+
+  const api = useMemo(() => ({ begin, end, succeed }), [begin, end, succeed])
+  const blocking = count > 0
+  const visible = blocking || (lingering && Boolean(success))
+
+  // Keyboard must not reach dialogs or buttons underneath while an action is actively running.
   useEffect(() => {
-    if (!busy) return
+    if (!blocking) return
     const block = (e: KeyboardEvent) => {
       if (!BLOCKED_KEYS.has(e.key)) return
       e.preventDefault()
@@ -56,21 +96,22 @@ export function BusyOverlayProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener("keydown", block, true)
     return () => window.removeEventListener("keydown", block, true)
-  }, [busy])
+  }, [blocking])
 
   return (
     <BusyContext value={api}>
       {children}
-      {busy && (
+      {visible && (
         <div
-          data-ui="shared/BusyOverlayProvider/div-grid"
           role="status"
           aria-live="polite"
-          className="fixed inset-0 z-90 grid cursor-default place-items-center bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-150"
+          className={cn(styles.busyBackdrop, !blocking && styles.busyBackdropLinger)}
         >
-          <div data-ui="shared/BusyOverlayProvider/div-flex" className="flex items-center gap-3 rounded-full bg-card px-5 py-3 text-sm font-medium text-card-foreground shadow-lg ring-1 ring-foreground/10">
-            {success ? <SuccessTick /> : <Loader2Icon className="size-5 animate-spin text-primary" aria-hidden />}
-            {success ?? "Please wait…"}
+          <div className={cn(styles.busyPill, success && styles.busyPillSuccess)}>
+            {success ? <SuccessTick /> : <Loader2Icon className={styles.busySpinner} aria-hidden />}
+            <span key={success ?? "wait"} className={success ? styles.busyTextSuccess : styles.busyTextWait}>
+              {success ?? "Please wait…"}
+            </span>
           </div>
         </div>
       )}

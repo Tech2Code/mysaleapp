@@ -15,6 +15,7 @@ import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnResoluti
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS } from "@/lib/validation"
+import styles from "./admin-orders.module.css"
 
 type Row = { qty: string; restock: boolean }
 
@@ -78,7 +79,7 @@ export function AdminReturnOrder({
   if (lines.length === 0) {
     // Nothing left to take back. Only say so when something was actually returned (not in the request-prefill dialog).
     return returns.length > 0 && !prefill ? (
-      <p data-ui="admin/AdminReturnOrder" className="text-sm text-muted-foreground">Everything was returned.</p>
+      <p className={styles.allReturnedNote}>Everything was returned.</p>
     ) : null
   }
 
@@ -146,27 +147,27 @@ export function AdminReturnOrder({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
-        data-ui="admin/AdminReturnOrder/DialogTrigger-inline-flex"
-        className="inline-flex h-9 w-full items-center justify-center rounded-full border text-sm font-semibold transition-colors hover:bg-muted"
+
+        className={styles.recordReturnTrigger}
       >
         {triggerLabel}
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminReturnOrder/DialogContent" mobileFullScreen className="sm:max-w-lg">
+      <DialogContent mobileFullScreen className={styles.dialogLgMax}>
         <DialogHeader>
           <DialogTitle>Return for {orderCode}</DialogTitle>
           <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="space-y-4">
-          <ul data-ui="admin/AdminReturnOrder/ul" className="space-y-4">
+        <DialogBody className={styles.dialogBodyStack4}>
+          <ul className={styles.recordReturnList}>
             {lines.map((i) => {
               const max = maxOf(i.productId)
               const row = rowOf(i.productId)
               const over = Number(row.qty) > max
               return (
-                <li data-ui="admin/AdminReturnOrder/li" key={i.productId} className="space-y-2 rounded-xl border p-3">
-                  <p data-ui="admin/AdminReturnOrder/p" className="text-sm font-medium">{i.name}</p>
-                  <div data-ui="admin/AdminReturnOrder/div-grid" className="grid items-start gap-x-4 gap-y-1 sm:grid-cols-[8rem_1fr]">
+                <li key={i.productId} className={styles.recordReturnItem}>
+                  <p className={styles.recordItemTitle}>{i.name}</p>
+                  <div className={styles.recordItemGrid}>
                     <TextField
                       label={`Returned (max ${max})`}
                       kind="digits"
@@ -183,7 +184,7 @@ export function AdminReturnOrder({
                             : undefined
                       }
                     />
-                    <div data-ui="admin/AdminReturnOrder/div" className="sm:pt-6">
+                    <div className={styles.restockCol}>
                       <SwitchField
                         label="Back into stock"
                         description="Resellable condition"
@@ -231,11 +232,11 @@ export function AdminReturnOrder({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="admin/AdminReturnOrder/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <XIcon className="size-4" /> Cancel
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtnGap}>
+            <XIcon className={styles.iconMd} /> Cancel
           </Button>
-          <Button data-ui="admin/AdminReturnOrder/Button-save-return" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save return
+          <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtnGap}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />} Save return
           </Button>
         </DialogFooter>
       </DialogContent>

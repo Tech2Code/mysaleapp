@@ -5,7 +5,7 @@ import { placeholderCategories, placeholderListItems } from "@/features/products
 export default function Loading() {
   return (
     <Skeletonize>
-      <ProductsPageView items={placeholderListItems(8)} categories={placeholderCategories(5)} />
+      <ProductsPageView items={placeholderListItems(12)} categories={placeholderCategories(5)} />
     </Skeletonize>
   )
 }

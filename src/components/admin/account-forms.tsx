@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-core.module.css"
 
 function Card({
   title,
@@ -47,35 +48,36 @@ function Card({
 }) {
   return (
     <section
-      data-ui="admin/Card"
+
       className={cn(
-        "adminCard mb-4 break-inside-avoid overflow-hidden rounded-xl border transition-colors",
-        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
+        "adminCard",
+        styles.accountCard,
+        dirty && styles.accountCardDirty
       )}
     >
       <div
-        data-ui="admin/Card/div"
+
         className={cn(
-          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
-          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
+          styles.accountCardHeader,
+          dirty && styles.accountCardHeaderDirty
         )}
       >
-        <div data-ui="admin/Card/div-2" className="min-w-0">
-          <h2 data-ui="admin/Card/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+        <div className={styles.cardHeaderTitleCol}>
+          <h2 className={styles.cardTitle}>
             {title}
           </h2>
-          <p data-ui="admin/Card/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+          <p className={styles.cardDesc}>
             {description}
           </p>
         </div>
         {dirty && (
-          <span data-ui="admin/Card/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
-            <span data-ui="admin/Card/span" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+          <span className={styles.editedPill}>
+            <span className={styles.editedDot} aria-hidden />
             Edited
           </span>
         )}
       </div>
-      <div data-ui="admin/Card/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+      <div className={styles.accountCardBody}>
         {children}
       </div>
     </section>
@@ -128,9 +130,9 @@ function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; on
 
   return (
     <form
-      data-ui="admin/ProfileForm"
+
       noValidate
-      className="space-y-2"
+      className={styles.formStack2}
       onSubmit={form.handleSubmit((values) => {
         if (!hasChanges) return
         run(
@@ -149,12 +151,12 @@ function ProfileForm({ name, phone, onSaved }: { name: string; phone: string; on
         )
       })}
     >
-      <div data-ui="admin/ProfileForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+      <div className={styles.twoColFormGrid}>
         <TextField label="Your name" kind="personName" fieldSize="md" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
         <TextField label="Mobile number (optional)" kind="phone" fieldSize="md" leading="+91" error={errors.phone?.message} {...form.register("phone")} />
       </div>
-      <Button data-ui="admin/ProfileForm/Button-save-details" type="submit" disabled={!hasChanges || pending} className="rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Save details
+      <Button type="submit" disabled={!hasChanges || pending} className={styles.roundedFullBtn}>
+        {pending && <Loader2Icon className={styles.spinIcon} />} Save details
       </Button>
     </form>
   )
@@ -211,9 +213,9 @@ function EmailForm({ email }: { email: string }) {
 
   return (
     <form
-      data-ui="admin/EmailForm"
+
       noValidate
-      className="space-y-4"
+      className={styles.formStack4}
       onSubmit={form.handleSubmit((values) => {
         if (emailUnchanged) return
         run(
@@ -227,34 +229,35 @@ function EmailForm({ email }: { email: string }) {
         )
       })}
     >
-      <p data-ui="admin/EmailForm/p" className="text-sm wrap-anywhere">
-        Signed in as <span data-ui="admin/EmailForm/span" className="font-semibold">{email}</span>
+      <p className={styles.signedInLine}>
+        Signed in as <span className={styles.fontSemibold}>{email}</span>
       </p>
       <TextField label="New email address" kind="email" fieldSize="md" error={errors.email?.message} {...form.register("email")} />
       {callbackBanner && (
         <p
-          data-ui="admin/EmailForm/p-2"
+
           role="status"
-          className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
-            callbackBanner.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-success/10"
-          }`}
+          className={cn(
+            styles.statusBanner,
+            callbackBanner.tone === "error" ? styles.statusBannerError : styles.statusBannerSuccess
+          )}
         >
-          <MailCheckIcon className={`mt-0.5 size-4 shrink-0 ${callbackBanner.tone === "error" ? "text-destructive" : "text-success"}`} aria-hidden />
-          <span data-ui="admin/EmailForm/span-2">{callbackBanner.text}</span>
+          <MailCheckIcon className={cn(styles.bannerIcon, callbackBanner.tone === "error" ? styles.bannerIconError : styles.bannerIconSuccess)} aria-hidden />
+          <span>{callbackBanner.text}</span>
         </p>
       )}
       {sentTo && (
-        <p data-ui="admin/EmailForm/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
-          <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          <span data-ui="admin/EmailForm/span-3">
-            We sent a confirmation link to <span data-ui="admin/EmailForm/span-4" className="font-semibold">{sentTo}</span> (and to{" "}
-            <span data-ui="admin/EmailForm/span-5" className="font-semibold">{email}</span> if double confirmation is enabled). Open the link(s) to finish. Until then you keep signing in with{" "}
+        <p role="status" className={cn(styles.statusBanner, styles.statusBannerSuccess)}>
+          <MailCheckIcon className={cn(styles.bannerIcon, styles.bannerIconSuccess)} aria-hidden />
+          <span>
+            We sent a confirmation link to <span className={styles.fontSemibold}>{sentTo}</span> (and to{" "}
+            <span className={styles.fontSemibold}>{email}</span> if double confirmation is enabled). Open the link(s) to finish. Until then you keep signing in with{" "}
             {email}.
           </span>
         </p>
       )}
-      <Button data-ui="admin/EmailForm/Button-change-email" type="submit" variant="outline" disabled={pending || emailUnchanged} className="rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Change email
+      <Button type="submit" variant="outline" disabled={pending || emailUnchanged} className={styles.roundedFullBtn}>
+        {pending && <Loader2Icon className={styles.spinIcon} />} Change email
       </Button>
     </form>
   )
@@ -282,9 +285,9 @@ function PasswordForm() {
   return (
     <form
       key={resetCount}
-      data-ui="admin/PasswordForm"
+
       noValidate
-      className="space-y-2"
+      className={styles.formStack2}
       onSubmit={form.handleSubmit((values) =>
         run(
           () => changeAdminPassword(values),
@@ -306,7 +309,7 @@ function PasswordForm() {
         error={errors.current?.message}
         {...form.register("current")}
       />
-      <div data-ui="admin/PasswordForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+      <div className={styles.twoColFormGrid}>
         <TextField
           label="New password"
           type="password"
@@ -327,8 +330,8 @@ function PasswordForm() {
           {...form.register("confirm")}
         />
       </div>
-      <Button data-ui="admin/PasswordForm/Button-change-password" type="submit" variant="outline" disabled={pending || !canSubmitPassword} className="rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} Change password
+      <Button type="submit" variant="outline" disabled={pending || !canSubmitPassword} className={styles.roundedFullBtn}>
+        {pending && <Loader2Icon className={styles.spinIcon} />} Change password
       </Button>
     </form>
   )
@@ -547,15 +550,15 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   }
 
   return (
-    <div data-ui="admin/PinLockForm" className="space-y-4">
-      <div data-ui="admin/PinLockForm/div-flex" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-3.5 py-2.5 text-sm">
-        <div data-ui="admin/PinLockForm/div-flex-2" className="flex items-center gap-2">
+    <div className={styles.formStack4}>
+      <div className={styles.pinStatusBar}>
+        <div className={styles.pinStatusLeft}>
           {isEnabled ? (
-            <KeyRoundIcon className="size-4 shrink-0 text-primary" aria-hidden />
+            <KeyRoundIcon className={styles.iconPrimary16} aria-hidden />
           ) : (
-            <ShieldOffIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <ShieldOffIcon className={styles.iconMuted16} aria-hidden />
           )}
-          <span data-ui="admin/PinLockForm/span" className="font-medium">
+          <span className={styles.fontMedium}>
             {isEnabled
               ? "Active — locks screen every 12 hours"
               : status.mode === "disabled"
@@ -564,13 +567,13 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
           </span>
         </div>
         {isEnabled && (
-          <Button data-ui="admin/PinLockForm/Button-lock-screen-now"
+          <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={pending}
             onClick={handleLockNow}
-            className="rounded-full"
+            className={styles.roundedFullBtn}
           >
             <LockIcon /> Lock screen now
           </Button>
@@ -578,8 +581,8 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
       </div>
 
       {!isEnabled ? (
-        <form data-ui="admin/PinLockForm/form" noValidate onSubmit={handleSetPin} className="space-y-3">
-          <div data-ui="admin/PinLockForm/div-grid" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+        <form noValidate onSubmit={handleSetPin} className={styles.formStack3}>
+          <div className={styles.twoColFormGrid}>
             <TextField
               label="New 4-digit PIN"
               kind="adminPin"
@@ -597,21 +600,21 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
               {...setForm.register("confirm")}
             />
           </div>
-          <div data-ui="admin/PinLockForm/div-flex-3" className="flex flex-wrap items-center gap-2">
-            <Button data-ui="admin/PinLockForm/Button-enable-4-digit-pin"
+          <div className={styles.flexWrapGap2}>
+            <Button
               type="submit"
               disabled={pending || (setPinVal ?? "").length !== 4 || (setConfirmVal ?? "").length !== 4}
-              className="rounded-full"
+              className={styles.roundedFullBtn}
             >
-              {pending && <Loader2Icon className="animate-spin" />} Enable 4-digit PIN
+              {pending && <Loader2Icon className={styles.spinIcon} />} Enable 4-digit PIN
             </Button>
             {status.mode === "unset" && (
-              <Button data-ui="admin/PinLockForm/Button-don-apos-t-use-pin"
+              <Button
                 type="button"
                 variant="ghost"
                 disabled={pending}
                 onClick={handleDisablePin}
-                className="rounded-full"
+                className={styles.roundedFullBtn}
               >
                 Don&apos;t use PIN
               </Button>
@@ -621,7 +624,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
       ) : (
         <form
           key={`pin-change-${pinResetCount}`}
-          data-ui="admin/PinLockForm/form-2"
+
           noValidate
           onSubmit={(e) => {
             if (showDisableConfirm) {
@@ -631,20 +634,20 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
               handleChangePin(e)
             }
           }}
-          className="space-y-3"
+          className={styles.formStack3}
         >
-          <div data-ui="admin/PinLockForm/div-flex-4" className="flex flex-wrap items-center justify-between gap-2">
-            <span data-ui="admin/PinLockForm/span-2" className="text-xs font-medium text-muted-foreground">
+          <div className={styles.pinVerifyHeaderRow}>
+            <span className={styles.verifyMutedLabel}>
               Verify with your {authMethod === "pin" ? "current PIN" : "account password"} to change or turn off PIN:
             </span>
-            <button data-ui="admin/PinLockForm/button"
+            <button
               type="button"
               onClick={() => {
                 setAuthMethod((m) => (m === "pin" ? "password" : "pin"))
                 setVerifySecret("")
                 setVerifyError(null)
               }}
-              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+              className={styles.textPrimaryLinkBtn}
             >
               {authMethod === "pin" ? "Forgot PIN? Use account password" : "Use current 4-digit PIN instead"}
             </button>
@@ -683,7 +686,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
 
           {!showDisableConfirm ? (
             <>
-              <div data-ui="admin/PinLockForm/div-grid-2" className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <div className={styles.twoColFormGrid}>
                 <TextField
                   label="New 4-digit PIN"
                   kind="adminPin"
@@ -719,8 +722,8 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                   }
                 />
               </div>
-              <div data-ui="admin/PinLockForm/div-flex-5" className="flex flex-wrap items-center gap-2">
-                <Button data-ui="admin/PinLockForm/Button-change-pin"
+              <div className={styles.flexWrapGap2}>
+                <Button
                   type="submit"
                   variant="outline"
                   disabled={
@@ -731,11 +734,11 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                     nextPin !== confirmNextPin ||
                     (authMethod === "pin" && verifySecret === nextPin)
                   }
-                  className="rounded-full"
+                  className={styles.roundedFullBtn}
                 >
-                  {pending && <Loader2Icon className="animate-spin" />} Change PIN
+                  {pending && <Loader2Icon className={styles.spinIcon} />} Change PIN
                 </Button>
-                <Button data-ui="admin/PinLockForm/Button-don-apos-t-use-pin-tur"
+                <Button
                   type="button"
                   variant="ghost"
                   disabled={pending}
@@ -743,33 +746,33 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                     setShowDisableConfirm(true)
                     setVerifyError(null)
                   }}
-                  className="rounded-full text-destructive hover:text-destructive"
+                  className={styles.destructiveGhostBtn}
                 >
                   Don&apos;t use PIN (Turn off)
                 </Button>
               </div>
             </>
           ) : (
-            <div data-ui="admin/PinLockForm/div" className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3.5">
-              <p data-ui="admin/PinLockForm/p" className="text-xs text-muted-foreground">
+            <div className={styles.disableConfirmBox}>
+              <p className={styles.disableConfirmText}>
                 Turning off Quick PIN means the admin panel will stay unlocked for your full 7-day login session without asking for a 4-digit PIN every 12 hours.{" "}
                 {!verifySecret && (
-                  <span data-ui="admin/PinLockForm/span-3" className="font-medium text-foreground">
+                  <span className={styles.confirmHighlight}>
                     Enter your {authMethod === "pin" ? "current 4-digit PIN" : "account password"} in the field above to confirm.
                   </span>
                 )}
               </p>
-              <div data-ui="admin/PinLockForm/div-flex-6" className="flex flex-wrap items-center gap-2">
-                <Button data-ui="admin/PinLockForm/Button-confirm-don-apos-t-use"
+              <div className={styles.flexWrapGap2}>
+                <Button
                   type="button"
                   variant="destructive"
                   disabled={pending || !verifySecret}
                   onClick={handleDisablePin}
-                  className="rounded-full"
+                  className={styles.roundedFullBtn}
                 >
-                  {pending && <Loader2Icon className="animate-spin" />} Confirm: Don&apos;t use PIN
+                  {pending && <Loader2Icon className={styles.spinIcon} />} Confirm: Don&apos;t use PIN
                 </Button>
-                <Button data-ui="admin/PinLockForm/Button-cancel"
+                <Button
                   type="button"
                   variant="ghost"
                   disabled={pending}
@@ -777,7 +780,7 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                     setShowDisableConfirm(false)
                     setVerifyError(null)
                   }}
-                  className="rounded-full"
+                  className={styles.roundedFullBtn}
                 >
                   Cancel
                 </Button>
@@ -822,7 +825,7 @@ export function AccountSettings({
   }, [])
 
   return (
-    <div data-ui="admin/AccountSettings" className="xl:columns-2 xl:gap-5">
+    <div className={styles.accountSettingsGrid}>
       <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
         <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
       </Card>

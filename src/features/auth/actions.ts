@@ -29,6 +29,7 @@ const customerSignUpSchema = z
     email: v.email(),
     password: v.newPassword(),
     confirmPassword: z.string(),
+    acceptTerms: z.literal(true, { error: "Please accept the Terms of Service and Privacy Policy." }),
     next: z.string().optional(),
     wishlistIds: z.array(z.string()).max(200).optional(),
   })
@@ -146,6 +147,8 @@ export async function signUpCustomer(
       data: {
         full_name: parsed.data.fullName,
         phone: parsed.data.phone,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: "2026-11",
       },
       ...(origin ? { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}` } : {}),
     },

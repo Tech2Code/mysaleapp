@@ -3,6 +3,7 @@
 import { MinusIcon, PlusIcon } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import styles from "./store-widgets.module.css"
 
 export function QuantityStepper({
   value,
@@ -20,10 +21,7 @@ export function QuantityStepper({
   label: string
 }) {
   const atMax = value >= max
-  const btn = cn(
-    "grid place-items-center rounded-full transition-colors hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent",
-    size === "sm" ? "size-8" : "size-11"
-  )
+  const btn = cn(styles.stepBtn, size === "sm" ? styles.stepBtnSm : styles.stepBtnLg)
 
   const unit = max === 1 ? "item" : "items"
 
@@ -40,26 +38,26 @@ export function QuantityStepper({
   }
 
   return (
-    <div data-ui="store/QuantityStepper"
+    <div
       role="group"
       aria-label={`Quantity for ${label}`}
-      className={cn("inline-flex items-center rounded-full border bg-background", size === "lg" && "p-0.5", className)}
+      className={cn(styles.stepperGroup, size === "lg" && styles.stepperGroupLg, className)}
     >
-      <button data-ui="store/QuantityStepper/button-decrease-quantity" type="button" className={btn} onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label="Decrease quantity">
-        <MinusIcon className="size-3.5" />
+      <button type="button" className={btn} onClick={() => onChange(value - 1)} disabled={value <= 1} aria-label="Decrease quantity">
+        <MinusIcon className={styles.stepSvg} />
       </button>
-      <span data-ui="store/QuantityStepper/span" className={cn("min-w-8 text-center font-semibold tabular-nums", size === "lg" && "min-w-10 text-lg")} aria-live="polite">
+      <span className={cn(styles.qtyReadout, size === "lg" && styles.qtyReadoutLg)} aria-live="polite">
         {value}
       </span>
       <button
-        data-ui="store/QuantityStepper/button-increase-quantity"
+
         type="button"
         aria-disabled={atMax}
-        className={cn(btn, atMax && "opacity-40 hover:bg-transparent")}
+        className={cn(btn, atMax && styles.stepBtnAtMax)}
         onClick={handleIncrease}
         aria-label="Increase quantity"
       >
-        <PlusIcon className="size-3.5" />
+        <PlusIcon className={styles.stepSvg} />
       </button>
     </div>
   )

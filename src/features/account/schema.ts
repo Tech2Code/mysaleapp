@@ -35,7 +35,7 @@ export const DEACTIVATION_REASONS = [
 ] as const
 
 export const deactivateAccountSchema = z.object({
-  reason: v.note(200).optional(),
+  reason: z.string().trim().min(3, "Please select a reason for deactivating your account").max(200),
 })
 
 export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>

@@ -1,12 +1,13 @@
 import type { LucideIcon } from "lucide-react"
+import styles from "@/components/admin/admin-core.module.css"
 import { Sparkline } from "@/components/admin/charts"
 import { cn } from "@/lib/utils"
 import { Delta } from "./delta"
 
 const KPI_TONES = {
-  emerald: "text-emerald-500 dark:text-emerald-400",
-  sky: "text-sky-500 dark:text-sky-400",
-  violet: "text-primary",
+  emerald: styles.kpiToneEmerald,
+  sky: styles.kpiToneSky,
+  violet: styles.kpiToneViolet,
 } as const
 
 export function KpiCard({
@@ -32,26 +33,26 @@ export function KpiCard({
 }) {
   return (
     <div
-      data-ui="admin/KpiCard"
-      className="adminCardInteractive relative flex h-full flex-col overflow-hidden rounded-xl border"
+
+      className={cn("adminCardInteractive", styles.kpiCard)}
     >
-      <div data-ui="admin/KpiCard/div" className="flex-1 p-4 pb-1 sm:p-5 sm:pb-1">
-        <div data-ui="admin/KpiCard/div-flex" className="flex items-center justify-between gap-2">
-          <div data-ui="admin/KpiCard/div-flex-2" className="flex items-center gap-1.5 text-muted-foreground">
-            <Icon className="size-3.5 shrink-0" aria-hidden />
-            <p data-ui="admin/KpiCard/p" className="text-xs font-medium">{label}</p>
+      <div className={styles.kpiBody}>
+        <div className={styles.kpiTopRow}>
+          <div className={styles.kpiLabelGroup}>
+            <Icon className={styles.icon14} aria-hidden />
+            <p className={styles.kpiLabelText}>{label}</p>
           </div>
           <Delta value={delta} show={showDelta} />
         </div>
-        <p data-ui="admin/KpiCard/p-2" className="mt-3 font-heading text-2xl leading-none font-semibold tracking-tight tabular-nums sm:text-[28px]">
+        <p className={styles.kpiValueText}>
           {value}
         </p>
-        <p data-ui="admin/KpiCard/p-3" className="mt-1.5 text-[11px] text-muted-foreground">
+        <p className={styles.kpiPeriodText}>
           {period}
           {showDelta && " · vs prev"}
         </p>
       </div>
-      <Sparkline data={series} label={seriesLabel} className={cn("h-11", KPI_TONES[tone])} />
+      <Sparkline data={series} label={seriesLabel} className={cn(styles.kpiSparkline, KPI_TONES[tone])} />
     </div>
   )
 }

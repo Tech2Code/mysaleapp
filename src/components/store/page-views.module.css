@@ -1,0 +1,86 @@
+/* Section: Shared Storefront Page Body & Views */
+.pageBodyContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 16px 16px 0 16px; }
+.emptyCollectionBox { border-radius: 24px; border: 1px dashed var(--border); background-color: var(--card); padding: 56px 16px; text-align: center; color: var(--muted-foreground); margin: 0; }
+/* Section: Order Placed & Login Hero Wrappers */
+.heroBackdropSection { background: radial-gradient(60% 60% at 15% 20%, var(--hero-a), transparent 70%), radial-gradient(50% 55% at 85% 15%, var(--hero-b), transparent 70%), radial-gradient(60% 60% at 50% 100%, var(--hero-c), transparent 70%), var(--background); }
+.heroBackdropSection .orderPlacedContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 64px 16px; }
+.heroBackdropSection .loginContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 40px 16px; display: flex; min-height: 540px; align-items: center; justify-content: center; }
+/* Section: About Story View */
+.aboutContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 32px 16px 0 16px; display: flex; flex-direction: column; gap: 40px; }
+.aboutContainer .storyIntro { margin: 0 auto; max-width: 768px; display: flex; flex-direction: column; gap: 20px; font-size: 18px; line-height: 29px; color: var(--muted-foreground); }
+.storyIntro .storyParagraph { margin: 0; }
+.aboutContainer .valuesGrid { display: grid; gap: 20px; }
+.valuesGrid .valueCard { border-radius: 24px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 28px; transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.valuesGrid .valueCard:hover { transform: translateY(-3px); box-shadow: var(--store-elevation-md); }
+.valueCard .valueIcon { width: 32px; height: 32px; color: var(--primary); transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.valuesGrid .valueCard:hover .valueIcon { transform: scale(1.08); }
+.valueCard .valueTitle { margin: 16px 0 0 0; font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.valueCard .valueText { margin: 8px 0 0 0; color: var(--muted-foreground); }
+.aboutContainer .exploreActionWrap { text-align: center; }
+.exploreActionWrap .exploreBtn { height: 48px; border-radius: 9999px; padding: 0 20px; font-size: 16px; }
+/* Section: Contact Us View */
+.contactContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 32px 16px 0 16px; display: grid; gap: 20px; }
+.contactContainer .contactCard { border-radius: 24px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 28px; transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.contactContainer .contactCard:hover { transform: translateY(-4px); box-shadow: var(--store-elevation-md); }
+.contactCard .contactIconBox { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 16px; background-color: var(--secondary); color: var(--primary); transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.contactContainer .contactCard:hover .contactIconBox { transform: scale(1.06); }
+.contactIconBox .contactIcon { width: 24px; height: 24px; }
+.contactCard .contactTitle { margin: 20px 0 0 0; font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.contactCard .contactText { margin: 4px 0 0 0; color: var(--muted-foreground); }
+.contactCard .contactCtaRow { margin-top: 16px; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--primary); }
+.contactContainer .contactCard:hover .contactCtaRow { text-decoration: underline; }
+.contactCtaRow .ctaArrow { width: 16px; height: 16px; transition: transform 150ms ease; }
+.contactContainer .contactCard:hover .ctaArrow { transform: translateX(2px); }
+.contactContainer .studioLocationNote { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted-foreground); }
+.studioLocationNote .pinIcon { width: 16px; height: 16px; }
+.contactContainer .businessLegalCard { border-radius: 24px; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.businessLegalCard .legalCardTitle { margin: 0; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: var(--foreground); }
+.businessLegalCard .legalCardSub { margin: 0; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.businessLegalCard .legalMetaRow { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; font-size: 13px; color: var(--muted-foreground); }
+.legalMetaRow .legalStrong { font-weight: 600; color: var(--foreground); }
+.businessLegalCard .legalLinksBar { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 13px; }
+.legalLinksBar .legalPolicyLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.legalLinksBar .legalPolicyLink:hover { text-decoration: underline; }
+/* Section: Wishlist View */
+.wishlistWrapper { display: flex; flex-direction: column; gap: 32px; }
+.wishlistWrapper .deviceNotice { margin: 0; border-radius: 16px; background-color: var(--secondary); padding: 16px; font-size: 14px; color: var(--foreground); }
+.deviceNotice .signInLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.deviceNotice .signInLink:hover { text-decoration: underline; }
+.wishlistWrapper .emptyWishlistCard { display: flex; flex-direction: column; align-items: center; gap: 16px; border-radius: 24px; border: 1px dashed var(--border); background-color: var(--card); padding: 56px 16px; text-align: center; }
+.emptyWishlistCard .heartCircle { display: grid; width: 80px; height: 80px; place-items: center; border-radius: 9999px; background-color: var(--secondary); }
+.heartCircle .heartIcon { width: 32px; height: 32px; color: var(--primary); }
+.emptyWishlistCard .emptyHeading { margin: 0; font-family: var(--font-heading); font-size: 24px; line-height: 30px; color: var(--foreground); }
+.emptyWishlistCard .emptySubtext { margin: 0; font-size: 14px; color: var(--muted-foreground); }
+.emptyWishlistCard .exploreProductsBtn { border-radius: 9999px; padding: 0 24px; }
+.wishlistGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 32px; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .pageBodyContainer { padding: 24px 24px 0 24px; }
+  .emptyCollectionBox { padding: 80px 24px; }
+  .heroBackdropSection .orderPlacedContainer { padding: 96px 24px; }
+  .heroBackdropSection .loginContainer { padding: 64px 24px; }
+  .aboutContainer { padding: 48px 24px 0 24px; gap: 64px; }
+  .exploreActionWrap .exploreBtn { padding: 0 32px; }
+  .contactContainer { padding: 48px 24px 0 24px; }
+  .wishlistWrapper .emptyWishlistCard { padding: 80px 24px; }
+  .wishlistGrid { column-gap: 24px; }
+}
+@media (min-width: 768px) {
+  .aboutContainer .valuesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .contactContainer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contactContainer .studioLocationNote { grid-column: span 2 / span 2; }
+  .contactContainer .businessLegalCard { grid-column: span 2 / span 2; }
+  .wishlistGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .pageBodyContainer { padding: 24px 32px 0 32px; }
+  .heroBackdropSection .orderPlacedContainer { padding: 96px 32px; }
+  .heroBackdropSection .loginContainer { padding: 64px 32px; }
+  .aboutContainer { padding: 48px 32px 0 32px; }
+  .contactContainer { padding: 48px 32px 0 32px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .contactContainer .studioLocationNote { grid-column: span 3 / span 3; }
+  .contactContainer .businessLegalCard { grid-column: span 3 / span 3; }
+}
+@media (min-width: 1280px) {
+  .wishlistGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

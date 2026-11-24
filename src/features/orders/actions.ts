@@ -36,7 +36,14 @@ function storedCustomer(c: z.output<typeof checkoutSchema>) {
   return { ...rest, city: joinCityState(c.city, state) }
 }
 
-export type PlacedOrder = { orderCode: string; total: number; phoneLast4: string; whatsappUrl: string }
+export type PlacedOrder = {
+  orderCode: string
+  total: number
+  phoneLast4: string
+  whatsappUrl: string
+  paymentReference?: string
+  createdAt?: string
+}
 
 type CreateOrderRow = {
   order_code: string
@@ -203,6 +210,8 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
       total: pricing.total,
       phoneLast4: phone.slice(-4),
       whatsappUrl: shopWhatsappLink(shop, message),
+      paymentReference: parsed.data.paymentReference,
+      createdAt: new Date().toISOString(),
     },
   }
 }

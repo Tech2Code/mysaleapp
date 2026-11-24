@@ -1,7 +1,8 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, UserXIcon, XIcon } from "lucide-react"
+import { DownloadIcon, KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, ShieldCheckIcon, UserXIcon, XIcon } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -10,7 +11,7 @@ import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { applyClientProfileUpdate, applyClientSignOut } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { changeCustomerPassword, deactivateMyAccount, updateProfile } from "@/features/account/actions"
+import { changeCustomerPassword, deactivateMyAccount, exportMyAccountData, updateProfile } from "@/features/account/actions"
 import {
   customerPasswordSchema,
   DEACTIVATION_REASONS,
@@ -19,11 +20,14 @@ import {
   type Profile,
   type ProfileInput,
 } from "@/features/account/schema"
+import { cancelReasonText, OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
+import styles from "./account.module.css"
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [visitKey, setVisitKey] = useState(0)
@@ -61,13 +65,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
   }, [])
 
   return (
-    <div data-ui="account/ProfileForm" className="space-y-6">
+    <div className={styles.profileFormsStack}>
       <ProfileFormInner key={`details-${visitKey}`} saved={saved} onSaved={setSaved} />
       <CustomerPasswordForm
         key={`password-${visitKey}-${hasPassword ? "change" : "set"}`}
         hasPassword={hasPassword}
         onPasswordSet={() => setHasPassword(true)}
       />
+      <DataPrivacyCard />
       <DeactivateAccountCard key={`deactivate-${visitKey}`} />
     </div>
   )
@@ -178,8 +183,8 @@ function ProfileFormInner({
   })
 
   return (
-    <form data-ui="account/ProfileFormInner" onSubmit={onSubmit} noValidate className="space-y-3 rounded-3xl border bg-card p-6 sm:p-8">
-      <div data-ui="account/ProfileFormInner/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+    <form onSubmit={onSubmit} noValidate className={styles.profileCardForm}>
+      <div className={styles.threeColFieldsGrid}>
         <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
         <TextField
           label="Email"
@@ -203,27 +208,28 @@ function ProfileFormInner({
       </div>
       {callbackBanner && (
         <p
-          data-ui="account/ProfileFormInner/p"
+
           role="status"
-          className={`flex items-start gap-2 rounded-xl p-3 text-sm ${
-            callbackBanner.tone === "error" ? "bg-destructive/10 text-destructive" : "bg-success/10"
-          }`}
+          className={cn(
+            styles.statusAlertRow,
+            callbackBanner.tone === "error" ? styles.statusAlertError : styles.statusAlertSuccess
+          )}
         >
-          <MailCheckIcon className={`mt-0.5 size-4 shrink-0 ${callbackBanner.tone === "error" ? "text-destructive" : "text-success"}`} aria-hidden />
-          <span data-ui="account/ProfileFormInner/span">{callbackBanner.text}</span>
+          <MailCheckIcon className={callbackBanner.tone === "error" ? styles.alertIconError : styles.alertIconSuccess} aria-hidden />
+          <span>{callbackBanner.text}</span>
         </p>
       )}
       {sentTo && (
-        <p data-ui="account/ProfileFormInner/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
-          <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          <span data-ui="account/ProfileFormInner/span-2">
-            We sent a confirmation link to <span data-ui="account/ProfileFormInner/span-3" className="font-semibold">{sentTo}</span> (and to{" "}
-            <span data-ui="account/ProfileFormInner/span-4" className="font-semibold">{saved.email}</span> if double confirmation is enabled). Open the link(s) to finish changing your login email.
+        <p role="status" className={cn(styles.statusAlertRow, styles.statusAlertSuccess)}>
+          <MailCheckIcon className={styles.alertIconSuccess} aria-hidden />
+          <span>
+            We sent a confirmation link to <span className={styles.boldInline}>{sentTo}</span> (and to{" "}
+            <span className={styles.boldInline}>{saved.email}</span> if double confirmation is enabled). Open the link(s) to finish changing your login email.
           </span>
         </p>
       )}
-      <Button data-ui="account/ProfileFormInner/Button-save-changes" type="submit" size="lg" disabled={pending || !hasChanges} className="h-11 rounded-full px-5 sm:px-8">
-        {pending && <Loader2Icon className="animate-spin" />} Save changes
+      <Button type="submit" size="lg" disabled={pending || !hasChanges} className={styles.savePillBtn}>
+        {pending && <Loader2Icon className={styles.spinSvg} />} Save changes
       </Button>
     </form>
   )
@@ -292,17 +298,17 @@ function CustomerPasswordForm({
   return (
     <form
       key={resetCount}
-      data-ui="account/CustomerPasswordForm"
+
       onSubmit={onSubmit}
       noValidate
-      className="space-y-3 rounded-3xl border bg-card p-6 sm:p-8"
+      className={styles.profileCardForm}
     >
-      <div data-ui="account/CustomerPasswordForm/div">
-        <h3 data-ui="account/CustomerPasswordForm/h3-flex" className="flex items-center gap-2 font-sans text-lg font-semibold">
-          <KeyRoundIcon className="size-4 text-primary" aria-hidden />
+      <div>
+        <h3 className={styles.formCardHeading}>
+          <KeyRoundIcon className={styles.primaryIcon16} aria-hidden />
           {hasPassword ? "Change password" : "Set a password"}
         </h3>
-        <p data-ui="account/CustomerPasswordForm/p" className="mt-0.5 text-sm text-muted-foreground">
+        <p className={styles.formCardSubtext}>
           {hasPassword
             ? "Update the password you use to sign in with your email address."
             : "Set a password so you can also sign in directly with your email and password."}
@@ -310,8 +316,8 @@ function CustomerPasswordForm({
       </div>
 
       <div
-        data-ui="account/CustomerPasswordForm/div-2"
-        className={`grid gap-x-5 gap-y-1 ${hasPassword ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}
+
+        className={hasPassword ? styles.threeColFieldsGrid : styles.twoColPasswordGrid}
       >
         {hasPassword && (
           <TextField
@@ -343,17 +349,87 @@ function CustomerPasswordForm({
       </div>
 
       <Button
-        data-ui="account/CustomerPasswordForm/Button"
+
         type="submit"
         variant="outline"
         size="lg"
         disabled={pending || !canSubmit}
-        className="h-11 rounded-full px-5 sm:px-8"
+        className={styles.savePillBtn}
       >
-        {pending && <Loader2Icon className="animate-spin" />}
+        {pending && <Loader2Icon className={styles.spinSvg} />}
         {hasPassword ? "Update password" : "Save password"}
       </Button>
     </form>
+  )
+}
+
+function DataPrivacyCard() {
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+
+  const handleDownload = () => {
+    startTransition(async () => {
+      try {
+        const res = await exportMyAccountData()
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        const blob = new Blob([res.data.htmlReport], { type: "text/html;charset=utf-8" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = res.data.fileName
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+        toast.success("Your readable account data summary has been downloaded.")
+      } catch {
+        toast.error("Couldn't download your data right now. Please try again.")
+      }
+    })
+  }
+
+  return (
+    <section
+
+      aria-label="Your data and privacy"
+      className={styles.dataPrivacySection}
+    >
+      <div className={styles.privacyTextCol}>
+        <h3 className={styles.formCardHeading}>
+          <ShieldCheckIcon className={styles.primaryIcon16} aria-hidden />
+          Your data &amp; privacy
+        </h3>
+        <p className={styles.privacyCopy}>
+          Download an easy-to-read, printable summary of your profile details, saved addresses, wishlist items, order history, and product reviews at any time.
+        </p>
+        <div className={styles.policyLinksRow}>
+          <Link href="/privacy" className={styles.policySmallLink}>
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className={styles.policySmallLink}>
+            Terms of Service
+          </Link>
+          <Link href="/refund-policy" className={styles.policySmallLink}>
+            Refund &amp; Return Policy
+          </Link>
+        </div>
+      </div>
+
+      <Button
+
+        type="button"
+        variant="outline"
+        disabled={pending}
+        onClick={handleDownload}
+        className={styles.downloadDataBtn}
+      >
+        {pending ? <Loader2Icon className={styles.spinSvg} /> : <DownloadIcon className={styles.icon16} />}
+        {pending ? "Preparing export…" : "Download my data"}
+      </Button>
+    </section>
   )
 }
 
@@ -362,9 +438,13 @@ function DeactivateAccountCard() {
   const [open, setOpen] = useState(false)
   const [reasonChoice, setReasonChoice] = useState("")
   const [customNote, setCustomNote] = useState("")
+  const [submitted, setSubmitted] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+
+  const needsOtherDetail = otherNeedsDetail(reasonChoice, customNote)
+  const canDeactivate = Boolean(reasonChoice) && !needsOtherDetail
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -372,13 +452,16 @@ function DeactivateAccountCard() {
     if (!nextOpen) {
       setReasonChoice("")
       setCustomNote("")
+      setSubmitted(false)
     }
   }
 
   const handleDeactivate = () => {
-    const combinedReason = [reasonChoice, customNote.trim()].filter(Boolean).join(" — ").slice(0, 200)
+    setSubmitted(true)
+    if (!canDeactivate) return
+    const combinedReason = cancelReasonText(reasonChoice, customNote.trim() || undefined).slice(0, 200)
     startTransition(async () => {
-      const res = await deactivateMyAccount({ reason: combinedReason || undefined })
+      const res = await deactivateMyAccount({ reason: combinedReason })
       if (!res.ok) {
         toast.error(res.error)
         return
@@ -393,32 +476,32 @@ function DeactivateAccountCard() {
 
   return (
     <section
-      data-ui="account/DeactivateAccountCard"
+
       aria-label="Deactivate account"
-      className="flex flex-col justify-between gap-4 rounded-3xl border border-destructive/25 bg-card p-6 sm:flex-row sm:items-center sm:p-8"
+      className={styles.deactivateSection}
     >
-      <div data-ui="account/DeactivateAccountCard/div" className="space-y-1">
-        <h3 data-ui="account/DeactivateAccountCard/h3-deactivate-account" className="flex items-center gap-2 font-sans text-lg font-semibold text-foreground">
-          <UserXIcon className="size-4 text-destructive" aria-hidden />
+      <div className={styles.deactivateTextCol}>
+        <h3 className={styles.formCardHeading}>
+          <UserXIcon className={styles.destructiveIcon16} aria-hidden />
           Deactivate account
         </h3>
-        <p data-ui="account/DeactivateAccountCard/p" className="max-w-xl text-sm/relaxed text-muted-foreground">
+        <p className={styles.deactivateCopy}>
           Taking a break? You can deactivate your account once all active orders and returns are complete. If you change your mind or deactivate by mistake, simply sign back in anytime to automatically restore your account and order history.
         </p>
       </div>
 
       <Button
-        data-ui="account/DeactivateAccountCard/Button-deactivate-account"
+
         type="button"
         variant="outline"
         onClick={() => handleOpenChange(true)}
-        className="h-11 shrink-0 rounded-full border-destructive/40 px-5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        className={styles.deactivateTriggerBtn}
       >
-        <UserXIcon className="size-4" /> Deactivate account
+        <UserXIcon className={styles.icon16} /> Deactivate account
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent data-ui="account/DeactivateAccountCard/DialogContent" className="sm:max-w-md">
+        <DialogContent className={styles.dialogModalMd}>
           <DialogHeader>
             <DialogTitle>Deactivate your account?</DialogTitle>
             <DialogDescription>
@@ -426,57 +509,64 @@ function DeactivateAccountCard() {
             </DialogDescription>
           </DialogHeader>
 
-          <DialogBody className="space-y-3">
-            <div data-ui="account/DeactivateAccountCard/div-2" className="rounded-xl border border-primary/20 bg-primary/8 p-3 text-xs/relaxed text-foreground">
-              <p data-ui="account/DeactivateAccountCard/p-flex" className="flex items-center gap-1.5 font-semibold text-primary">
-                <ShieldAlertIcon className="size-3.5 shrink-0" aria-hidden /> Easy recovery if deactivated by mistake
+          <DialogBody className={styles.deactivateBodyStack}>
+            <div className={styles.recoveryInfoBox}>
+              <p className={styles.recoveryTitle}>
+                <ShieldAlertIcon className={styles.shieldSvg} aria-hidden /> Easy recovery if deactivated by mistake
               </p>
-              <p data-ui="account/DeactivateAccountCard/p-2" className="mt-1 text-muted-foreground">
+              <p className={styles.recoveryText}>
                 Signing back in with your email/password or Google account at any time will automatically reactivate your profile, saved addresses, and order history.
               </p>
             </div>
 
             <SelectField
-              label="Why are you deactivating? (optional)"
+              label="Why are you deactivating? *"
               placeholder="Select a reason"
               fieldSize="md"
               value={reasonChoice}
               onValueChange={setReasonChoice}
               options={DEACTIVATION_REASONS.map((r) => ({ value: r, label: r }))}
+              error={submitted && !reasonChoice ? "Please select why you are deactivating" : undefined}
             />
 
-            {reasonChoice === "Other" && (
+            {reasonChoice === OTHER_REASON && (
               <TextAreaField
-                label="Additional feedback (optional)"
+                label="Please tell us the reason"
+                required
                 rows={2}
                 maxLength={140}
-                placeholder="Tell us how we can improve"
+                placeholder="Tell us how we can improve (at least 5 letters)"
                 value={customNote}
                 onChange={(e) => setCustomNote(e.target.value)}
+                error={
+                  (submitted || Boolean(customNote.trim())) && needsOtherDetail
+                    ? OTHER_DETAIL_MESSAGE
+                    : undefined
+                }
               />
             )}
           </DialogBody>
 
           <DialogFooter>
             <Button
-              data-ui="account/DeactivateAccountCard/Button-keep-account-active"
+
               type="button"
               variant="outline"
               disabled={pending}
               onClick={() => handleOpenChange(false)}
-              className="gap-1.5 rounded-full"
+              className={styles.pillBtnGap}
             >
-              <XIcon className="size-4" /> Keep account active
+              <XIcon className={styles.icon16} /> Keep account active
             </Button>
             <Button
-              data-ui="account/DeactivateAccountCard/Button-deactivate-account-2"
+
               type="button"
               variant="destructive"
-              disabled={pending}
+              disabled={pending || !canDeactivate}
               onClick={handleDeactivate}
-              className="gap-1.5 rounded-full"
+              className={styles.pillBtnGap}
             >
-              {pending ? <Loader2Icon className="animate-spin" /> : <UserXIcon className="size-4" />} Deactivate account
+              {pending ? <Loader2Icon className={styles.spinSvg} /> : <UserXIcon className={styles.icon16} />} Deactivate account
             </Button>
           </DialogFooter>
         </DialogContent>

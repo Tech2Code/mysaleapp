@@ -5,6 +5,7 @@ import { AnimatePresence } from "motion/react"
 import * as m from "motion/react-m"
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
+import styles from "./product-detail.module.css"
 import { ProductImage } from "./product-image"
 
 export function ProductGallery({ images, name }: { images: string[]; name: string }) {
@@ -34,11 +35,11 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   }, [safeIndex])
 
   return (
-    <div data-ui="store/ProductGallery" className="flex flex-col-reverse gap-3 md:flex-row">
+    <div className={styles.galleryLayout}>
       {list.length > 1 && (
-        <div data-ui="store/ProductGallery/div-product-photos" className="scroll-row flex gap-2.5 md:w-23 md:flex-col md:gap-3" role="group" aria-label="Product photos">
+        <div className={styles.thumbRail} role="group" aria-label="Product photos">
           {list.map((src, i) => (
-            <button data-ui="store/ProductGallery/button"
+            <button
               key={`${src ?? "empty"}-${i}`}
               ref={(el) => {
                 thumbRefs.current[i] = el
@@ -47,10 +48,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
               aria-pressed={i === safeIndex}
               aria-label={`Show photo ${i + 1}`}
               onClick={() => goTo(i)}
-              className={cn(
-                "relative aspect-square w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition-all sm:w-20 @container",
-                i === safeIndex ? "ring-primary" : "opacity-70 ring-transparent hover:opacity-100"
-              )}
+              className={cn(styles.thumbBtn, i === safeIndex && styles.thumbBtnActive)}
             >
               <ProductImage src={src} alt={`${name} thumbnail ${i + 1}`} sizes="80px" />
             </button>
@@ -59,7 +57,7 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
       )}
 
       <div
-        data-ui="store/ProductGallery/div-relative"
+
         role={list.length > 1 ? "region" : undefined}
         aria-label={list.length > 1 ? `${name} photo ${safeIndex + 1} of ${list.length}` : undefined}
         tabIndex={list.length > 1 ? 0 : undefined}
@@ -84,17 +82,17 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
           if (delta < 0) goNext()
           else goPrev()
         }}
-        className="group relative aspect-4/5 flex-1 overflow-hidden rounded-2xl bg-muted select-none sm:rounded-3xl @container"
+        className={styles.mainStage}
       >
         <AnimatePresence mode="wait" initial={false} custom={direction}>
-          <m.div data-ui="store/ProductGallery/m.div-absolute"
+          <m.div
             key={safeIndex}
             custom={direction}
             initial={{ opacity: 0, x: direction >= 0 ? 24 : -24, scale: 1.01 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: direction >= 0 ? -24 : 24 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0"
+            className={styles.slideLayer}
           >
             <ProductImage
               src={list[safeIndex]}
@@ -108,27 +106,27 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
         {list.length > 1 && (
           <>
             <button
-              data-ui="store/ProductGallery/button-previous-photo"
+
               type="button"
               onClick={goPrev}
               aria-label="Previous photo"
-              className="absolute top-1/2 left-3 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-background/85 text-foreground shadow-md ring-1 ring-black/10 backdrop-blur-sm transition-all hover:bg-background active:scale-95 sm:size-10 dark:ring-white/15"
+              className={styles.navArrowPrev}
             >
-              <ChevronLeftIcon className="size-5" />
+              <ChevronLeftIcon className={styles.arrowIcon} />
             </button>
             <button
-              data-ui="store/ProductGallery/button-next-photo"
+
               type="button"
               onClick={goNext}
               aria-label="Next photo"
-              className="absolute top-1/2 right-3 z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-background/85 text-foreground shadow-md ring-1 ring-black/10 backdrop-blur-sm transition-all hover:bg-background active:scale-95 sm:size-10 dark:ring-white/15"
+              className={styles.navArrowNext}
             >
-              <ChevronRightIcon className="size-5" />
+              <ChevronRightIcon className={styles.arrowIcon} />
             </button>
             <span
-              data-ui="store/ProductGallery/span-absolute"
+
               aria-hidden
-              className="pointer-events-none absolute right-3 bottom-3 z-10 rounded-full bg-black/60 px-2.5 py-0.5 text-[0.7rem] font-semibold text-white tabular-nums backdrop-blur-sm"
+              className={styles.photoCounterPill}
             >
               {safeIndex + 1} / {list.length}
             </span>

@@ -14,6 +14,7 @@ import type { CustomerOrderStatusCounts } from "@/features/orders/queries"
 import { isOrderView, ORDER_VIEWS, RETURN_VIEWS } from "@/features/orders/views"
 import { ORDER_STATUSES, STATUS_META } from "@/features/orders/types"
 import { cn } from "@/lib/utils"
+import styles from "./admin-orders.module.css"
 
 /** Placeholder rows shown while the list reloads. */
 const ORDERS_SKELETON_ROWS = 20
@@ -190,17 +191,17 @@ export function OrdersBrowser({
     period.month !== currentYm
 
   return (
-    <div data-ui="admin/OrdersBrowser">
-      <div data-ui="admin/OrdersBrowser/div" className="adminCard mb-4 space-y-3 rounded-xl border p-3 sm:p-3.5">
+    <div>
+      <div className={cn("adminCard", styles.browserCard)}>
         {/* Row 1: Search + Mobile Filter Toggle + Financial Year & Month */}
-        <div data-ui="admin/OrdersBrowser/div-flex" className="flex flex-wrap items-center gap-2.5">
+        <div className={styles.topFilterRow}>
           <form
-            data-ui="admin/OrdersBrowser/form"
+
             onSubmit={(e) => {
               e.preventDefault()
               go({ q: query })
             }}
-            className="min-w-0 flex-1"
+            className={styles.searchForm}
             role="search"
           >
             <SearchField
@@ -219,29 +220,27 @@ export function OrdersBrowser({
 
           {/* Mobile-only filter toggle for Status / Payment / Returns */}
           <button
-            data-ui="admin/OrdersBrowser/button"
+
             type="button"
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((v) => !v)}
             className={cn(
-              "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors sm:hidden",
-              activeCategoryFilterCount > 0 || mobileOpen
-                ? "border-primary/60 bg-primary/10 text-primary"
-                : "bg-background text-foreground hover:bg-muted"
+              styles.mobileFilterToggle,
+              (activeCategoryFilterCount > 0 || mobileOpen) && styles.mobileFilterToggleActive
             )}
           >
-            <SlidersHorizontalIcon className="size-3.5" aria-hidden />
-            <span data-ui="admin/OrdersBrowser/span">Filters</span>
+            <SlidersHorizontalIcon className={styles.iconSm} aria-hidden />
+            <span>Filters</span>
             {activeCategoryFilterCount > 0 && (
-              <span data-ui="admin/OrdersBrowser/span-inline-flex" className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-foreground tabular-nums">
+              <span className={styles.filterCountBadge}>
                 {activeCategoryFilterCount}
               </span>
             )}
           </button>
 
           <div
-            data-ui="admin/OrdersBrowser/div-grid"
-            className="grid w-full grid-cols-2 gap-2.5 sm:ml-auto sm:flex sm:w-auto sm:items-center"
+
+            className={styles.periodSelectGroup}
           >
             <SelectField
               label="Financial year"
@@ -249,7 +248,7 @@ export function OrdersBrowser({
               activeFilter={period.year !== currentFy}
               fieldSize="md"
               noErrorSpace
-              containerClassName="w-full sm:w-36"
+              containerClassName={styles.selectWidth36}
               value={period.year}
               onValueChange={(y) => go({ year: y, month: y === currentFy ? currentYm : "all" })}
               options={yearOptions}
@@ -261,7 +260,7 @@ export function OrdersBrowser({
               fieldSize="md"
               noErrorSpace
               disabled={period.year === "all"}
-              containerClassName="w-full sm:w-44"
+              containerClassName={styles.selectWidth44}
               value={period.month}
               onValueChange={(m) => go({ month: m })}
               options={monthOptions}
@@ -271,11 +270,8 @@ export function OrdersBrowser({
 
         {/* Row 2: Status / Payment / Returns Dropdowns + Reset */}
         <div
-          data-ui="admin/OrdersBrowser/div-2"
-          className={cn(
-            "grid-cols-2 gap-2.5 border-t border-border/70 pt-3 sm:flex sm:flex-wrap sm:items-center sm:gap-2.5",
-            mobileOpen ? "grid" : "hidden sm:flex"
-          )}
+
+          className={cn(styles.bottomFilterRow, mobileOpen && styles.bottomFilterRowOpen)}
         >
           <SelectField
             label="Order status"
@@ -284,7 +280,7 @@ export function OrdersBrowser({
             activeFilter={status !== "all"}
             fieldSize="md"
             noErrorSpace
-            containerClassName="w-full sm:w-44"
+            containerClassName={styles.selectWidth44}
             value={status}
             onValueChange={(s) => go(s === "to-ship" ? { view: "to-ship" } : { status: s })}
             options={statusOptions}
@@ -296,7 +292,7 @@ export function OrdersBrowser({
             activeFilter={payment !== "all"}
             fieldSize="md"
             noErrorSpace
-            containerClassName="w-full sm:w-44"
+            containerClassName={styles.selectWidth44}
             value={payment}
             onValueChange={(p) => go({ payment: p })}
             options={paymentOptions}
@@ -308,7 +304,7 @@ export function OrdersBrowser({
             activeFilter={returnView !== "none"}
             fieldSize="md"
             noErrorSpace
-            containerClassName="col-span-2 w-full sm:w-52"
+            containerClassName={styles.selectSpan2Width52}
             value={returnView}
             onValueChange={(v) => go(v === "none" ? { view: "", status: "all", payment: "all" } : { view: v })}
             options={returnOptions}
@@ -316,22 +312,22 @@ export function OrdersBrowser({
 
           {hasActiveFilters && (
             <button
-              data-ui="admin/OrdersBrowser/button-reset"
+
               type="button"
               onClick={() => {
                 setQuery("")
                 setMobileOpen(false)
                 go({ view: "", status: "all", payment: "all", q: "", year: currentFy, month: currentYm })
               }}
-              className="col-span-2 inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary/55 px-3.5 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-secondary active:scale-98 sm:ml-auto sm:w-auto"
+              className={styles.resetFilterBtn}
             >
-              <RotateCcwIcon className="size-3.5" aria-hidden /> Reset
+              <RotateCcwIcon className={styles.iconSm} aria-hidden /> Reset
             </button>
           )}
         </div>
       </div>
 
-      <div data-ui="admin/OrdersBrowser/div-3" aria-busy={pending}>{pending ? <Skeletonize><OrdersTable orders={placeholderOrders(ORDERS_SKELETON_ROWS)} /></Skeletonize> : children}</div>
+      <div aria-busy={pending}>{pending ? <Skeletonize><OrdersTable orders={placeholderOrders(ORDERS_SKELETON_ROWS)} /></Skeletonize> : children}</div>
     </div>
   )
 }
@@ -468,11 +464,11 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
     : []
 
   return (
-    <div data-ui="admin/CustomerOrdersFilterBar">
-      <div data-ui="admin/CustomerOrdersFilterBar/div" className="mb-6 space-y-3 rounded-2xl border bg-card p-3.5 shadow-2xs sm:p-4">
+    <div>
+      <div className={styles.customerFilterCard}>
         {/* Row 1: Debounced Search Box + Financial Year & Month */}
-        <div data-ui="admin/CustomerOrdersFilterBar/div-flex" className="flex flex-wrap items-center gap-2.5">
-          <div data-ui="admin/CustomerOrdersFilterBar/div-2" className="min-w-0 flex-1">
+        <div className={styles.topFilterRow}>
+          <div className={styles.searchForm}>
             <SearchField
               label="Search my orders"
               maxLength={LIMITS.orderSearch.max}
@@ -484,14 +480,14 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
             />
           </div>
 
-          <div data-ui="admin/CustomerOrdersFilterBar/div-grid" className="grid w-full grid-cols-2 gap-2.5 sm:ml-auto sm:flex sm:w-auto sm:items-center">
+          <div className={styles.periodSelectGroup}>
             <SelectField
               label="Financial year"
               hideLabel
               activeFilter={period.year !== currentFy}
               fieldSize="md"
               noErrorSpace
-              containerClassName="w-full sm:w-36"
+              containerClassName={styles.selectWidth36}
               value={period.year}
               onValueChange={(y) => goPeriod({ year: y, month: y === currentFy ? currentYm : "all" })}
               options={yearOptions}
@@ -503,7 +499,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
               fieldSize="md"
               noErrorSpace
               disabled={period.year === "all"}
-              containerClassName="w-full sm:w-44"
+              containerClassName={styles.selectWidth44}
               value={period.month}
               onValueChange={(m) => goPeriod({ month: m })}
               options={monthOptions}
@@ -512,43 +508,38 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
         </div>
 
         {/* Row 2: Status Tabs (All, Active, Delivered, Cancelled, Refund) + Reset */}
-        <div data-ui="admin/CustomerOrdersFilterBar/div-flex-2" className="flex flex-col gap-3 border-t border-border/70 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className={styles.tabsRow}>
           <div
-            data-ui="admin/CustomerOrdersFilterBar/div-order-status"
+
             role="group"
             aria-label="Order status"
-            className="flex w-full items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border/60 bg-muted/50 p-1 sm:w-auto"
+            className={cn("no-scrollbar", styles.statusTabsGroup)}
           >
             {statusTabs.map((tab) => {
               const isSelected = status === tab.value
               return (
                 <button
-                  data-ui="admin/CustomerOrdersFilterBar/button"
+
                   key={tab.value}
                   type="button"
                   aria-pressed={isSelected}
                   onClick={() => selectTab(tab.value)}
-                  className={cn(
-                    "inline-flex h-8.5 flex-1 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 text-xs transition-all sm:flex-initial",
-                    isSelected
-                      ? "bg-primary font-semibold text-primary-foreground shadow-xs"
-                      : "font-medium text-foreground/75 hover:bg-background/90 hover:text-foreground"
-                  )}
+                  className={cn(styles.statusTabBtn, isSelected && styles.statusTabBtnSelected)}
                 >
-                  <span data-ui="admin/CustomerOrdersFilterBar/span">{tab.label}</span>
+                  <span>{tab.label}</span>
                   {tab.count !== undefined && (
                     <span
-                      data-ui="admin/CustomerOrdersFilterBar/span-2"
+
                       className={cn(
-                        "inline-flex h-5 min-w-5 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums leading-none",
+                        styles.tabCountBadge,
                         isSelected
-                          ? "bg-primary-foreground text-primary shadow-2xs"
+                          ? styles.tabCountSelected
                           : tab.attention
-                            ? "bg-amber-500/20 text-amber-950 ring-1 ring-amber-500/40 dark:bg-amber-500/25 dark:text-amber-200"
-                            : "bg-background text-foreground shadow-2xs ring-1 ring-border/80"
+                            ? styles.tabCountAttention
+                            : styles.tabCountDefault
                       )}
                     >
-                      {tab.attention && !isSelected && <span data-ui="admin/CustomerOrdersFilterBar/span-3" className="size-1.5 rounded-full bg-amber-500" aria-hidden />}
+                      {tab.attention && !isSelected && <span className={styles.attentionDot} aria-hidden />}
                       {tab.count}
                     </span>
                   )}
@@ -559,7 +550,7 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
 
           {hasActiveFilters && (
             <button
-              data-ui="admin/CustomerOrdersFilterBar/button-reset"
+
               type="button"
               onClick={() => {
                 clearSearch()
@@ -569,43 +560,43 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
                   goPeriod({ status: "all", year: currentFy, month: currentYm })
                 }
               }}
-              className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl border border-border bg-secondary/55 px-3.5 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-secondary active:scale-98 sm:ml-auto sm:w-auto"
+              className={styles.customerResetBtn}
             >
-              <RotateCcwIcon className="size-3.5" aria-hidden /> Reset
+              <RotateCcwIcon className={styles.iconSm} aria-hidden /> Reset
             </button>
           )}
         </div>
       </div>
 
       {rawItems && (
-        <div data-ui="admin/CustomerOrdersFilterBar/div-3" aria-busy={pending}>
+        <div aria-busy={pending}>
           {pending ? (
             <Skeletonize>{current.skeletonNode}</Skeletonize>
           ) : rawItems.length === 0 && !trimmedQuery ? (
             current.emptyPeriodNode
           ) : visibleItems.length === 0 ? (
             trimmedQuery && period.year !== "all" ? (
-              <div data-ui="admin/CustomerOrdersFilterBar/div-flex-3" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-12 text-center">
-                <p data-ui="admin/CustomerOrdersFilterBar/p" className="font-heading text-xl">
+              <div className={styles.noSearchMatchBox}>
+                <p className={styles.noMatchTitle}>
                   No orders matching &ldquo;{debouncedQuery.trim()}&rdquo; in this period
                 </p>
-                <p data-ui="admin/CustomerOrdersFilterBar/p-2" className="max-w-sm text-sm text-muted-foreground">
+                <p className={styles.noMatchSub}>
                   Search across all your past orders to find older purchases.
                 </p>
-                <div data-ui="admin/CustomerOrdersFilterBar/div-flex-4" className="flex flex-wrap justify-center gap-2.5">
+                <div className={styles.noMatchActions}>
                   <button
-                    data-ui="admin/CustomerOrdersFilterBar/button-search-in-all-time-ord"
+
                     type="button"
                     onClick={() => goPeriod({ status: "all", year: "all", month: "all" })}
-                    className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                    className={styles.allTimeBtn}
                   >
                     Search in all-time orders
                   </button>
                   <button
-                    data-ui="admin/CustomerOrdersFilterBar/button-clear-search"
+
                     type="button"
                     onClick={clearSearch}
-                    className="inline-flex h-10 items-center justify-center rounded-full border bg-background px-5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    className={styles.clearSearchBtn}
                   >
                     Clear search
                   </button>
@@ -615,9 +606,9 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
               current.emptyTabNode
             )
           ) : (
-            <ul data-ui="admin/CustomerOrdersFilterBar/ul" className="space-y-3">
+            <ul className={styles.customerOrdersList}>
               {visibleItems.map((item) => (
-                <li data-ui="admin/CustomerOrdersFilterBar/li" key={item.id}>
+                <li key={item.id}>
                   {item.node}
                 </li>
               ))}

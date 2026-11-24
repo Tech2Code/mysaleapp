@@ -1,14 +1,15 @@
 import type { ReactNode } from "react"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import styles from "./form.module.css"
 
 export type FieldSize = "md" | "lg"
 
 /** Control heights: md = admin panel, lg = storefront (bigger touch targets). */
-export const FIELD_HEIGHT: Record<FieldSize, string> = { md: "h-10", lg: "h-11" }
+export const FIELD_HEIGHT: Record<FieldSize, string> = { md: styles.fieldHeightMd, lg: styles.fieldHeightLg }
 
 /** Pill-shaped variant used by search bars and filters. */
-export const PILL = "h-12 rounded-full px-5"
+export const PILL = styles.fieldPill
 
 /** Id of the hint/error paragraph, for aria-describedby. */
 export const descriptionId = (id: string) => `${id}-desc`
@@ -47,29 +48,29 @@ export function FieldShell({
   children: ReactNode
 }) {
   return (
-    <div data-ui="form/FieldShell" className={cn("relative w-full min-w-0 max-w-full", !hint && !noErrorSpace && "pb-3", className)}>
-      <Label data-ui="form/FieldShell/Label" htmlFor={id} className={cn("text-sm leading-none font-medium", hideLabel && "sr-only")}>
+    <div className={cn(styles.fieldShell, !hint && !noErrorSpace && styles.fieldShellWithSpace, className)}>
+      <Label htmlFor={id} className={cn(styles.fieldLabel, hideLabel && styles.srOnly)}>
         {label}
       </Label>
       {/* The error is positioned against THIS box, so it always sits right under the input itself. */}
-      <div data-ui="form/FieldShell/div" className={cn("relative w-full min-w-0 max-w-full", !hideLabel && "mt-2")}>
+      <div className={cn(styles.controlBox, !hideLabel && styles.controlBoxSpaced)}>
         {children}
         {error && (
-          <p data-ui="form/FieldShell/p-absolute"
+          <p
             id={descriptionId(id)}
             role="alert"
             title={error}
-            className="absolute inset-x-0 top-full mt-0.5 text-[0.5625rem]/[0.8125rem] sm:text-[0.625rem]/[0.875rem] font-medium text-destructive tracking-tight"
+            className={styles.errorAlert}
           >
             {error}
           </p>
         )}
       </div>
       {hint && (
-        <p data-ui="form/FieldShell/p"
+        <p
           id={error ? undefined : descriptionId(id)}
           aria-hidden={error ? true : undefined}
-          className={cn("mt-1 text-[0.6875rem]/4 text-muted-foreground", error && "invisible")}
+          className={cn(styles.hintText, error && styles.hintInvisible)}
         >
           {hint}
         </p>
@@ -79,6 +80,6 @@ export function FieldShell({
 }
 
 /** Spacing between stacked fields (each field already reserves its error strip). */
-export const FIELD_STACK = "space-y-2"
+export const FIELD_STACK = styles.fieldStack
 /** Grid of fields: normal column gap, small row gap. */
-export const FIELD_GRID = "gap-x-4 gap-y-1"
+export const FIELD_GRID = styles.fieldGrid

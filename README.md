@@ -5,7 +5,8 @@ A fast, installable (PWA) online store where customers pay via **UPI** (with zer
 | | |
 |---|---|
 | Framework | Next.js 16 (App Router, Cache Components) + TypeScript |
-| UI | Tailwind CSS v4, shadcn/ui (Base UI), Motion animations |
+| UI & Styling | Plain CSS Modules (`*.module.css`, 35 modules), Base UI (`@base-ui/react`), Motion animations |
+| Design System | Borderless Tonal Layering & Specular Elevation (Sky, Ocean & Vibrant Coral) + Admin SaaS Slate & Terracotta |
 | Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage, `pg_cron`) |
 | Hosting | Vercel (free Hobby plan) |
 
@@ -133,7 +134,8 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
 6. **Promo Codes, Verified Product Reviews & Account Controls.**
    - **Promo Codes:** Admins create, enable/disable, or delete percentage or flat discount codes (with min order amount, max discount cap, usage limits, and expiry dates) in **Admin → Settings**; customers apply them at checkout and discounts appear on order summaries and GST invoices.
    - **Verified Reviews:** Customers who have received a delivered order for a product can rate (1–5 stars) and review it on the product page (with a *Verified purchase* badge, rating distribution bars, and `AggregateRating` SEO schema).
-   - **Account Deactivation & Recovery:** Customers can deactivate their account from `/account/profile` once all active orders and returns are complete; signing back in anytime automatically restores the account.
+   - **Account Deactivation, Recovery & Data Portability:** Customers can download a printable, human-readable HTML summary of their personal data (**Download my data**, `exportMyAccountDataHtml`) or deactivate their account from `/account/profile` (with required reason selection) once all active orders and returns are complete; signing back in anytime automatically restores a deactivated account.
+   - **Legal, Privacy & Compliance Pages:** Dynamic `/privacy` (Privacy Policy with Data Retention schedule & Subprocessors table), `/terms` (Terms of Service), and `/refund-policy` (Refund, Return & Shipping Policy) pages driven by `StoreSettings`, plus an essential-cookies & storage notice banner (`<CookieBanner />`), an in-place tabbed `<LegalQuickModal />` preview dialog, and explicit Terms & Privacy acceptance on account sign-up.
 7. **Customer & Guest Tracking.** Signed-in customers manage orders under **My orders** (`/account/orders`) and download printable GST/non-GST invoices. Guests track orders at `/track` using their order code + last 4 phone digits (sensitive details like full address, phone, and UTR prefix are masked for privacy).
 
 Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
@@ -157,9 +159,12 @@ src/
     orders/           actions, queries, admin-*, pricing, returns, refund, transitions, deadline, whatsapp
     auth/ account/ addresses/ settings/ security/ wishlist/ location/
   components/
-    ui/               shadcn primitives (don't edit by hand; re-add with the shadcn CLI)
-    form/             The shared inputs: TextField, TextAreaField, SelectField, SearchField, SwitchField, DateField
-    store/ admin/ account/ shared/
+    ui/               Base UI primitives (Button, Dialog, Sheet, Select, DropdownMenu, Tabs, Table, Sonner…) + ui.module.css
+    form/             Shared form inputs (TextField, TextAreaField, SelectField, FormSelectField, SearchField, SwitchField, DateField) + form.module.css
+    store/            Storefront views & components (Header, Hero, ProductBrowser with 12-per-page Pagination, Cart, Checkout, OrderPlaced, Reviews…) + *.module.css
+    admin/            Admin panel views (Dashboard, Orders, Products, Categories, Settings, Account, Launch) + admin-*.module.css
+    account/          Customer account views (MyOrders, ProfileForm, AddressBook, AccountNav) + account.module.css
+    shared/           Shared components (Pagination, Skeletonize, BusyOverlay, ConfirmDialog, InvoiceDocument, ScrollReset…) + shared.module.css & pagination.module.css
   lib/                supabase clients, seo helpers, formatting, validation
   store/              Client state (cart, wishlist, auth) with Zustand
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
@@ -177,7 +182,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 805 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 808 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

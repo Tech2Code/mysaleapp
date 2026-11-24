@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon } from "lucide-react"
 import { Children, cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from "react"
+import styles from "./shared.module.css"
 
 type ItemProps = { title: string; children: ReactNode; defaultOpen?: boolean; name?: string }
 
@@ -13,17 +14,17 @@ export function AccordionItem({ title, children, defaultOpen = false, name }: It
   const [open, setOpen] = useState(defaultOpen)
   return (
     <details
-      data-ui="shared/AccordionItem"
+
       name={name}
       open={open}
       onToggle={(e) => setOpen(e.currentTarget.open)}
-      className="group border-b last:border-b-0"
+      className={styles.accordionDetails}
     >
-      <summary data-ui="shared/AccordionItem/summary-flex" className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 text-sm font-semibold marker:hidden hover:text-primary">
+      <summary className={styles.accordionSummary}>
         {title}
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180" aria-hidden />
+        <ChevronDownIcon className={styles.chevronIcon} aria-hidden />
       </summary>
-      <div data-ui="shared/AccordionItem/div" className="pb-5 text-sm/relaxed  text-muted-foreground">{children}</div>
+      <div className={styles.accordionBody}>{children}</div>
     </details>
   )
 }
@@ -34,7 +35,7 @@ export function Accordion({ children }: { children: ReactNode }) {
   const items = Children.toArray(children)
   const firstElementIndex = items.findIndex((child) => isValidElement<ItemProps>(child))
   return (
-    <div data-ui="shared/Accordion" className="rounded-3xl border bg-card px-5 sm:px-6">
+    <div className={styles.accordionBox}>
       {items.map((child, i) =>
         isValidElement<ItemProps>(child)
           ? cloneElement(child as ReactElement<ItemProps>, {

@@ -1,0 +1,35 @@
+/* Section: Category Carousel Grid (60-30-10 Harmonious Surface Tints) */
+.categorySlide { width: 44%; flex-shrink: 0; scroll-snap-align: start; list-style: none; }
+.categorySlide .categoryCard { position: relative; display: flex; height: 168px; flex-direction: column; justify-content: space-between; overflow: hidden; border-radius: 20px; border: 0; box-shadow: var(--store-elevation-sm); padding: 16px; transition: transform 300ms ease, box-shadow 300ms ease; }
+.categorySlide .categoryCard:active { transform: scale(0.98); }
+.categorySlide .tintAmber { background-image: linear-gradient(135deg, var(--store-sky-surface, #EAF4FB), var(--card)); }
+.categorySlide .tintSupport { background-image: linear-gradient(135deg, color-mix(in oklab, var(--primary) 12%, var(--card)), var(--store-sky-surface, #EAF4FB)); }
+.categorySlide .tintWarm { background-image: linear-gradient(135deg, var(--card), var(--store-sky-surface, #EAF4FB)); }
+/* Section: Category Media & Watermark */
+.categoryCard .categoryPhoto { object-fit: cover; transition: transform 700ms ease; }
+.categoryCard:hover .categoryPhoto { transform: scale(1.05); }
+.categoryCard .photoOverlay { position: absolute; inset: 0; background-image: linear-gradient(0deg, rgba(11, 74, 111, 0.78) 0%, rgba(11, 74, 111, 0.2) 55%, transparent 100%); }
+.categoryCard .letterWatermark { position: absolute; right: -24px; bottom: -32px; font-family: var(--font-heading); font-size: 112px; line-height: 112px; font-weight: 600; color: color-mix(in oklab, var(--foreground) 9%, transparent); transition: transform 500ms ease; }
+.categoryCard:hover .letterWatermark { transform: scale(1.1); }
+/* Section: Card Arrow & Text */
+.categoryCard .cornerArrow { position: relative; width: 20px; height: 20px; align-self: flex-end; opacity: 0.65; transition: transform 200ms ease, opacity 200ms ease; }
+.categoryCard:hover .cornerArrow { transform: translate(2px, -2px); opacity: 1; }
+.categoryCard .cornerArrowOnPhoto { width: 24px; height: 24px; border-radius: 9999px; background-color: color-mix(in oklab, var(--background) 92%, transparent); padding: 4px; color: var(--foreground); opacity: 1; }
+.categoryCard .cardTextGroup { position: relative; }
+.cardTextGroup .categoryTitle { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.cardTextGroup .categoryTitlePhoto { color: #ffffff; }
+.cardTextGroup .categoryCount { margin: 2px 0 0 0; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.cardTextGroup .categoryCountPhoto { color: rgba(255, 255, 255, 0.82); }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .categorySlide { width: 31%; }
+  .categorySlide .categoryCard { height: 208px; padding: 20px; }
+  .categorySlide .categoryCard:hover { transform: translateY(-3px); box-shadow: var(--store-elevation-md); }
+  .cardTextGroup .categoryTitle { font-size: 20px; line-height: 26px; }
+}
+@media (min-width: 768px) {
+  .categorySlide { width: 23.5%; }
+}
+@media (min-width: 1024px) {
+  .categorySlide { width: calc((100% - 64px) / 5); }
+}

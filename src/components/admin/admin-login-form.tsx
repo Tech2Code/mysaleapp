@@ -15,6 +15,7 @@ import { signInAdmin } from "@/features/auth/actions"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { LIMITS, v } from "@/lib/validation"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import styles from "./admin-core.module.css"
 
 const schema = z.object({
   email: v.email(),
@@ -73,7 +74,7 @@ export function AdminLoginForm() {
   )
 
   return (
-    <form data-ui="admin/AdminLoginForm" onSubmit={onSubmit} noValidate className="space-y-2">
+    <form onSubmit={onSubmit} noValidate className={styles.authFormStack}>
       <TextField label="Email" kind="email" type="email" autoComplete="email" error={form.formState.errors.email?.message} {...form.register("email")} />
       <TextField
         label="Password" maxLength={LIMITS.password.max}
@@ -82,13 +83,13 @@ export function AdminLoginForm() {
         error={form.formState.errors.password?.message}
         {...form.register("password")}
       />
-      <div data-ui="admin/AdminLoginForm/div-flex" className="flex justify-end pt-0.5 text-sm">
-        <Link data-ui="admin/AdminLoginForm/Link-forgot-password" href="/admin/forgot-password" className="font-medium text-primary hover:underline">
+      <div className={styles.forgotLinkRow}>
+        <Link href="/admin/forgot-password" className={styles.primaryHoverLink}>
           Forgot password?
         </Link>
       </div>
-      <Button data-ui="admin/AdminLoginForm/Button-sign-in" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
-        {pending ? <Loader2Icon className="animate-spin" /> : <LogInIcon className="size-4" />} Sign in
+      <Button type="submit" size="lg" disabled={pending} className={styles.authSubmitBtn}>
+        {pending ? <Loader2Icon className={styles.spinIcon} /> : <LogInIcon className={styles.icon16} />} Sign in
       </Button>
     </form>
   )

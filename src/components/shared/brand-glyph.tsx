@@ -17,7 +17,7 @@ export function BrandGlyph({
 }) {
   return (
     <svg
-      data-ui="shared/BrandGlyph"
+
       width={size}
       height={size}
       viewBox="0 0 48 48"

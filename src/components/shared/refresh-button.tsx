@@ -4,6 +4,7 @@ import { RefreshCwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useProgressWhile } from "./route-progress"
+import styles from "./shared.module.css"
 
 /**
  * Re-fetches the current page's data in place (no full reload, scroll position kept). For pages whose state
@@ -29,14 +30,14 @@ export function RefreshButton({ label = "Refresh", onRefresh }: { label?: string
 
   return (
     <button
-      data-ui="shared/RefreshButton"
+
       type="button"
       onClick={() => void refresh()}
       disabled={pending}
       aria-busy={pending}
-      className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted disabled:opacity-70"
+      className={styles.refreshBtn}
     >
-      <RefreshCwIcon className={pending ? "size-4 animate-spin" : "size-4"} aria-hidden /> {label}
+      <RefreshCwIcon className={pending ? styles.icon16Spin : styles.icon16} aria-hidden /> {label}
     </button>
   )
 }

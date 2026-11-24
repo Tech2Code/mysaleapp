@@ -5,6 +5,7 @@ import { StoreSettingsProvider } from "@/components/store/store-settings-provide
 import { siteConfig } from "@/config/site"
 import { getStoreSettings } from "@/features/settings/queries"
 import "./globals.css"
+import styles from "@/app/(store)/store-layout.module.css"
 
 const display = Outfit({
   variable: "--font-display",
@@ -64,8 +65,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getStoreSettings()
 
   return (
-    <html data-ui="layout:/" lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+    <html lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} ${styles.rootHtml}`}>
+      <body className={styles.rootBody}>
         <StoreSettingsProvider value={settings}>
           <Providers>{children}</Providers>
         </StoreSettingsProvider>

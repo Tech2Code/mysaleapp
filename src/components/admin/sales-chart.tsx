@@ -4,6 +4,7 @@ import { BarChart3Icon, TrendingUpIcon } from "lucide-react"
 import { useId, useState, type KeyboardEvent } from "react"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import styles from "./admin-core.module.css"
 
 type Point = { label: string; revenue: number; orders: number }
 type Metric = "revenue" | "orders"
@@ -108,69 +109,69 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
   }
 
   return (
-    <div data-ui="admin/SalesChart" className="space-y-4">
+    <div className={styles.salesChartWrap}>
       {/* summary + switches */}
-      <div data-ui="admin/SalesChart/div-flex" className="flex flex-wrap items-start justify-between gap-3">
-        <dl data-ui="admin/SalesChart/dl-flex" className="flex flex-wrap gap-x-6 gap-y-2">
-          <div data-ui="admin/SalesChart/div">
-            <dt data-ui="admin/SalesChart/dt" className="text-[11px] font-medium text-muted-foreground">Total · {rangeLabel}</dt>
-            <dd data-ui="admin/SalesChart/dd" className="font-heading text-xl/tight font-semibold tabular-nums sm:text-2xl/tight">{fmt(total)}</dd>
+      <div className={styles.chartHeaderRow}>
+        <dl className={styles.chartSummaryDl}>
+          <div>
+            <dt className={styles.metricDt}>Total · {rangeLabel}</dt>
+            <dd className={styles.metricTotalDd}>{fmt(total)}</dd>
           </div>
-          <div data-ui="admin/SalesChart/div-2">
-            <dt data-ui="admin/SalesChart/dt-2" className="text-[11px] font-medium text-muted-foreground">Avg / {unit}</dt>
-            <dd data-ui="admin/SalesChart/dd-2" className="text-base/tight font-semibold tabular-nums sm:text-lg/tight">{fmt(Math.round(average))}</dd>
+          <div>
+            <dt className={styles.metricDt}>Avg / {unit}</dt>
+            <dd className={styles.metricSubDd}>{fmt(Math.round(average))}</dd>
           </div>
           {best >= 0 && (
-            <div data-ui="admin/SalesChart/div-3">
-              <dt data-ui="admin/SalesChart/dt-3" className="text-[11px] font-medium text-muted-foreground">Peak {unit}</dt>
-              <dd data-ui="admin/SalesChart/dd-3" className="text-base/tight font-semibold tabular-nums sm:text-lg/tight">
-                {fmt(max)} <span data-ui="admin/SalesChart/span" className="text-xs font-normal text-muted-foreground">({points[best].label})</span>
+            <div>
+              <dt className={styles.metricDt}>Peak {unit}</dt>
+              <dd className={styles.metricSubDd}>
+                {fmt(max)} <span className={styles.peakLabelSpan}>({points[best].label})</span>
               </dd>
             </div>
           )}
         </dl>
 
-        <div data-ui="admin/SalesChart/div-flex-2" className="flex items-center gap-2">
-          <div data-ui="admin/SalesChart/div-chart-style" role="group" aria-label="Chart style" className="inline-flex h-8 items-center rounded-lg border bg-muted/60 p-0.5">
-            <button data-ui="admin/SalesChart/button-area-chart"
+        <div className={styles.chartControlsRow}>
+          <div role="group" aria-label="Chart style" className={styles.segmentedGroup}>
+            <button
               type="button"
               onClick={() => setChartMode("area")}
               aria-pressed={chartMode === "area"}
               aria-label="Area chart"
               title="Area chart"
               className={cn(
-                "grid size-7 place-items-center rounded-md transition-colors",
-                chartMode === "area" ? "bg-card text-foreground shadow-2xs" : "text-muted-foreground hover:text-foreground"
+                styles.modeIconBtn,
+                chartMode === "area" && styles.segBtnActive
               )}
             >
-              <TrendingUpIcon className="size-3.5" aria-hidden />
+              <TrendingUpIcon className={styles.icon14} aria-hidden />
             </button>
-            <button data-ui="admin/SalesChart/button-bar-chart"
+            <button
               type="button"
               onClick={() => setChartMode("bars")}
               aria-pressed={chartMode === "bars"}
               aria-label="Bar chart"
               title="Bar chart"
               className={cn(
-                "grid size-7 place-items-center rounded-md transition-colors",
-                chartMode === "bars" ? "bg-card text-foreground shadow-2xs" : "text-muted-foreground hover:text-foreground"
+                styles.modeIconBtn,
+                chartMode === "bars" && styles.segBtnActive
               )}
             >
-              <BarChart3Icon className="size-3.5" aria-hidden />
+              <BarChart3Icon className={styles.icon14} aria-hidden />
             </button>
           </div>
 
-          <div data-ui="admin/SalesChart/div-chart-shows" role="group" aria-label="Chart shows" className="inline-flex h-8 items-center rounded-lg border bg-muted/60 p-0.5">
+          <div role="group" aria-label="Chart shows" className={styles.segmentedGroup}>
             {METRICS.map((m) => (
               <button
-                data-ui="admin/SalesChart/button"
+
                 key={m.key}
                 type="button"
                 aria-pressed={metric === m.key}
                 onClick={() => setMetric(m.key)}
                 className={cn(
-                  "h-7 rounded-md px-3 text-xs leading-none font-medium transition-colors",
-                  metric === m.key ? "bg-card text-foreground shadow-2xs" : "text-muted-foreground hover:text-foreground"
+                  styles.metricTabBtn,
+                  metric === m.key && styles.segBtnActive
                 )}
               >
                 {m.label}
@@ -181,24 +182,24 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
       </div>
 
       {total === 0 ? (
-        <div data-ui="admin/SalesChart/div-grid" className="grid h-56 place-items-center rounded-xl border border-dashed text-xs text-muted-foreground">
+        <div className={styles.emptyChartBox}>
           No {money ? "sales" : "orders"} in this period yet.
         </div>
       ) : (
-        <div data-ui="admin/SalesChart/div-flex-3" className="flex gap-2">
+        <div className={styles.chartPlotFlex}>
           {/* left axis */}
-          <div data-ui="admin/SalesChart/div-relative" className="relative h-56 w-11 shrink-0 text-right font-mono text-[10px] text-muted-foreground tabular-nums" aria-hidden>
+          <div className={styles.yAxisCol} aria-hidden>
             {ticks.map((t) => (
-              <span data-ui="admin/SalesChart/span-absolute" key={t} className="absolute right-0 -translate-y-1/2 leading-none" style={{ top: `${(1 - t) * 100}%` }}>
+              <span key={t} className={styles.yAxisTick} style={{ top: `${(1 - t) * 100}%` }}>
                 {compact(top * t, money)}
               </span>
             ))}
           </div>
 
-          <div data-ui="admin/SalesChart/div-4" className="min-w-0 flex-1">
+          <div className={styles.plotMainCol}>
             <div
-              data-ui="admin/SalesChart/div-relative-2"
-              className="relative h-56 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+
+              className={styles.plotCanvas}
               tabIndex={0}
               role="application"
               aria-label={`${money ? "Revenue" : "Orders"} by ${unit}. Use the left and right arrow keys to read each ${unit}.`}
@@ -209,17 +210,17 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
               {/* gridlines */}
               {ticks.map((t) => (
                 <div
-                  data-ui="admin/SalesChart/div-5"
+
                   key={t}
                   aria-hidden
-                  className={cn("absolute inset-x-0 border-t", t === 0 ? "border-border" : "border-dashed border-border/60")}
+                  className={cn(styles.gridLine, t === 0 ? styles.gridLineBase : styles.gridLineDashed)}
                   style={{ top: `${(1 - t) * 100}%` }}
                 />
               ))}
 
               {chartMode === "area" ? (
                 <>
-                  <svg data-ui="admin/SalesChart/svg-absolute" viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible" aria-hidden>
+                  <svg viewBox={`0 0 ${svgW} ${svgH}`} preserveAspectRatio="none" className={styles.areaSvg} aria-hidden>
                     <defs>
                       <linearGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
                         <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.24" />
@@ -252,20 +253,20 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                   </svg>
 
                   {/* Interactive hit columns + active dot */}
-                  <div data-ui="admin/SalesChart/div-flex-4" className="absolute inset-0 flex">
+                  <div className={styles.hitColumnsRow}>
                     {points.map((p, i) => {
                       const isActive = shown === i
                       const dotTopPct = ((padY + plotH - (p[metric] / top) * plotH) / svgH) * 100
                       return (
-                        <div data-ui="admin/SalesChart/div-relative-3"
+                        <div
                           key={`${p.label}-${i}`}
-                          className="relative flex-1 cursor-crosshair"
+                          className={styles.hitCol}
                           onMouseEnter={() => setActive(i)}
                           onTouchStart={() => setActive(i)}
                         >
                           {isActive && (
-                            <span data-ui="admin/SalesChart/span-absolute-2"
-                              className="pointer-events-none absolute left-1/2 size-3 -translate-1/2 rounded-full border-2 border-card bg-primary shadow-sm ring-4 ring-primary/20"
+                            <span
+                              className={styles.activeDot}
                               style={{ top: `${dotTopPct}%` }}
                               aria-hidden
                             />
@@ -277,28 +278,29 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                 </>
               ) : (
                 /* Modern rounded gradient bars */
-                <div data-ui="admin/SalesChart/div-flex-5" className="absolute inset-0 flex items-end gap-1">
+                <div className={styles.barsRow}>
                   {points.map((p, i) => {
                     const v = p[metric]
                     const isActive = shown === i
                     return (
                       <div
-                        data-ui="admin/SalesChart/div-flex-6"
+
                         key={`${p.label}-${i}`}
-                        className="group relative flex h-full min-w-0 flex-1 items-end"
+                        className={styles.barSlot}
                         onMouseEnter={() => setActive(i)}
                         onTouchStart={() => setActive(i)}
                       >
                         <div
-                          data-ui="admin/SalesChart/div-6"
+
                           className={cn(
-                            "adminBarGrow w-full rounded-t-md transition-opacity duration-200",
+                            "adminBarGrow",
+                            styles.barFill,
                             v === 0
-                              ? "bg-muted-foreground/20"
+                              ? styles.barZero
                               : isActive || (i === best && shown === null)
-                                ? "bg-linear-to-b from-primary to-primary/80"
-                                : "bg-linear-to-b from-primary/65 to-primary/35",
-                            shown !== null && !isActive && "opacity-45"
+                                ? styles.barPeak
+                                : styles.barNormal,
+                            shown !== null && !isActive && styles.barDimmed
                           )}
                           style={{
                             height: v === 0 ? "2px" : `max(4px, ${(v / top) * 100}%)`,
@@ -314,9 +316,9 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
               {/* Shared floating tooltip */}
               {activePoint && shown !== null && (
                 <div
-                  data-ui="admin/SalesChart/div-absolute"
+
                   role="status"
-                  className="pointer-events-none absolute z-20 w-max max-w-48 rounded-lg border bg-card/95 px-3 py-2 text-xs text-foreground shadow-md backdrop-blur-xs"
+                  className={styles.chartTooltip}
                   style={{
                     bottom: `calc(${Math.min(82, (activePoint[metric] / top) * 100)}% + 12px)`,
                     left: shown < points.length * 0.15 ? "0" : undefined,
@@ -326,10 +328,10 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                       : {}),
                   }}
                 >
-                  <p data-ui="admin/SalesChart/p" className="text-[11px] font-medium text-muted-foreground">{activePoint.label}</p>
-                  <p data-ui="admin/SalesChart/p-2" className="font-mono text-sm font-semibold tabular-nums">{fmt(activePoint[metric])}</p>
+                  <p className={styles.tooltipLabel}>{activePoint.label}</p>
+                  <p className={styles.tooltipValue}>{fmt(activePoint[metric])}</p>
                   {metric === "revenue" && activePoint.orders > 0 && (
-                    <p data-ui="admin/SalesChart/p-3" className="text-[11px] text-muted-foreground">
+                    <p className={styles.tooltipSub}>
                       {activePoint.orders} order{activePoint.orders === 1 ? "" : "s"}
                     </p>
                   )}
@@ -338,10 +340,10 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
             </div>
 
             {/* x labels */}
-            <div data-ui="admin/SalesChart/div-flex-7" className="mt-2 flex h-4 gap-1 text-[10px] text-muted-foreground" aria-hidden>
+            <div className={styles.xAxisRow} aria-hidden>
               {points.map((p, i) => (
-                <span data-ui="admin/SalesChart/span-relative" key={`${p.label}-${i}`} className="relative min-w-0 flex-1">
-                  {i % every === 0 && <span data-ui="admin/SalesChart/span-absolute-3" className="absolute left-0 whitespace-nowrap">{p.label}</span>}
+                <span key={`${p.label}-${i}`} className={styles.xAxisCell}>
+                  {i % every === 0 && <span className={styles.xAxisLabel}>{p.label}</span>}
                 </span>
               ))}
             </div>

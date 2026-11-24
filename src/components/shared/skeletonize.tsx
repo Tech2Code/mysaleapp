@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import styles from "./shared.module.css"
 
 /**
  * THE way to show a loading state. Render the REAL page/component with placeholder data inside
@@ -16,9 +17,9 @@ import type { ReactNode } from "react"
  */
 export function Skeletonize({ children, label = "Loading" }: { children: ReactNode; label?: string }) {
   return (
-    <div data-ui="shared/Skeletonize" data-skeleton="" aria-busy="true" className="contents">
-      <span data-ui="shared/Skeletonize/span" role="status" className="sr-only">{label}…</span>
-      <div data-ui="shared/Skeletonize/div" aria-hidden inert className="contents">
+    <div data-skeleton="" aria-busy="true" className={styles.displayContents}>
+      <span role="status" className={styles.srOnly}>{label}…</span>
+      <div aria-hidden inert className={styles.displayContents}>
         {children}
       </div>
     </div>

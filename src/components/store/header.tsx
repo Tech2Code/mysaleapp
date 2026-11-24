@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { cartCount, useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
 import { AccountMenu } from "./account-menu"
+import styles from "./header.module.css"
 import { SearchDialog } from "./search-dialog"
 
 export type NavCategory = { name: string; slug: string }
@@ -28,13 +29,13 @@ function CountBadge({ count }: { count: number }) {
   return (
     <AnimatePresence>
       {count > 0 && (
-        <m.span data-ui="store/CountBadge/m.span-grid"
+        <m.span
           key={count}
           initial={{ scale: 0.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.4, opacity: 0 }}
           transition={{ type: "spring", stiffness: 600, damping: 20 }}
-          className="absolute top-0.5 right-0.5 grid min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.65rem]/4.5 font-bold text-primary-foreground ring-2 ring-background"
+          className={styles.countBadge}
         >
           {count > 99 ? "99+" : count}
         </m.span>
@@ -49,23 +50,20 @@ function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: 
       {links.map((l) => {
         const active = isActive(pathname, l.href)
         return (
-          <ScrollLink data-ui="store/DesktopNavItems/ScrollLink"
+          <ScrollLink
             key={l.href}
             href={l.href}
             aria-current={active ? "page" : undefined}
-            className={cn(
-              "relative max-w-44 truncate rounded-full px-3.5 py-2 text-sm font-medium whitespace-nowrap text-foreground/70 transition-colors hover:text-foreground",
-              active && "font-semibold text-foreground"
-            )}
+            className={cn(styles.desktopNavLink, active && styles.desktopNavLinkActive)}
           >
+            {l.label}
             {active && (
-              <m.span data-ui="store/DesktopNavItems/m.span-absolute"
+              <m.span
                 layoutId="nav-pill"
-                className="absolute inset-0 -z-10 rounded-full bg-secondary/90 ring-1 ring-border/70"
-                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                className={styles.activeNavBeam}
+                transition={{ type: "spring", stiffness: 420, damping: 32 }}
               />
             )}
-            {l.label}
           </ScrollLink>
         )
       })}
@@ -90,15 +88,12 @@ function MobileNavItems({
   return (
     <>
       {links.map((l, i) => (
-        <m.div data-ui="store/MobileNavItems/m.div" key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
-          <ScrollLink data-ui="store/MobileNavItems/ScrollLink"
+        <m.div key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
+          <ScrollLink
             href={l.href}
             onClick={onNavigate}
             aria-current={isActive(pathname, l.href) ? "page" : undefined}
-            className={cn(
-              "block truncate rounded-xl px-4 py-3 text-base font-medium transition-colors hover:bg-muted",
-              isActive(pathname, l.href) && "bg-secondary text-primary"
-            )}
+            className={cn(styles.mobileNavLink, isActive(pathname, l.href) && styles.mobileNavLinkActive)}
           >
             {l.label}
           </ScrollLink>
@@ -129,24 +124,24 @@ function MobileHeaderShortcuts({
   if (!isDetailOrCheckout) return null
 
   return (
-    <div data-ui="store/MobileHeaderShortcuts" className="flex items-center gap-0.5 sm:hidden">
+    <div className={styles.mobileShortcuts}>
       <Link
-        data-ui="store/MobileHeaderShortcuts/Link"
+
         href="/wishlist"
-        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn)}
         aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
       >
-        <HeartIcon className="size-4.5" />
+        <HeartIcon className={styles.actionIcon} />
         {mounted && <CountBadge count={wishCount} />}
       </Link>
       <button
-        data-ui="store/MobileHeaderShortcuts/button"
+
         type="button"
         onClick={onOpenCart}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative rounded-full")}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn)}
         aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
       >
-        <ShoppingBagIcon className="size-4.5" />
+        <ShoppingBagIcon className={styles.actionIcon} />
         {mounted && <CountBadge count={itemCount} />}
       </button>
     </div>
@@ -175,26 +170,23 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
   return (
     <>
-    <header data-ui="store/Header/header"
-      className={cn(
-        "sticky top-0 z-40 transition-[background-color,border-color,box-shadow] duration-200",
-        scrolled ? "glass border-b shadow-[0_8px_30px_-12px_rgb(0_0_0/0.12)]" : "border-b border-transparent"
-      )}
+    <header
+      className={cn(styles.storeHeader, scrolled && styles.headerScrolled)}
     >
-      <div data-ui="store/Header/div-flex" className="container-page flex h-(--store-header-h) min-w-0 items-center gap-2 sm:gap-3">
+      <div className={styles.headerContainer}>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger data-ui="store/Header/SheetTrigger-open-menu"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "hidden shrink-0 rounded-full sm:inline-flex lg:hidden")}
+          <SheetTrigger
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.mobileMenuTrigger)}
             aria-label="Open menu"
           >
-            <MenuIcon className="size-5" />
+            <MenuIcon className={styles.menuTriggerIcon} />
           </SheetTrigger>
-          <SheetContent data-ui="store/Header/SheetContent" side="left" className="w-80">
-            <SheetHeader className="pr-12">
-              <SheetTitle className="sr-only">Menu</SheetTitle>
+          <SheetContent side="left" className={styles.mobileSheetContent}>
+            <SheetHeader className={styles.mobileSheetHeader}>
+              <SheetTitle className={styles.srOnlyTitle}>Menu</SheetTitle>
               <Logo />
             </SheetHeader>
-            <nav data-ui="store/Header/nav-mobile" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-4" aria-label="Mobile">
+            <nav className={styles.mobileNavList} aria-label="Mobile">
               <Suspense fallback={<MobileNavItems links={mobileLinks} pathname={null} onNavigate={closeMobile} />}>
                 <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
               </Suspense>
@@ -202,30 +194,27 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </SheetContent>
         </Sheet>
 
-        <Logo className="min-w-0" />
+        <Logo className={styles.brandLogo} />
 
-        <nav data-ui="store/Header/nav-main" className="ml-8 hidden min-w-0 items-center gap-1 lg:flex" aria-label="Main">
+        <nav className={styles.desktopNav} aria-label="Main">
           <Suspense fallback={<DesktopNavItems links={links} pathname={null} />}>
             <DesktopNavWithPath links={links} />
           </Suspense>
         </nav>
 
-        <div data-ui="store/Header/div-flex-2" className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <button data-ui="store/Header/button-search-products"
+        <div className={styles.headerActions}>
+          <button
             data-search-trigger=""
             type="button"
             onClick={() => setSearchOpen((v) => !v)}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon" }),
-              "rounded-full xl:w-auto xl:gap-2 xl:border xl:border-border/80 xl:bg-muted/45 xl:px-3.5 xl:text-xs xl:font-medium xl:text-muted-foreground xl:hover:bg-muted xl:hover:text-foreground"
-            )}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.searchTriggerBtn)}
             aria-label="Search products"
             aria-expanded={searchOpen}
           >
-            <SearchIcon className="size-4.5 xl:size-3.5" />
-            <span data-ui="store/Header/span-hidden" className="hidden xl:inline">Search…</span>
+            <SearchIcon className={styles.searchIcon} />
+            <span className={styles.searchLabel}>Search…</span>
           </button>
-          <ThemeToggle className="hidden sm:inline-flex" />
+          <ThemeToggle className={styles.desktopThemeToggle} />
           <Suspense fallback={null}>
             <MobileHeaderShortcuts
               mounted={mounted}
@@ -234,24 +223,24 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               onOpenCart={() => openCart(true)}
             />
           </Suspense>
-          <Link data-ui="store/Header/Link"
+          <Link
             href="/wishlist"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn)}
             aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
           >
-            <HeartIcon className="size-4.5" />
+            <HeartIcon className={styles.actionIcon} />
             {mounted && <CountBadge count={wishCount} />}
           </Link>
-          <button data-ui="store/Header/button"
+          <button
             type="button"
             onClick={() => openCart(true)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative hidden rounded-full sm:inline-flex")}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn)}
             aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
           >
-            <ShoppingBagIcon className="size-4.5" />
+            <ShoppingBagIcon className={styles.actionIcon} />
             {mounted && <CountBadge count={itemCount} />}
           </button>
-          <span data-ui="store/Header/span-inline-flex" className="inline-flex"><AccountMenu /></span>
+          <span className={styles.accountMenuWrap}><AccountMenu /></span>
         </div>
       </div>
     </header>

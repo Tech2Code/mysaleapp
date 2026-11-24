@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Order } from "@/features/orders/types"
 import { formatDateTime, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import styles from "./admin-orders.module.css"
 
 const SEEN_ORDERS_KEY = "admin_seen_orders"
 const MAX_SEEN_ORDERS = 500
@@ -106,131 +107,122 @@ export function OrdersTable({
 
   if (orders.length === 0) {
     return (
-      <div data-ui="admin/OrdersTable" className="adminCard overflow-hidden rounded-2xl border p-8 text-center sm:p-12">
-        <p data-ui="admin/OrdersTable/p" className="text-sm text-muted-foreground">No orders match these filters.</p>
+      <div className={cn("adminCard", styles.emptyCard)}>
+        <p className={styles.emptyText}>No orders match these filters.</p>
       </div>
     )
   }
 
   return (
-    <div data-ui="admin/OrdersTable" className="space-y-3">
+    <div className={styles.ordersTableRoot}>
       {/* View Switcher Bar */}
-      <div data-ui="admin/OrdersTable/div-flex" className="flex items-center justify-between gap-3 px-1">
-        <span data-ui="admin/OrdersTable/span" className="text-xs font-medium text-muted-foreground">
+      <div className={styles.switcherBar}>
+        <span className={styles.showingLabel}>
           {total && total > orders.length
             ? `Showing ${(page - 1) * pageSize + 1}–${(page - 1) * pageSize + orders.length} of ${total} orders`
             : `Showing ${orders.length} order${orders.length === 1 ? "" : "s"}`}
         </span>
-        <div data-ui="admin/OrdersTable/div-view-format" className="flex items-center rounded-lg border bg-muted/60 p-0.5 text-xs font-medium" role="group" aria-label="View format">
-          <button data-ui="admin/OrdersTable/button-list-view"
+        <div className={styles.viewSwitcher} role="group" aria-label="View format">
+          <button
             type="button"
             onClick={() => changeView("table")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
-              viewMode === "table" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
-            )}
+            className={cn(styles.viewBtn, viewMode === "table" && styles.viewBtnActive)}
             aria-pressed={viewMode === "table"}
             aria-label="List view"
           >
-            <ListIcon className="size-3.5" />
-            <span data-ui="admin/OrdersTable/span-2">List</span>
+            <ListIcon className={styles.iconSm} />
+            <span>List</span>
           </button>
-          <button data-ui="admin/OrdersTable/button-tile-view"
+          <button
             type="button"
             onClick={() => changeView("tiles")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
-              viewMode === "tiles" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
-            )}
+            className={cn(styles.viewBtn, viewMode === "tiles" && styles.viewBtnActive)}
             aria-pressed={viewMode === "tiles"}
             aria-label="Tile view"
           >
-            <LayoutGridIcon className="size-3.5" />
-            <span data-ui="admin/OrdersTable/span-3">Tiles</span>
+            <LayoutGridIcon className={styles.iconSm} />
+            <span>Tiles</span>
           </button>
         </div>
       </div>
 
       {viewMode === "tiles" ? (
-        <div data-ui="admin/OrdersTable/div-grid" className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className={styles.ordersTilesGrid}>
           {orders.map((o) => {
             const isNew = isNewOrder(o)
             return (
               <div
                 key={o.id}
-                data-ui="admin/OrdersTable/div"
-                className={cn(
-                  "adminCardInteractive group flex flex-col justify-between rounded-xl border p-4 hover:border-ring/40",
-                  isNew && "border-primary/45 bg-primary/2"
-                )}
+
+                className={cn("adminCardInteractive", styles.orderTile, isNew && styles.orderTileNew)}
               >
-                <div data-ui="admin/OrdersTable/div-2" className="space-y-3">
+                <div className={styles.tileContent}>
                   {/* Header: Code, Placed date */}
-                  <div data-ui="admin/OrdersTable/div-flex-2" className="flex items-start justify-between gap-2 border-b pb-3">
-                    <div data-ui="admin/OrdersTable/div-3">
-                      <div data-ui="admin/OrdersTable/div-flex-3" className="flex flex-wrap items-center gap-2">
-                        <Link data-ui="admin/OrdersTable/Link"
+                  <div className={styles.tileHeader}>
+                    <div>
+                      <div className={styles.codeRow}>
+                        <Link
                           href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                           onClick={() => markSeen(o.id)}
-                          className="font-mono text-base font-bold text-primary hover:underline"
+                          className={styles.orderCodeLink}
                         >
                           {o.orderCode}
                         </Link>
                         {isNew && (
                           <span
-                            data-ui="admin/OrdersTable/span-inline-flex"
-                            className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-primary px-2 font-sans text-[10px] leading-none font-bold tracking-wide text-primary-foreground uppercase shadow-2xs"
+
+                            className={styles.newBadge}
                             title="New order — open to review"
                           >
-                            <span data-ui="admin/OrdersTable/span-4" className="size-1.5 animate-pulse rounded-full bg-primary-foreground" aria-hidden />
+                            <span className={styles.pulseDot} aria-hidden />
                             New
                           </span>
                         )}
                       </div>
-                      <div data-ui="admin/OrdersTable/div-4" className="mt-0.5 text-xs text-muted-foreground">
+                      <div className={styles.placedTime}>
                         Placed {formatDateTime(o.createdAt)}
                       </div>
                     </div>
-                    <div data-ui="admin/OrdersTable/div-5" className="text-right">
-                      <span data-ui="admin/OrdersTable/span-5" className="text-xs text-muted-foreground">Total</span>
-                      <div data-ui="admin/OrdersTable/div-6" className="text-base font-bold text-foreground">{formatPrice(o.total)}</div>
+                    <div className={styles.totalBox}>
+                      <span className={styles.totalLabel}>Total</span>
+                      <div className={styles.totalAmount}>{formatPrice(o.total)}</div>
                     </div>
                   </div>
 
                   {/* Status & Payment badges + Last updated status date */}
-                  <div data-ui="admin/OrdersTable/div-7" className="space-y-2 rounded-xl bg-muted/30 p-2.5">
-                    <div data-ui="admin/OrdersTable/div-flex-4" className="flex flex-wrap items-center gap-1.5">
+                  <div className={styles.statusBox}>
+                    <div className={styles.badgesRow}>
                       <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
                       <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                     </div>
-                    <div data-ui="admin/OrdersTable/div-flex-5" className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <ClockIcon className="size-3 shrink-0" />
-                      <span data-ui="admin/OrdersTable/span-6">Status updated:</span>
-                      <span data-ui="admin/OrdersTable/span-7" className="font-medium text-foreground">{formatDateTime(o.updatedAt)}</span>
+                    <div className={styles.updatedLine}>
+                      <ClockIcon className={styles.iconXs} />
+                      <span>Status updated:</span>
+                      <span className={styles.updatedTime}>{formatDateTime(o.updatedAt)}</span>
                     </div>
                   </div>
 
                   {/* Customer info */}
-                  <div data-ui="admin/OrdersTable/div-8" className="text-xs space-y-0.5">
-                    <div data-ui="admin/OrdersTable/div-9" className="font-semibold text-foreground text-sm">{o.customerName}</div>
-                    <div data-ui="admin/OrdersTable/div-10" className="text-muted-foreground">{o.phone} · {o.city}</div>
+                  <div className={styles.customerBox}>
+                    <div className={styles.customerName}>{o.customerName}</div>
+                    <div className={styles.customerSub}>{o.phone} · {o.city}</div>
                   </div>
 
                   {/* Products in this order */}
-                  <div data-ui="admin/OrdersTable/div-11" className="rounded-xl border bg-muted/20 p-3 space-y-1.5">
-                    <div data-ui="admin/OrdersTable/div-flex-6" className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                      <span data-ui="admin/OrdersTable/span-flex" className="flex items-center gap-1.5">
-                        <PackageIcon className="size-3.5 text-primary" />
-                        <span data-ui="admin/OrdersTable/span-8">Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
+                  <div className={styles.productsBox}>
+                    <div className={styles.productsBoxHeader}>
+                      <span className={styles.productsTitle}>
+                        <PackageIcon className={styles.primaryIcon} />
+                        <span>Products ({o.items.reduce((n, i) => n + i.quantity, 0)})</span>
                       </span>
                     </div>
-                    <ul data-ui="admin/OrdersTable/ul" className="space-y-1 divide-y divide-border/30">
+                    <ul className={styles.productsList}>
                       {o.items.map((item, idx) => (
-                        <li data-ui="admin/OrdersTable/li-flex" key={idx} className="flex items-center justify-between gap-2 pt-1 first:pt-0">
-                          <span data-ui="admin/OrdersTable/span-9" className="truncate text-xs font-medium text-foreground" title={item.name}>
+                        <li key={idx} className={styles.productItem}>
+                          <span className={styles.itemName} title={item.name}>
                             {item.name}
                           </span>
-                          <span data-ui="admin/OrdersTable/span-10" className="shrink-0 font-mono text-xs font-semibold text-muted-foreground">
+                          <span className={styles.itemQty}>
                             ×{item.quantity}
                           </span>
                         </li>
@@ -240,13 +232,13 @@ export function OrdersTable({
                 </div>
 
                 {/* Card Footer: View order link */}
-                <div data-ui="admin/OrdersTable/div-flex-7" className="mt-4 pt-3 border-t flex items-center justify-end">
-                  <Link data-ui="admin/OrdersTable/Link-manage-order"
+                <div className={styles.tileFooter}>
+                  <Link
                     href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                     onClick={() => markSeen(o.id)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    className={styles.manageLink}
                   >
-                    Manage order <ArrowRightIcon className="size-3.5" />
+                    Manage order <ArrowRightIcon className={styles.iconSm} />
                   </Link>
                 </div>
               </div>
@@ -255,77 +247,77 @@ export function OrdersTable({
         </div>
       ) : (
         <div
-          data-ui="admin/OrdersTable/div-orders-table"
+
           tabIndex={0}
           role="region"
           aria-label="Orders table"
-          className="adminCard overflow-hidden rounded-xl border focus-visible:outline-2 focus-visible:outline-ring"
+          className={cn("adminCard", styles.tableCard)}
         >
-          <Table data-ui="admin/OrdersTable/Table">
-            <TableHeader data-ui="admin/OrdersTable/TableHeader-sticky" className="sticky top-0 z-10 bg-muted">
-              <TableRow data-ui="admin/OrdersTable/TableRow">
-                <TableHead data-ui="admin/OrdersTable/TableHead-order" className="pl-5">Order</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-customer">Customer</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-products" className="hidden md:table-cell">Products</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-status-updated">Status & Updated</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-payment" className="hidden lg:table-cell">Payment</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-total" className="text-right">Total</TableHead>
-                <TableHead data-ui="admin/OrdersTable/TableHead-placed" className="hidden pr-5 text-right sm:table-cell">Placed</TableHead>
+          <Table>
+            <TableHeader className={styles.tableHeaderSticky}>
+              <TableRow>
+                <TableHead className={styles.cellPl}>Order</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead className={styles.cellHiddenMd}>Products</TableHead>
+                <TableHead>Status & Updated</TableHead>
+                <TableHead className={styles.cellHiddenLg}>Payment</TableHead>
+                <TableHead className={styles.cellRight}>Total</TableHead>
+                <TableHead className={styles.cellPlacedHead}>Placed</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody data-ui="admin/OrdersTable/TableBody">
+            <TableBody>
               {orders.map((o) => {
                 const isNew = isNewOrder(o)
                 return (
-                  <TableRow data-ui="admin/OrdersTable/TableRow-2" key={o.id} className={cn("group", isNew && "bg-primary/3")}>
-                    <TableCell data-ui="admin/OrdersTable/TableCell" className="pl-5">
-                      <div data-ui="admin/OrdersTable/div-flex-8" className="flex flex-wrap items-center gap-2">
+                  <TableRow key={o.id} className={cn(styles.tableRow, isNew && styles.tableRowNew)}>
+                    <TableCell className={styles.cellPl}>
+                      <div className={styles.codeCellWrap}>
                         <Link
-                          data-ui="admin/OrdersTable/Link-2"
+
                           href={`/admin/orders/${encodeURIComponent(o.orderCode)}`}
                           onClick={() => markSeen(o.id)}
-                          className="font-mono font-semibold text-primary group-hover:underline"
+                          className={styles.tableCodeLink}
                         >
                           {o.orderCode}
                         </Link>
                         {isNew && (
                           <span
-                            data-ui="admin/OrdersTable/span-inline-flex-2"
-                            className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full bg-primary px-2 font-sans text-[10px] leading-none font-bold tracking-wide text-primary-foreground uppercase shadow-2xs"
+
+                            className={styles.newBadge}
                             title="New order — open to review"
                           >
-                            <span data-ui="admin/OrdersTable/span-11" className="size-1.5 animate-pulse rounded-full bg-primary-foreground" aria-hidden />
+                            <span className={styles.pulseDot} aria-hidden />
                             New
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-2">
-                      <div data-ui="admin/OrdersTable/div-12" className="font-medium">{o.customerName}</div>
-                      <div data-ui="admin/OrdersTable/div-13" className="text-xs text-muted-foreground">
+                    <TableCell>
+                      <div className={styles.cellCustomerName}>{o.customerName}</div>
+                      <div className={styles.cellCustomerSub}>
                         {o.phone} · {o.city}
                       </div>
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden" className="hidden max-w-72 text-sm md:table-cell">
-                      <div data-ui="admin/OrdersTable/div-flex-9" className="flex flex-col gap-0.5">
+                    <TableCell className={styles.cellProducts}>
+                      <div className={styles.cellProductsStack}>
                         {o.items.map((i, idx) => (
-                          <div data-ui="admin/OrdersTable/div-14" key={idx} className="truncate text-xs text-muted-foreground font-medium" title={`${i.name} (×${i.quantity})`}>
-                            <span data-ui="admin/OrdersTable/span-12" className="text-foreground">{i.name}</span> <span data-ui="admin/OrdersTable/span-13" className="font-mono font-semibold">×{i.quantity}</span>
+                          <div key={idx} className={styles.cellProductLine} title={`${i.name} (×${i.quantity})`}>
+                            <span className={styles.cellProductName}>{i.name}</span> <span className={styles.cellProductQty}>×{i.quantity}</span>
                           </div>
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-3">
-                      <div data-ui="admin/OrdersTable/div-flex-10" className="flex flex-col items-start gap-1">
+                    <TableCell>
+                      <div className={styles.cellStatusWrap}>
                         <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
-                        <span data-ui="admin/OrdersTable/span-14" className="text-[11px] text-muted-foreground">Updated {formatDateTime(o.updatedAt)}</span>
+                        <span className={styles.cellUpdatedSub}>Updated {formatDateTime(o.updatedAt)}</span>
                       </div>
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden-2" className="hidden lg:table-cell">
+                    <TableCell className={styles.cellHiddenLg}>
                       <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                     </TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-4" className="text-right font-semibold tabular-nums">{formatPrice(o.total)}</TableCell>
-                    <TableCell data-ui="admin/OrdersTable/TableCell-hidden-3" className="hidden pr-5 text-right text-xs text-muted-foreground sm:table-cell">
+                    <TableCell className={styles.cellTotal}>{formatPrice(o.total)}</TableCell>
+                    <TableCell className={styles.cellPlaced}>
                       {formatDateTime(o.createdAt)}
                     </TableCell>
                   </TableRow>

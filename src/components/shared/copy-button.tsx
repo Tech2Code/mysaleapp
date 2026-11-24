@@ -4,6 +4,7 @@ import { CheckIcon, CopyIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 /** Small "copy" button next to an id. `label` names what is copied, for screen readers and the toast. */
 export function CopyButton({
@@ -41,18 +42,18 @@ export function CopyButton({
   }
 
   return (
-    <button data-ui="shared/CopyButton"
+    <button
       type="button"
       onClick={copy}
       className={cn(
-        "inline-flex h-8 items-center justify-center gap-1.5 rounded-full border bg-card text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        variant === "icon" ? "w-8" : "px-3",
-        copied && "border-success/40 text-success",
+        styles.copyBtn,
+        variant === "icon" ? styles.copyBtnIcon : styles.copyBtnPill,
+        copied && styles.copyBtnCopied,
         className
       )}
       aria-label={`Copy ${label.toLowerCase()}`}
     >
-      {copied ? <CheckIcon className="size-3.5" aria-hidden /> : <CopyIcon className="size-3.5" aria-hidden />}
+      {copied ? <CheckIcon className={styles.icon14} aria-hidden /> : <CopyIcon className={styles.icon14} aria-hidden />}
       {variant === "pill" && (copied ? "Copied" : "Copy")}
     </button>
   )

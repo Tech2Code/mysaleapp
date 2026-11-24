@@ -25,6 +25,7 @@ import { z } from "zod"
 import { TextField } from "@/components/form"
 import { applyClientSignIn } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import { LegalQuickModal, type LegalDocTab } from "@/components/shared/cookie-banner"
 import { LogoMark } from "@/components/shared/logo"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,6 +41,7 @@ import { cn } from "@/lib/utils"
 import { LIMITS, v } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
 import { useWishlist } from "@/store/wishlist"
+import styles from "./google-sign-in.module.css"
 
 const signInSchema = z.object({
   email: v.email(),
@@ -53,6 +55,9 @@ const signUpSchema = z
     email: v.email(),
     password: v.newPassword(),
     confirmPassword: z.string(),
+    acceptTerms: z.boolean().refine((val) => val === true, {
+      message: "Please accept the Terms of Service and Privacy Policy",
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords don't match",
@@ -94,7 +99,7 @@ const SIGN_UP_PERKS = [
 
 function GoogleIcon() {
   return (
-    <svg data-ui="store/GoogleIcon" viewBox="0 0 24 24" className="size-5" aria-hidden>
+    <svg viewBox="0 0 24 24" className={styles.googleSvg} aria-hidden>
       <path
         fill="#4285F4"
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -180,6 +185,8 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const later = useToastAfter(pending)
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null)
   const [resetLinkSentTo, setResetLinkSentTo] = useState<string | null>(null)
+  const [legalModalOpen, setLegalModalOpen] = useState(false)
+  const [legalModalTab, setLegalModalTab] = useState<LegalDocTab>("terms")
   const submittingRef = useRef(false)
   const recoveryLockRef = useRef(false)
 
@@ -190,7 +197,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
   const signUpForm = useForm<SignUpValues, unknown, z.output<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { fullName: "", phone: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { fullName: "", phone: "", email: "", password: "", confirmPassword: "", acceptTerms: false },
   })
 
   const forgotForm = useForm<ForgotValues>({
@@ -246,7 +253,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       submittingRef.current = false
       recoveryLockRef.current = false
       signInForm.reset({ email: "", password: "" })
-      signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
+      signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "", acceptTerms: false })
       forgotForm.reset({ email: "" })
       resetForm.reset({ next: "", confirm: "" })
       setConfirmationEmail(null)
@@ -313,7 +320,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
         const targetNext = resolveNext()
         const { ids: storedIds, ownerId } = useWishlist.getState()
         const localWishlistIds = ownerId === null ? storedIds : []
-        const res = await signUpCustomer({ ...values, next: targetNext, wishlistIds: localWishlistIds })
+        const res = await signUpCustomer({ ...values, acceptTerms: true, next: targetNext, wishlistIds: localWishlistIds })
         if (!res.ok) {
           submittingRef.current = false
           for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
@@ -329,13 +336,13 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           submittingRef.current = false
           setConfirmationEmail(values.email)
           signInForm.setValue("email", values.email)
-          signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
+          signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "", acceptTerms: false })
           setMode("signin")
           later(() => toast.success("Confirmation link sent to your email"))
           return
         }
 
-        signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "" })
+        signUpForm.reset({ fullName: "", phone: "", email: "", password: "", confirmPassword: "", acceptTerms: false })
         if (res.data.user) {
           applyClientSignIn(res.data.user, res.data.wishlistIds)
         }
@@ -437,8 +444,8 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
   return (
     <div
-      data-ui="store/GoogleSignIn"
-      className="grid w-full max-w-4xl overflow-hidden rounded-4xl border bg-card/90 shadow-2xl shadow-black/5 backdrop-blur lg:grid-cols-[0.95fr_1.05fr]"
+
+      className={styles.authShell}
     >
       <Suspense fallback={null}>
         <SearchParamsSync
@@ -457,44 +464,44 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
       {/* Left Column: Dynamic Welcome & Perks Panel (Desktop only) */}
       <div
-        data-ui="store/GoogleSignIn/div-hidden"
-        className="hidden flex-col justify-between border-r border-border/60 bg-secondary/40 p-7 lg:flex"
+
+        className={styles.welcomeColumn}
       >
-        <div data-ui="store/GoogleSignIn/div">
-          <div data-ui="store/GoogleSignIn/div-flex" className="flex items-center gap-3">
-            <LogoMark className="size-11 text-xl" />
-            <span data-ui="store/GoogleSignIn/span" className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+        <div>
+          <div className={styles.logoRow}>
+            <LogoMark className={styles.logoBadge} />
+            <span className={styles.modePill}>
               {mode === "signup" ? "New customer" : mode === "forgot" || mode === "reset-password" ? "Account recovery" : "Welcome back"}
             </span>
           </div>
 
-          <h1 data-ui="store/GoogleSignIn/h1" className="mt-6 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className={styles.welcomeTitle}>
             {mode === "signup" ? `Join ${shopName}` : `Welcome to ${shopName}`}
           </h1>
-          <p data-ui="store/GoogleSignIn/p" className="mt-2 text-sm/relaxed text-muted-foreground">
+          <p className={styles.welcomeLead}>
             {mode === "signup"
               ? "Create your account with your basic details once so every future order is faster and easier."
               : "Sign in with your email and password or one-tap Google login to manage your orders and saved items."}
           </p>
 
-          <ul data-ui="store/GoogleSignIn/ul" className="mt-7 space-y-4">
+          <ul className={styles.perksList}>
             {perks.map((p) => (
-              <li data-ui="store/GoogleSignIn/li-flex" key={p.title} className="flex items-start gap-3.5">
-                <span data-ui="store/GoogleSignIn/span-grid" className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-2xl bg-card text-primary shadow-xs ring-1 ring-border/60">
-                  <p.icon data-ui="store/GoogleSignIn/p.icon" className="size-4" aria-hidden />
+              <li key={p.title} className={styles.perkItem}>
+                <span className={styles.perkIconBadge}>
+                  <p.icon className={styles.perkSvg} aria-hidden />
                 </span>
-                <div data-ui="store/GoogleSignIn/div-2" className="space-y-0.5">
-                  <p data-ui="store/GoogleSignIn/p-2" className="text-sm font-semibold text-foreground">{p.title}</p>
-                  <p data-ui="store/GoogleSignIn/p-3" className="text-xs/relaxed text-muted-foreground">{p.text}</p>
+                <div className={styles.perkTextCol}>
+                  <p className={styles.perkTitle}>{p.title}</p>
+                  <p className={styles.perkDesc}>{p.text}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p data-ui="store/GoogleSignIn/p-4" className="mt-8 border-t border-border/60 pt-5 text-xs text-muted-foreground">
+        <p className={styles.guestNoteDesktop}>
           Signing in is optional — you can also{" "}
-          <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a-" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link href="/products" className={styles.guestLink}>
             browse &amp; order as a guest
           </Link>
           .
@@ -502,35 +509,35 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       </div>
 
       {/* Right Column: Toggle + Form + Google OAuth */}
-      <div data-ui="store/GoogleSignIn/div-flex-2" className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
-        <div data-ui="store/GoogleSignIn/div-3" className="space-y-4">
+      <div className={styles.formColumn}>
+        <div className={styles.formStack}>
           {mode !== "reset-password" && (
             <div
-              data-ui="store/GoogleSignIn/div-account-access"
+
               role="group"
               aria-label="Account access"
-              className="grid grid-cols-2 rounded-full border bg-muted/60 p-1 text-sm font-medium"
+              className={styles.modeSwitcher}
             >
               <button
-                data-ui="store/GoogleSignIn/button-sign-in"
+
                 type="button"
                 aria-pressed={mode === "signin"}
                 onClick={() => switchMode("signin")}
                 className={cn(
-                  "h-9 rounded-full transition",
-                  mode === "signin" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  styles.modeTabBtn,
+                  mode === "signin" && styles.modeTabBtnActive
                 )}
               >
                 Sign in
               </button>
               <button
-                data-ui="store/GoogleSignIn/button-create-account"
+
                 type="button"
                 aria-pressed={mode === "signup"}
                 onClick={() => switchMode("signup")}
                 className={cn(
-                  "h-9 rounded-full transition",
-                  mode === "signup" ? "bg-card font-semibold text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  styles.modeTabBtn,
+                  mode === "signup" && styles.modeTabBtnActive
                 )}
               >
                 Create account
@@ -539,7 +546,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           )}
 
           {problem && (
-            <p data-ui="store/GoogleSignIn/p-5" role="alert" className="rounded-xl bg-muted p-3 text-sm">
+            <p role="alert" className={styles.problemAlert}>
               {problem === "cancelled"
                 ? "Sign-in was cancelled, so you're not signed in yet. You can try again whenever you like."
                 : problem === "expired"
@@ -549,16 +556,16 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           )}
 
           {confirmationEmail && (
-            <p data-ui="store/GoogleSignIn/p-flex" role="status" className="flex items-start gap-2 rounded-xl bg-success/10 p-3 text-sm">
-              <MailCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-              <span data-ui="store/GoogleSignIn/span-2">
-                We sent a confirmation link to <span data-ui="store/GoogleSignIn/span-3" className="font-semibold">{confirmationEmail}</span>. Open the link in your email to activate your account, then sign in below.
+            <p role="status" className={styles.confirmationBanner}>
+              <MailCheckIcon className={styles.mailCheckSvg} aria-hidden />
+              <span>
+                We sent a confirmation link to <span className={styles.boldInline}>{confirmationEmail}</span>. Open the link in your email to activate your account, then sign in below.
               </span>
             </p>
           )}
 
           {mode === "signin" ? (
-            <form key="signin" data-ui="store/GoogleSignIn/form" onSubmit={onSignIn} noValidate className="space-y-2.5">
+            <form key="signin" onSubmit={onSignIn} noValidate className={styles.authForm}>
               <TextField
                 label="Email"
                 kind="email"
@@ -575,49 +582,49 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 error={signInForm.formState.errors.password?.message}
                 {...signInForm.register("password")}
               />
-              <div data-ui="store/GoogleSignIn/div-flex-3" className="flex justify-end pt-0.5 text-xs">
+              <div className={styles.forgotRow}>
                 <button
-                  data-ui="store/GoogleSignIn/button-forgot-password"
+
                   type="button"
                   onClick={() => switchMode("forgot")}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  className={styles.forgotLinkBtn}
                 >
                   Forgot password?
                 </button>
               </div>
               <Button
-                data-ui="store/GoogleSignIn/Button-sign-in"
+
                 type="submit"
                 size="lg"
                 disabled={pending || loadingGoogle}
-                className="mt-1 h-11 w-full gap-2 rounded-full"
+                className={styles.primarySubmitBtn}
               >
-                {pending ? <Loader2Icon className="size-4 animate-spin" /> : <LogInIcon className="size-4" />}
+                {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <LogInIcon className={styles.btnIcon} />}
                 Sign in
               </Button>
             </form>
           ) : mode === "forgot" ? (
             resetLinkSentTo ? (
-              <div data-ui="store/GoogleSignIn/div-4" role="status" className="space-y-3 rounded-2xl bg-success/10 p-4 text-sm">
-                <p data-ui="store/GoogleSignIn/p-flex-2" className="flex items-center gap-2 font-semibold">
-                  <MailCheckIcon className="size-4 text-success" aria-hidden /> Check your inbox
+              <div role="status" className={styles.resetSentCard}>
+                <p className={styles.resetSentTitle}>
+                  <MailCheckIcon className={styles.resetMailSvg} aria-hidden /> Check your inbox
                 </p>
-                <p data-ui="store/GoogleSignIn/p-6">
-                  If an account exists for <span data-ui="store/GoogleSignIn/span-4" className="font-semibold">{resetLinkSentTo}</span>, a password reset link is on its way. Open the link in your email to choose a new password.
+                <p className={styles.resetSentBody}>
+                  If an account exists for <span className={styles.boldEmail}>{resetLinkSentTo}</span>, a password reset link is on its way. Open the link in your email to choose a new password.
                 </p>
-                <Button data-ui="store/GoogleSignIn/Button-back-to-sign-in"
+                <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => switchMode("signin")}
-                  className="rounded-full"
+                  className={styles.backPillBtn}
                 >
-                  <ArrowLeftIcon className="size-3.5" /> Back to sign in
+                  <ArrowLeftIcon className={styles.backArrowSvg} /> Back to sign in
                 </Button>
               </div>
             ) : (
-              <form key="forgot" data-ui="store/GoogleSignIn/form-2" onSubmit={onForgotPassword} noValidate className="space-y-2.5">
-                <p data-ui="store/GoogleSignIn/p-7" className="text-xs text-muted-foreground">
+              <form key="forgot" onSubmit={onForgotPassword} noValidate className={styles.authForm}>
+                <p className={styles.helperText}>
                   Enter the email address for your account and we&apos;ll send you a link to reset your password.
                 </p>
                 <TextField
@@ -629,27 +636,27 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                   {...forgotForm.register("email")}
                 />
                 <Button
-                  data-ui="store/GoogleSignIn/Button-send-reset-link"
+
                   type="submit"
                   size="lg"
                   disabled={pending || loadingGoogle}
-                  className="mt-1 h-11 w-full gap-2 rounded-full"
+                  className={styles.primarySubmitBtn}
                 >
-                  {pending ? <Loader2Icon className="size-4 animate-spin" /> : <SendIcon className="size-4" />}
+                  {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <SendIcon className={styles.btnIcon} />}
                   Send reset link
                 </Button>
-                <button data-ui="store/GoogleSignIn/button-back-to-sign-in"
+                <button
                   type="button"
                   onClick={() => switchMode("signin")}
-                  className="flex w-full items-center justify-center gap-1.5 pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  className={styles.backTextBtn}
                 >
-                  <ArrowLeftIcon className="size-3.5" /> Back to sign in
+                  <ArrowLeftIcon className={styles.backArrowSvg} /> Back to sign in
                 </button>
               </form>
             )
           ) : mode === "reset-password" ? (
-            <form key="reset-password" data-ui="store/GoogleSignIn/form-3" onSubmit={onResetPassword} noValidate className="space-y-2.5">
-              <p data-ui="store/GoogleSignIn/p-8" className="text-xs text-muted-foreground">
+            <form key="reset-password" onSubmit={onResetPassword} noValidate className={styles.authForm}>
+              <p className={styles.helperText}>
                 Choose a new password for your account. You&apos;ll be signed in right after.
               </p>
               <TextField
@@ -670,19 +677,19 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 {...resetForm.register("confirm")}
               />
               <Button
-                data-ui="store/GoogleSignIn/Button-save-new-password"
+
                 type="submit"
                 size="lg"
                 disabled={pending}
-                className="mt-1 h-11 w-full gap-2 rounded-full"
+                className={styles.primarySubmitBtn}
               >
-                {pending ? <Loader2Icon className="size-4 animate-spin" /> : <KeyRoundIcon className="size-4" />}
+                {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <KeyRoundIcon className={styles.btnIcon} />}
                 Save new password
               </Button>
             </form>
           ) : (
-            <form key="signup" data-ui="store/GoogleSignIn/form-4" onSubmit={onSignUp} noValidate className="space-y-2">
-              <div data-ui="store/GoogleSignIn/div-grid" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <form key="signup" onSubmit={onSignUp} noValidate className={styles.signUpForm}>
+              <div className={styles.twoColGrid}>
                 <TextField
                   label="Full name"
                   kind="personName"
@@ -709,7 +716,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 error={signUpForm.formState.errors.email?.message}
                 {...signUpForm.register("email")}
               />
-              <div data-ui="store/GoogleSignIn/div-grid-2" className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+              <div className={styles.twoColGrid}>
                 <TextField
                   label="Password"
                   type="password"
@@ -727,17 +734,61 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                   {...signUpForm.register("confirmPassword")}
                 />
               </div>
-              <p data-ui="store/GoogleSignIn/p-9" className="text-[0.72rem] text-muted-foreground">
+              <p className={styles.passwordRuleNote}>
                 Use at least {LIMITS.newPassword.min} characters with a letter and a number.
               </p>
+              <div className={styles.termsConsentWrap}>
+                <label className={styles.termsCheckboxLabel}>
+                  <input
+
+                    type="checkbox"
+                    className={styles.termsCheckboxInput}
+                    {...signUpForm.register("acceptTerms")}
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <button
+
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setLegalModalTab("terms")
+                        setLegalModalOpen(true)
+                      }}
+                      className={styles.termsPolicyLink}
+                    >
+                      Terms of Service
+                    </button>{" "}
+                    and{" "}
+                    <button
+
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setLegalModalTab("privacy")
+                        setLegalModalOpen(true)
+                      }}
+                      className={styles.termsPolicyLink}
+                    >
+                      Privacy Policy
+                    </button>
+                    .
+                  </span>
+                </label>
+                {signUpForm.formState.errors.acceptTerms?.message && (
+                  <p role="alert" className={styles.termsErrorMsg}>
+                    {signUpForm.formState.errors.acceptTerms.message}
+                  </p>
+                )}
+              </div>
               <Button
-                data-ui="store/GoogleSignIn/Button-create-account"
+
                 type="submit"
                 size="lg"
                 disabled={pending || loadingGoogle}
-                className="mt-1 h-11 w-full gap-2 rounded-full"
+                className={styles.primarySubmitBtn}
               >
-                {pending ? <Loader2Icon className="size-4 animate-spin" /> : <UserPlusIcon className="size-4" />}
+                {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <UserPlusIcon className={styles.btnIcon} />}
                 Create account
               </Button>
             </form>
@@ -745,30 +796,71 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
           {mode !== "reset-password" && (
             <>
-              <div data-ui="store/GoogleSignIn/div-flex-4" className="relative flex items-center py-1">
-                <div data-ui="store/GoogleSignIn/div-5" className="grow border-t border-border/70" />
-                <span data-ui="store/GoogleSignIn/span-5" className="mx-3 shrink-0 text-xs text-muted-foreground">or continue with</span>
-                <div data-ui="store/GoogleSignIn/div-6" className="grow border-t border-border/70" />
+              <div className={styles.dividerRow}>
+                <div className={styles.dividerLine} />
+                <span className={styles.dividerLabel}>or continue with</span>
+                <div className={styles.dividerLine} />
               </div>
 
               <Button
-                data-ui="store/GoogleSignIn/Button"
+
                 type="button"
                 size="lg"
                 variant="outline"
                 onClick={signInWithGoogle}
                 disabled={loadingGoogle || pending}
-                className="h-11 w-full rounded-full bg-card text-sm shadow-sm"
+                className={styles.googleOauthBtn}
               >
-                {loadingGoogle ? <Loader2Icon className="size-5 animate-spin" /> : <GoogleIcon />}
+                {loadingGoogle ? <Loader2Icon className={styles.googleSpinnerSvg} /> : <GoogleIcon />}
                 {loadingGoogle ? "Opening Google…" : "Continue with Google"}
               </Button>
+              <p className={styles.oauthLegalNote}>
+                By continuing, you agree to our{" "}
+                <button
+
+                  type="button"
+                  onClick={() => {
+                    setLegalModalTab("terms")
+                    setLegalModalOpen(true)
+                  }}
+                  className={styles.termsPolicyLink}
+                >
+                  Terms
+                </button>{" "}
+                &amp;{" "}
+                <button
+
+                  type="button"
+                  onClick={() => {
+                    setLegalModalTab("privacy")
+                    setLegalModalOpen(true)
+                  }}
+                  className={styles.termsPolicyLink}
+                >
+                  Privacy Policy
+                </button>
+                .
+              </p>
             </>
           )}
 
-          <p data-ui="store/GoogleSignIn/p-10" className="pt-1 text-center text-xs text-muted-foreground lg:hidden">
+          <LegalQuickModal
+            open={legalModalOpen}
+            onOpenChange={setLegalModalOpen}
+            initialTab={legalModalTab}
+            onAccept={
+              mode === "signup"
+                ? () => {
+                    signUpForm.setValue("acceptTerms", true, { shouldValidate: true, shouldDirty: true })
+                    toast.success("Terms & Privacy Policy accepted.")
+                  }
+                : undefined
+            }
+          />
+
+          <p className={styles.guestNoteMobile}>
             Signing in is optional —{" "}
-            <Link data-ui="store/GoogleSignIn/Link-browse-amp-order-as-a--2" href="/products" className="font-semibold text-primary underline-offset-4 hover:underline">
+            <Link href="/products" className={styles.guestLink}>
               browse &amp; order as a guest
             </Link>
             .

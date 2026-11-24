@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { refundReturn } from "@/features/orders/admin-actions"
 import { formatPrice } from "@/lib/format"
+import styles from "./admin-orders.module.css"
 
 /**
  * "Mark refunded" for ONE return that was recorded without a refund. `value` is only shown (the server prices the
@@ -38,8 +39,8 @@ export function RefundReturnButton({ returnId, value, expectedRefunded }: { retu
 
   return (
     <>
-      <Button data-ui="admin/RefundReturnButton/Button-i-have-refunded" type="button" variant="outline" size="sm" disabled={pending} onClick={() => setOpen(true)} className="rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} I have refunded {formatPrice(value)}
+      <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => setOpen(true)} className={styles.pillBtn}>
+        {pending && <Loader2Icon className={styles.spinIcon} />} I have refunded {formatPrice(value)}
       </Button>
       <ConfirmDialog
         open={open}

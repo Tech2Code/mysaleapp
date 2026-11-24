@@ -8,7 +8,7 @@ import { CheckoutForm } from "@/components/store/checkout-form"
 import { GoogleSignIn } from "@/components/store/google-sign-in"
 import { OrderPlaced } from "@/components/store/order-placed"
 import { PageHeader } from "@/components/store/page-header"
-import { ProductBrowser } from "@/components/store/product-browser"
+import { PRODUCTS_PER_PAGE, ProductBrowser } from "@/components/store/product-browser"
 import { ProductGrid } from "@/components/store/product-grid"
 import { TrackOrder } from "@/components/store/track-order"
 import { WishlistView } from "@/components/store/wishlist-view"
@@ -18,9 +18,11 @@ import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import type { Profile } from "@/features/account/schema"
 import type { Address } from "@/features/addresses/types"
 import type { Category, ProductCardData, ProductListItem } from "@/features/products/types"
+import { gstActive } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
 import { safeExternalUrl } from "@/lib/safe-redirect"
 import { cn } from "@/lib/utils"
+import styles from "./page-views.module.css"
 
 /**
  * The small storefront pages. Each is rendered by its page with real data and by its loading.tsx
@@ -30,7 +32,7 @@ import { cn } from "@/lib/utils"
 
 /** Wrapper used by pages that sit under a PageHeader. */
 function Body({ children }: { children: ReactNode }) {
-  return <div data-ui="store/Body" className="container-page pt-4 sm:pt-6">{children}</div>
+  return <div className={styles.pageBodyContainer}>{children}</div>
 }
 
 export function CartPageView({ products, preview }: { products: LiveProduct[]; preview?: boolean }) {
@@ -94,8 +96,8 @@ export function ProductsPageView({ items, categories }: { items: ProductListItem
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Shop all" }]}
       />
       <Body>
-        {/* Fallback is the full, crawlable grid; filters hydrate on top of it. */}
-        <Suspense fallback={<ProductGrid products={items} />}>
+        {/* Fallback is the first page of the crawlable grid; filters and pagination hydrate on top of it. */}
+        <Suspense fallback={<ProductGrid products={items.slice(0, PRODUCTS_PER_PAGE)} />}>
           <ProductBrowser products={items} categories={categories} />
         </Suspense>
       </Body>
@@ -122,8 +124,8 @@ export function TrackPageView() {
 
 export function OrderPlacedPageView({ preview }: { preview?: boolean }) {
   return (
-    <section data-ui="store/OrderPlacedPageView" className="bg-hero">
-      <div data-ui="store/OrderPlacedPageView/div" className="container-page py-16 sm:py-24">
+    <section className={styles.heroBackdropSection}>
+      <div className={styles.orderPlacedContainer}>
         <Suspense>
           <OrderPlaced preview={preview} />
         </Suspense>
@@ -148,29 +150,29 @@ export function AboutView({ shop }: { shop: StoreSettings }) {
         description={`${shop.shopName} began with a simple idea: the things we live with should carry a little bit of someone's heart.`}
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "About" }]}
       />
-      <div data-ui="store/AboutView/div" className="container-page space-y-10 sm:space-y-16 pt-8 sm:pt-12">
-        <FadeIn className="mx-auto max-w-3xl space-y-5 text-lg/relaxed  text-muted-foreground">
-          <p data-ui="store/AboutView/p">
+      <div className={styles.aboutContainer}>
+        <FadeIn className={styles.storyIntro}>
+          <p className={styles.storyParagraph}>
             We work with small studios and independent artisans{shop.city ? ` around ${shop.city}` : ""} to bring you decor and
             gifts that feel personal. Each piece is made in small batches, which means tiny variations in colour and texture —
             that&apos;s the beauty of handmade.
           </p>
-          <p data-ui="store/AboutView/p-2">
+          <p className={styles.storyParagraph}>
             Have something specific in mind? We love custom orders — personalised names, colours and bulk gifting for
             weddings and festivals.
           </p>
         </FadeIn>
-        <div data-ui="store/AboutView/div-grid" className="grid gap-5 md:grid-cols-3">
+        <div className={styles.valuesGrid}>
           {values.map((v, i) => (
-            <FadeIn key={v.title} delay={i * 0.08} className="rounded-3xl border bg-card p-7">
-              <v.icon data-ui="store/AboutView/v.icon" className="size-8 text-primary" />
-              <h2 data-ui="store/AboutView/h2" className="mt-4 font-sans text-xl font-semibold">{v.title}</h2>
-              <p data-ui="store/AboutView/p-3" className="mt-2 text-muted-foreground">{v.text}</p>
+            <FadeIn key={v.title} delay={i * 0.08} className={styles.valueCard}>
+              <v.icon className={styles.valueIcon} />
+              <h2 className={styles.valueTitle}>{v.title}</h2>
+              <p className={styles.valueText}>{v.text}</p>
             </FadeIn>
           ))}
         </div>
-        <div data-ui="store/AboutView/div-2" className="text-center">
-          <Link data-ui="store/AboutView/Link-explore-the-collection" href="/products" className={cn(buttonVariants({ size: "lg" }), "h-12 rounded-full px-5 sm:px-8 text-base")}>
+        <div className={styles.exploreActionWrap}>
+          <Link href="/products" className={cn(buttonVariants({ size: "lg" }), styles.exploreBtn)}>
             Explore the collection
           </Link>
         </div>
@@ -221,30 +223,62 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
         description="Questions, custom orders or just saying hello — we'd love to hear from you."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Contact" }]}
       />
-      <div data-ui="store/ContactView/div-grid" className="container-page grid gap-5 pt-8 sm:pt-12 md:grid-cols-2 lg:grid-cols-3">
+      <div className={styles.contactContainer}>
         {cards.map((c) => (
-          <a data-ui="store/ContactView/a"
+          <a
             key={c.title}
             href={c.href}
             target={c.href.startsWith("http") ? "_blank" : undefined}
             rel="noopener noreferrer"
-            className="group rounded-3xl border bg-card p-7 transition-all hover:-translate-y-1 hover:shadow-xl"
+            className={styles.contactCard}
           >
-            <span data-ui="store/ContactView/span-grid" className="grid size-12 place-items-center rounded-2xl bg-secondary text-primary">
-              <c.icon data-ui="store/ContactView/c.icon" className="size-6" />
+            <span className={styles.contactIconBox}>
+              <c.icon className={styles.contactIcon} />
             </span>
-            <h2 data-ui="store/ContactView/h2" className="mt-5 font-sans text-xl font-semibold">{c.title}</h2>
-            <p data-ui="store/ContactView/p" className="mt-1 text-muted-foreground">{c.text}</p>
-            <span data-ui="store/ContactView/span-inline-flex" className="mt-4 inline-flex items-center gap-1 font-semibold text-primary group-hover:underline">
-              {c.cta} <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+            <h2 className={styles.contactTitle}>{c.title}</h2>
+            <p className={styles.contactText}>{c.text}</p>
+            <span className={styles.contactCtaRow}>
+              {c.cta} <ArrowRightIcon className={styles.ctaArrow} />
             </span>
           </a>
         ))}
         {place && (
-          <p data-ui="store/ContactView/p-flex" className="flex items-center gap-2 text-sm text-muted-foreground md:col-span-2 lg:col-span-3">
-            <MapPinIcon className="size-4" /> Studio in {place}. Shipping across India.
+          <p className={styles.studioLocationNote}>
+            <MapPinIcon className={styles.pinIcon} /> Studio in {place}. Shipping across India.
           </p>
         )}
+        <div className={styles.businessLegalCard}>
+          <h2 className={styles.legalCardTitle}>
+            Business &amp; Grievance Redressal Details
+          </h2>
+          <p className={styles.legalCardSub}>
+            Operated by <span className={styles.legalStrong}>{shop.legalName?.trim() || shop.shopName}</span>
+            {shop.businessAddress?.trim() ? ` · ${shop.businessAddress.trim()}` : place ? ` · ${place}, India` : " · India"}.
+          </p>
+          <div className={styles.legalMetaRow}>
+            {shop.email && (
+              <span>
+                Grievance / Support Email: <strong className={styles.legalStrong}>{shop.email}</strong>
+              </span>
+            )}
+            {gstActive(shop) && shop.gstin && (
+              <span>
+                GSTIN: <strong className={styles.legalStrong}>{shop.gstin}</strong>
+              </span>
+            )}
+          </div>
+          <div className={styles.legalLinksBar}>
+            <Link href="/privacy" className={styles.legalPolicyLink}>
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className={styles.legalPolicyLink}>
+              Terms of Service
+            </Link>
+            <Link href="/refund-policy" className={styles.legalPolicyLink}>
+              Refund &amp; Return Policy
+            </Link>
+          </div>
+        </div>
       </div>
     </>
   )
@@ -254,8 +288,8 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
 
 export function LoginView({ shop }: { shop: StoreSettings }) {
   return (
-    <section data-ui="store/LoginView" className="bg-hero">
-      <div data-ui="store/LoginView/div-flex" className="container-page flex min-h-[72vh] items-center justify-center py-10 sm:py-16">
+    <section className={styles.heroBackdropSection}>
+      <div className={styles.loginContainer}>
         <GoogleSignIn shopName={shop.shopName} />
       </div>
     </section>

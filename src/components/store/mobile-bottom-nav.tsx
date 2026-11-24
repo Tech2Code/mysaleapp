@@ -10,13 +10,14 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { cartCount, useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
+import styles from "./mobile-bottom-nav.module.css"
 
 function TabBadge({ count }: { count: number }) {
   if (count <= 0) return null
   return (
     <span
-      data-ui="store/TabBadge"
-      className="absolute -top-1 -right-2 grid min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.625rem]/4.5 font-bold text-primary-foreground ring-2 ring-background"
+
+      className={styles.tabBadge}
     >
       {count > 99 ? "99+" : count}
     </span>
@@ -78,36 +79,33 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
 
   return (
     <nav
-      data-ui="store/BottomNavTabs"
+
       data-mobile-bottom-bar
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-6px_28px_-10px_rgb(0_0_0/0.14)] backdrop-blur-xl sm:hidden"
+      className={cn(styles.bottomNav, "glass")}
     >
-      <ul data-ui="store/BottomNavTabs/ul-grid" className="grid h-15.5 grid-cols-5 items-center px-1.5">
+      <ul className={styles.tabList}>
         {tabs.map((tab) => {
           const Icon = tab.icon
           const content = (
             <>
-              <span data-ui="store/BottomNavTabs/span-grid" className="relative grid h-7.5 w-12 place-items-center rounded-full">
+              <span className={styles.iconPill}>
                 {tab.active && (
                   <m.span
-                    data-ui="store/BottomNavTabs/m.span-absolute"
+
                     layoutId="mobile-bottom-nav-pill"
-                    className="absolute inset-0 rounded-full bg-primary/14 ring-1 ring-primary/20"
+                    className={styles.activePill}
                     transition={{ type: "spring", stiffness: 450, damping: 32 }}
                   />
                 )}
-                <span data-ui="store/BottomNavTabs/span-relative" className="relative">
-                  <Icon className={cn("size-5 transition-transform duration-150", tab.active && "scale-105 stroke-[2.25]")} aria-hidden />
+                <span className={styles.iconWrap}>
+                  <Icon className={cn(styles.tabIcon, tab.active && styles.tabIconActive)} aria-hidden />
                   {tab.badge ? <TabBadge count={tab.badge} /> : null}
                 </span>
               </span>
               <span
-                data-ui="store/BottomNavTabs/span"
-                className={cn(
-                  "text-[0.68rem]/tight font-medium tracking-tight",
-                  tab.active ? "font-semibold text-primary" : "text-muted-foreground"
-                )}
+
+                className={cn(styles.tabLabel, tab.active && styles.tabLabelActive)}
               >
                 {tab.label}
               </span>
@@ -115,29 +113,23 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
           )
 
           return (
-            <li data-ui="store/BottomNavTabs/li-flex" key={tab.key} className="flex justify-center">
+            <li key={tab.key} className={styles.tabItem}>
               {"href" in tab && tab.href ? (
                 <ScrollLink
-                  data-ui="store/BottomNavTabs/ScrollLink"
+
                   href={tab.href}
                   aria-current={tab.active ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
-                    tab.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive)}
                 >
                   {content}
                 </ScrollLink>
               ) : (
                 <button
-                  data-ui="store/BottomNavTabs/button"
+
                   type="button"
                   onClick={tab.onClick}
                   aria-pressed={tab.active}
-                  className={cn(
-                    "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-1 transition-colors active:scale-95",
-                    tab.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive)}
                 >
                   {content}
                 </button>

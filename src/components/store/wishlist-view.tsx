@@ -10,6 +10,7 @@ import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { useWishlist } from "@/store/wishlist"
+import styles from "./page-views.module.css"
 import { ProductCard, type ProductCardData } from "./product-card"
 
 /** `preview`: render placeholder cards as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
@@ -35,11 +36,11 @@ export function WishlistView({ products, preview = false }: { products: ProductC
   }
 
   return (
-    <div data-ui="store/WishlistView" className="space-y-8">
+    <div className={styles.wishlistWrapper}>
       {authReady && !user && saved.length > 0 && (
-        <p data-ui="store/WishlistView/p" className="rounded-2xl bg-secondary/70 p-4 text-sm">
+        <p className={styles.deviceNotice}>
           Your wishlist is saved on this device.{" "}
-          <Link data-ui="store/WishlistView/Link-sign-in" href="/login?next=/wishlist" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link href="/login?next=/wishlist" className={styles.signInLink}>
             Sign in
           </Link>{" "}
           to keep it across all your devices.
@@ -47,13 +48,13 @@ export function WishlistView({ products, preview = false }: { products: ProductC
       )}
 
       {saved.length === 0 ? (
-        <div data-ui="store/WishlistView/div-flex" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-          <div data-ui="store/WishlistView/div-grid" className="grid size-20 place-items-center rounded-full bg-secondary animate-float">
-            <HeartIcon className="size-8 text-rose-500" />
+        <div className={styles.emptyWishlistCard}>
+          <div className={styles.heartCircle}>
+            <HeartIcon className={styles.heartIcon} />
           </div>
-          <p data-ui="store/WishlistView/p-2" className="font-heading text-2xl">Nothing saved yet</p>
-          <p data-ui="store/WishlistView/p-3" className="text-sm text-muted-foreground">Tap the heart on any product to save it here.</p>
-          <Link data-ui="store/WishlistView/Link-explore-products" href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
+          <p className={styles.emptyHeading}>Nothing saved yet</p>
+          <p className={styles.emptySubtext}>Tap the heart on any product to save it here.</p>
+          <Link href="/products" className={cn(buttonVariants({ size: "lg" }), styles.exploreProductsBtn)}>
             Explore products
           </Link>
         </div>
@@ -66,7 +67,7 @@ export function WishlistView({ products, preview = false }: { products: ProductC
 
 function WishlistGrid({ products }: { products: ProductCardData[] }) {
   return (
-    <div data-ui="store/WishlistGrid" className="grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-x-6 md:grid-cols-3 xl:grid-cols-4">
+    <div className={styles.wishlistGrid}>
       {products.map((p) => (
         <ProductCard key={p.id} product={p} />
       ))}

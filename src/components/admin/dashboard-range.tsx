@@ -8,6 +8,8 @@ import { DateField, SelectField } from "@/components/form"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { placeholderDashboard } from "@/features/orders/placeholders"
 import { fyOptions, fyYearOf, monthOptions, monthValue, type RangeKey } from "@/features/orders/dashboard-range"
+import { cn } from "@/lib/utils"
+import styles from "./admin-core.module.css"
 
 type Selected = { key: RangeKey; from: string; to: string }
 
@@ -94,14 +96,14 @@ export function DashboardRangeShell({
       : `${fys.find((o) => o.value === fyYear)?.label.replace(" (current)", "") ?? ""}${monthSel === "all" ? "" : ` · ${months.find((o) => o.value === monthSel)?.label ?? monthSel}`}`
 
   return (
-    <div data-ui="admin/DashboardRangeShell" className="space-y-4">
-      <div data-ui="admin/DashboardRangeShell/div-flex" className="adminCard flex flex-wrap items-end gap-3 rounded-xl border p-3 sm:px-4">
+    <div className={styles.rangeShell}>
+      <div className={cn("adminCard", styles.rangeControlsCard)}>
         <SelectField
           label="Financial year"
           hideLabel
           fieldSize="md"
           noErrorSpace
-          containerClassName="w-full sm:w-52"
+          containerClassName={styles.selectContainer}
           value={fyYear}
           onValueChange={onPickYear}
           options={fys}
@@ -111,14 +113,14 @@ export function DashboardRangeShell({
           hideLabel
           fieldSize="md"
           noErrorSpace
-          containerClassName="w-full sm:w-52"
+          containerClassName={styles.selectContainer}
           value={monthSel}
           onValueChange={onPickMonth}
           options={months}
         />
         {monthSel === "custom" && (
-          <div data-ui="admin/DashboardRangeShell/div-custom-date-range" className="flex w-full flex-wrap items-end gap-2 sm:w-auto" role="group" aria-label="Custom date range">
-            <CalendarRangeIcon className="mb-2.5 size-4 text-primary" aria-hidden />
+          <div className={styles.customRangeGroup} role="group" aria-label="Custom date range">
+            <CalendarRangeIcon className={styles.calendarIcon} aria-hidden />
             <DateField
               label="From"
               hideLabel
@@ -130,10 +132,10 @@ export function DashboardRangeShell({
                 setFrom(val)
                 applyCustom(val, to)
               }}
-              containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
+              containerClassName={styles.dateContainer}
               noErrorSpace
             />
-            <span data-ui="admin/DashboardRangeShell/span" className="mb-2.5 text-sm text-muted-foreground">
+            <span className={styles.rangeToWord}>
               to
             </span>
             <DateField
@@ -148,16 +150,16 @@ export function DashboardRangeShell({
                 setTo(val)
                 applyCustom(from, val)
               }}
-              containerClassName="min-w-36 flex-1 sm:w-40 sm:flex-none"
+              containerClassName={styles.dateContainer}
               noErrorSpace
             />
           </div>
         )}
-        <p data-ui="admin/DashboardRangeShell/p" className="mb-2.5 text-sm text-muted-foreground" aria-live="polite">
-          Showing: <span data-ui="admin/DashboardRangeShell/span-2" className="font-medium text-foreground">{showing}</span>
+        <p className={styles.showingText} aria-live="polite">
+          Showing: <span className={styles.showingStrong}>{showing}</span>
         </p>
       </div>
-      <div data-ui="admin/DashboardRangeShell/div" aria-busy={pending}>
+      <div aria-busy={pending}>
         {pending ? <Skeletonize><DashboardBody d={placeholderDashboard()} bucket="day" /></Skeletonize> : children}
       </div>
     </div>

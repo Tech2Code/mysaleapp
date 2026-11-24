@@ -2,6 +2,7 @@ import { SparklesIcon } from "lucide-react"
 import type { OrderFee } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 type Breakdown = {
   subtotal: number
@@ -36,59 +37,59 @@ export function PriceBreakdown({
   const totalSaved = saved + promoSaved
 
   return (
-    <div data-ui="shared/PriceBreakdown" className={cn("space-y-3 text-sm", className)}>
-      <dl data-ui="shared/PriceBreakdown/dl" className="space-y-2">
-        <div data-ui="shared/PriceBreakdown/div-flex" className="flex justify-between gap-4">
-          <dt data-ui="shared/PriceBreakdown/dt" className="text-muted-foreground">Items total{itemCount ? ` (${itemCount} ${itemCount === 1 ? "item" : "items"})` : ""}</dt>
-          <dd data-ui="shared/PriceBreakdown/dd" className="font-medium">{formatPrice(subtotal)}</dd>
+    <div className={cn(styles.priceBreakdown, className)}>
+      <dl className={styles.linesDl}>
+        <div className={styles.lineRow}>
+          <dt className={styles.mutedDt}>Items total{itemCount ? ` (${itemCount} ${itemCount === 1 ? "item" : "items"})` : ""}</dt>
+          <dd className={styles.mediumDd}>{formatPrice(subtotal)}</dd>
         </div>
         {promoSaved > 0 && (
-          <div data-ui="shared/PriceBreakdown/div-flex-2" className="flex justify-between gap-4 text-success">
-            <dt data-ui="shared/PriceBreakdown/dt-flex" className="flex items-center gap-1.5 font-medium">
-              <span data-ui="shared/PriceBreakdown/span">Promo discount</span>
+          <div className={styles.promoDiscountRow}>
+            <dt className={styles.promoDt}>
+              <span>Promo discount</span>
               {promoCode && (
-                <span data-ui="shared/PriceBreakdown/span-2" className="rounded bg-success/12 px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wider uppercase">
+                <span className={styles.promoCodeBadge}>
                   {promoCode}
                 </span>
               )}
             </dt>
-            <dd data-ui="shared/PriceBreakdown/dd-2" className="font-semibold tabular-nums">-{formatPrice(promoSaved)}</dd>
+            <dd className={styles.promoDd}>-{formatPrice(promoSaved)}</dd>
           </div>
         )}
       </dl>
 
       {extraFees.length > 0 && (
-        <section data-ui="shared/PriceBreakdown/section-product-charges" aria-label="Product charges" className="space-y-1.5 rounded-lg bg-muted/40 p-2.5 text-xs">
-          <ul data-ui="shared/PriceBreakdown/ul" className="space-y-1.5">
+        <section aria-label="Product charges" className={styles.chargesBox}>
+          <ul className={styles.chargesUl}>
             {extraFees.map((fee, i) => (
               <li
-                data-ui="shared/PriceBreakdown/li-flex"
+
                 key={`${fee.productId ?? fee.productName ?? ""}-${fee.label}-${i}`}
                 title={fee.reason ?? undefined}
-                className="flex items-start justify-between gap-2"
+                className={styles.chargeLi}
               >
-                <span data-ui="shared/PriceBreakdown/span-3" className="min-w-0 text-muted-foreground">
-                  <span data-ui="shared/PriceBreakdown/span-4" className="block truncate">
+                <span className={styles.chargeTextCol}>
+                  <span className={styles.chargeLabelTrunc}>
                     {fee.label}
-                    {fee.productName && <span data-ui="shared/PriceBreakdown/span-5" className="text-[11px] opacity-80"> · {fee.productName}</span>}
+                    {fee.productName && <span className={styles.chargeProdSpan}> · {fee.productName}</span>}
                   </span>
-                  {fee.reason && <span data-ui="shared/PriceBreakdown/span-6" className="block text-[11px] opacity-75">{fee.reason}</span>}
+                  {fee.reason && <span className={styles.chargeReasonSpan}>{fee.reason}</span>}
                 </span>
-                <span data-ui="shared/PriceBreakdown/span-7" className="font-medium shrink-0">{formatPrice(fee.amount)}</span>
+                <span className={styles.chargeAmount}>{formatPrice(fee.amount)}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      <dl data-ui="shared/PriceBreakdown/dl-2" className="space-y-2">
-        <div data-ui="shared/PriceBreakdown/div-flex-3" className="flex justify-between gap-4">
-          <dt data-ui="shared/PriceBreakdown/dt-2" className="text-muted-foreground">Delivery</dt>
-          <dd data-ui="shared/PriceBreakdown/dd-flex" className="flex items-baseline gap-2 font-medium">
+      <dl className={styles.linesDl}>
+        <div className={styles.lineRow}>
+          <dt className={styles.mutedDt}>Delivery</dt>
+          <dd className={styles.deliveryDd}>
             {deliveryFree ? (
               <>
-                {saved > 0 && <s data-ui="shared/PriceBreakdown/s" className="text-muted-foreground">{formatPrice(saved)}</s>}
-                <span data-ui="shared/PriceBreakdown/span-8" className="font-semibold text-success">FREE</span>
+                {saved > 0 && <s className={styles.struckOriginal}>{formatPrice(saved)}</s>}
+                <span className={styles.freeBadgeText}>FREE</span>
               </>
             ) : (
               formatPrice(shippingFee)
@@ -97,15 +98,15 @@ export function PriceBreakdown({
         </div>
 
         {totalSaved > 0 && (
-          <p data-ui="shared/PriceBreakdown/p-inline-flex" className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-            <SparklesIcon className="size-3.5 shrink-0" aria-hidden />
-            <span data-ui="shared/PriceBreakdown/span-9">You saved {formatPrice(totalSaved)} on this order</span>
+          <p className={styles.savingsBannerRow}>
+            <SparklesIcon className={styles.sparkleSvg} aria-hidden />
+            <span>You saved {formatPrice(totalSaved)} on this order</span>
           </p>
         )}
 
-        <div data-ui="shared/PriceBreakdown/div-flex-4" className="flex items-baseline justify-between gap-4 border-t pt-3">
-          <dt data-ui="shared/PriceBreakdown/dt-3" className="font-semibold">{totalLabel}</dt>
-          <dd data-ui="shared/PriceBreakdown/dd-3" className="font-heading text-2xl font-semibold">{formatPrice(total)}</dd>
+        <div className={styles.grandTotalRow}>
+          <dt className={styles.grandTotalDt}>{totalLabel}</dt>
+          <dd className={styles.grandTotalDd}>{formatPrice(total)}</dd>
         </div>
       </dl>
     </div>

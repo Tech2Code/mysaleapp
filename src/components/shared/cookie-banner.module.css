@@ -1,0 +1,48 @@
+/* Section: Essential Cookie & Consent Banner */
+@keyframes cookieBannerSlideUp { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.cookieBanner { position: fixed; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: 16px; z-index: 44; display: flex; flex-direction: column; gap: 14px; border-radius: 22px; border: 0; background-color: color-mix(in oklab, var(--card) 96%, transparent); padding: 16px; box-shadow: var(--store-elevation-md); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); animation: cookieBannerSlideUp 320ms cubic-bezier(0.22, 1, 0.36, 1); }
+:global(.dark) .cookieBanner { box-shadow: 0 20px 44px -12px rgba(0, 0, 0, 0.65); }
+.cookieBanner .bannerTopRow { display: flex; align-items: flex-start; gap: 12px; }
+.bannerTopRow .cookieIconBox { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 12px; background-color: var(--secondary); color: var(--primary); }
+.cookieIconBox .cookieSvg { width: 18px; height: 18px; }
+.bannerTopRow .bannerTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 4px; }
+.bannerTextCol .bannerTitle { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 700; color: var(--foreground); }
+.bannerTextCol .bannerBody { margin: 0; font-size: 12.5px; line-height: 18px; color: var(--muted-foreground); }
+.bannerBody .policyLink { font-weight: 600; color: var(--primary); text-underline-offset: 3px; }
+.bannerBody .policyLink:hover { text-decoration: underline; }
+/* Section: Equal-Weight Action Buttons (No Dark Patterns) */
+.cookieBanner .bannerActions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bannerActions .equalBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; border-radius: 9999px; border: 0; background-color: var(--store-section-tint, var(--secondary)); padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--foreground); white-space: nowrap; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.bannerActions .equalBtn:hover { background-color: var(--secondary); transform: translateY(-1px); }
+.bannerActions .equalBtn:active { transform: translateY(0) scale(0.97); }
+.bannerActions .equalBtnPrimary { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 12px -2px color-mix(in oklab, var(--primary) 35%, transparent); }
+.bannerActions .equalBtnPrimary:hover { background-color: var(--store-accent-hover, var(--primary)); color: var(--primary-foreground); }
+/* Section: Cookie Preferences Dialog */
+.prefsModal { width: 100%; }
+.prefsBodyStack { display: flex; flex-direction: column; gap: 12px; }
+.prefsBodyStack .categoryCard { display: flex; flex-direction: column; gap: 6px; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 35%, transparent); padding: 14px 16px; }
+.categoryCard .categoryHeaderRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.categoryHeaderRow .categoryTitle { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--foreground); display: flex; align-items: center; gap: 8px; }
+.categoryTitle .categoryIcon { width: 16px; height: 16px; color: var(--primary); }
+.categoryHeaderRow .alwaysActiveBadge { border-radius: 9999px; background-color: var(--secondary); padding: 3px 10px; font-size: 11px; font-weight: 600; color: var(--foreground); }
+.categoryCard .categoryDesc { margin: 0; font-size: 12.5px; line-height: 19px; color: var(--muted-foreground); }
+.prefsBodyStack .legalFooterLinks { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding-top: 4px; font-size: 12px; color: var(--muted-foreground); }
+.legalFooterLinks .inlinePolicyLink { font-weight: 600; color: var(--primary); text-underline-offset: 3px; }
+.legalFooterLinks .inlinePolicyLink:hover { text-decoration: underline; }
+.prefsFooterBtn { gap: 6px; border-radius: 9999px; }
+.btnIcon16 { width: 16px; height: 16px; }
+.footerTriggerBtn { border: 0; background: transparent; padding: 2px 0; font-size: 14px; color: var(--muted-foreground); text-align: left; transition: color 150ms ease; }
+.footerTriggerBtn:hover { color: var(--foreground); }
+/* Section: Terms & Privacy Quick-View Modal */
+.legalTabRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 65%, transparent); padding: 4px; }
+.legalTabRow .legalTabBtn { height: 34px; border-radius: 9999px; border: 0; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.legalTabRow .legalTabBtn:hover { color: var(--foreground); }
+.legalTabRow .legalTabBtnActive { background-color: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.legalPointList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.legalPointList .legalPointItem { border-radius: 14px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 30%, transparent); padding: 12px 14px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.legalPointItem .pointHeading { display: block; margin-bottom: 2px; font-weight: 600; color: var(--foreground); }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .cookieBanner { right: auto; bottom: 20px; left: 20px; width: 432px; padding: 18px 20px; }
+  .prefsModal { max-width: 512px; }
+}

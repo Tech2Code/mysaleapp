@@ -15,6 +15,7 @@ import { emailSchema, resetSchema } from "@/features/auth/account-schema"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import styles from "./admin-core.module.css"
 
 /** Step 1: ask for the account email; a reset link is sent. */
 export function ForgotPasswordForm() {
@@ -43,14 +44,14 @@ export function ForgotPasswordForm() {
 
   if (sentTo) {
     return (
-      <div data-ui="admin/ForgotPasswordForm" role="status" className="space-y-3 rounded-2xl bg-success/10 p-4 text-sm">
-        <p data-ui="admin/ForgotPasswordForm/p-flex" className="flex items-center gap-2 font-semibold">
-          <MailCheckIcon className="size-4 text-success" aria-hidden /> Check your inbox
+      <div role="status" className={styles.forgotSentBox}>
+        <p className={styles.sentHeadingRow}>
+          <MailCheckIcon className={styles.iconSuccess16} aria-hidden /> Check your inbox
         </p>
-        <p data-ui="admin/ForgotPasswordForm/p">
-          If <span data-ui="admin/ForgotPasswordForm/span" className="font-semibold">{sentTo}</span> is an admin account, a reset link is on its way. It works once and expires soon.
+        <p className={styles.sentBodyText}>
+          If <span className={styles.fontSemibold}>{sentTo}</span> is an admin account, a reset link is on its way. It works once and expires soon.
         </p>
-        <Button data-ui="admin/ForgotPasswordForm/Button-use-a-different-email" type="button" variant="outline" size="sm" onClick={() => setSentTo(null)}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setSentTo(null)}>
           Use a different email
         </Button>
       </div>
@@ -59,9 +60,9 @@ export function ForgotPasswordForm() {
 
   return (
     <form
-      data-ui="admin/ForgotPasswordForm"
+
       noValidate
-      className="space-y-2"
+      className={styles.authFormStack}
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           const res = await requestPasswordReset(values)
@@ -77,8 +78,8 @@ export function ForgotPasswordForm() {
       )}
     >
       <TextField label="Admin email" kind="email" error={form.formState.errors.email?.message} {...form.register("email")} />
-      <Button data-ui="admin/ForgotPasswordForm/Button-send-reset-link" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
-        {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} Send reset link
+      <Button type="submit" size="lg" disabled={pending} className={styles.authSubmitBtn}>
+        {pending ? <Loader2Icon className={styles.spinIcon} /> : <SendIcon className={styles.icon16} />} Send reset link
       </Button>
     </form>
   )
@@ -102,9 +103,9 @@ export function ResetPasswordForm() {
 
   return (
     <form
-      data-ui="admin/ResetPasswordForm"
+
       noValidate
-      className="space-y-2"
+      className={styles.authFormStack}
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
           const res = await resetAdminPassword(values)
@@ -145,8 +146,8 @@ export function ResetPasswordForm() {
         error={errors.confirm?.message}
         {...form.register("confirm")}
       />
-      <Button data-ui="admin/ResetPasswordForm/Button-set-new-password" type="submit" size="lg" disabled={pending} className="h-11 w-full gap-2 rounded-full">
-        {pending ? <Loader2Icon className="animate-spin" /> : <KeyRoundIcon className="size-4" />} Set new password
+      <Button type="submit" size="lg" disabled={pending} className={styles.authSubmitBtn}>
+        {pending ? <Loader2Icon className={styles.spinIcon} /> : <KeyRoundIcon className={styles.icon16} />} Set new password
       </Button>
     </form>
   )

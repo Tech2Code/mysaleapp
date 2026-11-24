@@ -35,7 +35,9 @@ import { DeliveryEditor } from "./delivery-editor"
 import { useStoreSettings } from "./store-settings-provider"
 import { PaymentPanel } from "./payment-panel"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
+import styles from "./order-status.module.css"
 
 type TrackInput = z.input<typeof trackOrderSchema>
 
@@ -47,33 +49,33 @@ const hints = [
 
 function EmptyState({ signedIn }: { signedIn: boolean }) {
   return (
-    <div data-ui="store/EmptyState" className="flex h-full min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed bg-card/50 p-6 sm:p-8 text-center">
-      <div data-ui="store/EmptyState/div-grid" className="grid size-16 place-items-center rounded-full bg-secondary animate-float">
-        <PackageSearchIcon className="size-7 text-primary" />
+    <div className={styles.trackEmptyBox}>
+      <div className={styles.searchIconCircle}>
+        <PackageSearchIcon className={styles.pkgIcon} />
       </div>
-      <h2 data-ui="store/EmptyState/h2-your-order-status-will" className="mt-5 font-heading text-2xl font-semibold">Your order status will appear here</h2>
-      <ol data-ui="store/EmptyState/ol" className="mt-6 max-w-sm space-y-3 text-left text-sm text-muted-foreground">
+      <h2 className={styles.emptyTitle}>Your order status will appear here</h2>
+      <ol className={styles.hintsList}>
         {hints.map((h, i) => (
-          <li data-ui="store/EmptyState/li-flex" key={h.text} className="flex gap-3">
-            <span data-ui="store/EmptyState/span-grid" className="grid size-6 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-primary">
+          <li key={h.text} className={styles.hintRow}>
+            <span className={styles.hintNumBadge}>
               {i + 1}
             </span>
             {h.text}
           </li>
         ))}
       </ol>
-      <p data-ui="store/EmptyState/p" className="mt-6 text-sm text-muted-foreground">
+      <p className={styles.accountPrompt}>
         {signedIn ? (
           <>
             Ordered with your account?{" "}
-            <Link data-ui="store/EmptyState/Link-see-all-your-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+            <Link href="/account/orders" className={styles.promptLink}>
               See all your orders
             </Link>
           </>
         ) : (
           <>
             Have an account?{" "}
-            <Link data-ui="store/EmptyState/Link-sign-in-to-see-all-you" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+            <Link href="/login?next=/account/orders" className={styles.promptLink}>
               Sign in to see all your orders
             </Link>
           </>
@@ -108,28 +110,28 @@ function TrackResult({
         (result.paymentReference && !result.paymentReference.includes("*")))
   )
   return (
-    <m.section data-ui="store/TrackResult"
+    <m.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className="space-y-6 rounded-3xl border bg-card p-6 sm:p-8"
+      className={styles.trackResultCard}
     >
-      <div data-ui="store/TrackResult/div-flex" className="flex flex-wrap items-start justify-between gap-3">
-        <div data-ui="store/TrackResult/div">
-          <div data-ui="store/TrackResult/div-flex-2" className="flex flex-wrap items-center gap-2">
-            <p data-ui="store/TrackResult/p" className="font-mono text-xl font-semibold">{result.orderCode}</p>
+      <div className={styles.resultHeader}>
+        <div>
+          <div className={styles.codeRow}>
+            <p className={styles.orderCodeText}>{result.orderCode}</p>
             <CopyButton value={result.orderCode} label="Order ID" />
           </div>
-          <p data-ui="store/TrackResult/p-2" className="text-sm text-muted-foreground">
+          <p className={styles.placedMetaText}>
             Placed {formatDate(result.createdAt)} · {result.city}
           </p>
         </div>
-        <div data-ui="store/TrackResult/div-flex-3" className="flex flex-wrap items-center gap-2">
+        <div className={styles.headerBadgesRow}>
           <RefreshButton onRefresh={() => refetch()} />
           <OrderStatusBadge status={result.status} returnStage={returnStage(stageInputOf(result))} paymentStatus={result.paymentStatus} audience="customer" pulse alwaysShow />
         </div>
       </div>
-      <p data-ui="store/TrackResult/p-3" className="text-sm text-muted-foreground">
+      <p className={styles.statusDescription}>
                 {customerStatusLine(STATUS_META[result.status].description, returnStage(stageInputOf(result)), {
                   canRequestAgain: result.status === "delivered" ? canRequestAgain(result.returnRequests, result.returnWindow.open) : undefined,
                 })}
@@ -154,7 +156,7 @@ function TrackResult({
       )}
       <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} returnInput={stageInputOf(result)} audience="customer" />
       {query && (
-        <div data-ui="store/TrackResult/div-flex-4" className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className={styles.orderActionsBar}>
           <RequestReturn
             orderCode={result.orderCode}
             phoneLast4={isOwner ? undefined : query.phoneLast4}
@@ -180,37 +182,37 @@ function TrackResult({
           />
         </div>
       )}
-      <section data-ui="store/TrackResult/section-items-in-this-order" aria-label="Items in this order" className="border-t pt-5 text-sm">
-        <h3 data-ui="store/TrackResult/h3-item" className="font-sans font-semibold">
+      <section aria-label="Items in this order" className={styles.itemsSummarySection}>
+        <h3 className={styles.itemsHeading}>
           {itemCount} item{itemCount === 1 ? "" : "s"} in this order
         </h3>
-        <ul data-ui="store/TrackResult/ul" className="mt-2 space-y-1 text-muted-foreground">
+        <ul className={styles.itemsList}>
           {result.items.map((i) => (
-            <li data-ui="store/TrackResult/li-flex" key={i.productId} className="flex gap-2">
-              <span data-ui="store/TrackResult/span" className="min-w-0 flex-1 truncate leading-normal">{i.name}</span>
-              <span data-ui="store/TrackResult/span-2" className="shrink-0">× {i.quantity}</span>
+            <li key={i.productId} className={styles.itemLine}>
+              <span className={styles.itemName}>{i.name}</span>
+              <span className={styles.itemQty}>× {i.quantity}</span>
             </li>
           ))}
         </ul>
-        <p data-ui="store/TrackResult/p-4" className="mt-3 text-xs text-muted-foreground">
+        <p className={styles.invoiceHint}>
           {isOwner ? (
             <>
               Need the invoice or full order details?{" "}
-              <Link data-ui="store/TrackResult/Link-open-in-my-orders" href={`/account/orders/${encodeURIComponent(result.orderCode)}`} className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link href={`/account/orders/${encodeURIComponent(result.orderCode)}`} className={styles.invoiceLink}>
                 Open in My orders
               </Link>
             </>
           ) : signedIn ? (
             <>
               Looking for orders placed with your account?{" "}
-              <Link data-ui="store/TrackResult/Link-open-my-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link href="/account/orders" className={styles.invoiceLink}>
                 Open My orders
               </Link>
             </>
           ) : (
             <>
               Need the invoice or payment details?{" "}
-              <Link data-ui="store/TrackResult/Link-sign-in-and-open-my-or" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link href="/login?next=/account/orders" className={styles.invoiceLink}>
                 Sign in and open My orders
               </Link>
             </>
@@ -227,17 +229,17 @@ function TrackResult({
           onChanged={(newLast4) => void refetch(newLast4)}
         />
       )}
-      {/* Guests don't get the address back (anyone with the code + 4 digits could read it): only the city,
+      {/* Guests don't get the address back (anyone with the code + 4-digits could read it): only the city,
           and a way to change it while the order is still pending. */}
       {!result.delivery && result.status === "pending" && (
-        <p data-ui="store/TrackResult/p-5" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
-          Delivering to <span data-ui="store/TrackResult/span-3" className="font-semibold text-foreground">{result.city}</span>. To change the address,{" "}
+        <p className={styles.guestCityNotice}>
+          Delivering to <span className={styles.cityStrong}>{result.city}</span>. To change the address,{" "}
           <a
-            data-ui="store/TrackResult/a-message-us-on-whatsapp"
+
             href={shopWhatsappLink(shop, `Hi! I want to change the delivery address of my order ${result.orderCode}.`)}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-foreground underline underline-offset-4"
+            className={styles.waChangeLink}
           >
             message us on WhatsApp
           </a>
@@ -246,7 +248,7 @@ function TrackResult({
           ) : (
             <>
               {" "}or{" "}
-              <Link data-ui="store/TrackResult/Link-sign-in" href="/login?next=/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link href="/login?next=/account/orders" className={styles.signInInlineLink}>
                 sign in
               </Link>
               .
@@ -351,18 +353,18 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   }, [userId, query])
 
   return (
-    <div data-ui="store/TrackOrderBody" className={`grid gap-x-6 gap-y-4 lg:grid-cols-[380px_1fr] lg:gap-8 ${result ? "items-start" : "items-stretch"}`}>
+    <div className={cn(styles.trackBodyGrid, Boolean(result) && styles.trackBodyGridAlignedStart)}>
       {/* Left: find your order */}
-      <form data-ui="store/TrackOrderBody/form" onSubmit={onSubmit} noValidate className={`space-y-2 rounded-3xl border bg-card p-6 sm:p-7 ${result ? "lg:sticky-store" : ""}`}>
-        <div data-ui="store/TrackOrderBody/div">
-          <h2 data-ui="store/TrackOrderBody/h2-find-your-order" className="text-2xl font-semibold">Find your order</h2>
-          <p data-ui="store/TrackOrderBody/p" className="mt-1 text-sm text-muted-foreground">
+      <form onSubmit={onSubmit} noValidate className={cn(styles.lookupForm, Boolean(result) && styles.lookupFormSticky)}>
+        <div>
+          <h2 className={styles.formTitle}>Find your order</h2>
+          <p className={styles.formSubtitle}>
             {signedIn ? "Takes 5 seconds. Enter your order code and phone's last 4 digits." : "Takes 5 seconds. No login needed."}
           </p>
         </div>
         <TextField
           label="Order code" kind="orderCode"
-          className="font-mono uppercase"
+          className={styles.codeFieldInput}
           placeholder="KK-7F3K9Q"
           autoCapitalize="characters"
           error={form.formState.errors.code?.message}
@@ -376,27 +378,27 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
           error={form.formState.errors.phoneLast4?.message}
           {...form.register("phoneLast4")}
         />
-        <Button data-ui="store/TrackOrderBody/Button-track-order" type="submit" size="lg" disabled={pending} className="w-full rounded-full">
-          {pending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />} Track order
+        <Button type="submit" size="lg" disabled={pending} className={styles.submitBtn}>
+          {pending ? <Loader2Icon className={styles.spinIcon} /> : <SearchIcon />} Track order
         </Button>
-        <div data-ui="store/TrackOrderBody/div-2" className="mt-auto border-t pt-4 text-sm">
-          <p data-ui="store/TrackOrderBody/p-2" className="text-muted-foreground">Can&apos;t find your order code?</p>
-          <a data-ui="store/TrackOrderBody/a-ask-us-on-whatsapp"
+        <div className={styles.helpFooter}>
+          <p className={styles.helpPrompt}>Can&apos;t find your order code?</p>
+          <a
             href={shopWhatsappLink(shop, "Hi! I need help finding my order.")}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-2 font-semibold text-whatsapp hover:underline"
+            className={styles.waHelpLink}
           >
-            <WhatsAppIcon className="size-4" /> Ask us on WhatsApp
+            <WhatsAppIcon className={styles.waIcon} /> Ask us on WhatsApp
           </a>
         </div>
       </form>
 
       {/* Right: order details */}
-      <div data-ui="store/TrackOrderBody/div-3" ref={resultRef} aria-live="polite" data-reveal-top className="scroll-mt-24 *:h-full">
+      <div ref={resultRef} aria-live="polite" data-reveal-top className={styles.resultColumn}>
         <AnimatePresence mode="wait">
           {pending ? (
-            <m.div data-ui="store/TrackOrderBody/m.div" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <m.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={styles.fullHeightBox}>
               <Skeletonize>
                 <TrackResult result={placeholderTrackedOrder()} query={PLACEHOLDER_QUERY} shop={shop} signedIn={signedIn} refetch={async () => {}} />
               </Skeletonize>
@@ -404,7 +406,7 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
           ) : result ? (
             <TrackResult key={result.orderCode} result={result} query={query} shop={shop} signedIn={signedIn} refetch={refetch} />
           ) : (
-            <m.div data-ui="store/TrackOrderBody/m.div-2" key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
+            <m.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={styles.fullHeightBox}>
               <EmptyState signedIn={signedIn} />
             </m.div>
           )}

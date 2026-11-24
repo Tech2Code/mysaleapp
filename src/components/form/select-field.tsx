@@ -5,6 +5,7 @@ import { ArrowRightIcon, CheckIcon, ChevronDownIcon, RotateCcwIcon } from "lucid
 import { useId } from "react"
 import { cn } from "@/lib/utils"
 import { describedBy, FieldShell, FIELD_HEIGHT, PILL, type FieldSize } from "./field-shell"
+import styles from "./form.module.css"
 
 export type SelectOption = {
   value: string
@@ -98,73 +99,64 @@ export function SelectField({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(id, error, hint)}
           className={cn(
-            "group flex w-full min-w-0 max-w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-input bg-background px-3 text-left text-sm outline-none transition-all",
-            "hover:border-ring/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
-            "data-popup-open:border-ring data-popup-open:ring-3 data-popup-open:ring-ring/30",
-            "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            isRevertSelected && "border-amber-400/90 bg-amber-50/70 text-amber-950 hover:border-amber-500 dark:border-amber-700/80 dark:bg-amber-950/30 dark:text-amber-100",
-            isNextSelected && "border-emerald-400/90 bg-emerald-50/60 text-emerald-950 hover:border-emerald-500 dark:border-emerald-700/80 dark:bg-emerald-950/25 dark:text-emerald-100",
-            activeFilter && !isRevertSelected && !isNextSelected && "border-primary/60 bg-primary/5 font-medium text-foreground",
-            pill ? `${PILL} bg-card font-medium shadow-sm` : FIELD_HEIGHT[fieldSize],
+            styles.selectTrigger,
+            isRevertSelected && styles.selectTriggerRevert,
+            isNextSelected && styles.selectTriggerNext,
+            activeFilter && !isRevertSelected && !isNextSelected && styles.selectTriggerActiveFilter,
+            pill ? cn(PILL, styles.selectTriggerPill) : FIELD_HEIGHT[fieldSize],
             className
           )}
         >
           <span
-            data-ui="form/SelectField/span"
+
             title={selectedLabel ? (prefix ? `${prefix} ${selectedLabel}` : selectedLabel) : placeholder ?? undefined}
-            className={cn("flex min-w-0 flex-1 items-center gap-1.5 text-left", !selectedLabel && "text-muted-foreground/60")}
+            className={cn(styles.triggerContent, !selectedLabel && styles.triggerContentPlaceholder)}
           >
-            {isRevertSelected && <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />}
-            {isNextSelected && <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
+            {isRevertSelected && <RotateCcwIcon className={styles.revertIcon} aria-hidden />}
+            {isNextSelected && <ArrowRightIcon className={styles.nextIcon} aria-hidden />}
             {prefix && (
-              <span data-ui="form/SelectField/span-2" className="shrink-0 text-xs font-medium text-muted-foreground">
+              <span className={styles.prefixLabel}>
                 {prefix}
               </span>
             )}
-            <span data-ui="form/SelectField/span-3" className={cn("truncate", prefix && "font-medium")}>
+            <span className={cn(styles.valueTrunc, prefix && styles.valueTruncMedium)}>
               {selectedLabel ?? placeholder ?? "Select…"}
             </span>
             {isRevertSelected && (
-              <span data-ui="form/SelectField/span-4" className="ml-auto shrink-0 rounded-full bg-amber-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
+              <span className={styles.revertBadge}>
                 {selectedOption?.badge ?? "Revert"}
               </span>
             )}
             {isNextSelected && (
-              <span data-ui="form/SelectField/span-5" className="ml-auto shrink-0 rounded-full bg-emerald-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
+              <span className={styles.nextBadge}>
                 {selectedOption?.badge ?? "Next step"}
               </span>
             )}
             {selectedOption?.badge && !isRevertSelected && !isNextSelected && (
               <span
-                data-ui="form/SelectField/span-6"
+
                 className={cn(
-                  "ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] font-bold tabular-nums leading-none",
-                  selectedOption.tone === "attention"
-                    ? "bg-amber-500/20 text-amber-950 ring-1 ring-amber-500/40 dark:bg-amber-500/25 dark:text-amber-200"
-                    : "bg-foreground/10 text-foreground ring-1 ring-border/70"
+                  styles.countBadge,
+                  selectedOption.tone === "attention" ? styles.countBadgeAttention : styles.countBadgeDefault
                 )}
               >
-                {selectedOption.tone === "attention" && <span data-ui="form/SelectField/span-7" className="size-1.5 rounded-full bg-amber-500" aria-hidden />}
+                {selectedOption.tone === "attention" && <span className={styles.attentionDot} aria-hidden />}
                 {selectedOption.badge}
               </span>
             )}
           </span>
-          <SelectPrimitive.Icon className="shrink-0 text-muted-foreground transition-transform duration-200 group-data-popup-open:rotate-180">
-            <ChevronDownIcon className="size-4" aria-hidden />
+          <SelectPrimitive.Icon className={styles.chevronTriggerIcon}>
+            <ChevronDownIcon className={styles.icon16} aria-hidden />
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
 
         <SelectPrimitive.Portal>
-          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className="z-70 max-w-[calc(100dvw-2rem)] outline-none">
+          <SelectPrimitive.Positioner side="bottom" align="start" sideOffset={6} alignItemWithTrigger={false} className={styles.selectPositioner}>
             <SelectPrimitive.Popup
               data-slot="select-content"
-              className={cn(
-                "max-h-(--available-height) min-w-(--anchor-width) max-w-[calc(100dvw-2rem)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border bg-popover p-1.5 text-popover-foreground shadow-xl outline-none",
-                "transition-[opacity,transform] duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0"
-              )}
+              className={styles.selectPopup}
             >
-              <SelectPrimitive.List className="space-y-1 outline-none">
+              <SelectPrimitive.List className={styles.selectList}>
                 {items.map((item) => {
                   const isRevert = item.tone === "revert"
                   const isNext = item.tone === "next"
@@ -176,44 +168,39 @@ export function SelectField({
                       value={item.value}
                       title={item.label}
                       className={cn(
-                        "relative flex min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-lg py-2 pr-9 pl-3 text-sm outline-none select-none",
+                        styles.selectItem,
                         isRevert
-                          ? "border border-amber-300/60 bg-amber-50/60 text-amber-950 data-highlighted:bg-amber-100/90 data-highlighted:text-amber-950 data-selected:font-semibold data-selected:text-amber-950 dark:border-amber-800/50 dark:bg-amber-950/25 dark:text-amber-200 dark:data-highlighted:bg-amber-900/45 dark:data-selected:text-amber-100"
+                          ? styles.selectItemRevert
                           : isNext
-                            ? "border border-emerald-300/60 bg-emerald-50/60 font-medium text-emerald-950 data-highlighted:bg-emerald-100/90 data-highlighted:text-emerald-950 data-selected:font-semibold data-selected:text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/25 dark:text-emerald-200 dark:data-highlighted:bg-emerald-900/45 dark:data-selected:text-emerald-100"
-                            : [
-                                "data-highlighted:bg-primary/10 data-highlighted:text-foreground",
-                                "data-selected:font-semibold data-selected:text-primary",
-                              ],
-                        item.value === NONE && "text-muted-foreground"
+                            ? styles.selectItemNext
+                            : styles.selectItemDefault,
+                        item.value === NONE && styles.selectItemNone
                       )}
                     >
-                      {isRevert && <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />}
-                      {isNext && <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />}
-                      <SelectPrimitive.ItemText className="min-w-0 flex-1 truncate">{item.label}</SelectPrimitive.ItemText>
+                      {isRevert && <RotateCcwIcon className={styles.revertIcon} aria-hidden />}
+                      {isNext && <ArrowRightIcon className={styles.nextIcon} aria-hidden />}
+                      <SelectPrimitive.ItemText className={styles.itemTextTrunc}>{item.label}</SelectPrimitive.ItemText>
                       {isCurrent && (
-                        <span data-ui="form/SelectField/span-8" className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
+                        <span className={styles.currentPillBadge}>
                           {item.badge ?? "Current"}
                         </span>
                       )}
                       {isNext && (
-                        <span data-ui="form/SelectField/span-9" className="shrink-0 rounded-full bg-emerald-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200">
+                        <span className={styles.nextPillBadge}>
                           {item.badge ?? "Next step"}
                         </span>
                       )}
                       {isRevert && (
-                        <span data-ui="form/SelectField/span-10" className="shrink-0 rounded-full bg-amber-200/80 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
+                        <span className={styles.revertPillBadge}>
                           {item.badge ?? "Undo"}
                         </span>
                       )}
                       {item.badge && !isCurrent && !isNext && !isRevert && (
                         <span
-                          data-ui="form/SelectField/span-11"
+
                           className={cn(
-                            "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums leading-none",
-                            item.tone === "attention"
-                              ? "bg-amber-500/20 text-amber-950 ring-1 ring-amber-500/40 dark:bg-amber-500/25 dark:text-amber-200"
-                              : "bg-foreground/10 text-foreground ring-1 ring-border/70"
+                            styles.itemCountBadge,
+                            item.tone === "attention" ? styles.countBadgeAttention : styles.countBadgeDefault
                           )}
                         >
                           {item.badge}
@@ -221,11 +208,11 @@ export function SelectField({
                       )}
                       <SelectPrimitive.ItemIndicator
                         className={cn(
-                          "absolute right-3 grid place-items-center",
-                          isRevert ? "text-amber-700 dark:text-amber-300" : isNext ? "text-emerald-700 dark:text-emerald-300" : "text-primary"
+                          styles.itemIndicator,
+                          isRevert ? styles.indicatorRevert : isNext ? styles.indicatorNext : styles.indicatorPrimary
                         )}
                       >
-                        <CheckIcon className="size-4" aria-hidden />
+                        <CheckIcon className={styles.icon16} aria-hidden />
                       </SelectPrimitive.ItemIndicator>
                     </SelectPrimitive.Item>
                   )

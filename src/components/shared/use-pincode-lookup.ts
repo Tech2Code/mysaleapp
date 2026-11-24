@@ -4,6 +4,7 @@ import { CheckCircle2Icon, Loader2Icon } from "lucide-react"
 import { createElement, useEffect, useRef, useState, type ReactNode } from "react"
 import { lookupPincode, type PincodeInfo } from "@/features/location/actions"
 import { PATTERNS } from "@/lib/validation"
+import styles from "./shared.module.css"
 
 const found = new Map<string, PincodeInfo>()
 
@@ -78,8 +79,8 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
   const hint: ReactNode = loading
     ? createElement(
         "span",
-        { className: "inline-flex items-center gap-1 font-medium text-primary" },
-        createElement(Loader2Icon, { className: "size-3 shrink-0 animate-spin", "aria-hidden": true }),
+        { className: styles.pincodeHintLoading },
+        createElement(Loader2Icon, { className: styles.pincodeSpinSvg, "aria-hidden": true }),
         createElement("span", null, "Finding your area…")
       )
     : error
@@ -87,8 +88,8 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
       : matched
         ? createElement(
             "span",
-            { className: "inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400" },
-            createElement(CheckCircle2Icon, { className: "size-3.5 shrink-0", "aria-hidden": true }),
+            { className: styles.pincodeHintMatched },
+            createElement(CheckCircle2Icon, { className: styles.pincodeCheckSvg, "aria-hidden": true }),
             createElement("span", null, `${matched.city}, ${matched.state} — filled from pincode`)
           )
         : "City / district and state are filled in from the pincode"

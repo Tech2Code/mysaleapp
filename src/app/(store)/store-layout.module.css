@@ -1,0 +1,18 @@
+/* Section: Store Layout Shell */
+.skipLink { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; z-index: 50; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); }
+.skipLink:focus { position: fixed; top: 12px; left: 12px; width: auto; height: auto; padding: 8px 16px; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+.storeMain { flex: 1 1 0%; }
+.rootHtml { height: 100%; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.rootBody { display: flex; min-height: 100%; flex-direction: column; margin: 0; }
+.errorCenterMain { display: grid; min-height: 70dvh; place-items: center; padding: 0 16px; text-align: center; }
+.fullCenterHeroMain { display: grid; min-height: 100dvh; place-items: center; padding: 0 16px; text-align: center; }
+.code404Number { margin: 0; font-family: var(--font-heading); font-size: 96px; line-height: 1; font-weight: 600; }
+.statusPageTitle { margin: 16px 0 0 0; font-family: var(--font-heading); font-size: 30px; font-weight: 600; color: var(--foreground); }
+.statusPageLead { margin: 8px 0 0 0; color: var(--muted-foreground); }
+.statusPageLeadNarrow { margin: 8px auto 0 auto; max-width: 384px; color: var(--muted-foreground); }
+.errorRetryBtn { margin-top: 24px; border-radius: 9999px; padding-left: 24px; padding-right: 24px; }
+.notFoundBtnsRow { margin-top: 32px; display: flex; justify-content: center; gap: 12px; }
+.pillBtnPx24 { border-radius: 9999px; padding-left: 24px; padding-right: 24px; }
+.offlineCircle { margin: 0 auto; display: grid; width: 80px; height: 80px; place-items: center; border-radius: 9999px; background-color: var(--secondary); }
+.offlineCircle .wifiIcon { width: 36px; height: 36px; color: var(--primary); }
+.offlineTryLink { margin-top: 24px; display: inline-block; border-radius: 9999px; background-color: var(--primary); padding: 12px 24px; font-weight: 600; color: var(--primary-foreground); }

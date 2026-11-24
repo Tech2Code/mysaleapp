@@ -25,6 +25,7 @@ import { toast } from "sonner"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
+import styles from "./store-widgets.module.css"
 
 function PathnameSync({ onPathname }: { onPathname: (pathname: string | null) => void }) {
   const pathname = usePathname()
@@ -54,8 +55,8 @@ export function AccountMenu() {
   if (!ready) {
     return (
       <Skeletonize label="Loading account">
-        <span data-ui="store/AccountMenu/span-grid" className="grid size-10 place-items-center rounded-full border max-sm:size-9">
-          <UserRoundIcon className="size-4.5" />
+        <span className={styles.skeletonAvatar}>
+          <UserRoundIcon className={styles.userIconSvg} />
         </span>
       </Skeletonize>
     )
@@ -88,70 +89,70 @@ export function AccountMenu() {
         <PathnameSync onPathname={setPathname} />
       </Suspense>
       <DropdownMenu>
-        <DropdownMenuTrigger data-ui="store/AccountMenu/DropdownMenuTrigger"
+        <DropdownMenuTrigger
           className={cn(
-            "relative grid place-items-center rounded-full transition",
+            styles.menuTrigger,
             user
-              ? "size-10 max-sm:size-9 ring-2 ring-primary/20 hover:ring-primary/50"
-              : cn(buttonVariants({ variant: "ghost", size: "icon" }), "max-sm:size-9")
+              ? styles.menuTriggerSignedIn
+              : cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.menuTriggerGuest)
           )}
           aria-label={user ? "Account menu" : "Sign in and theme settings"}
         >
           {user ? (
             user.avatarUrl ? (
-              <Image data-ui="store/AccountMenu/Image" src={user.avatarUrl} alt="" width={36} height={36} sizes="36px" className="size-full overflow-hidden rounded-full object-cover" />
+              <Image src={user.avatarUrl} alt="" width={36} height={36} sizes="36px" className={styles.avatarImg} />
             ) : (
-              <span data-ui="store/AccountMenu/span" className="font-semibold text-primary">{user.name.charAt(0).toUpperCase()}</span>
+              <span className={styles.avatarInitial}>{user.name.charAt(0).toUpperCase()}</span>
             )
           ) : (
-            <UserRoundIcon className="size-4.5" />
+            <UserRoundIcon className={styles.userIconSvg} />
           )}
         </DropdownMenuTrigger>
-        <DropdownMenuContent data-ui="store/AccountMenu/DropdownMenuContent" align="end" className="w-56 border border-border/80 bg-popover/98 shadow-xl">
+        <DropdownMenuContent align="end" className={styles.menuDropdown}>
           {user ? (
             <>
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="truncate">
-                  <span data-ui="store/AccountMenu/span-2" className="block text-sm font-semibold text-foreground">{user.name}</span>
-                  <span data-ui="store/AccountMenu/span-3" className="block truncate">{user.email}</span>
+                <DropdownMenuLabel className={styles.userLabelGroup}>
+                  <span className={styles.userNameText}>{user.name}</span>
+                  <span className={styles.userEmailText}>{user.email}</span>
                 </DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem" onClick={() => router.push("/account/orders")}>
+              <DropdownMenuItem onClick={() => router.push("/account/orders")}>
                 <PackageIcon /> My orders
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-2" onClick={() => router.push("/account/profile")}>
+              <DropdownMenuItem onClick={() => router.push("/account/profile")}>
                 <UserIcon /> Profile
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-3" onClick={() => router.push("/account/profile?tab=addresses")}>
+              <DropdownMenuItem onClick={() => router.push("/account/profile?tab=addresses")}>
                 <MapPinIcon /> Addresses
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-4" className="sm:hidden" onClick={() => router.push("/account/profile?tab=settings")}>
+              <DropdownMenuItem className={styles.mobileOnlyItem} onClick={() => router.push("/account/profile?tab=settings")}>
                 <SettingsIcon /> Settings
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="sm:hidden" />
-              <div data-ui="store/AccountMenu/div" className="px-2 py-1.5 sm:hidden">
-                <p data-ui="store/AccountMenu/p" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <DropdownMenuSeparator className={styles.mobileOnlySep} />
+              <div className={styles.mobileThemeSection}>
+                <p className={styles.themeSectionHeading}>
                   Theme
                 </p>
                 <ThemeSegmentedControl />
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-5" variant="destructive" onClick={() => setAskSignOut(true)}>
+              <DropdownMenuItem variant="destructive" onClick={() => setAskSignOut(true)}>
                 <LogOutIcon /> Sign out
               </DropdownMenuItem>
             </>
           ) : (
             <>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-6" onClick={() => router.push(loginHref)}>
+              <DropdownMenuItem onClick={() => router.push(loginHref)}>
                 <LogInIcon /> Sign in
               </DropdownMenuItem>
-              <DropdownMenuItem data-ui="store/AccountMenu/DropdownMenuItem-7" onClick={() => router.push("/track")}>
+              <DropdownMenuItem onClick={() => router.push("/track")}>
                 <PackageSearchIcon /> Track order
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="sm:hidden" />
-              <div data-ui="store/AccountMenu/div-2" className="px-2 py-1.5 sm:hidden">
-                <p data-ui="store/AccountMenu/p-2" className="mb-1.5 px-0.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <DropdownMenuSeparator className={styles.mobileOnlySep} />
+              <div className={styles.mobileThemeSection}>
+                <p className={styles.themeSectionHeading}>
                   Settings · Theme
                 </p>
                 <ThemeSegmentedControl />

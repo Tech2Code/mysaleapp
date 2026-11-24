@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
+import styles from "./product-card.module.css"
 
 function hueFrom(text: string): number {
   let h = 0
@@ -43,7 +44,7 @@ export function ProductImage({
   if (src && !src.startsWith("data:") && failedSrc !== src) {
     const isLoaded = Boolean(priority) || loadedSrc === src
     return (
-      <Image data-ui="store/ProductImage"
+      <Image
         src={src}
         alt={alt}
         fill
@@ -59,8 +60,8 @@ export function ProductImage({
           if (mounted.current) setFailedSrc(src)
         }}
         className={cn(
-          "object-cover text-transparent transition-[opacity,transform] duration-300",
-          isLoaded ? "opacity-100" : "opacity-0",
+          styles.productImg,
+          isLoaded ? styles.productImgLoaded : styles.productImgPending,
           className
         )}
       />
@@ -69,19 +70,19 @@ export function ProductImage({
 
   const hue = hueFrom(alt)
   return (
-    <div data-ui="store/ProductImage"
+    <div
       role="img"
       aria-label={alt}
-      className={cn("absolute inset-0 grid place-items-center overflow-hidden", className)}
+      className={cn(styles.fallbackTile, className)}
       style={{
         background: `radial-gradient(80% 80% at 20% 15%, oklch(0.93 0.06 ${hue}), transparent 60%),
                      radial-gradient(70% 70% at 85% 90%, oklch(0.88 0.08 ${(hue + 40) % 360}), transparent 60%),
                      oklch(0.95 0.03 ${(hue + 20) % 360})`,
       }}
     >
-      <span data-ui="store/ProductImage/span"
+      <span
         aria-hidden
-        className="font-heading text-[min(28cqw,6rem)] font-semibold opacity-30 select-none"
+        className={styles.fallbackLetter}
         style={{ color: `oklch(0.45 0.1 ${hue})` }}
       >
         {alt.charAt(0)}

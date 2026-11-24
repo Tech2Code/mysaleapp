@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { toast } from "sonner"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import styles from "./admin-views.module.css"
 
 const BUCKET = "product-images"
 const MAX_IMAGES = 8
@@ -142,68 +143,65 @@ export function ImageUploader({
   }
 
   return (
-    <div data-ui="admin/ImageUploader" className="space-y-3">
-      <div data-ui="admin/ImageUploader/div-grid" className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+    <div className={styles.uploaderRoot}>
+      <div className={styles.photoGrid}>
         {value.map((url, i) => (
-          <div data-ui="admin/ImageUploader/div-relative" key={`${url}-${i}`} className="group relative aspect-square overflow-hidden rounded-xl border bg-muted">
+          <div key={`${url}-${i}`} className={styles.photoItem}>
             {url.startsWith("data:") ? (
-              <div data-ui="admin/ImageUploader/div-absolute" className="absolute inset-0 bg-muted" />
+              <div className={styles.photoPlaceholder} />
             ) : (
-              <Image data-ui="admin/ImageUploader/Image" src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className="object-cover" />
+              <Image src={url} alt={`Product photo ${i + 1}`} fill sizes="160px" className={styles.photoImg} />
             )}
             {i === 0 && (
-              <span data-ui="admin/ImageUploader/span-absolute" className="absolute top-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5 text-[0.65rem] font-semibold text-primary-foreground">
+              <span className={styles.coverBadge}>
                 Cover
               </span>
             )}
-            <div data-ui="admin/ImageUploader/div-flex" className="absolute inset-x-1.5 bottom-1.5 flex justify-between gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
-              <button data-ui="admin/ImageUploader/button-grid"
+            <div className={styles.photoControls}>
+              <button
                 type="button"
                 onClick={() => move(i, i - 1)}
                 disabled={i === 0}
-                className="grid size-7 place-items-center rounded-full bg-background/90 shadow disabled:opacity-30"
+                className={styles.photoMoveBtn}
                 aria-label={`Move photo ${i + 1} left`}
               >
-                <ArrowLeftIcon className="size-3.5" />
+                <ArrowLeftIcon className={styles.iconSm} />
               </button>
-              <button data-ui="admin/ImageUploader/button-grid-2"
+              <button
                 type="button"
                 onClick={() => removeImage(url)}
-                className="grid size-7 place-items-center rounded-full bg-destructive-solid text-white shadow"
+                className={styles.photoRemoveBtn}
                 aria-label={`Remove photo ${i + 1}`}
               >
-                <XIcon className="size-3.5" />
+                <XIcon className={styles.iconSm} />
               </button>
-              <button data-ui="admin/ImageUploader/button-grid-3"
+              <button
                 type="button"
                 onClick={() => move(i, i + 1)}
                 disabled={i === value.length - 1}
-                className="grid size-7 place-items-center rounded-full bg-background/90 shadow disabled:opacity-30"
+                className={styles.photoMoveBtn}
                 aria-label={`Move photo ${i + 1} right`}
               >
-                <ArrowRightIcon className="size-3.5" />
+                <ArrowRightIcon className={styles.iconSm} />
               </button>
             </div>
           </div>
         ))}
 
         {value.length < MAX_IMAGES && (
-          <label data-ui="admin/ImageUploader/label"
+          <label
             htmlFor={inputId}
-            className={cn(
-              "flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-within:border-primary",
-              uploading > 0 && "pointer-events-none opacity-60"
-            )}
+            className={cn(styles.uploadDropzone, uploading > 0 && styles.uploadDropzoneBusy)}
           >
-            {uploading > 0 ? <Loader2Icon className="size-6 animate-spin" /> : <ImagePlusIcon className="size-6" />}
-            <span data-ui="admin/ImageUploader/span" className="text-xs font-medium">{uploading > 0 ? `Uploading ${uploading}…` : "Add photos"}</span>
-            <input data-ui="admin/ImageUploader/input-file"
+            {uploading > 0 ? <Loader2Icon className={cn(styles.uploadIcon, styles.spinIcon)} /> : <ImagePlusIcon className={styles.uploadIcon} />}
+            <span className={styles.uploadLabel}>{uploading > 0 ? `Uploading ${uploading}…` : "Add photos"}</span>
+            <input
               id={inputId}
               type="file"
               accept={ACCEPTED.join(",")}
               multiple
               disabled={uploading > 0}
-              className="sr-only"
+              className={styles.srOnly}
               onChange={(e) => {
                 void upload(e.target.files)
                 e.target.value = ""
@@ -212,7 +210,7 @@ export function ImageUploader({
           </label>
         )}
       </div>
-      <p data-ui="admin/ImageUploader/p" className="text-xs text-muted-foreground">
+      <p className={styles.uploaderHint}>
         Square or portrait photos look best. Images are compressed automatically. First photo is the cover.
       </p>
     </div>

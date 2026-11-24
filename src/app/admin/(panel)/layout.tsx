@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react"
 import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
+import styles from "@/components/admin/admin-core.module.css"
 import { AdminMobileBottomNav, AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { getAdminPinStatus, getCurrentUser, isAdminUser, requireAdmin } from "@/features/auth/guards"
@@ -56,12 +57,12 @@ async function OrdersBadge() {
   const count = await getPaymentsToVerifyCount()
   if (count === 0) return null
   return (
-    <span data-ui="layout:/admin#OrdersBadge"
-      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[0.7rem] leading-none font-bold text-primary-foreground shadow-xs transition-colors group-aria-[current=page]:bg-sidebar-primary-foreground group-aria-[current=page]:text-sidebar-primary"
+    <span
+      className={styles.ordersBadge}
       title={`${count} payment${count === 1 ? "" : "s"} to verify`}
     >
       {count > 99 ? "99+" : count}
-      <span data-ui="layout:/admin#OrdersBadge/span" className="sr-only"> payments to verify</span>
+      <span className={styles.srOnly}> payments to verify</span>
     </span>
   )
 }
@@ -74,9 +75,9 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
   )
 
   return (
-    <div data-ui="layout:/admin" className="mx-auto w-full max-w-400 lg:flex lg:border-x">
+    <div className={styles.adminPanelLayout}>
       <AdminSidebar ordersBadge={badge} />
-      <div data-ui="layout:/admin/div" className="min-w-0 flex-1">
+      <div className={styles.adminPanelMainCol}>
         <AdminTopbar
           ordersBadge={badge}
           account={
@@ -91,7 +92,7 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
             </Suspense>
           }
         />
-        <main data-ui="layout:/admin/main" data-slot="admin-main" className="p-4 sm:p-6 lg:p-8">
+        <main data-slot="admin-main" className={styles.adminMainContent}>
           <Suspense fallback={null}>
             <AdminGate />
           </Suspense>

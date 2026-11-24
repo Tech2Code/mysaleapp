@@ -3,52 +3,48 @@ import Image from "next/image"
 import Link from "next/link"
 import { Carousel } from "@/components/shared/carousel"
 import type { Category } from "@/features/products/types"
+import { cn } from "@/lib/utils"
+import styles from "./category-grid.module.css"
 
-const tints = [
-  "from-orange-200/70 to-rose-200/60 dark:from-orange-900/40 dark:to-rose-900/30",
-  "from-amber-200/70 to-lime-200/50 dark:from-amber-900/40 dark:to-lime-900/30",
-  "from-rose-200/70 to-fuchsia-200/50 dark:from-rose-900/40 dark:to-fuchsia-900/30",
-  "from-sky-200/60 to-teal-200/50 dark:from-sky-900/40 dark:to-teal-900/30",
-  "from-violet-200/60 to-pink-200/50 dark:from-violet-900/40 dark:to-pink-900/30",
-]
+const tints = [styles.tintAmber, styles.tintSupport, styles.tintWarm] as const
 
 /** Category cards in a swipeable carousel (5 fit on desktop; more scroll). Uses the category photo when there is one. */
 export function CategoryGrid({ categories }: { categories: (Category & { count: number })[] }) {
   return (
     <Carousel label="Shop by category">
       {categories.map((c, i) => (
-        <li data-ui="store/CategoryGrid/li"
+        <li
           key={c.id}
-          className="w-[44%] shrink-0 snap-start sm:w-[31%] md:w-[23.5%] lg:w-[calc((100%-4rem)/5)]"
+          className={styles.categorySlide}
         >
-          <Link data-ui="store/CategoryGrid/Link"
+          <Link
             href={`/category/${c.slug}`}
-            className={`group relative flex h-42 flex-col justify-between overflow-hidden rounded-2xl bg-linear-to-br p-4 ring-1 ring-border/70 transition-all duration-300 active:scale-[0.98] sm:h-52 sm:p-5 sm:hover:-translate-y-0.5 sm:hover:shadow-lg ${tints[i % tints.length]}`}
+            className={cn(styles.categoryCard, tints[i % tints.length])}
           >
             {c.imageUrl ? (
               <>
-                <Image data-ui="store/CategoryGrid/Image"
+                <Image
                   src={c.imageUrl}
                   alt=""
                   fill
                   loading="lazy"
                   decoding="async"
                   sizes="(min-width: 1024px) 20vw, (min-width: 768px) 24vw, 44vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  className={styles.categoryPhoto}
                 />
-                <span data-ui="store/CategoryGrid/span-absolute" aria-hidden className="absolute inset-0 bg-linear-to-t from-black/70 via-black/15 to-transparent" />
+                <span aria-hidden className={styles.photoOverlay} />
               </>
             ) : (
-              <span data-ui="store/CategoryGrid/span-absolute-2" className="absolute -right-6 -bottom-8 font-heading text-[7rem] leading-none font-semibold text-foreground/8 transition-transform duration-500 group-hover:scale-110">
+              <span className={styles.letterWatermark}>
                 {c.name.charAt(0)}
               </span>
             )}
             <ArrowUpRightIcon
-              className={`relative size-5 self-end transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${c.imageUrl ? "rounded-full bg-background/90 p-1 text-foreground" : "opacity-60 group-hover:opacity-100"}`}
+              className={cn(styles.cornerArrow, Boolean(c.imageUrl) && styles.cornerArrowOnPhoto)}
             />
-            <div data-ui="store/CategoryGrid/div-relative" className="relative">
-              <h3 data-ui="store/CategoryGrid/h3" className={`text-lg font-semibold sm:text-xl ${c.imageUrl ? "text-white" : ""}`}>{c.name}</h3>
-              <p data-ui="store/CategoryGrid/p" className={`text-xs ${c.imageUrl ? "text-white/80" : "text-foreground/60"}`}>
+            <div className={styles.cardTextGroup}>
+              <h3 className={cn(styles.categoryTitle, Boolean(c.imageUrl) && styles.categoryTitlePhoto)}>{c.name}</h3>
+              <p className={cn(styles.categoryCount, Boolean(c.imageUrl) && styles.categoryCountPhoto)}>
                 {c.count} {c.count === 1 ? "item" : "items"}
               </p>
             </div>

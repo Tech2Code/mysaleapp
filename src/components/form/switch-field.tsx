@@ -3,6 +3,7 @@
 import { useId } from "react"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
+import styles from "./form.module.css"
 
 /** On/off toggle with a title and optional description, labelled for screen readers. */
 export function SwitchField({
@@ -25,13 +26,13 @@ export function SwitchField({
   const descId = `${id}-desc`
 
   return (
-    <div data-ui="form/SwitchField" className={cn("flex items-center justify-between gap-4 text-sm", className)}>
-      <div data-ui="form/SwitchField/div">
-        <p data-ui="form/SwitchField/p" id={labelId} className="font-medium">
+    <div className={cn(styles.switchFieldRow, className)}>
+      <div>
+        <p id={labelId} className={styles.switchTitle}>
           {label}
         </p>
         {description && (
-          <p data-ui="form/SwitchField/p-2" id={descId} className="text-muted-foreground">
+          <p id={descId} className={styles.switchDesc}>
             {description}
           </p>
         )}

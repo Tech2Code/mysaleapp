@@ -30,6 +30,7 @@ import { formatDateTime, formatPrice } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-orders.module.css"
 
 type PaymentOrder = OrderPayment & {
   id: string
@@ -72,9 +73,9 @@ const methodOptions = PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_MET
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div data-ui="admin/Fact">
-      <dt data-ui="admin/Fact/dt" className="text-xs text-muted-foreground">{label}</dt>
-      <dd data-ui="admin/Fact/dd" className="mt-0.5 text-sm font-medium">{children}</dd>
+    <div>
+      <dt className={styles.factLabel}>{label}</dt>
+      <dd className={styles.factValue}>{children}</dd>
     </div>
   )
 }
@@ -287,13 +288,13 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const lockPaidFields = isPaymentMoneyLocked(order) && order.paymentStatus === "paid" && statusNow === "paid"
 
   return (
-    <div data-ui="admin/PaymentControl" className="space-y-5">
-      <div data-ui="admin/PaymentControl/div-flex" className="flex flex-wrap items-center justify-between gap-2">
-        <h2 data-ui="admin/PaymentControl/h2-payment" className="font-sans text-lg font-semibold">Payment</h2>
+    <div className={styles.paymentRoot}>
+      <div className={styles.paymentHeader}>
+        <h2 className={styles.paymentHeading}>Payment</h2>
         <PaymentBadge status={order.paymentStatus} orderStatus={order.status} method={order.paymentMethod} refundedAmount={order.refundedAmount} paidAmount={order.paymentAmount ?? order.total} />
       </div>
 
-      <dl data-ui="admin/PaymentControl/dl-grid" className="grid gap-x-6 gap-y-3 grid-cols-2">
+      <dl className={styles.factsGrid}>
         {due && <Fact label={due.label}>{formatPrice(due.amount)}</Fact>}
         <Fact label="Received">{order.paymentAmount == null ? "—" : formatPrice(order.paymentAmount)}</Fact>
         <Fact label="Method">{order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "—"}</Fact>
@@ -305,27 +306,27 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       </dl>
 
       {order.status === "cancelled" && order.paymentStatus === "paid" && owedBack && (
-        <div data-ui="admin/PaymentControl/div" className="space-y-3 rounded-xl border border-orange-200 bg-orange-50/70 p-4 text-sm dark:border-orange-900/50 dark:bg-orange-950/20">
-          <p data-ui="admin/PaymentControl/p">
-            <span data-ui="admin/PaymentControl/span" className="font-semibold">This order was cancelled after the customer paid.</span> Send{" "}
+        <div className={styles.owedRefundBox}>
+          <p>
+            <span className={styles.boldSpan}>This order was cancelled after the customer paid.</span> Send{" "}
             {formatPrice(remainingToRefund)} back to them, then record the refund details.
           </p>
           <Button
-            data-ui="admin/PaymentControl/Button-mark-as-refunded"
+
             type="button"
             variant="outline"
             disabled={pending}
-            className="rounded-full"
+            className={styles.pillBtn}
             onClick={() => setRefundOpen(true)}
           >
-            {pending ? <Loader2Icon className="animate-spin" /> : <RotateCcwIcon className="size-4" />} Mark as refunded
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <RotateCcwIcon className={styles.iconMd} />} Mark as refunded
           </Button>
         </div>
       )}
 
       {needsVerification && (
-        <p data-ui="admin/PaymentControl/p-2" className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-sm dark:border-sky-900/50 dark:bg-sky-950/20">
-          <span data-ui="admin/PaymentControl/span-2" className="font-semibold">
+        <p className={styles.verifyNoteBox}>
+          <span className={styles.boldSpan}>
             {order.status === "cancelled" ? "This order was cancelled after the customer submitted a payment." : "The customer says they paid."}
           </span>{" "}
           Look for {formatPrice(order.total)} with this reference in your UPI/bank app, then{" "}
@@ -334,21 +335,21 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       )}
 
       {canVerify && (
-        <div data-ui="admin/PaymentControl/div-flex-2" className="flex flex-wrap items-start gap-2">
-          <Button data-ui="admin/PaymentControl/Button" type="button" onClick={() => setAsk("verify")} disabled={pending} className="rounded-full bg-success-solid text-white hover:bg-success-solid/90">
-            {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />}{" "}
+        <div className={styles.verifyActionRow}>
+          <Button type="button" onClick={() => setAsk("verify")} disabled={pending} className={styles.verifyBtn}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />}{" "}
             {order.status === "cancelled" ? "Payment received (mark paid)" : "Verify payment & confirm order"}
           </Button>
           {needsVerification && !rejecting && (
-            <Button data-ui="admin/PaymentControl/Button-reject" type="button" variant="outline" onClick={() => setRejecting(true)} className="rounded-full">
-              <BanIcon className="size-4" /> Reject…
+            <Button type="button" variant="outline" onClick={() => setRejecting(true)} className={styles.pillBtn}>
+              <BanIcon className={styles.iconMd} /> Reject…
             </Button>
           )}
         </div>
       )}
 
       {rejecting && (
-        <div data-ui="admin/PaymentControl/div-2" className="space-y-2 rounded-xl border p-4">
+        <div className={styles.rejectBox}>
           <TextAreaField
             label="Reason (shown to the customer)"
             required
@@ -359,12 +360,12 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             placeholder="e.g. We couldn't find this UTR. Please check and resend."
             error={reason.trim().length > 0 && reason.trim().length < 5 ? "Please write at least 5 characters" : undefined}
           />
-          <div data-ui="admin/PaymentControl/div-flex-3" className="flex gap-2">
-            <Button data-ui="admin/PaymentControl/Button-reject-payment" type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className="rounded-full">
-              {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Reject payment
+          <div className={styles.rejectBtnRow}>
+            <Button type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className={styles.pillBtn}>
+              {pending ? <Loader2Icon className={styles.spinIcon} /> : <BanIcon className={styles.iconMd} />} Reject payment
             </Button>
-            <Button data-ui="admin/PaymentControl/Button-cancel" type="button" variant="ghost" onClick={() => { setRejecting(false); setReason("") }} className="rounded-full">
-              <XIcon className="size-4" /> Cancel
+            <Button type="button" variant="ghost" onClick={() => { setRejecting(false); setReason("") }} className={styles.pillBtn}>
+              <XIcon className={styles.iconMd} /> Cancel
             </Button>
           </div>
         </div>
@@ -374,13 +375,13 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       {(showManual || (refundOnly && order.status === "cancelled" && owedBack)) && (
         <>
           {showManual && (
-            <Button data-ui="admin/PaymentControl/Button-edit-payment-record-ma" type="button" variant="outline" onClick={() => setRefundOpen(true)} className="w-full rounded-full sm:w-auto">
-              <PencilIcon className="size-4" /> Edit payment record manually
+            <Button type="button" variant="outline" onClick={() => setRefundOpen(true)} className={styles.manualEditBtn}>
+              <PencilIcon className={styles.iconMd} /> Edit payment record manually
             </Button>
           )}
           <Dialog open={refundOpen} onOpenChange={handleDialogOpenChange}>
-            <DialogContent data-ui="admin/PaymentControl/DialogContent" className="sm:max-w-md">
-              <form data-ui="admin/PaymentControl/form-flex" onSubmit={onSave} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+            <DialogContent className={styles.dialogSmMax}>
+              <form onSubmit={onSave} noValidate className={styles.dialogForm}>
                 <DialogHeader>
                   <DialogTitle>{refundOnly ? "Refund this payment" : "Edit payment record"}</DialogTitle>
                   <DialogDescription>
@@ -389,9 +390,9 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                       : "Fix the payment details by hand. Use this only when the verify button doesn't fit."}
                   </DialogDescription>
                 </DialogHeader>
-                <DialogBody className="space-y-2">
+                <DialogBody className={styles.dialogBodyStack2}>
                   {editNote && !refundOnly && order.paymentStatus !== "paid" && (
-                    <p data-ui="admin/PaymentControl/p-3" role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    <p role="note" className={styles.editPaymentNote}>
                       {editNote}
                     </p>
                   )}
@@ -415,7 +416,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                     kind="paymentRef"
                     placeholder={isRefunding ? "e.g. 412345678901" : undefined}
                     disabled={lockPaidFields && !refundOnly}
-                    className="font-mono"
+                    className={styles.monoText}
                     error={errors.reference?.message}
                     {...form.register("reference")}
                   />
@@ -448,11 +449,11 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                   />
                 </DialogBody>
                 <DialogFooter>
-                  <Button data-ui="admin/PaymentControl/Button-cancel-2" type="button" variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={pending} className="gap-1.5 rounded-full">
-                    <XIcon className="size-4" /> Cancel
+                  <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={pending} className={styles.pillBtnGap}>
+                    <XIcon className={styles.iconMd} /> Cancel
                   </Button>
-                  <Button data-ui="admin/PaymentControl/Button-2" type="submit" disabled={!canSubmitDialog || pending} className="gap-1.5 rounded-full">
-                    {pending ? <Loader2Icon className="animate-spin" /> : refundOnly ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />} {refundOnly ? "Refund payment" : "Save payment record"}
+                  <Button type="submit" disabled={!canSubmitDialog || pending} className={styles.pillBtnGap}>
+                    {pending ? <Loader2Icon className={styles.spinIcon} /> : refundOnly ? <RotateCcwIcon className={styles.iconMd} /> : <CheckIcon className={styles.iconMd} />} {refundOnly ? "Refund payment" : "Save payment record"}
                   </Button>
                 </DialogFooter>
               </form>

@@ -12,6 +12,7 @@ import { deleteProduct, toggleProductFlag } from "@/features/products/actions"
 import { cn } from "@/lib/utils"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-views.module.css"
 
 export function ProductFlagSwitch({
   productId,
@@ -68,15 +69,15 @@ export function ProductRowActions({ productId, productSlug, name }: { productId:
   const later = useToastAfter(pending)
 
   return (
-    <div data-ui="admin/ProductRowActions" className="flex justify-end gap-1">
-      <Link data-ui="admin/ProductRowActions/Link"
+    <div className={styles.rowActions}>
+      <Link
         href={`/admin/products/${encodeURIComponent(productSlug ?? productId)}`}
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
         aria-label={`Edit ${name}`}
       >
         <PencilIcon />
       </Link>
-      <Button data-ui="admin/ProductRowActions/Button" variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className="text-destructive hover:bg-destructive/10">
+      <Button variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className={styles.deleteBtn}>
         <Trash2Icon />
       </Button>
       <ConfirmDialog

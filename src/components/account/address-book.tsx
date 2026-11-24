@@ -27,6 +27,7 @@ import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./account.module.css"
 
 const labelOptions = ADDRESS_LABELS.map((l) => ({ value: l, label: l }))
 
@@ -112,15 +113,15 @@ function AddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="account/AddressDialog/DialogContent" mobileFullScreen className="sm:max-w-lg">
-        <form data-ui="account/AddressDialog/form-flex" onSubmit={onSubmit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
+      <DialogContent mobileFullScreen className={styles.dialogModalLg}>
+        <form onSubmit={onSubmit} noValidate className={styles.dialogFormFlex}>
           <DialogHeader>
             <DialogTitle>{address ? "Edit address" : "Add a new address"}</DialogTitle>
             <DialogDescription>Saved addresses can be picked in one tap at checkout.</DialogDescription>
           </DialogHeader>
 
-          <DialogBody className="space-y-2">
-            <div data-ui="account/AddressDialog/div-grid" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+          <DialogBody className={styles.dialogBodyStack}>
+            <div className={styles.twoColFieldsGrid}>
               <FormSelectField control={form.control} name="label" label="Save as" options={labelOptions} />
               <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
             </div>
@@ -140,7 +141,7 @@ function AddressDialog({
               error={errors.address?.message}
               {...form.register("address")}
             />
-            <div data-ui="account/AddressDialog/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFieldsGrid}>
               <TextField
                 label="Pincode" kind="pincode"
                 inputMode="numeric"
@@ -151,7 +152,7 @@ function AddressDialog({
                 {...form.register("pincode")}
               />
               <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
-              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
+              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.spanTwoCols} />
             </div>
             <Controller
               control={form.control}
@@ -167,11 +168,11 @@ function AddressDialog({
             />
           </DialogBody>
           <DialogFooter>
-            <Button data-ui="account/AddressDialog/Button-cancel" type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className="gap-1.5 rounded-full">
-              <XIcon className="size-4" /> Cancel
+            <Button type="button" variant="outline" size="lg" disabled={pending} onClick={() => onOpenChange(false)} className={styles.pillBtnGap}>
+              <XIcon className={styles.icon16} /> Cancel
             </Button>
-            <Button data-ui="account/AddressDialog/Button-save-address" type="submit" size="lg" disabled={pending || (Boolean(address) && !hasChanges)} className="gap-1.5 rounded-full">
-              {pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save address
+            <Button type="submit" size="lg" disabled={pending || (Boolean(address) && !hasChanges)} className={styles.pillBtnGap}>
+              {pending ? <Loader2Icon className={styles.spinSvg} /> : <CheckIcon className={styles.icon16} />} Save address
             </Button>
           </DialogFooter>
         </form>
@@ -228,54 +229,54 @@ export function AddressBook({
   }
 
   return (
-    <section data-ui="account/AddressBook" aria-labelledby="addresses-title" className="space-y-4">
-      <div data-ui="account/AddressBook/div-flex" className="flex flex-wrap items-end justify-between gap-3">
-        <div data-ui="account/AddressBook/div">
-          <h2 data-ui="account/AddressBook/h2-saved-addresses" id="addresses-title" className="text-3xl font-semibold">
+    <section aria-labelledby="addresses-title" className={styles.addressBookSection}>
+      <div className={styles.addressHeaderRow}>
+        <div>
+          <h2 id="addresses-title" className={styles.ordersHeading}>
             Saved addresses
           </h2>
-          <p data-ui="account/AddressBook/p" className="mt-1 text-muted-foreground">
+          <p className={styles.placedSubtext}>
             {addresses.length} of {MAX_ADDRESSES} saved. Pick one at checkout in a single tap.
           </p>
         </div>
-        <Button data-ui="account/AddressBook/Button-add-address" onClick={openNew} disabled={addresses.length >= MAX_ADDRESSES} className="rounded-full">
+        <Button onClick={openNew} disabled={addresses.length >= MAX_ADDRESSES} className={styles.addAddrPillBtn}>
           <PlusIcon /> Add address
         </Button>
       </div>
 
       {addresses.length === 0 ? (
-        <div data-ui="account/AddressBook/div-flex-2" className="flex flex-col items-center gap-3 rounded-3xl border border-dashed py-14 text-center">
-          <MapPinIcon className="size-9 text-muted-foreground" />
-          <p data-ui="account/AddressBook/p-2" className="font-heading text-xl">No saved addresses yet</p>
-          <p data-ui="account/AddressBook/p-3" className="max-w-sm text-sm text-muted-foreground">Add your home or office address to check out faster next time.</p>
-          <Button data-ui="account/AddressBook/Button-add-your-first-address" onClick={openNew} className="rounded-full">
+        <div className={styles.emptyAddrBox}>
+          <MapPinIcon className={styles.pinIcon36} />
+          <p className={styles.emptyAddrTitle}>No saved addresses yet</p>
+          <p className={styles.emptyAddrSub}>Add your home or office address to check out faster next time.</p>
+          <Button onClick={openNew} className={styles.addAddrPillBtn}>
             <PlusIcon /> Add your first address
           </Button>
         </div>
       ) : (
-        <ul data-ui="account/AddressBook/ul-grid" className="grid gap-4 md:grid-cols-2">
+        <ul className={styles.addressesGrid}>
           {addresses.map((a) => (
-            <li data-ui="account/AddressBook/li-flex" key={a.id} className="flex flex-col rounded-3xl border bg-card p-5">
-              <div data-ui="account/AddressBook/div-flex-3" className="flex items-center gap-2">
-                <span data-ui="account/AddressBook/span-inline-flex" className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold">
-                  <HomeIcon className="size-3.5" aria-hidden /> {a.label}
+            <li key={a.id} className={styles.addressCardItem}>
+              <div className={styles.addrBadgesRow}>
+                <span className={styles.labelBadgePill}>
+                  <HomeIcon className={styles.icon14} aria-hidden /> {a.label}
                 </span>
                 {a.isDefault && (
-                  <span data-ui="account/AddressBook/span-inline-flex-2" className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                    <StarIcon className="size-3.5 fill-current" aria-hidden /> Default
+                  <span className={styles.defaultStarPill}>
+                    <StarIcon className={styles.starFill14} aria-hidden /> Default
                   </span>
                 )}
               </div>
-              <p data-ui="account/AddressBook/p-4" className="mt-3 font-medium">{a.fullName}</p>
-              <p data-ui="account/AddressBook/p-5" className="text-sm text-muted-foreground">+91 {a.phone}</p>
-              <p data-ui="account/AddressBook/p-6" className="mt-1 text-sm">
+              <p className={styles.addrFullName}>{a.fullName}</p>
+              <p className={styles.addrPhone}>+91 {a.phone}</p>
+              <p className={styles.addrStreet}>
                 {a.address}, {a.city} - {a.pincode}
               </p>
-              <div data-ui="account/AddressBook/div-flex-4" className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-                <Button data-ui="account/AddressBook/Button-edit"
+              <div className={styles.addrCardActions}>
+                <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full"
+                  className={styles.addAddrPillBtn}
                   onClick={() => {
                     setEditing(a)
                     setOpenCount((n) => n + 1)
@@ -285,14 +286,14 @@ export function AddressBook({
                   <PencilIcon /> Edit
                 </Button>
                 {!a.isDefault && (
-                  <Button data-ui="account/AddressBook/Button-set-as-default" variant="ghost" size="sm" className="rounded-full" disabled={pending} onClick={() => makeDefault(a)}>
+                  <Button variant="ghost" size="sm" className={styles.addAddrPillBtn} disabled={pending} onClick={() => makeDefault(a)}>
                     <StarIcon /> Set as default
                   </Button>
                 )}
-                <Button data-ui="account/AddressBook/Button-delete"
+                <Button
                   variant="ghost"
                   size="sm"
-                  className="ml-auto rounded-full text-destructive hover:bg-destructive/10"
+                  className={styles.deleteAddrBtn}
                   onClick={() => setDeleting(a)}
                   aria-label={`Delete ${a.label} address`}
                 >

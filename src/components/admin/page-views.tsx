@@ -13,6 +13,7 @@ import type { LaunchCounts } from "@/features/settings/launch"
 import type { ChecklistItem } from "@/features/settings/launch-queries"
 import type { PromoCode, StoreSettings } from "@/features/settings/types"
 import { cn } from "@/lib/utils"
+import styles from "./admin-core.module.css"
 
 /**
  * The simple admin pages (a header + one client component). Each is rendered by its page with real
@@ -23,12 +24,12 @@ import { cn } from "@/lib/utils"
 export function ProductFormView({ product, categories }: { product: Product | null; categories: Pick<Category, "id" | "name">[] }) {
   return (
     <>
-      <div data-ui="admin/ProductFormView/div" className="mb-3">
-        <Link data-ui="admin/ProductFormView/Link-all-products"
+      <div className={styles.backNavRow}>
+        <Link
           href="/admin/products"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className={styles.backNavLink}
         >
-          <ArrowLeftIcon className="size-3.5" aria-hidden /> All products
+          <ArrowLeftIcon className={styles.icon14} aria-hidden /> All products
         </Link>
       </div>
       {product ? (
@@ -38,11 +39,11 @@ export function ProductFormView({ product, categories }: { product: Product | nu
           description="Changes go live on the store as soon as you save."
           actions={
             product.isActive && (
-              <Link data-ui="admin/ProductFormView/Link-view-in-store"
+              <Link
                 href={`/products/${product.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}
+                className={cn(buttonVariants({ variant: "outline" }), styles.roundedFullBtn)}
               >
                 <ExternalLinkIcon /> View in store
               </Link>

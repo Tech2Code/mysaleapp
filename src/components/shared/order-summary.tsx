@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { PAYMENT_TONE_STYLE } from "./payment-badge"
 import { PriceBreakdown } from "./price-breakdown"
+import styles from "./shared.module.css"
 
 export type OrderSummaryData = OrderPricing & OrderPayment & { items: OrderItem[]; status: OrderStatus }
 
@@ -39,37 +40,37 @@ export function OrderSummary({
   const linkProps = openLinksInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {}
 
   return (
-    <section data-ui="shared/OrderSummary"
+    <section
       aria-labelledby="order-summary-title"
-      className={cn(!bare && "rounded-3xl border bg-card p-5 sm:p-6", bare && "border-t pt-5", className)}
+      className={cn(!bare && styles.orderSummaryCard, bare && styles.orderSummaryBare, className)}
     >
-      <h3 data-ui="shared/OrderSummary/h3-order-summary" id="order-summary-title" className="flex items-baseline justify-between gap-3 font-sans text-lg font-semibold">
+      <h3 id="order-summary-title" className={styles.summaryTitleRow}>
         Order summary
-        <span data-ui="shared/OrderSummary/span" className="text-sm font-medium text-muted-foreground">
+        <span className={styles.summaryCountSpan}>
           {itemCount} item{itemCount === 1 ? "" : "s"}
         </span>
       </h3>
 
-      <ul data-ui="shared/OrderSummary/ul" className="mt-4 divide-y">
+      <ul className={styles.summaryItemsUl}>
         {order.items.map((item) => (
-          <li data-ui="shared/OrderSummary/li" key={item.productId} className="py-3 first:pt-0">
-            <div data-ui="shared/OrderSummary/div-flex" className="flex gap-3">
-              <Link data-ui="shared/OrderSummary/Link-relative"
+          <li key={item.productId} className={styles.summaryItemLi}>
+            <div className={styles.itemFlexRow}>
+              <Link
                 href={`/products/${item.slug}`}
                 {...linkProps}
-                className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted @container"
+                className={styles.itemThumbLink}
               >
                 <ProductImage src={item.image} alt={item.name} sizes="64px" />
               </Link>
-              <div data-ui="shared/OrderSummary/div" className="min-w-0 flex-1">
-                <Link data-ui="shared/OrderSummary/Link" href={`/products/${item.slug}`} {...linkProps} className="line-clamp-2 text-sm font-semibold hover:text-primary">
+              <div className={styles.itemDetailsCol}>
+                <Link href={`/products/${item.slug}`} {...linkProps} className={styles.itemNameLink}>
                   {item.name}
                 </Link>
-                <p data-ui="shared/OrderSummary/p" className="mt-0.5 text-xs text-muted-foreground">
+                <p className={styles.itemUnitQty}>
                   {formatPrice(item.price)} × {item.quantity}
                 </p>
               </div>
-              <p data-ui="shared/OrderSummary/p-2" className="text-sm font-semibold">{formatPrice(item.price * item.quantity)}</p>
+              <p className={styles.itemLineTotal}>{formatPrice(item.price * item.quantity)}</p>
             </div>
             {audience === "customer" && order.status === "delivered" && !item.productId.startsWith("ph-") && (
               <OrderItemReviewWidget item={item} />
@@ -87,20 +88,20 @@ export function OrderSummary({
         discountAmount={order.discountAmount}
         total={order.total}
         totalLabel="Total paid / payable"
-        className="mt-2 border-t pt-4"
+        className={styles.summaryBreakdownTop}
       />
 
-      <div data-ui="shared/OrderSummary/div-flex-2" className="mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-muted/60 p-3 text-sm">
-        <span data-ui="shared/OrderSummary/span-flex" className="flex items-center gap-2 text-muted-foreground">
-          <CreditCardIcon className="size-4" aria-hidden /> Payment
+      <div className={styles.paymentStatusStrip}>
+        <span className={styles.paymentLabelLeft}>
+          <CreditCardIcon className={styles.icon16} aria-hidden /> Payment
         </span>
-        <span data-ui="shared/OrderSummary/span-2" className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", pay.className)}>
-          <PayIcon className="size-3.5" aria-hidden />
+        <span className={cn(styles.paymentTonePill, pay.className)}>
+          <PayIcon className={styles.icon14} aria-hidden />
           {display.label}
         </span>
       </div>
       {audience === "customer" && isAwaitingPayment(order) && (
-        <p data-ui="shared/OrderSummary/p-3" className="mt-2 text-xs text-muted-foreground">
+        <p className={styles.awaitingPaymentHint}>
           Your order is confirmed after the payment is verified. Cash on delivery isn&apos;t available.
         </p>
       )}

@@ -14,6 +14,7 @@ import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features
 import { EXCHANGE_REASONS, REPLACEMENT_REASONS, RETURN_REASONS, returnableQuantities } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, ReturnResolutionType } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
+import styles from "./admin-orders.module.css"
 
 /**
  * "Create return request" for a customer who asked outside the app (WhatsApp / phone). It opens a normal request
@@ -158,19 +159,19 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger data-ui="admin/CreateReturnRequest/DialogTrigger-inline-flex" className="inline-flex h-9 items-center rounded-full border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
+      <DialogTrigger className={styles.createReturnTrigger}>
         Create return request
       </DialogTrigger>
-      <DialogContent data-ui="admin/CreateReturnRequest/DialogContent" mobileFullScreen className="sm:max-w-lg">
+      <DialogContent mobileFullScreen className={styles.dialogLgMax}>
         <DialogHeader>
           <DialogTitle>Return or exchange request for {orderCode}</DialogTitle>
           <DialogDescription>For a customer who asked outside the app. The return window is ignored. You approve it next, with a pickup date.</DialogDescription>
         </DialogHeader>
-        <DialogBody className="space-y-3">
-          <ul ref={itemsListRef} data-ui="admin/CreateReturnRequest/ul" className="space-y-3">
+        <DialogBody className={styles.dialogBodyStack3}>
+          <ul ref={itemsListRef} className={styles.returnItemsList}>
             {lines.map((i) => (
-              <li data-ui="admin/CreateReturnRequest/li" key={i.productId} className="space-y-1 rounded-xl border p-3">
-                <p data-ui="admin/CreateReturnRequest/p" className="text-sm font-medium">{i.name}</p>
+              <li key={i.productId} className={styles.returnItemCard}>
+                <p className={styles.returnItemName}>{i.name}</p>
                 <TextField
                   label={`How many (max ${left.get(i.productId) ?? 0})`}
                   kind="digits"
@@ -216,7 +217,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
             }}
           />
           {resolutionType === "exchange" && (
-            <div ref={exchangeBoxRef} data-ui="admin/CreateReturnRequest/div" className="space-y-3 rounded-xl border bg-muted/30 p-3.5">
+            <div ref={exchangeBoxRef} className={styles.exchangeBox}>
               <SelectField
                 label="Exchange or Replacement? *"
                 placeholder="Choose Exchange or Replacement"
@@ -286,7 +287,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
             </div>
           )}
           {showLowerFields && (
-            <div ref={nextFieldsRef} data-ui="admin/CreateReturnRequest/div-2" className="space-y-3">
+            <div ref={nextFieldsRef} className={styles.dialogBodyStack3}>
               <SelectField
                 label={
                   resolutionType === "exchange"
@@ -329,11 +330,11 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
           )}
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="admin/CreateReturnRequest/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <XIcon className="size-4" /> Cancel
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtnGap}>
+            <XIcon className={styles.iconMd} /> Cancel
           </Button>
-          <Button data-ui="admin/CreateReturnRequest/Button" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <SendIcon className="size-4" />} {submitButtonLabel}
+          <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtnGap}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <SendIcon className={styles.iconMd} />} {submitButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { LAST_ORDER_KEY } from "./checkout-form"
 import { WhatsAppIcon } from "./brand-icons"
+import styles from "./order-status.module.css"
 import { PaymentPanel } from "./payment-panel"
 import { useStoreSettings } from "./store-settings-provider"
 
@@ -69,12 +70,25 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
 
   const [state, setState] = useState<TrackedOrder | null>(preview ? placeholderTrackedOrder({ paymentStatus: "submitted" }) : null)
   const [lookupFailed, setLookupFailed] = useState(false)
+  const optimisticState = useMemo<TrackedOrder | null>(() => {
+    if (!order) return null
+    return {
+      ...placeholderTrackedOrder({ paymentStatus: "submitted" }),
+      orderCode: order.orderCode,
+      total: order.total,
+      status: "pending",
+      paymentStatus: "submitted",
+      paymentReference: order.paymentReference ?? null,
+      createdAt: order.createdAt ?? new Date().toISOString(),
+    }
+  }, [order])
+  const activeState = state ?? optimisticState
   const isOwner = Boolean(
     signedIn &&
-      (!state ||
-        state.delivery ||
-        state.paymentMethod ||
-        (state.paymentReference && !state.paymentReference.includes("*")))
+      (!activeState ||
+        activeState.delivery ||
+        activeState.paymentMethod ||
+        (activeState.paymentReference && !activeState.paymentReference.includes("*")))
   )
   const orderDetailHref = order && code ? myOrderHref : "/account/orders"
 
@@ -115,8 +129,8 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
     }
   }, [order, preview, userId])
 
-  const headline = state
-    ? (HEADLINE[state.paymentStatus] ?? HEADLINE.submitted)
+  const headline = activeState
+    ? (HEADLINE[activeState.paymentStatus] ?? HEADLINE.submitted)
     : {
         title: "Order placed!",
         text: "Thanks for shopping with us — we've received your order.",
@@ -127,22 +141,22 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
       : shopWhatsappLink(shop, code ? `Hi! I placed order ${code}.` : "Hi! I placed an order.")
 
   return (
-    <div data-ui="store/OrderPlaced" className="mx-auto max-w-xl text-center">
-      <m.div data-ui="store/OrderPlaced/m.div-grid"
+    <div className={styles.orderPlacedWrap}>
+      <m.div
         initial={{ scale: 0, rotate: -45 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
-        className="mx-auto grid size-24 place-items-center rounded-full bg-linear-to-br from-success-solid to-whatsapp-solid text-white shadow-2xl shadow-success/30"
+        className={styles.checkBadge}
       >
-        <CheckIcon className="size-12" strokeWidth={3} />
+        <CheckIcon className={styles.checkSvg} strokeWidth={3} />
       </m.div>
 
-      <m.div data-ui="store/OrderPlaced/m.div" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <h1 data-ui="store/OrderPlaced/h1" className="mt-8 text-4xl font-semibold">{state ? headline.title : "Order placed & payment submitted!"}</h1>
-        <p data-ui="store/OrderPlaced/p" className="mt-3 text-muted-foreground">{state ? headline.text : HEADLINE.submitted.text}</p>
+      <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <h1 className={styles.placedHeadline}>{activeState ? headline.title : "Order placed & payment submitted!"}</h1>
+        <p className={styles.placedSubtext}>{activeState ? headline.text : HEADLINE.submitted.text}</p>
 
         {code && (
-          <button data-ui="store/OrderPlaced/button-flex"
+          <button
             type="button"
             onClick={async () => {
               try {
@@ -152,24 +166,24 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
                 toast.error("Couldn't copy. Please select and copy the code.")
               }
             }}
-            className="mx-auto mt-6 flex items-center gap-2 rounded-full border bg-card px-5 py-2.5 font-mono text-lg font-semibold tracking-wider transition-colors hover:bg-muted"
+            className={styles.codeCopyBtn}
             aria-label={`Copy order code ${code}`}
           >
-            {code} <CopyIcon className="size-4 text-muted-foreground" />
+            {code} <CopyIcon className={styles.copySvg} />
           </button>
         )}
 
-        <div data-ui="store/OrderPlaced/div" className="mt-8 text-left">
+        <div className={styles.panelMount}>
           {!order ? (
-            <p data-ui="store/OrderPlaced/p-2" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+            <p className={styles.statusFallbackCard}>
               {signedIn ? (
                 <>
                   To check your order status and payment verification, open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-my-orders" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href="/account/orders" className={styles.inlineAccentLink}>
                     My orders
                   </Link>{" "}
                   or{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href={trackHref} className={styles.inlineAccentLink}>
                     Track order
                   </Link>
                   .
@@ -177,33 +191,33 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               ) : (
                 <>
                   To check your order status and payment verification, open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-2" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href={trackHref} className={styles.inlineAccentLink}>
                     Track order
                   </Link>{" "}
                   and enter your order code with the last 4 digits of your phone.
                 </>
               )}
             </p>
-          ) : state ? (
+          ) : activeState ? (
             <PaymentPanel
-              orderCode={state.orderCode}
+              orderCode={activeState.orderCode}
               phoneLast4={order.phoneLast4}
-              total={state.total}
-              orderStatus={state.status}
-              payment={state}
-              createdAt={state.createdAt}
+              total={activeState.total}
+              orderStatus={activeState.status}
+              payment={activeState}
+              createdAt={activeState.createdAt}
               onSubmitted={() => void load()}
             />
           ) : lookupFailed ? (
-            <p data-ui="store/OrderPlaced/p-3" role="alert" className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+            <p role="alert" className={styles.statusFallbackCard}>
               {signedIn ? (
                 <>
                   We couldn&apos;t load your order details just now. Open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-my-orders-2" href="/account/orders" className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href="/account/orders" className={styles.inlineAccentLink}>
                     My orders
                   </Link>{" "}
                   or{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-3" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href={trackHref} className={styles.inlineAccentLink}>
                     Track order
                   </Link>{" "}
                   to check your order status.
@@ -211,7 +225,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
               ) : (
                 <>
                   We couldn&apos;t load your order details just now. Open{" "}
-                  <Link data-ui="store/OrderPlaced/Link-track-order-4" href={trackHref} className="font-semibold text-primary underline-offset-4 hover:underline">
+                  <Link href={trackHref} className={styles.inlineAccentLink}>
                     Track order
                   </Link>{" "}
                   and enter your order code with the last 4 digits of your phone to check your order status.
@@ -232,22 +246,22 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
           )}
         </div>
 
-        <div data-ui="store/OrderPlaced/div-flex" className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link data-ui="store/OrderPlaced/Link" href={isOwner ? orderDetailHref : trackHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-6")}>
+        <div className={styles.actionBtnRow}>
+          <Link href={isOwner ? orderDetailHref : trackHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), styles.pillBtn)}>
             {isOwner ? "View in My orders" : "Track this order"}
           </Link>
-          <Link data-ui="store/OrderPlaced/Link-continue-shopping" href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "rounded-full px-6")}>
+          <Link href="/products" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), styles.pillBtn)}>
             Continue shopping
           </Link>
         </div>
 
-        <a data-ui="store/OrderPlaced/a-send-order-details-to-"
+        <a
           href={whatsappHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-whatsapp hover:underline"
+          className={styles.whatsappSendLink}
         >
-          <WhatsAppIcon className="size-4" /> Send order details to us on WhatsApp (optional)
+          <WhatsAppIcon className={styles.waIcon} /> Send order details to us on WhatsApp (optional)
         </a>
       </m.div>
     </div>

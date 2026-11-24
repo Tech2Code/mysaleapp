@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Product } from "@/features/products/types"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import styles from "./admin-views.module.css"
 
 type StockFilter = "all" | "active" | "hidden" | "featured" | "low-stock" | "sold-out"
 
@@ -91,66 +92,52 @@ export function ProductsView({ products }: { products: Product[] }) {
         title="Products"
         description={`${products.length} product${products.length === 1 ? "" : "s"} · ${products.filter((p) => p.isActive).length} visible in store`}
         actions={
-          <div data-ui="admin/ProductsView/div-flex" className="flex items-center gap-2">
-            <div data-ui="admin/ProductsView/div-view-format" className="flex items-center rounded-lg border bg-muted/60 p-0.5 text-xs font-medium" role="group" aria-label="View format">
-              <button data-ui="admin/ProductsView/button-list-view"
+          <div className={styles.headerActions}>
+            <div className={styles.viewSwitcher} role="group" aria-label="View format">
+              <button
                 type="button"
                 onClick={() => changeView("table")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
-                  viewMode === "table" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
-                )}
+                className={cn(styles.viewBtn, viewMode === "table" && styles.viewBtnActive)}
                 aria-pressed={viewMode === "table"}
                 aria-label="List view"
               >
-                <ListIcon className="size-3.5" />
-                <span data-ui="admin/ProductsView/span">List</span>
+                <ListIcon className={styles.iconSm} />
+                <span>List</span>
               </button>
-              <button data-ui="admin/ProductsView/button-tile-view"
+              <button
                 type="button"
                 onClick={() => changeView("tiles")}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
-                  viewMode === "tiles" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
-                )}
+                className={cn(styles.viewBtn, viewMode === "tiles" && styles.viewBtnActive)}
                 aria-pressed={viewMode === "tiles"}
                 aria-label="Tile view"
               >
-                <LayoutGridIcon className="size-3.5" />
-                <span data-ui="admin/ProductsView/span-2">Tiles</span>
+                <LayoutGridIcon className={styles.iconSm} />
+                <span>Tiles</span>
               </button>
             </div>
-            <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" prefetch={true} className={cn(buttonVariants({ size: "sm" }), "h-9 rounded-lg px-3.5 text-xs font-semibold")}>
-              <PlusIcon className="size-3.5" /> Add product
+            <Link href="/admin/products/new" prefetch={true} className={cn(buttonVariants({ size: "sm" }), styles.addProductBtn)}>
+              <PlusIcon className={styles.iconSm} /> Add product
             </Link>
           </div>
         }
       />
 
       {products.length > 0 && (
-        <div data-ui="admin/ProductsView/div-flex-2" className="adminCard mb-4 flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5">
-          <div data-ui="admin/ProductsView/div-filter-products" className="scroll-row flex items-center gap-1.5 overflow-x-auto" role="group" aria-label="Filter products">
+        <div className={cn("adminCard", styles.filterBar)}>
+          <div className={cn("scroll-row", styles.chipRow)} role="group" aria-label="Filter products">
             {filterChips.map((chip) => {
               const active = filter === chip.id
               return (
-                <button data-ui="admin/ProductsView/button"
+                <button
                   key={chip.id}
                   type="button"
                   aria-pressed={active}
                   onClick={() => setFilter(chip.id)}
-                  className={cn(
-                    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs leading-none font-medium transition-colors",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground shadow-2xs"
-                      : "bg-card text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                  )}
+                  className={cn(styles.filterChip, active && styles.filterChipActive)}
                 >
-                  <span data-ui="admin/ProductsView/span-3">{chip.label}</span>
-                  <span data-ui="admin/ProductsView/span-4"
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold",
-                      active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
-                    )}
+                  <span>{chip.label}</span>
+                  <span
+                    className={cn(styles.chipCount, active && styles.chipCountActive)}
                   >
                     {chip.count}
                   </span>
@@ -158,7 +145,7 @@ export function ProductsView({ products }: { products: Product[] }) {
               )
             })}
           </div>
-          <div data-ui="admin/ProductsView/div" className="w-full sm:max-w-xs">
+          <div className={styles.searchWrap}>
             <SearchField
               label="Search products"
               fieldSize="md"
@@ -172,15 +159,15 @@ export function ProductsView({ products }: { products: Product[] }) {
       )}
 
       {products.length === 0 ? (
-        <div data-ui="admin/ProductsView/div-2" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
-          <p data-ui="admin/ProductsView/p" className="font-medium">No products yet</p>
-          <p data-ui="admin/ProductsView/p-2" className="mt-1 text-sm text-muted-foreground">Add your first product to start selling.</p>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyTitle}>No products yet</p>
+          <p className={styles.emptySubtitle}>Add your first product to start selling.</p>
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div data-ui="admin/ProductsView/div-3" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
-          <p data-ui="admin/ProductsView/p-3" className="font-medium">No products match your search or filter</p>
-          <p data-ui="admin/ProductsView/p-4" className="mt-1 text-sm text-muted-foreground">Try clearing the search query or switching to All products.</p>
-          <Button data-ui="admin/ProductsView/Button-show-all-products"
+        <div className={styles.emptyState}>
+          <p className={styles.emptyTitle}>No products match your search or filter</p>
+          <p className={styles.emptySubtitle}>Try clearing the search query or switching to All products.</p>
+          <Button
             type="button"
             variant="outline"
             size="sm"
@@ -188,27 +175,27 @@ export function ProductsView({ products }: { products: Product[] }) {
               setFilter("all")
               setSearch("")
             }}
-            className="mt-4 rounded-full"
+            className={styles.showAllBtn}
           >
             Show all products
           </Button>
         </div>
       ) : viewMode === "tiles" ? (
-        <div data-ui="admin/ProductsView/div-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        <div className={styles.tilesGrid}>
           {filteredProducts.map((p) => (
             <div
               key={p.id}
-              data-ui="admin/ProductsView/div-flex-3"
-              className="adminCardInteractive group relative flex flex-col justify-between overflow-hidden rounded-xl border p-3.5 hover:border-ring/40"
+
+              className={cn("adminCardInteractive", styles.productTile)}
             >
-              <div data-ui="admin/ProductsView/div-4" className="space-y-3">
-                <div data-ui="admin/ProductsView/div-relative" className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
+              <div className={styles.tileBody}>
+                <div className={styles.tileImageWrap}>
                   <ProductImage src={p.images[0]} alt={p.name} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
-                  <div data-ui="admin/ProductsView/div-flex-4" className="absolute top-2 right-2 flex items-center gap-1">
-                    <span data-ui="admin/ProductsView/span-5"
+                  <div className={styles.stockBadgeWrap}>
+                    <span
                       className={cn(
-                        "rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-xs backdrop-blur-xs",
-                        p.stock === 0 ? "bg-destructive-solid text-white" : p.stock <= 5 ? "bg-amber-500 text-white" : "bg-background/90 text-foreground"
+                        styles.stockBadge,
+                        p.stock === 0 ? styles.stockBadgeOut : p.stock <= 5 ? styles.stockBadgeLow : styles.stockBadgeNormal
                       )}
                     >
                       {p.stock === 0 ? "Sold out" : `${p.stock} in stock`}
@@ -216,29 +203,29 @@ export function ProductsView({ products }: { products: Product[] }) {
                   </div>
                 </div>
 
-                <div data-ui="admin/ProductsView/div-5" className="space-y-1">
-                  <div data-ui="admin/ProductsView/div-flex-5" className="flex items-center justify-between gap-2">
-                    <span data-ui="admin/ProductsView/span-6" className="truncate text-xs font-medium text-muted-foreground">{p.category?.name ?? "Uncategorized"}</span>
-                    <span data-ui="admin/ProductsView/span-7" className="font-semibold text-base text-foreground">{formatPrice(p.price)}</span>
+                <div className={styles.tileMeta}>
+                  <div className={styles.tileMetaHeader}>
+                    <span className={styles.tileCategory}>{p.category?.name ?? "Uncategorized"}</span>
+                    <span className={styles.tilePrice}>{formatPrice(p.price)}</span>
                   </div>
-                  <Link data-ui="admin/ProductsView/Link"
+                  <Link
                     href={`/admin/products/${encodeURIComponent(p.slug)}`}
-                    className="block text-sm/snug font-medium text-foreground transition-colors line-clamp-2 hover:text-primary"
+                    className={styles.tileTitleLink}
                   >
                     {p.name}
                   </Link>
                 </div>
               </div>
 
-              <div data-ui="admin/ProductsView/div-flex-6" className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
-                <div data-ui="admin/ProductsView/div-flex-7" className="flex items-center gap-3">
-                  <div data-ui="admin/ProductsView/div-flex-8" className="flex items-center gap-1.5" title="Store visibility">
+              <div className={styles.tileFooter}>
+                <div className={styles.tileSwitches}>
+                  <div className={styles.switchItem} title="Store visibility">
                     <ProductFlagSwitch productId={p.id} flag="isActive" value={p.isActive} label={`Show ${p.name} in store`} />
-                    <span data-ui="admin/ProductsView/span-8" className="text-[11px] font-medium text-muted-foreground">Active</span>
+                    <span className={styles.switchLabel}>Active</span>
                   </div>
-                  <div data-ui="admin/ProductsView/div-flex-9" className="flex items-center gap-1.5" title="Home page feature">
+                  <div className={styles.switchItem} title="Home page feature">
                     <ProductFlagSwitch productId={p.id} flag="isFeatured" value={p.isFeatured} label={`Feature ${p.name} on home page`} />
-                    <span data-ui="admin/ProductsView/span-9" className="text-[11px] font-medium text-muted-foreground">Featured</span>
+                    <span className={styles.switchLabel}>Featured</span>
                   </div>
                 </div>
                 <ProductRowActions productId={p.id} productSlug={p.slug} name={p.name} />
@@ -248,49 +235,49 @@ export function ProductsView({ products }: { products: Product[] }) {
         </div>
       ) : (
         <div
-          data-ui="admin/ProductsView/div-products-table"
+
           tabIndex={0}
           role="region"
           aria-label="Products table"
-          className="adminCard overflow-hidden rounded-xl border focus-visible:outline-2 focus-visible:outline-ring"
+          className={cn("adminCard", styles.tableCard)}
         >
-          <Table data-ui="admin/ProductsView/Table">
-            <TableHeader data-ui="admin/ProductsView/TableHeader-sticky" className="sticky top-0 z-10 bg-muted">
-              <TableRow data-ui="admin/ProductsView/TableRow">
-                <TableHead data-ui="admin/ProductsView/TableHead-product" className="pl-5">Product</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead-category" className="hidden md:table-cell">Category</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead-price" className="text-right">Price</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead-stock" className="hidden text-right sm:table-cell">Stock</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead-active" className="text-center">Active</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead-featured" className="hidden text-center sm:table-cell">Featured</TableHead>
-                <TableHead data-ui="admin/ProductsView/TableHead" className="pr-5 text-right">
-                  <span data-ui="admin/ProductsView/span-10" className="sr-only">Actions</span>
+          <Table>
+            <TableHeader className={styles.tableHeaderSticky}>
+              <TableRow>
+                <TableHead className={styles.cellPl}>Product</TableHead>
+                <TableHead className={styles.cellHiddenMd}>Category</TableHead>
+                <TableHead className={styles.cellRight}>Price</TableHead>
+                <TableHead className={styles.cellHiddenSmRight}>Stock</TableHead>
+                <TableHead className={styles.cellCenter}>Active</TableHead>
+                <TableHead className={styles.cellHiddenSmCenter}>Featured</TableHead>
+                <TableHead className={styles.cellPrRight}>
+                  <span className={styles.srOnly}>Actions</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody data-ui="admin/ProductsView/TableBody">
+            <TableBody>
               {filteredProducts.map((p) => (
-                <TableRow data-ui="admin/ProductsView/TableRow-2" key={p.id}>
-                  <TableCell data-ui="admin/ProductsView/TableCell" className="pl-5">
-                    <Link data-ui="admin/ProductsView/Link-flex" href={`/admin/products/${encodeURIComponent(p.slug)}`} className="flex items-center gap-3">
-                      <span data-ui="admin/ProductsView/span-relative" className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted @container">
+                <TableRow key={p.id}>
+                  <TableCell className={styles.cellPl}>
+                    <Link href={`/admin/products/${encodeURIComponent(p.slug)}`} className={styles.productCellLink}>
+                      <span className={styles.productThumb}>
                         <ProductImage src={p.images[0]} alt={p.name} sizes="44px" />
                       </span>
-                      <span data-ui="admin/ProductsView/span-11" className="max-w-56 truncate font-medium hover:text-primary">{p.name}</span>
+                      <span className={styles.productName}>{p.name}</span>
                     </Link>
                   </TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-hidden" className="hidden text-sm text-muted-foreground md:table-cell">{p.category?.name ?? "—"}</TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-2" className="text-right font-medium tabular-nums">{formatPrice(p.price)}</TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-3" className={cn("hidden text-right sm:table-cell", p.stock === 0 && "font-semibold text-destructive")}>
+                  <TableCell className={styles.cellCategory}>{p.category?.name ?? "—"}</TableCell>
+                  <TableCell className={styles.cellPrice}>{formatPrice(p.price)}</TableCell>
+                  <TableCell className={cn(styles.cellHiddenSmRight, p.stock === 0 && styles.cellStockOut)}>
                     {p.stock === 0 ? "Sold out" : p.stock}
                   </TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-4" className="text-center">
+                  <TableCell className={styles.cellCenter}>
                     <ProductFlagSwitch productId={p.id} flag="isActive" value={p.isActive} label={`Show ${p.name} in store`} />
                   </TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-hidden-2" className="hidden text-center sm:table-cell">
+                  <TableCell className={styles.cellHiddenSmCenter}>
                     <ProductFlagSwitch productId={p.id} flag="isFeatured" value={p.isFeatured} label={`Feature ${p.name} on home page`} />
                   </TableCell>
-                  <TableCell data-ui="admin/ProductsView/TableCell-5" className="pr-5">
+                  <TableCell className={styles.cellPr}>
                     <ProductRowActions productId={p.id} productSlug={p.slug} name={p.name} />
                   </TableCell>
                 </TableRow>

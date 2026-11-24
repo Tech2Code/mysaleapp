@@ -1,7 +1,7 @@
 "use client"
 
 import { useId, useState, type ReactNode } from "react"
-import { cn } from "@/lib/utils"
+import styles from "./shared.module.css"
 
 /**
  * Long text collapsed to a few lines with a fade and a "Read more" button.
@@ -27,24 +27,24 @@ export function ReadMore({
   const collapsible = length > threshold
 
   return (
-    <div data-ui="shared/ReadMore" className={className}>
-      <div data-ui="shared/ReadMore/div"
+    <div className={className}>
+      <div
         id={id}
-        className={cn("relative overflow-hidden transition-[max-height] duration-500 ease-out")}
+        className={styles.readMoreCollapsible}
         style={collapsible && !open ? { maxHeight: collapsedHeight } : { maxHeight: "200rem" }}
       >
         {children}
         {collapsible && !open && (
-          <div data-ui="shared/ReadMore/div-absolute" aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-background to-transparent" />
+          <div aria-hidden className={styles.readMoreFade} />
         )}
       </div>
       {collapsible && (
-        <button data-ui="shared/ReadMore/button"
+        <button
           type="button"
           aria-expanded={open}
           aria-controls={id}
           onClick={() => setOpen((v) => !v)}
-          className="mt-2 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          className={styles.readMoreToggleBtn}
         >
           {open ? "Show less" : "Read more"}
         </button>

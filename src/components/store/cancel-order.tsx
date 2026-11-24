@@ -16,6 +16,7 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 import { LIMITS } from "@/lib/validation"
+import styles from "./order-status.module.css"
 
 /**
  * "Cancel order" for customers. Available until the order is packed; after that it points to WhatsApp.
@@ -52,9 +53,9 @@ export function CancelOrder({
 
   if (!CANCELLABLE_BY_CUSTOMER.includes(status)) {
     return (
-      <p data-ui="store/CancelOrder" className="rounded-2xl bg-muted/60 p-4 text-sm text-muted-foreground">
+      <p className={styles.cancelLockedNotice}>
         Need to cancel? This order is already {status === "shipped" ? "on its way" : "packed"}.{" "}
-        <a data-ui="store/CancelOrder/a-message-us-on-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-foreground underline underline-offset-4">
+        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={styles.waInlineLink}>
           Message us on WhatsApp
         </a>{" "}
         and we&apos;ll help.
@@ -121,12 +122,12 @@ export function CancelOrder({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
-        data-ui="store/CancelOrder/DialogTrigger-inline-flex"
-        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-destructive/40 px-6 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+
+        className={styles.cancelTriggerBtn}
       >
-        <BanIcon className="size-4" /> Cancel order
+        <BanIcon className={styles.banSvg} /> Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="store/CancelOrder/DialogContent" mobileFullScreen className="sm:max-w-md">
+      <DialogContent mobileFullScreen className={styles.cancelDialogMax}>
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -137,7 +138,7 @@ export function CancelOrder({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div data-ui="store/CancelOrder/div" className="space-y-1">
+          <div className={styles.cancelFormFields}>
             <SelectField
               label="Why are you cancelling? *"
               placeholder="Select a reason"
@@ -190,11 +191,11 @@ export function CancelOrder({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="store/CancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <CheckIcon className="size-4" /> Keep order
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.dialogPillBtn}>
+            <CheckIcon className={styles.btnIcon} /> Keep order
           </Button>
-          <Button data-ui="store/CancelOrder/Button-yes-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Yes, cancel order
+          <Button type="button" variant="destructive" onClick={submit} disabled={pending} className={styles.dialogPillBtn}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <BanIcon className={styles.btnIcon} />} Yes, cancel order
           </Button>
         </DialogFooter>
       </DialogContent>

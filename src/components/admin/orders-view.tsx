@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button"
 import type { OrderFilterCounts, OrderFilters, ReturnViewCounts } from "@/features/orders/admin-queries"
 import type { Order } from "@/features/orders/types"
 import { cn } from "@/lib/utils"
+import styles from "./admin-orders.module.css"
 
 /** The admin orders page. The page passes real data; loading.tsx passes placeholders inside <Skeletonize>. */
 export function OrdersView({
@@ -56,25 +57,25 @@ export function OrdersView({
         <OrdersTable orders={orders} total={total} page={page} />
 
         {pages > 1 && (
-          <nav data-ui="admin/OrdersView/nav-pagination" className="mt-4 flex items-center justify-between" aria-label="Pagination">
-            <Link data-ui="admin/OrdersView/Link-previous"
+          <nav className={styles.paginationNav} aria-label="Pagination">
+            <Link
               href={pageHref(page - 1)}
               aria-disabled={page <= 1}
               tabIndex={page <= 1 ? -1 : undefined}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8.5 rounded-lg bg-card px-3 text-xs", page <= 1 && "pointer-events-none opacity-50")}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.pageLink, page <= 1 && styles.pageLinkDisabled)}
             >
-              <ChevronLeftIcon className="size-3.5" /> Previous
+              <ChevronLeftIcon className={styles.iconSm} /> Previous
             </Link>
-            <span data-ui="admin/OrdersView/span" className="text-xs font-medium text-muted-foreground tabular-nums">
+            <span className={styles.pageInfo}>
               Page {page} of {pages}
             </span>
-            <Link data-ui="admin/OrdersView/Link-next"
+            <Link
               href={pageHref(page + 1)}
               aria-disabled={page >= pages}
               tabIndex={page >= pages ? -1 : undefined}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8.5 rounded-lg bg-card px-3 text-xs", page >= pages && "pointer-events-none opacity-50")}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.pageLink, page >= pages && styles.pageLinkDisabled)}
             >
-              Next <ChevronRightIcon className="size-3.5" />
+              Next <ChevronRightIcon className={styles.iconSm} />
             </Link>
           </nav>
         )}

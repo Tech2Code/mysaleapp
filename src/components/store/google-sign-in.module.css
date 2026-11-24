@@ -1,0 +1,82 @@
+/* Section: Auth Shell & Split Card */
+.authShell { display: grid; width: 100%; max-width: 896px; overflow: hidden; border-radius: 32px; border: 0; background-color: color-mix(in oklab, var(--card) 94%, transparent); box-shadow: var(--store-elevation-md); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+/* Section: Left Column — Perks & Brand Welcome */
+.authShell .welcomeColumn { display: none; flex-direction: column; justify-content: space-between; border-right: 0; background-color: var(--store-section-tint, var(--secondary)); padding: 28px; }
+.welcomeColumn .logoRow { display: flex; align-items: center; gap: 12px; }
+.logoRow .logoBadge { width: 44px; height: 44px; font-size: 20px; }
+.logoRow .modePill { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--primary); }
+.welcomeColumn .welcomeTitle { margin: 24px 0 0 0; font-family: var(--font-heading); font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -0.4px; color: var(--foreground); }
+.welcomeColumn .welcomeLead { margin: 8px 0 0 0; font-size: 14px; line-height: 22px; color: var(--muted-foreground); }
+.welcomeColumn .perksList { margin: 28px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.perksList .perkItem { display: flex; align-items: flex-start; gap: 14px; }
+.perkItem .perkIconBadge { margin-top: 2px; display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--border) 65%, transparent); background-color: var(--card); color: var(--primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.perkIconBadge .perkSvg { width: 16px; height: 16px; }
+.perkItem .perkTextCol { display: flex; flex-direction: column; gap: 2px; }
+.perkTextCol .perkTitle { margin: 0; font-size: 14px; font-weight: 600; color: var(--foreground); }
+.perkTextCol .perkDesc { margin: 0; font-size: 12px; line-height: 19px; color: var(--muted-foreground); }
+.welcomeColumn .guestNoteDesktop { margin: 32px 0 0 0; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-top: 20px; font-size: 12px; color: var(--muted-foreground); }
+.guestNoteDesktop .guestLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.guestNoteDesktop .guestLink:hover { text-decoration: underline; }
+/* Section: Right Column — Mode Toggle & Auth Forms */
+.authShell .formColumn { display: flex; flex-direction: column; justify-content: center; padding: 20px; }
+.formColumn .formStack { display: flex; flex-direction: column; gap: 16px; }
+.formStack .modeSwitcher { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 65%, transparent); padding: 4px; font-size: 14px; font-weight: 500; }
+.modeSwitcher .modeTabBtn { height: 36px; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.modeSwitcher .modeTabBtn:hover { color: var(--foreground); }
+.modeSwitcher .modeTabBtnActive { background-color: var(--card); font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.formStack .problemAlert { margin: 0; border-radius: 12px; background-color: var(--muted); padding: 12px; font-size: 14px; color: var(--foreground); }
+.formStack .confirmationBanner { margin: 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: color-mix(in oklab, var(--success) 10%, transparent); padding: 12px; font-size: 14px; color: var(--foreground); }
+.confirmationBanner .mailCheckSvg { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; color: var(--success); }
+.confirmationBanner .boldInline { font-weight: 600; }
+.formStack .authForm { display: flex; flex-direction: column; gap: 10px; }
+.formStack .signUpForm { display: flex; flex-direction: column; gap: 8px; }
+.authForm .forgotRow { display: flex; justify-content: flex-end; padding-top: 2px; font-size: 12px; }
+.forgotRow .forgotLinkBtn { border: 0; background: transparent; padding: 0; font-weight: 500; color: var(--primary); text-underline-offset: 4px; }
+.forgotRow .forgotLinkBtn:hover { text-decoration: underline; }
+.primarySubmitBtn { margin-top: 4px; height: 44px; width: 100%; gap: 8px; border-radius: 9999px; }
+@keyframes spinKeyframes { to { transform: rotate(360deg); } }
+.btnIcon { width: 16px; height: 16px; }
+.btnIconSpin { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
+.formStack .resetSentCard { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; background-color: color-mix(in oklab, var(--success) 10%, transparent); padding: 16px; font-size: 14px; }
+.resetSentCard .resetSentTitle { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.resetSentTitle .resetMailSvg { width: 16px; height: 16px; color: var(--success); }
+.resetSentCard .resetSentBody { margin: 0; }
+.resetSentCard .boldEmail { font-weight: 600; }
+.resetSentCard .backPillBtn { align-self: flex-start; border-radius: 9999px; }
+.backArrowSvg { width: 14px; height: 14px; }
+.authForm .helperText { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.authForm .backTextBtn { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; border: 0; background: transparent; padding-top: 4px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); transition: color 150ms ease; }
+.authForm .backTextBtn:hover { color: var(--foreground); }
+.signUpForm .twoColGrid { display: grid; column-gap: 12px; row-gap: 8px; }
+.signUpForm .passwordRuleNote { margin: 0; font-size: 11.5px; color: var(--muted-foreground); }
+.signUpForm .termsConsentWrap { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.termsConsentWrap .termsCheckboxLabel { display: flex; align-items: flex-start; gap: 10px; font-size: 12.5px; line-height: 19px; color: var(--muted-foreground); cursor: pointer; user-select: none; }
+.termsCheckboxLabel .termsCheckboxInput { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--primary); cursor: pointer; }
+.termsCheckboxLabel .termsPolicyLink { border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--primary); text-underline-offset: 3px; }
+.termsCheckboxLabel .termsPolicyLink:hover { text-decoration: underline; }
+.termsConsentWrap .termsErrorMsg { margin: 0; font-size: 11px; font-weight: 500; color: var(--destructive); }
+.formStack .oauthLegalNote { margin: 0; text-align: center; font-size: 11.5px; line-height: 17px; color: var(--muted-foreground); }
+.oauthLegalNote .termsPolicyLink { border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--primary); text-underline-offset: 3px; }
+.oauthLegalNote .termsPolicyLink:hover { text-decoration: underline; }
+.formStack .dividerRow { position: relative; display: flex; align-items: center; padding: 4px 0; }
+.dividerRow .dividerLine { flex-grow: 1; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); }
+.dividerRow .dividerLabel { margin: 0 12px; flex-shrink: 0; font-size: 12px; color: var(--muted-foreground); }
+.formStack .googleOauthBtn { height: 44px; width: 100%; border-radius: 9999px; border: 0; background-color: var(--card); font-size: 14px; box-shadow: var(--store-elevation-sm); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.formStack .googleOauthBtn:hover { background-color: var(--card); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.googleSvg { width: 20px; height: 20px; }
+.googleSpinnerSvg { width: 20px; height: 20px; animation: spinKeyframes 1s linear infinite; }
+.formStack .guestNoteMobile { margin: 0; padding-top: 4px; text-align: center; font-size: 12px; color: var(--muted-foreground); }
+.guestNoteMobile .guestLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.guestNoteMobile .guestLink:hover { text-decoration: underline; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .welcomeColumn .welcomeTitle { font-size: 30px; line-height: 36px; }
+  .authShell .formColumn { padding: 32px; }
+  .signUpForm .twoColGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .authShell { grid-template-columns: 0.95fr 1.05fr; }
+  .authShell .welcomeColumn { display: flex; }
+  .authShell .formColumn { padding: 40px; }
+  .formStack .guestNoteMobile { display: none; }
+}

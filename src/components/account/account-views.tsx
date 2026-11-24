@@ -30,6 +30,7 @@ import { isAwaitingPayment, STATUS_META, type Order, type OrderWithHistory } fro
 import type { StoreSettings } from "@/features/settings/types"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import styles from "./account.module.css"
 
 /**
  * The signed-in customer's pages. Each is rendered by its page with real data and by its
@@ -40,38 +41,38 @@ import { cn } from "@/lib/utils"
 
 function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
   return (
-    <Link data-ui="account/MyOrderCard"
+    <Link
       href={`/account/orders/${o.orderCode}`}
-      className="group flex items-center gap-4 rounded-3xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg sm:p-5"
+      className={styles.myOrderCard}
     >
-      <div data-ui="account/MyOrderCard/div" className="min-w-0 flex-1 space-y-1">
-        <div data-ui="account/MyOrderCard/div-flex" className="flex flex-wrap items-center gap-2">
-          <span data-ui="account/MyOrderCard/span" className="font-mono font-semibold">{o.orderCode}</span>
+      <div className={styles.orderMainInfo}>
+        <div className={styles.orderTopRow}>
+          <span className={styles.orderCodeMono}>{o.orderCode}</span>
           <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
           {isAwaitingPayment(o) && (
-            <span data-ui="account/MyOrderCard/span-2" className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">Update UTR</span>
+            <span className={styles.utrBadge}>Update UTR</span>
           )}
           {o.status === "pending" && o.paymentStatus === "submitted" && (
-            <span data-ui="account/MyOrderCard/span-3" className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-900 dark:bg-sky-900/40 dark:text-sky-200">
+            <span className={styles.verifyingBadge}>
               Verifying payment
             </span>
           )}
         </div>
-        <p data-ui="account/MyOrderCard/p" className="truncate text-sm text-muted-foreground">
+        <p className={styles.orderItemsTrunc}>
           {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
         </p>
         {o.returnStage?.badge && o.returnStage.active && (
-          <p data-ui="account/MyOrderCard/p-2" className="text-xs font-medium text-foreground">{o.returnStage.customerDetail}</p>
+          <p className={styles.returnStageNote}>{o.returnStage.customerDetail}</p>
         )}
-        <p data-ui="account/MyOrderCard/p-3" className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</p>
+        <p className={styles.orderDateNote}>{formatDate(o.createdAt)}</p>
         {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
-          <p data-ui="account/MyOrderCard/p-4" className="text-xs font-medium text-amber-700 dark:text-amber-300">
+          <p className={styles.deadlineWarning}>
             Update UTR by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
           </p>
         )}
       </div>
-      <span data-ui="account/MyOrderCard/span-4" className="font-semibold">{formatPrice(o.total)}</span>
-      <ChevronRightIcon className="size-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+      <span className={styles.orderTotalAmount}>{formatPrice(o.total)}</span>
+      <ChevronRightIcon className={styles.chevronSvg} />
     </Link>
   )
 }
@@ -84,28 +85,28 @@ function MyOrdersEmpty({
   showAllTimeButton?: boolean
 }) {
   return (
-    <div data-ui="account/MyOrdersEmpty" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-      <PackageIcon className="size-10 text-muted-foreground" />
-      <p data-ui="account/MyOrdersEmpty/p" className="font-heading text-2xl">
+    <div className={styles.emptyOrdersBox}>
+      <PackageIcon className={styles.pkgIcon40} />
+      <p className={styles.emptyHeading}>
         {isFiltered ? "No matching orders" : "No orders yet"}
       </p>
-      <p data-ui="account/MyOrdersEmpty/p-2" className="max-w-sm text-sm text-muted-foreground">
+      <p className={styles.emptyCopy}>
         {isFiltered
           ? showAllTimeButton
             ? "Try switching the status tab above, or select Full FY / All time to see older orders."
             : "Try switching the status tab above or clearing your search query."
           : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
       </p>
-      <div data-ui="account/MyOrdersEmpty/div-flex" className="flex flex-wrap justify-center gap-3">
+      <div className={styles.emptyActionsRow}>
         {showAllTimeButton && (
-          <Link data-ui="account/MyOrdersEmpty/Link-view-all-time-orders" href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), "rounded-full px-5")}>
+          <Link href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), styles.pillBtnPx20)}>
             View all-time orders
           </Link>
         )}
-        <Link data-ui="account/MyOrdersEmpty/Link-start-shopping" href="/products" className={cn(buttonVariants(), "rounded-full px-5")}>
+        <Link href="/products" className={cn(buttonVariants(), styles.pillBtnPx20)}>
           Start shopping
         </Link>
-        <Link data-ui="account/MyOrdersEmpty/Link-track-a-guest-order" href="/track" className={cn(buttonVariants({ variant: "outline" }), "rounded-full px-5")}>
+        <Link href="/track" className={cn(buttonVariants({ variant: "outline" }), styles.pillBtnPx20)}>
           Track a guest order
         </Link>
       </div>
@@ -169,9 +170,9 @@ export function MyOrdersView({
     }
   })
   const skeletonNode = (
-    <ul data-ui="account/MyOrdersView/ul" className="space-y-3">
+    <ul className={styles.ordersSkeletonList}>
       {placeholderOrders(3).map((o) => (
-        <li data-ui="account/MyOrdersView/li" key={o.id}>
+        <li key={o.id}>
           <MyOrderCard o={o} shop={shop} />
         </li>
       ))}
@@ -179,8 +180,8 @@ export function MyOrdersView({
   )
 
   return (
-    <section data-ui="account/MyOrdersView">
-      <h2 data-ui="account/MyOrdersView/h2-my-orders" className="mb-4 text-3xl font-semibold">My orders</h2>
+    <section>
+      <h2 className={styles.ordersHeading}>My orders</h2>
       <CustomerOrdersFilterBar
         year={filters?.year}
         month={filters?.month}
@@ -209,29 +210,29 @@ export function MyOrderView({
   win: { open: boolean; until: Date | null; days?: number }
 }) {
   return (
-    <section data-ui="account/MyOrderView" className="space-y-6">
-      <Link data-ui="account/MyOrderView/Link-all-orders" data-back-link href="/account/orders" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-        <ArrowLeftIcon className="size-4" /> All orders
+    <section className={styles.singleOrderSection}>
+      <Link data-back-link href="/account/orders" className={styles.backNavLink}>
+        <ArrowLeftIcon className={styles.icon16} /> All orders
       </Link>
-      <div data-ui="account/MyOrderView/div" className="space-y-6">
-        <div data-ui="account/MyOrderView/div-flex" className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-card p-5">
-          <div data-ui="account/MyOrderView/div-2">
-            <div data-ui="account/MyOrderView/div-flex-2" className="flex flex-wrap items-center gap-3">
-              <h2 data-ui="account/MyOrderView/h2" className="font-mono text-2xl font-semibold">{order.orderCode}</h2>
+      <div className={styles.orderDetailStack}>
+        <div className={styles.orderHeaderCard}>
+          <div>
+            <div className={styles.codeRow}>
+              <h2 className={styles.codeHeading}>{order.orderCode}</h2>
               <CopyButton value={order.orderCode} label="Order ID" />
             </div>
-            <p data-ui="account/MyOrderView/p" className="text-sm text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
+            <p className={styles.placedSubtext}>Placed on {formatDate(order.createdAt)}</p>
           </div>
-          <div data-ui="account/MyOrderView/div-flex-3" className="flex flex-wrap items-center gap-2.5">
+          <div className={styles.headerActionsGroup}>
             <RefreshButton />
             {order.status !== "cancelled" && (
-              <Link data-ui="account/MyOrderView/Link-invoice" href={`/account/orders/${order.orderCode}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
-                <ReceiptTextIcon className="size-4" /> Invoice
+              <Link href={`/account/orders/${order.orderCode}/invoice`} className={styles.invoicePillLink}>
+                <ReceiptTextIcon className={styles.icon16} /> Invoice
               </Link>
             )}
-            <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="customer" className="text-sm" pulse alwaysShow />
+            <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="customer" className={styles.badgeTextSm} pulse alwaysShow />
           </div>
-          <p data-ui="account/MyOrderView/p-2" className="basis-full text-sm text-muted-foreground">
+          <p className={styles.statusDescriptionLine}>
             {customerStatusLine(STATUS_META[order.status].description, order.returnStage, {
               canRequestAgain: order.status === "delivered" ? canRequestAgain(order.returnRequests, win.open) : undefined,
             })}
@@ -239,8 +240,8 @@ export function MyOrderView({
         </div>
 
         {/* Progress gets the wide column; what you ordered + what you paid sits beside it. */}
-        <div data-ui="account/MyOrderView/div-grid" className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div data-ui="account/MyOrderView/div-3" className="space-y-6">
+        <div className={styles.orderTwoColGrid}>
+          <div className={styles.leftMainCol}>
             <ReturnRequestsPanel requests={order.returnRequests} returns={order.returns} refundedInFull={order.returnStage?.key === "refunded"} orderCode={order.orderCode} />
             <RefundSummary order={order} />
             {order.cancellation && (
@@ -255,20 +256,20 @@ export function MyOrderView({
               createdAt={order.createdAt}
               updatedAt={order.updatedAt}
             />
-            <section data-ui="account/MyOrderView/section" aria-labelledby="progress-title" className="rounded-3xl border bg-card p-6 sm:p-8">
-              <h3 data-ui="account/MyOrderView/h3-order-progress" id="progress-title" className="mb-6 font-sans text-lg font-semibold">
+            <section aria-labelledby="progress-title" className={styles.progressCard}>
+              <h3 id="progress-title" className={styles.progressTitle}>
                 Order progress
               </h3>
               <OrderTimeline status={order.status} history={order.history} shipping={order.shipping} returnInput={stageInputOf(order)} audience="customer" />
               {/* Help + cancel live together, under the progress they relate to */}
-              <div data-ui="account/MyOrderView/div-flex-4" className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:flex-wrap sm:items-center">
-                <a data-ui="account/MyOrderView/a-ask-about-this-order"
+              <div className={styles.progressFooterActions}>
+                <a
                   href={shopWhatsappLink(shop, `Hi! I have a question about my order ${order.orderCode}.`)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-11 items-center justify-center gap-2 rounded-full bg-whatsapp-solid px-6 text-sm font-semibold text-white sm:w-auto"
+                  className={styles.askWaBtn}
                 >
-                  <WhatsAppIcon className="size-4" /> Ask about this order
+                  <WhatsAppIcon className={styles.icon16} /> Ask about this order
                 </a>
                 <RequestReturn
                   orderCode={order.orderCode}
@@ -298,7 +299,7 @@ export function MyOrderView({
             </section>
           </div>
 
-          <div data-ui="account/MyOrderView/div-4" className="space-y-6 xl:sticky-store xl:self-start">
+          <div className={styles.rightSidebarCol}>
             <OrderSummary order={order} />
 
             <DeliveryEditor
@@ -326,15 +327,15 @@ export function MyOrderView({
 /** The printable bill page. `backHref` differs for the customer and the admin. */
 export function InvoicePageView({ order, shop, backHref }: { order: Order; shop: StoreSettings; backHref: string }) {
   return (
-    <div data-ui="account/InvoicePageView" className="space-y-4">
-      <div data-ui="account/InvoicePageView/div-flex" className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link data-ui="account/InvoicePageView/Link-back-to-order" data-back-link href={backHref} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-          <ArrowLeftIcon className="size-4" /> Back to order
+    <div className={styles.invoicePageStack}>
+      <div className={styles.invoiceTopBar}>
+        <Link data-back-link href={backHref} className={styles.backNavLink}>
+          <ArrowLeftIcon className={styles.icon16} /> Back to order
         </Link>
         {order.status !== "cancelled" && <PrintButton />}
       </div>
       {order.status === "cancelled" ? (
-        <p data-ui="account/InvoicePageView/p" className="mx-auto max-w-3xl rounded-2xl border bg-card p-6 text-sm text-muted-foreground">This order was cancelled, so there is no invoice for it.</p>
+        <p className={styles.cancelledInvoiceNotice}>This order was cancelled, so there is no invoice for it.</p>
       ) : (
         <InvoiceDocument order={order} shop={shop} />
       )}
@@ -348,14 +349,14 @@ export function ProfileView({ profile, addresses }: { profile: Profile; addresse
   return (
     <ProfileOrSettingsView
       profileContent={
-        <section data-ui="account/ProfileView/section">
-          <h2 data-ui="account/ProfileView/h2-profile" className="text-3xl font-semibold">Profile</h2>
-          <p data-ui="account/ProfileView/p" className="mt-1 mb-8 text-muted-foreground">Manage your personal details, contact number, and login password.</p>
+        <section>
+          <h2 className={styles.ordersHeading}>Profile</h2>
+          <p className={styles.profileHeaderLead}>Manage your personal details, contact number, and login password.</p>
           <ProfileForm profile={profile} />
         </section>
       }
       addressesContent={
-        <section data-ui="account/ProfileView/section-2">
+        <section>
           <AddressBook addresses={addresses} defaults={{ fullName: profile.fullName, phone: profile.phone }} />
         </section>
       }

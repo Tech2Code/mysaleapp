@@ -2,6 +2,7 @@ import { InfoIcon, WalletIcon } from "lucide-react"
 import { refundBreakdown } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, ReturnRequest } from "@/features/orders/types"
 import { formatPrice } from "@/lib/format"
+import styles from "./shared.module.css"
 
 /**
  * "How much will I get back?" for an order with a return, for customers, guests and the admin:
@@ -28,65 +29,65 @@ export function RefundSummary({
   const done = b.basis === "returned"
 
   return (
-    <section data-ui="shared/RefundSummary" aria-label="Refund details" className="space-y-3 rounded-2xl border bg-card p-4 sm:p-5">
-      <h3 data-ui="shared/RefundSummary/h3-refund-details" className="flex items-center gap-2 font-sans text-base font-semibold">
-        <WalletIcon className="size-4 text-primary" aria-hidden /> Refund details
+    <section aria-label="Refund details" className={styles.sharedPanelCard}>
+      <h3 className={styles.panelHeading}>
+        <WalletIcon className={styles.primaryIcon} aria-hidden /> Refund details
       </h3>
-      <p data-ui="shared/RefundSummary/p-flex" className="flex items-baseline justify-between gap-3 text-sm">
-        <span data-ui="shared/RefundSummary/span" className="text-muted-foreground">Order total paid</span>
-        <span data-ui="shared/RefundSummary/span-2" className="font-medium">{formatPrice(b.paid)}</span>
+      <p className={styles.refundRow}>
+        <span className={styles.mutedSpan}>Order total paid</span>
+        <span className={styles.mediumSpan}>{formatPrice(b.paid)}</span>
       </p>
 
-      <div data-ui="shared/RefundSummary/div" className="space-y-1.5 border-t pt-3">
-        <p data-ui="shared/RefundSummary/p" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <div className={styles.refundSectionBlock}>
+        <p className={styles.kickerLabel}>
           {done ? "Items returned" : "Items you are returning"}
         </p>
-        <ul data-ui="shared/RefundSummary/ul" className="space-y-1.5 text-sm">
+        <ul className={styles.refundLinesUl}>
           {b.lines.map((l) => (
-            <li data-ui="shared/RefundSummary/li-flex" key={l.productId} className="flex items-baseline justify-between gap-3">
-              <span data-ui="shared/RefundSummary/span-3" className="min-w-0">
-                {l.name} <span data-ui="shared/RefundSummary/span-4" className="text-muted-foreground">({l.quantity} × {formatPrice(l.unitPrice)})</span>
+            <li key={l.productId} className={styles.refundLineLi}>
+              <span className={styles.minW0}>
+                {l.name} <span className={styles.mutedSpan}>({l.quantity} × {formatPrice(l.unitPrice)})</span>
               </span>
-              <span data-ui="shared/RefundSummary/span-5" className="shrink-0 font-medium">{formatPrice(l.amount)}</span>
+              <span className={styles.shrink0Medium}>{formatPrice(l.amount)}</span>
             </li>
           ))}
         </ul>
       </div>
 
       {b.promoDiscountShare > 0 && (
-        <p data-ui="shared/RefundSummary/p-flex-2" className="flex items-baseline justify-between gap-3 border-t pt-3 text-sm text-muted-foreground">
-          <span data-ui="shared/RefundSummary/span-6">Promo discount applied</span>
-          <span data-ui="shared/RefundSummary/span-7" className="shrink-0 font-medium">−{formatPrice(b.promoDiscountShare)}</span>
+        <p className={styles.promoShareRow}>
+          <span>Promo discount applied</span>
+          <span className={styles.shrink0Medium}>−{formatPrice(b.promoDiscountShare)}</span>
         </p>
       )}
 
       {b.notRefunded.length > 0 && (
-        <div data-ui="shared/RefundSummary/div-2" className="space-y-1.5 border-t pt-3">
-          <p data-ui="shared/RefundSummary/p-2" className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Not refunded</p>
-          <ul data-ui="shared/RefundSummary/ul-2" className="space-y-1.5 text-sm">
+        <div className={styles.refundSectionBlock}>
+          <p className={styles.kickerLabel}>Not refunded</p>
+          <ul className={styles.refundLinesUl}>
             {b.notRefunded.map((c, i) => (
-              <li data-ui="shared/RefundSummary/li-flex-2" key={`${c.label}-${i}`} className="flex items-baseline justify-between gap-3 text-muted-foreground">
-                <span data-ui="shared/RefundSummary/span-8" className="min-w-0">{c.label}</span>
-                <span data-ui="shared/RefundSummary/span-9" className="shrink-0">{formatPrice(c.amount)}</span>
+              <li key={`${c.label}-${i}`} className={styles.refundLineMutedLi}>
+                <span className={styles.minW0}>{c.label}</span>
+                <span className={styles.shrink0}>{formatPrice(c.amount)}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <p data-ui="shared/RefundSummary/p-flex-3" className="flex items-baseline justify-between gap-3 border-t pt-3 text-base font-semibold">
-        <span data-ui="shared/RefundSummary/span-10">{done ? "Refund for these items" : "You get back"}</span>
-        <span data-ui="shared/RefundSummary/span-11">{formatPrice(b.refundable)}</span>
+      <p className={styles.refundableTotalRow}>
+        <span>{done ? "Refund for these items" : "You get back"}</span>
+        <span>{formatPrice(b.refundable)}</span>
       </p>
       {b.alreadyRefunded > 0 && (
-        <p data-ui="shared/RefundSummary/p-flex-4" className="flex items-baseline justify-between gap-3 text-sm font-medium text-success">
-          <span data-ui="shared/RefundSummary/span-12">Already refunded</span>
-          <span data-ui="shared/RefundSummary/span-13">{formatPrice(b.alreadyRefunded)}</span>
+        <p className={styles.alreadyRefundedRow}>
+          <span>Already refunded</span>
+          <span>{formatPrice(b.alreadyRefunded)}</span>
         </p>
       )}
-      <p data-ui="shared/RefundSummary/p-flex-5" className="flex items-start gap-1.5 text-xs text-muted-foreground">
-        <InfoIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-        <span data-ui="shared/RefundSummary/span-14">A return refunds only the price of the returned items. Delivery and other charges are not refunded.</span>
+      <p className={styles.refundFootnote}>
+        <InfoIcon className={styles.infoIcon} aria-hidden />
+        <span>A return refunds only the price of the returned items. Delivery and other charges are not refunded.</span>
       </p>
     </section>
   )

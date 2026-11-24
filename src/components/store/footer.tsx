@@ -1,4 +1,5 @@
 import { BackToTop } from "@/components/shared/back-to-top"
+import { CookiePreferencesButton } from "@/components/shared/cookie-banner"
 import { ScrollLink } from "@/components/shared/scroll-link"
 import { Logo } from "@/components/shared/logo"
 import type { StoreSettings } from "@/features/settings/types"
@@ -7,6 +8,7 @@ import { safeExternalUrl } from "@/lib/safe-redirect"
 import type { NavCategory } from "./header"
 import { InstallButton } from "./install-prompt"
 import { WhatsAppIcon } from "./brand-icons"
+import styles from "./footer.module.css"
 
 export function Footer({ categories, shop }: { categories: NavCategory[]; shop: StoreSettings }) {
   const igUrl = safeExternalUrl(shop.instagramUrl)
@@ -33,9 +35,12 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
       ],
     },
     {
-      title: "About",
+      title: "About & Policies",
       links: [
         { href: "/about", label: "Our story" },
+        { href: "/refund-policy", label: "Refund & return policy" },
+        { href: "/privacy", label: "Privacy policy" },
+        { href: "/terms", label: "Terms of service" },
         ...socials,
       ],
     },
@@ -43,55 +48,60 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
 
   return (
     <footer
-      data-ui="store/Footer"
+
       data-slot="store-footer"
-      className="mt-12 border-t bg-linear-to-b from-secondary/40 to-secondary/80 sm:mt-20"
+      className={styles.storeFooter}
     >
-      <div data-ui="store/Footer/div-grid" className="container-page grid grid-cols-2 gap-6 py-8 sm:gap-12 sm:py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div data-ui="store/Footer/div" className="col-span-2 space-y-3 sm:space-y-4 md:col-span-1">
+      <div className={styles.footerGrid}>
+        <div className={styles.brandColumn}>
           <Logo />
-          <p data-ui="store/Footer/p" className="max-w-xs text-sm/relaxed  text-muted-foreground">{shop.description}</p>
+          <p className={styles.shopDescription}>{shop.description}</p>
           {/* Both buttons: same width and height, stacked. */}
-          <div data-ui="store/Footer/div-flex" className="flex w-full max-w-56 flex-col gap-2.5">
-            <a data-ui="store/Footer/a-chat-on-whatsapp"
+          <div className={styles.actionStack}>
+            <a
               href={shopWhatsappLink(shop, `Hi ${shop.shopName}!`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-whatsapp-solid px-4 text-sm font-semibold text-white shadow-md shadow-whatsapp/25 transition-transform hover:-translate-y-0.5"
+              className={styles.whatsappBtn}
             >
-              <WhatsAppIcon className="size-4" /> Chat on WhatsApp
+              <WhatsAppIcon className={styles.whatsappIcon} /> Chat on WhatsApp
             </a>
-            <InstallButton className="w-full justify-center" />
+            <InstallButton className={styles.installBtn} />
           </div>
         </div>
         {columns.map((col) => (
-          <nav data-ui="store/Footer/nav" key={col.title} aria-label={col.title}>
-            <h2 data-ui="store/Footer/h2" className="mb-4 font-sans text-sm font-semibold tracking-wide uppercase">{col.title}</h2>
-            <ul data-ui="store/Footer/ul" className="space-y-2.5">
+          <nav key={col.title} aria-label={col.title} className={styles.navColumn}>
+            <h2 className={styles.columnHeading}>{col.title}</h2>
+            <ul className={styles.linkList}>
               {col.links.map((l) => (
-                <li data-ui="store/Footer/li" key={l.label}>
+                <li key={l.label} className={styles.linkItem}>
                   {"external" in l ? (
-                    <a data-ui="store/Footer/a" href={l.href} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground transition-colors hover:text-primary">
+                    <a href={l.href} target="_blank" rel="noopener noreferrer" className={styles.externalLink}>
                       {l.label}
                     </a>
                   ) : (
-                    <ScrollLink data-ui="store/Footer/ScrollLink" href={l.href} className="inline-block py-0.5 text-sm text-muted-foreground transition-colors hover:text-primary">
+                    <ScrollLink href={l.href} className={styles.internalLink}>
                       {l.label}
                     </ScrollLink>
                   )}
                 </li>
               ))}
+              {col.title === "About & Policies" && (
+                <li className={styles.linkItem}>
+                  <CookiePreferencesButton className={styles.internalLink} />
+                </li>
+              )}
             </ul>
           </nav>
         ))}
       </div>
-      <div data-ui="store/Footer/div-2" className="border-t">
-        <div data-ui="store/Footer/div-flex-2" className="container-page flex flex-col items-center justify-between gap-2 py-6 text-xs text-muted-foreground sm:flex-row">
-          <p data-ui="store/Footer/p-2">
+      <div className={styles.bottomSection}>
+        <div className={styles.bottomBar}>
+          <p className={styles.copyrightText}>
             © {shop.shopName}.{shop.city ? ` Handmade in ${shop.city}, India.` : ""}
           </p>
-          <p data-ui="store/Footer/p-3">Orders confirmed on WhatsApp · Secure &amp; simple</p>
-          <BackToTop className="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 font-medium transition-colors hover:bg-muted hover:text-foreground" />
+          <p className={styles.trustText}>Orders confirmed on WhatsApp · Secure &amp; simple</p>
+          <BackToTop className={styles.backToTopBtn} />
         </div>
       </div>
     </footer>

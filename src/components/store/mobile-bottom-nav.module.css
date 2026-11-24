@@ -1,0 +1,20 @@
+/* Section: Mobile Bottom Navigation Bar (Exact .glass Transparency + 10% Accent Active Pill) */
+.bottomNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -6px 28px -10px rgba(0, 0, 0, 0.14); }
+.bottomNav .tabList { display: grid; height: 62px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 6px; list-style: none; margin: 0; }
+.tabList .tabItem { display: flex; justify-content: center; }
+.tabItem .tabInteractive { display: flex; min-height: 44px; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0; color: var(--muted-foreground); transition: color 150ms ease, transform 150ms ease; background: transparent; border: 0; }
+.tabItem .tabInteractive:hover { color: var(--foreground); }
+.tabItem .tabInteractive:active { transform: scale(0.95); }
+.tabItem .tabInteractiveActive { color: var(--primary); }
+/* Section: Tab Icon & Pill Indicator (10% Accent Highlight) */
+.tabInteractive .iconPill { position: relative; display: grid; height: 30px; width: 48px; place-items: center; border-radius: 9999px; }
+.iconPill .activePill { position: absolute; inset: 0; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 28%, transparent); }
+.iconPill .iconWrap { position: relative; display: inline-flex; }
+.iconWrap .tabIcon { width: 20px; height: 20px; transition: transform 150ms ease; }
+.iconWrap .tabIconActive { transform: scale(1.05); stroke-width: 2.25; }
+.iconWrap .tabBadge { position: absolute; top: -4px; right: -8px; display: grid; min-width: 18px; height: 18px; place-items: center; border-radius: 9999px; background-color: var(--primary); padding: 0 4px; font-size: 10px; line-height: 18px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 0 0 2px var(--background); }
+.tabInteractive .tabLabel { font-size: 11px; line-height: 14px; font-weight: 500; letter-spacing: -0.2px; color: var(--muted-foreground); }
+.tabInteractive .tabLabelActive { font-weight: 700; color: var(--primary); }
+@media (min-width: 640px) {
+  .bottomNav { display: none; }
+}

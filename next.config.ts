@@ -45,8 +45,6 @@ const nextConfig: NextConfig = {
   // Lets a phone on the same Wi-Fi open the dev server (otherwise dev assets/HMR are blocked and the page doesn't hydrate).
   allowedDevOrigins: ["192.168.1.*"],
   cacheComponents: true,
-  // data-ui ids (see scripts/tag-ui.mjs) are for developers only: keep them out of production HTML
-  compiler: process.env.NODE_ENV === "production" ? { reactRemoveProperties: { properties: ["^data-ui$"] } } : {},
   partialPrefetching: true,
   images: {
     formats: ["image/avif", "image/webp"],
@@ -90,14 +88,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ]
-  },
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
   },
 }
 

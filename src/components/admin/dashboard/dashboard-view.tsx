@@ -1,5 +1,6 @@
 import { ExternalLinkIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
+import styles from "@/components/admin/admin-core.module.css"
 import { DashboardBody } from "@/components/admin/dashboard/dashboard-body"
 import { DashboardRangeShell } from "@/components/admin/dashboard-range"
 import { buttonVariants } from "@/components/ui/button"
@@ -12,25 +13,25 @@ export function DashboardView({ d, range, today }: { d: DashboardData; range: Pi
   const attentionTotal = d.attention.toVerify + d.attention.awaitingPayment + d.attention.toFulfil + d.attention.returnRequests + d.attention.returnsToReceive + d.attention.refundsToSend + d.lowStock.length
 
   return (
-    <div data-ui="admin/DashboardView" className="space-y-5">
-      <header data-ui="admin/DashboardView/header-flex" className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div data-ui="admin/DashboardView/div" className="min-w-0">
-          <p data-ui="admin/DashboardView/p" className="text-xs font-medium text-muted-foreground">{d.todayLabel}</p>
-          <h1 data-ui="admin/DashboardView/h1" className="mt-1 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            <span data-ui="admin/DashboardView/span">{d.greeting}</span>
+    <div className={styles.dashboardView}>
+      <header className={styles.dashboardHeader}>
+        <div className={styles.greetingCol}>
+          <p className={styles.todayText}>{d.todayLabel}</p>
+          <h1 className={styles.greetingHeading}>
+            <span>{d.greeting}</span>
           </h1>
-          <p data-ui="admin/DashboardView/p-2" className="mt-1 text-sm text-muted-foreground">
+          <p className={styles.greetingSub}>
             {attentionTotal > 0
               ? `${attentionTotal} item${attentionTotal === 1 ? "" : "s"} across orders, returns, and inventory need review.`
               : "All orders, payments, and stock levels are in good shape."}
           </p>
         </div>
-        <div data-ui="admin/DashboardView/div-flex" className="flex flex-wrap items-center gap-2 sm:shrink-0">
-          <Link data-ui="admin/DashboardView/Link-view-store" href="/" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 rounded-lg bg-card px-3.5 text-xs font-medium")}>
-            <ExternalLinkIcon className="size-3.5" /> View store
+        <div className={styles.headerCtaRow}>
+          <Link href="/" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.viewStoreBtn)}>
+            <ExternalLinkIcon className={styles.icon14} /> View store
           </Link>
-          <Link data-ui="admin/DashboardView/Link-add-product" href="/admin/products/new" className={cn(buttonVariants({ size: "sm" }), "h-9 rounded-lg px-4 text-xs font-semibold")}>
-            <PlusIcon className="size-3.5" /> Add product
+          <Link href="/admin/products/new" className={cn(buttonVariants({ size: "sm" }), styles.addProductBtn)}>
+            <PlusIcon className={styles.icon14} /> Add product
           </Link>
         </div>
       </header>

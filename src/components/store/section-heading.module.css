@@ -1,0 +1,16 @@
+/* Section: Storefront Section Heading */
+.headingRow { margin-bottom: 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.headingRow .titleGroup { min-width: 0; }
+.titleGroup .eyebrowText { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 1.4px; color: var(--muted-foreground); text-transform: uppercase; }
+.titleGroup .sectionTitle { margin: 4px 0 0 0; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
+.headingRow .viewAllLink { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: box-shadow 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease; }
+.headingRow .viewAllLink:hover { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 40%, transparent); transform: translateY(-1px); }
+.viewAllLink .linkArrow { width: 14px; height: 14px; transition: transform 150ms ease; }
+.headingRow .viewAllLink:hover .linkArrow { transform: translateX(2px); }
+@media (min-width: 640px) {
+  .headingRow { margin-bottom: 32px; }
+  .titleGroup .eyebrowText { font-size: 14px; }
+  .titleGroup .sectionTitle { margin-top: 8px; font-size: 36px; line-height: 42px; }
+  .headingRow .viewAllLink { padding: 8px 16px; font-size: 14px; }
+  .viewAllLink .linkArrow { width: 16px; height: 16px; }
+}

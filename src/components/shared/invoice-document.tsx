@@ -3,6 +3,7 @@ import { paymentDisplay } from "@/features/orders/types"
 import { gstActive, gstIncluded, invoiceTitle } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
 import { formatDate, formatMoney } from "@/lib/format"
+import styles from "./shared.module.css"
 
 /**
  * Printable bill for one order. Prices already include any GST, so this only shows how much tax is inside.
@@ -30,110 +31,110 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
   })
 
   return (
-    <article data-ui="shared/InvoiceDocument" data-invoice className="mx-auto w-full max-w-3xl rounded-2xl border bg-card p-6 text-foreground sm:p-8" aria-label={`${title} ${order.orderCode}`}>
-      <header data-ui="shared/InvoiceDocument/header-flex" className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
-        <div data-ui="shared/InvoiceDocument/div" className="min-w-0">
-          <h1 data-ui="shared/InvoiceDocument/h1" className="font-sans text-2xl font-semibold">{title}</h1>
-          <p data-ui="shared/InvoiceDocument/p" className="mt-1 text-sm text-muted-foreground">
-            No. <span data-ui="shared/InvoiceDocument/span" className="font-mono font-semibold text-foreground">{order.orderCode}</span> · {formatDate(order.createdAt)}
+    <article data-invoice className={styles.invoiceArticle} aria-label={`${title} ${order.orderCode}`}>
+      <header className={styles.invoiceHeader}>
+        <div className={styles.headerLeftCol}>
+          <h1 className={styles.invoiceTitle}>{title}</h1>
+          <p className={styles.invoiceNoLine}>
+            No. <span className={styles.monoStrong}>{order.orderCode}</span> · {formatDate(order.createdAt)}
           </p>
         </div>
-        <div data-ui="shared/InvoiceDocument/div-2" className="text-sm sm:text-right print:text-right">
-          <p data-ui="shared/InvoiceDocument/p-2" className="font-semibold">{sellerName}</p>
-          {sellerAddress && <p data-ui="shared/InvoiceDocument/p-3" className="max-w-64 text-muted-foreground sm:ml-auto print:ml-auto">{sellerAddress}</p>}
-          {effectiveShop.phone && <p data-ui="shared/InvoiceDocument/p-4" className="text-muted-foreground">{effectiveShop.phone}</p>}
-          {effectiveShop.email && <p data-ui="shared/InvoiceDocument/p-5" className="text-muted-foreground">{effectiveShop.email}</p>}
-          {taxed && effectiveShop.gstin && <p data-ui="shared/InvoiceDocument/p-6" className="mt-1 font-mono text-xs font-semibold">GSTIN: {effectiveShop.gstin}</p>}
+        <div className={styles.headerSellerCol}>
+          <p className={styles.sellerNameText}>{sellerName}</p>
+          {sellerAddress && <p className={styles.sellerAddrText}>{sellerAddress}</p>}
+          {effectiveShop.phone && <p className={styles.sellerMutedLine}>{effectiveShop.phone}</p>}
+          {effectiveShop.email && <p className={styles.sellerMutedLine}>{effectiveShop.email}</p>}
+          {taxed && effectiveShop.gstin && <p className={styles.gstinMono}>GSTIN: {effectiveShop.gstin}</p>}
         </div>
       </header>
 
-      <section data-ui="shared/InvoiceDocument/section-billed-to" className="grid gap-4 border-b py-5 text-sm sm:grid-cols-2 print:grid-cols-2" aria-label="Billed to">
-        <div data-ui="shared/InvoiceDocument/div-3">
-          <h2 data-ui="shared/InvoiceDocument/h2-billed-to" className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">Billed to</h2>
-          <p data-ui="shared/InvoiceDocument/p-7" className="mt-1 font-semibold">{order.customerName}</p>
-          <p data-ui="shared/InvoiceDocument/p-8" className="text-muted-foreground">{order.address}</p>
-          <p data-ui="shared/InvoiceDocument/p-9" className="text-muted-foreground">{order.city} - {order.pincode}</p>
-          <p data-ui="shared/InvoiceDocument/p-10" className="text-muted-foreground">{order.phone}</p>
+      <section className={styles.billedToGrid} aria-label="Billed to">
+        <div>
+          <h2 className={styles.sectionKicker}>Billed to</h2>
+          <p className={styles.billedBold}>{order.customerName}</p>
+          <p className={styles.billedMuted}>{order.address}</p>
+          <p className={styles.billedMuted}>{order.city} - {order.pincode}</p>
+          <p className={styles.billedMuted}>{order.phone}</p>
         </div>
-        <div data-ui="shared/InvoiceDocument/div-4" className="sm:text-right print:text-right">
-          <h2 data-ui="shared/InvoiceDocument/h2-payment" className="font-sans text-xs font-semibold tracking-wider text-muted-foreground uppercase">Payment</h2>
-          <p data-ui="shared/InvoiceDocument/p-11" className="mt-1 font-semibold">{payment.label}</p>
+        <div className={styles.paymentRightCol}>
+          <h2 className={styles.sectionKicker}>Payment</h2>
+          <p className={styles.billedBold}>{payment.label}</p>
           {order.returnStage?.badge && order.returnStage.key !== "rejected" && (
-            <p data-ui="shared/InvoiceDocument/p-12" className="text-xs text-muted-foreground">Return: {order.returnStage.customerLabel}</p>
+            <p className={styles.billedSmallNote}>Return: {order.returnStage.customerLabel}</p>
           )}
-          {order.paymentReference && <p data-ui="shared/InvoiceDocument/p-13" className="font-mono text-xs text-muted-foreground">Ref: {order.paymentReference}</p>}
+          {order.paymentReference && <p className={styles.billedMonoRef}>Ref: {order.paymentReference}</p>}
         </div>
       </section>
 
-      <div data-ui="shared/InvoiceDocument/div-5" className="overflow-x-auto print:overflow-visible">
-        <table data-ui="shared/InvoiceDocument/table" className="w-full min-w-[480px] border-collapse text-sm print:min-w-0">
-          <caption data-ui="shared/InvoiceDocument/caption" className="sr-only">Items in this order</caption>
-          <thead data-ui="shared/InvoiceDocument/thead">
-            <tr data-ui="shared/InvoiceDocument/tr" className="border-b text-left text-xs tracking-wider text-muted-foreground uppercase">
-              <th data-ui="shared/InvoiceDocument/th-item" scope="col" className="py-3 pr-2 font-semibold">Item</th>
-              <th data-ui="shared/InvoiceDocument/th-qty" scope="col" className="px-2 py-3 text-right font-semibold">Qty</th>
-              <th data-ui="shared/InvoiceDocument/th-rate" scope="col" className="px-2 py-3 text-right font-semibold">Rate</th>
-              <th data-ui="shared/InvoiceDocument/th-amount" scope="col" className="py-3 pl-2 text-right font-semibold">Amount</th>
+      <div className={styles.tableScrollWrap}>
+        <table className={styles.invoiceTable}>
+          <caption className={styles.srOnly}>Items in this order</caption>
+          <thead>
+            <tr className={styles.theadRow}>
+              <th scope="col" className={styles.thLeft}>Item</th>
+              <th scope="col" className={styles.thMiddleRight}>Qty</th>
+              <th scope="col" className={styles.thMiddleRight}>Rate</th>
+              <th scope="col" className={styles.thRight}>Amount</th>
             </tr>
           </thead>
-          <tbody data-ui="shared/InvoiceDocument/tbody">
+          <tbody>
             {order.items.map((i) => (
-              <tr data-ui="shared/InvoiceDocument/tr-2" key={i.productId} className="border-b">
-                <td data-ui="shared/InvoiceDocument/td" className="py-3 pr-2">{i.name}</td>
-                <td data-ui="shared/InvoiceDocument/td-2" className="px-2 py-3 text-right tabular-nums">{i.quantity}</td>
-                <td data-ui="shared/InvoiceDocument/td-3" className="px-2 py-3 text-right tabular-nums">{formatMoney(i.price)}</td>
-                <td data-ui="shared/InvoiceDocument/td-4" className="py-3 pl-2 text-right tabular-nums">{formatMoney(i.price * i.quantity)}</td>
+              <tr key={i.productId} className={styles.tbodyRow}>
+                <td className={styles.tdLeft}>{i.name}</td>
+                <td className={styles.tdMiddleNum}>{i.quantity}</td>
+                <td className={styles.tdMiddleNum}>{formatMoney(i.price)}</td>
+                <td className={styles.tdRightNum}>{formatMoney(i.price * i.quantity)}</td>
               </tr>
             ))}
             {order.discountAmount && order.discountAmount > 0 ? (
-              <tr data-ui="shared/InvoiceDocument/tr-3" className="border-b text-emerald-700 dark:text-emerald-300 print:text-black">
-                <td data-ui="shared/InvoiceDocument/td-5" className="py-3 pr-2 font-medium" colSpan={3}>
+              <tr className={styles.tbodyPromoRow}>
+                <td className={styles.tdLeftMedium} colSpan={3}>
                   Promo discount{order.promoCode ? ` (${order.promoCode})` : ""}
                 </td>
-                <td data-ui="shared/InvoiceDocument/td-6" className="py-3 pl-2 text-right font-semibold tabular-nums">
+                <td className={styles.tdRightBoldNum}>
                   -{formatMoney(order.discountAmount)}
                 </td>
               </tr>
             ) : null}
             {order.extraFees.map((f, idx) => (
-              <tr data-ui="shared/InvoiceDocument/tr-4" key={`${f.productId ?? "fee"}-${idx}`} className="border-b">
-                <td data-ui="shared/InvoiceDocument/td-7" className="py-3 pr-2" colSpan={3}>
+              <tr key={`${f.productId ?? "fee"}-${idx}`} className={styles.tbodyRow}>
+                <td className={styles.tdLeft} colSpan={3}>
                   {f.label}
                   {f.productName ? ` (${f.productName})` : ""}
                 </td>
-                <td data-ui="shared/InvoiceDocument/td-8" className="py-3 pl-2 text-right tabular-nums">{formatMoney(f.amount)}</td>
+                <td className={styles.tdRightNum}>{formatMoney(f.amount)}</td>
               </tr>
             ))}
-            <tr data-ui="shared/InvoiceDocument/tr-5" className="border-b">
-              <td data-ui="shared/InvoiceDocument/td-9" className="py-3 pr-2" colSpan={3}>Delivery</td>
-              <td data-ui="shared/InvoiceDocument/td-10" className="py-3 pl-2 text-right tabular-nums">{order.shippingFee > 0 ? formatMoney(order.shippingFee) : "Free"}</td>
+            <tr className={styles.tbodyRow}>
+              <td className={styles.tdLeft} colSpan={3}>Delivery</td>
+              <td className={styles.tdRightNum}>{order.shippingFee > 0 ? formatMoney(order.shippingFee) : "Free"}</td>
             </tr>
           </tbody>
-          <tfoot data-ui="shared/InvoiceDocument/tfoot">
-            <tr data-ui="shared/InvoiceDocument/tr-6">
-              <th data-ui="shared/InvoiceDocument/th-total" scope="row" colSpan={3} className="pt-4 pr-2 text-right text-base font-semibold">Total</th>
-              <td data-ui="shared/InvoiceDocument/td-11" className="pt-4 pl-2 text-right text-base font-semibold tabular-nums">{formatMoney(order.total)}</td>
+          <tfoot>
+            <tr>
+              <th scope="row" colSpan={3} className={styles.tfootTh}>Total</th>
+              <td className={styles.tfootTd}>{formatMoney(order.total)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
       {tax ? (
-        <section data-ui="shared/InvoiceDocument/section-gst-included" className="mt-5 rounded-xl border p-4 text-sm" aria-label="GST included">
-          <p data-ui="shared/InvoiceDocument/p-flex" className="flex justify-between gap-4"><span data-ui="shared/InvoiceDocument/span-2">Taxable value</span><span data-ui="shared/InvoiceDocument/span-3" className="tabular-nums">{formatMoney(tax.taxable)}</span></p>
-          <p data-ui="shared/InvoiceDocument/p-flex-2" className="mt-1 flex justify-between gap-4">
-            <span data-ui="shared/InvoiceDocument/span-4">GST @ {effectiveShop.gstRate}% (included in the total)</span>
-            <span data-ui="shared/InvoiceDocument/span-5" className="tabular-nums">{formatMoney(tax.gst)}</span>
+        <section className={styles.gstSection} aria-label="GST included">
+          <p className={styles.gstRow}><span>Taxable value</span><span className={styles.tabularSpan}>{formatMoney(tax.taxable)}</span></p>
+          <p className={styles.gstRowTop}>
+            <span>GST @ {effectiveShop.gstRate}% (included in the total)</span>
+            <span className={styles.tabularSpan}>{formatMoney(tax.gst)}</span>
           </p>
-          <p data-ui="shared/InvoiceDocument/p-14" className="mt-2 text-xs text-muted-foreground">Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
+          <p className={styles.gstFootnote}>Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
         </section>
       ) : (
-        <p data-ui="shared/InvoiceDocument/p-15" className="mt-5 text-xs text-muted-foreground">
+        <p className={styles.nonGstNote}>
           {sellerName} is not registered under GST, so no tax is charged. This is a Bill of Supply, not a Tax Invoice.
         </p>
       )}
 
-      <footer data-ui="shared/InvoiceDocument/footer" className="mt-6 border-t pt-4 text-center text-xs text-muted-foreground">
+      <footer className={styles.invoiceFooter}>
         Thank you for shopping with {effectiveShop.shopName}. This is a computer-generated document.
       </footer>
     </article>

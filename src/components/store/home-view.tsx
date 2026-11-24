@@ -10,6 +10,7 @@ import { SectionHeading } from "@/components/store/section-heading"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import type { Category, ProductCardData } from "@/features/products/types"
 import type { StoreSettings } from "@/features/settings/types"
+import styles from "./home-view.module.css"
 
 /** The home page. The page passes real data; loading.tsx passes placeholders inside <Skeletonize>. */
 export function HomeView({
@@ -33,16 +34,16 @@ export function HomeView({
     <>
       <Hero showcase={inStockFeatured.slice(0, 3)} />
 
-      <div data-ui="store/HomeView/div" className="space-y-12 pt-12 sm:space-y-20 sm:pt-20">
+      <div className={styles.homeContentStack}>
         {categories.length > 0 && (
-          <section data-ui="store/HomeView/section" className="container-page" aria-labelledby="cat-title">
+          <section className={styles.pageSection} aria-labelledby="cat-title">
             <SectionHeading id="cat-title" eyebrow="Browse" title="Shop by category" href="/products" />
             <CategoryGrid categories={categories} />
           </section>
         )}
 
         {bestsellers.length > 0 && (
-          <section data-ui="store/HomeView/section-2" className="container-page" aria-labelledby="featured-title">
+          <section className={styles.pageSection} aria-labelledby="featured-title">
             <SectionHeading id="featured-title" eyebrow="Loved by customers" title="Bestsellers" href="/products" />
             <ProductGrid products={bestsellers} priorityCount={0} />
           </section>
@@ -51,36 +52,36 @@ export function HomeView({
         <HowItWorks />
 
         {newArrivals.length > 0 && (
-          <section data-ui="store/HomeView/section-3" className="container-page" aria-labelledby="new-title">
+          <section className={styles.pageSection} aria-labelledby="new-title">
             <SectionHeading id="new-title" eyebrow="Fresh from the studio" title="New arrivals" href="/products?sort=new" />
             <ProductGrid products={newArrivals} priorityCount={0} />
           </section>
         )}
 
         {/* CTA band */}
-        <section data-ui="store/HomeView/section-4" className="container-page">
-          <FadeIn className="relative overflow-hidden rounded-2xl border border-border/80 bg-foreground px-6 py-12 text-center text-background shadow-lg sm:rounded-3xl sm:px-12 sm:py-16 dark:bg-card dark:text-foreground">
-            <p data-ui="store/HomeView/p" className="text-xs font-semibold tracking-widest text-primary uppercase">Bespoke studio</p>
-            <h2 data-ui="store/HomeView/h2-looking-for-something-" className="relative mx-auto mt-2 max-w-2xl text-2xl font-semibold sm:text-4xl lg:text-5xl">
+        <section className={styles.pageSection}>
+          <FadeIn className={styles.bespokeBanner}>
+            <p className={styles.bannerEyebrow}>Bespoke studio</p>
+            <h2 className={styles.bannerTitle}>
               Looking for something custom?
             </h2>
-            <p data-ui="store/HomeView/p-relative" className="relative mx-auto mt-3 max-w-xl text-sm/relaxed text-background/75 sm:mt-4 sm:text-base/relaxed dark:text-muted-foreground">
+            <p className={styles.bannerSubtitle}>
               Personalised names, colours or bulk gifting — tell us what you have in mind and we&apos;ll make it by hand.
             </p>
-            <div data-ui="store/HomeView/div-flex" className="relative mt-7 flex flex-wrap justify-center gap-3">
-              <a data-ui="store/HomeView/a-chat-with-us"
+            <div className={styles.bannerActions}>
+              <a
                 href={shopWhatsappLink(shop, `Hi ${shop.shopName}! I'd like a custom order.`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-background px-6 text-sm font-semibold text-foreground shadow-sm transition-transform hover:-translate-y-0.5 dark:bg-primary dark:text-primary-foreground"
+                className={styles.chatAccentBtn}
               >
-                <WhatsAppIcon className="size-4.5 text-whatsapp dark:text-primary-foreground" /> Chat with us
+                <WhatsAppIcon className={styles.chatBtnIcon} /> Chat with us
               </a>
-              <Link data-ui="store/HomeView/Link-browse-all"
+              <Link
                 href="/products"
-                className="group inline-flex h-11 items-center gap-2 rounded-full border border-background/25 px-6 text-sm font-semibold transition-colors hover:bg-background/10 dark:border-border dark:hover:bg-muted"
+                className={styles.browseOutlineBtn}
               >
-                Browse all <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+                Browse all <ArrowRightIcon className={styles.browseArrow} aria-hidden />
               </Link>
             </div>
           </FadeIn>

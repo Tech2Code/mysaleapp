@@ -5,7 +5,9 @@ import Link from "next/link"
 import { memo } from "react"
 import type { ProductCardData } from "@/features/products/types"
 import { discountPercent, formatPrice } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { useCart } from "@/store/cart"
+import styles from "./product-card.module.css"
 import { ProductImage } from "./product-image"
 import { WishlistButton } from "./wishlist-button"
 
@@ -22,29 +24,29 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
 
   return (
     <article
-      data-ui="store/ProductCard"
-      className="group relative flex h-full flex-col rounded-2xl border border-border/75 bg-card p-2 shadow-2xs transition-shadow duration-200 sm:border-transparent sm:bg-transparent sm:p-0 sm:shadow-none"
+
+      className={styles.productCard}
     >
-      <div data-ui="store/ProductCard/div-relative" className="relative aspect-4/5 overflow-hidden rounded-xl bg-muted ring-1 ring-border/40 sm:rounded-2xl @container">
-        <Link data-ui="store/ProductCard/Link-absolute" href={`/products/${product.slug}`} prefetch={true} className="absolute inset-0" aria-label={product.name}>
+      <div className={styles.mediaFrame}>
+        <Link href={`/products/${product.slug}`} prefetch={true} className={styles.imageLink} aria-label={product.name}>
           <ProductImage
             src={product.images[0]}
             alt={product.name}
             priority={priority}
             sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 50vw"
-            className={`transition-transform duration-700 ease-out group-hover:scale-106 ${soldOut ? "opacity-60 grayscale" : ""}`}
+            className={cn(styles.productPhoto, soldOut && styles.productPhotoSoldOut)}
           />
-          <span data-ui="store/ProductCard/span-absolute" className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <span className={styles.hoverVignette} />
         </Link>
 
-        <div data-ui="store/ProductCard/div-flex" className="pointer-events-none absolute top-2 left-2 flex flex-col gap-1 sm:top-3 sm:left-3 sm:gap-1.5">
+        <div className={styles.badgeStack}>
           {off && (
-            <span data-ui="store/ProductCard/span" className="rounded-full bg-primary px-2 py-0.5 text-[0.68rem] font-semibold text-primary-foreground shadow sm:px-2.5 sm:py-1 sm:text-xs">
+            <span className={styles.discountBadge}>
               {off}% off
             </span>
           )}
           {soldOut && (
-            <span data-ui="store/ProductCard/span-2" className="rounded-full bg-destructive-solid px-2 py-0.5 text-[0.68rem] font-semibold text-white shadow sm:px-2.5 sm:py-1 sm:text-xs">
+            <span className={styles.soldOutBadge}>
               Sold out
             </span>
           )}
@@ -52,30 +54,30 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
 
         {hasRating && (
           <div
-            data-ui="store/ProductCard/div-rating-badge"
-            className="pointer-events-none absolute bottom-2 left-2 inline-flex max-w-[calc(100%-3.25rem)] items-center gap-1 truncate rounded-full bg-background/92 px-2 py-0.5 text-[0.68rem] font-semibold text-foreground shadow-sm ring-1 ring-border/60 backdrop-blur-md tabular-nums sm:bottom-3 sm:left-3 sm:max-w-[calc(100%-4rem)] sm:px-2.5 sm:py-1 sm:text-xs"
+
+            className={styles.ratingPill}
             aria-label={ratingLabel}
           >
             <span>{ratingAvg.toFixed(1)}</span>
-            <StarIcon className="size-3 fill-amber-400 text-amber-400" aria-hidden />
-            <span className="text-muted-foreground/50" aria-hidden>|</span>
-            <span className="font-medium text-muted-foreground">{reviewCount}</span>
+            <StarIcon className={styles.pillStar} aria-hidden />
+            <span className={styles.pillDivider} aria-hidden>|</span>
+            <span className={styles.pillCount}>{reviewCount}</span>
           </div>
         )}
 
-        <WishlistButton productId={product.id} productName={product.name} className="absolute top-2 right-2 max-sm:size-8 sm:top-3 sm:right-3" />
+        <WishlistButton productId={product.id} productName={product.name} className={styles.cardWishlistPos} />
 
         {soldOut ? (
-          <button data-ui="store/ProductCard/button-add-disabled"
+          <button
             type="button"
             disabled
             aria-label={`${product.name} is sold out`}
-            className="absolute right-2 bottom-2 grid size-8.5 cursor-not-allowed place-items-center rounded-full bg-muted text-muted-foreground shadow sm:right-3 sm:bottom-3 sm:size-10"
+            className={styles.quickAddDisabled}
           >
-            <PlusIcon className="size-4 sm:size-5" />
+            <PlusIcon className={styles.plusIcon} />
           </button>
         ) : (
-          <button data-ui="store/ProductCard/button-grid"
+          <button
             type="button"
             onClick={() => {
               add({
@@ -88,50 +90,46 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
               })
             }}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute right-2 bottom-2 grid size-8.5 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-200 active:scale-90 hover:scale-110 focus-visible:translate-y-0 focus-visible:opacity-100 sm:right-3 sm:bottom-3 sm:size-10 md:pointer-fine:translate-y-2 md:pointer-fine:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
+            className={styles.quickAddBtn}
           >
-            <PlusIcon className="size-4 sm:size-5" />
+            <PlusIcon className={styles.plusIcon} />
           </button>
         )}
       </div>
 
-      <div data-ui="store/ProductCard/div-flex-2" className="mt-2 flex flex-col gap-0.5 px-0.5 sm:mt-3 sm:gap-1">
+      <div className={styles.cardBody}>
         {product.category && (
-          <span data-ui="store/ProductCard/span-3" className="truncate text-[0.65rem] font-medium tracking-wide text-muted-foreground uppercase sm:text-xs">
+          <span className={styles.categoryName}>
             {product.category.name}
           </span>
         )}
-        <h3 data-ui="store/ProductCard/h3" className="font-sans text-[0.85rem] leading-snug font-semibold sm:text-[0.95rem]">
-          <Link data-ui="store/ProductCard/Link" href={`/products/${product.slug}`} prefetch={true} className="line-clamp-2 hover:text-primary">
+        <h3 className={styles.productTitle}>
+          <Link href={`/products/${product.slug}`} prefetch={true} className={styles.titleLink}>
             {product.name}
           </Link>
         </h3>
         {hasRating && (
           <div
-            data-ui="store/ProductCard/div-stars"
-            className="flex items-center gap-1 pt-0.5 text-xs tabular-nums"
+
+            className={styles.ratingRow}
             aria-label={ratingLabel}
           >
-            <span className="inline-flex items-center gap-0.5" aria-hidden>
+            <span className={styles.starsList} aria-hidden>
               {[1, 2, 3, 4, 5].map((star) => (
                 <StarIcon
                   key={star}
-                  className={
-                    star <= Math.round(ratingAvg)
-                      ? "size-3 fill-amber-400 text-amber-400 sm:size-3.5"
-                      : "size-3 fill-muted text-muted-foreground/30 sm:size-3.5"
-                  }
+                  className={star <= Math.round(ratingAvg) ? styles.starFilled : styles.starEmpty}
                 />
               ))}
             </span>
-            <span className="text-[0.72rem] font-semibold text-foreground sm:text-xs">{ratingAvg.toFixed(1)}</span>
-            <span className="text-[0.7rem] text-muted-foreground sm:text-xs">({reviewCount})</span>
+            <span className={styles.ratingScore}>{ratingAvg.toFixed(1)}</span>
+            <span className={styles.ratingTotal}>({reviewCount})</span>
           </div>
         )}
-        <div data-ui="store/ProductCard/div-flex-3" className="flex items-baseline gap-1.5 pt-0.5 tabular-nums sm:gap-2">
-          <span data-ui="store/ProductCard/span-4" className="text-sm font-bold sm:text-base">{formatPrice(product.price)}</span>
+        <div className={styles.priceRow}>
+          <span className={styles.currentPrice}>{formatPrice(product.price)}</span>
           {product.compareAtPrice && (
-            <span data-ui="store/ProductCard/span-5" className="text-xs text-muted-foreground line-through sm:text-sm">
+            <span className={styles.comparePrice}>
               {formatPrice(product.compareAtPrice)}
             </span>
           )}

@@ -24,6 +24,7 @@ import { buildStatusUpdateMessage, whatsappLink } from "@/features/orders/whatsa
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-orders.module.css"
 
 type Values = {
   status: OrderStatus
@@ -194,36 +195,36 @@ export function OrderStatusControl({
   }
 
   return (
-    <div data-ui="admin/OrderStatusControl" className="space-y-4">
+    <div className={styles.statusControlRoot}>
     {/* Delivered: the status dropdown manages the return steps (outside the form: it has its own dialogs). */}
     {status === "delivered" && returnControl}
-    <form data-ui="admin/OrderStatusControl/form" onSubmit={onSubmit} noValidate className="min-w-0 max-w-full space-y-4">
+    <form onSubmit={onSubmit} noValidate className={styles.statusForm}>
       {locked ? (
-        <div data-ui="admin/OrderStatusControl/div" className="min-w-0 max-w-full space-y-3">
+        <div className={styles.lockedBlock}>
           {!(status === "delivered" && returnControl) && (
-            <p data-ui="admin/OrderStatusControl/p-flex" role="note" className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium">
-              <LockIcon className="size-4 shrink-0" aria-hidden /> {note}
+            <p role="note" className={styles.lockedBanner}>
+              <LockIcon className={styles.iconMd} aria-hidden /> {note}
             </p>
           )}
           {/* Courier details are not repeated here: the progress timeline shows them under "Shipped". */}
-          <p data-ui="admin/OrderStatusControl/p" className="text-xs text-muted-foreground">
+          <p className={styles.lockedSub}>
             Delivered order details stay locked. You can still add a private note and manage the return from the status above.
           </p>
         </div>
       ) : (
-        <div data-ui="admin/OrderStatusControl/div-2" className="space-y-2">
+        <div className={styles.selectBlock}>
           <FormSelectField control={form.control} name="status" label="Order status" fieldSize="md" options={statusOptions} noErrorSpace />
           {value === status && primaryNextStep && (
-            <div data-ui="admin/OrderStatusControl/div-flex" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
-              <span data-ui="admin/OrderStatusControl/span-flex" className="flex items-center gap-1.5 text-emerald-950 dark:text-emerald-200">
-                <ArrowRightIcon className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                <span data-ui="admin/OrderStatusControl/span">Next step:</span>
-                <strong data-ui="admin/OrderStatusControl/strong" className="font-semibold">{STATUS_META[primaryNextStep].label}</strong>
+            <div className={styles.nextStepBanner}>
+              <span className={styles.nextStepLabel}>
+                <ArrowRightIcon className={styles.nextStepIcon} aria-hidden />
+                <span>Next step:</span>
+                <strong className={styles.nextStepStrong}>{STATUS_META[primaryNextStep].label}</strong>
               </span>
-              <button data-ui="admin/OrderStatusControl/button-select"
+              <button
                 type="button"
                 onClick={() => form.setValue("status", primaryNextStep, { shouldDirty: true })}
-                className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
+                className={styles.nextStepQuickBtn}
               >
                 Select {STATUS_META[primaryNextStep].label} →
               </button>
@@ -233,54 +234,54 @@ export function OrderStatusControl({
       )}
 
       {!locked && showShipping && (
-        <div data-ui="admin/OrderStatusControl/div-flex-2" className="flex items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/50 p-3 text-sm dark:border-violet-900/50 dark:bg-violet-950/20">
-          <p data-ui="admin/OrderStatusControl/p-2" className="min-w-0 wrap-anywhere">
+        <div className={styles.shippingBox}>
+          <p className={styles.shippingText}>
             {carrier?.trim() ? (
               <>
-                <span data-ui="admin/OrderStatusControl/span-2" className="text-muted-foreground">Courier: </span>
-                <span data-ui="admin/OrderStatusControl/span-3" className="font-medium">{carrier.trim()}</span>
-                {trackingNumber?.trim() ? <span data-ui="admin/OrderStatusControl/span-4" className="font-mono"> · {trackingNumber.trim()}</span> : null}
+                <span className={styles.shippingMuted}>Courier: </span>
+                <span className={styles.shippingCarrier}>{carrier.trim()}</span>
+                {trackingNumber?.trim() ? <span className={styles.shippingTracking}> · {trackingNumber.trim()}</span> : null}
               </>
             ) : (
               "Courier details are needed to mark this order as shipped."
             )}
           </p>
-          <Button data-ui="admin/OrderStatusControl/Button" type="button" variant="outline" size="sm" onClick={() => setCourierOpen(true)} className="shrink-0 rounded-full">
+          <Button type="button" variant="outline" size="sm" onClick={() => setCourierOpen(true)} className={styles.shippingEditBtn}>
             {carrier?.trim() ? "Edit" : "Add details"}
           </Button>
         </div>
       )}
 
       {!locked && isRevertTransition(status, value) && (
-        <p data-ui="admin/OrderStatusControl/p-flex-2" className="flex items-center gap-2 rounded-xl border border-amber-300/80 bg-amber-50/70 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
-          <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-          <span data-ui="admin/OrderStatusControl/span-5">Moves this order one step back ({STATUS_META[status].label} → {STATUS_META[value].label}). Requires a reason in the next popup.</span>
+        <p className={styles.revertWarnBanner}>
+          <RotateCcwIcon className={styles.revertWarnIcon} aria-hidden />
+          <span>Moves this order one step back ({STATUS_META[status].label} → {STATUS_META[value].label}). Requires a reason in the next popup.</span>
         </p>
       )}
 
       {!locked && (
         <Button
-          data-ui="admin/OrderStatusControl/Button-2"
+
           type="submit"
           variant={isRevertTransition(status, value) ? "outline" : "default"}
           disabled={!hasStatusChanges || pending}
           className={
             isRevertTransition(status, value)
-              ? "w-full gap-1.5 rounded-full border-amber-400 bg-amber-500/15 font-semibold text-amber-950 hover:bg-amber-500/25 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-900/50"
-              : "w-full rounded-full"
+              ? styles.revertSubmitBtn
+              : styles.pillBtnFull
           }
         >
-          {pending ? <Loader2Icon className="animate-spin" /> : isRevertTransition(status, value) ? <RotateCcwIcon className="size-4" /> : null}
+          {pending ? <Loader2Icon className={styles.spinIcon} /> : isRevertTransition(status, value) ? <RotateCcwIcon className={styles.iconMd} /> : null}
           {isRevertTransition(status, value) ? `Revert to ${STATUS_META[value].label}` : "Update status"}
         </Button>
       )}
-      <a data-ui="admin/OrderStatusControl/a-send"
+      <a
         href={notifyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex h-9 items-center justify-center gap-2 rounded-full bg-whatsapp-solid text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        className={styles.whatsappSendBtn}
       >
-        <WhatsAppIcon className="size-4" /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
+        <WhatsAppIcon className={styles.iconMd} /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
       </a>
     </form>
     <ConfirmDialog
@@ -408,12 +409,12 @@ export function RevertOrderStatusDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent data-ui="admin/RevertOrderStatusDialog/DialogContent" className="sm:max-w-md">
+      <DialogContent className={styles.dialogSmMax}>
         <DialogHeader>
           <DialogTitle>Revert order {orderCode} to {STATUS_META[to].label}?</DialogTitle>
           <DialogDescription>{descriptionText}</DialogDescription>
         </DialogHeader>
-        <DialogBody className="space-y-3">
+        <DialogBody className={styles.dialogBodyStack3}>
           <TextAreaField
             label="Reason for reverting (private admin note)"
             required
@@ -437,11 +438,11 @@ export function RevertOrderStatusDialog({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="admin/RevertOrderStatusDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleClose(false)} className="gap-1.5 rounded-full">
-            <XIcon className="size-4" /> Cancel
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleClose(false)} className={styles.pillBtnGap}>
+            <XIcon className={styles.iconMd} /> Cancel
           </Button>
-          <Button data-ui="admin/RevertOrderStatusDialog/Button-revert-to" type="button" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <RotateCcwIcon className="size-4" />} Revert to {STATUS_META[to].label}
+          <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtnGap}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <RotateCcwIcon className={styles.iconMd} />} Revert to {STATUS_META[to].label}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -502,12 +503,12 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
-        data-ui="admin/AdminCancelOrder/DialogTrigger-inline-flex"
-        className="inline-flex h-9 w-full items-center justify-center rounded-full border border-destructive/40 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+
+        className={styles.cancelTriggerBtn}
       >
         Cancel order
       </DialogTrigger>
-      <DialogContent data-ui="admin/AdminCancelOrder/DialogContent" className="sm:max-w-md">
+      <DialogContent className={styles.dialogSmMax}>
         <DialogHeader>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
@@ -515,7 +516,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
             {paidOrSent ? "A payment was received, so remember to refund it and mark the payment as Refunded." : "No payment was received."}
           </DialogDescription>
         </DialogHeader>
-        <DialogBody className="space-y-2">
+        <DialogBody className={styles.dialogBodyStack2}>
           <SelectField
             label="Reason *"
             placeholder="Select a reason"
@@ -547,11 +548,11 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
           />
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="admin/AdminCancelOrder/Button-keep-order" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <CheckIcon className="size-4" /> Keep order
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtnGap}>
+            <CheckIcon className={styles.iconMd} /> Keep order
           </Button>
-          <Button data-ui="admin/AdminCancelOrder/Button-cancel-order" type="button" variant="destructive" onClick={submit} disabled={pending} className="gap-1.5 rounded-full">
-            {pending ? <Loader2Icon className="animate-spin" /> : <BanIcon className="size-4" />} Cancel order
+          <Button type="button" variant="destructive" onClick={submit} disabled={pending} className={styles.pillBtnGap}>
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <BanIcon className={styles.iconMd} />} Cancel order
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -600,10 +601,10 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
   const unchanged = value.trim() === editableNote
 
   return (
-    <div data-ui="admin/AdminNoteForm" className="space-y-4">
+    <div className={styles.noteFormRoot}>
       <form
-        data-ui="admin/AdminNoteForm/form"
-        className="space-y-2"
+
+        className={styles.noteForm}
         onSubmit={(e) => {
           e.preventDefault()
           if (unchanged) return
@@ -624,33 +625,33 @@ export function AdminNoteForm({ orderId, note }: { orderId: string; note: string
           onChange={(e) => setValue(e.target.value)}
           placeholder="Payment received via UPI, packing notes…"
         />
-        <Button data-ui="admin/AdminNoteForm/Button-save-note" type="submit" variant="outline" size="sm" disabled={pending || unchanged} className="rounded-full">
-          {pending && <Loader2Icon className="animate-spin" />} Save note
+        <Button type="submit" variant="outline" size="sm" disabled={pending || unchanged} className={styles.pillBtn}>
+          {pending && <Loader2Icon className={styles.spinIcon} />} Save note
         </Button>
       </form>
 
       {auditEntries.length > 0 && (
-        <div data-ui="admin/AdminNoteForm/div" className="space-y-2 border-t pt-3">
-          <div data-ui="admin/AdminNoteForm/div-flex" className="flex items-center justify-between gap-2 text-xs font-semibold text-muted-foreground">
-            <span data-ui="admin/AdminNoteForm/span-flex" className="flex items-center gap-1.5">
-              <RotateCcwIcon className="size-3.5 text-amber-600 dark:text-amber-400" aria-hidden />
+        <div className={styles.auditSection}>
+          <div className={styles.auditHeader}>
+            <span className={styles.auditTitle}>
+              <RotateCcwIcon className={styles.auditIcon} aria-hidden />
               Status revert log
             </span>
-            <span data-ui="admin/AdminNoteForm/span-inline-flex" className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium">
-              <LockIcon className="size-2.5" aria-hidden /> Locked
+            <span className={styles.lockedPill}>
+              <LockIcon className={styles.icon2xs} aria-hidden /> Locked
             </span>
           </div>
-          <ul data-ui="admin/AdminNoteForm/ul" className="space-y-2">
+          <ul className={styles.auditList}>
             {auditEntries.map((entry, idx) => (
-              <li data-ui="admin/AdminNoteForm/li"
+              <li
                 key={`${entry.timestamp}-${idx}`}
-                className="rounded-xl border border-amber-300/60 bg-amber-50/50 p-2.5 text-xs dark:border-amber-800/50 dark:bg-amber-950/20"
+                className={styles.auditEntry}
               >
-                <div data-ui="admin/AdminNoteForm/div-flex-2" className="flex flex-wrap items-center justify-between gap-1 font-semibold text-amber-950 dark:text-amber-200">
-                  <span data-ui="admin/AdminNoteForm/span">{entry.transition}</span>
-                  <span data-ui="admin/AdminNoteForm/span-2" className="font-normal text-[11px] text-muted-foreground">{entry.timestamp}</span>
+                <div className={styles.auditEntryHeader}>
+                  <span>{entry.transition}</span>
+                  <span className={styles.auditTime}>{entry.timestamp}</span>
                 </div>
-                <p data-ui="admin/AdminNoteForm/p" className="mt-1 text-foreground/90">{entry.reason}</p>
+                <p className={styles.auditReason}>{entry.reason}</p>
               </li>
             ))}
           </ul>

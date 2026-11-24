@@ -1,0 +1,101 @@
+/* Section: Product Gallery & Thumbnails */
+.galleryLayout { display: flex; flex-direction: column-reverse; gap: 12px; }
+.galleryLayout .thumbRail { overflow-x: auto; padding: 6px; margin: -6px; scrollbar-width: none; display: flex; gap: 10px; }
+.galleryLayout .thumbRail::-webkit-scrollbar { display: none; }
+.thumbRail .thumbBtn { position: relative; aspect-ratio: 1 / 1; width: 64px; flex-shrink: 0; overflow: hidden; border-radius: 12px; border: 0; background-color: var(--muted); padding: 0; opacity: 0.7; box-shadow: 0 0 0 2px transparent; transition: opacity 150ms ease, box-shadow 150ms ease; container-type: inline-size; }
+.thumbRail .thumbBtn:hover { opacity: 1; }
+.thumbRail .thumbBtnActive { opacity: 1; box-shadow: 0 0 0 2px var(--primary); }
+.galleryLayout .mainStage { position: relative; aspect-ratio: 4 / 5; flex: 1 1 0%; overflow: hidden; border-radius: 16px; background-color: var(--muted); box-shadow: var(--store-elevation-sm); user-select: none; container-type: inline-size; }
+.mainStage .slideLayer { position: absolute; inset: 0; }
+.mainStage .navArrowPrev { position: absolute; top: 50%; left: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowPrev:hover { background-color: var(--card); }
+.mainStage .navArrowPrev:active { transform: translateY(-50%) scale(0.95); }
+.mainStage .navArrowNext { position: absolute; top: 50%; right: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowNext:hover { background-color: var(--card); }
+.mainStage .navArrowNext:active { transform: translateY(-50%) scale(0.95); }
+.arrowIcon { width: 20px; height: 20px; }
+.mainStage .photoCounterPill { pointer-events: none; position: absolute; right: 12px; bottom: 12px; z-index: 10; border-radius: 9999px; background-color: rgba(0, 0, 0, 0.62); padding: 2px 10px; font-size: 11px; font-weight: 600; color: #ffffff; font-variant-numeric: tabular-nums; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+/* Section: Product Detail Page Layout */
+.crumbsBar { margin: 0 auto; width: 100%; max-width: 1280px; padding: 12px 16px 8px 16px; }
+.detailGrid { margin: 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; display: grid; gap: 16px; }
+.detailGrid .galleryColumn { min-width: 0; }
+.detailGrid .infoColumn { min-width: 0; }
+.infoColumn .categoryEyebrow { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 1.4px; color: var(--primary); text-transform: uppercase; }
+.infoColumn .productHeading { margin: 8px 0 0 0; font-size: 30px; line-height: 36px; font-weight: 600; color: var(--foreground); }
+.infoColumn .priceHeaderRow { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+.priceHeaderRow .mainPriceText { font-family: var(--font-heading); font-size: 30px; line-height: 36px; font-weight: 600; color: var(--foreground); }
+.priceHeaderRow .comparePriceText { font-size: 18px; color: var(--muted-foreground); text-decoration: line-through; }
+.priceHeaderRow .saveBadge { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 4px 12px; font-size: 14px; font-weight: 600; color: var(--primary); }
+.priceHeaderRow .reviewsAnchorPill { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.priceHeaderRow .reviewsAnchorPill:hover { transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.reviewsAnchorPill .starGoldIcon { width: 14px; height: 14px; fill: #FFB020; color: #FFB020; }
+.reviewsAnchorPill .ratingScoreText { font-variant-numeric: tabular-nums; }
+.reviewsAnchorPill .ratingCountText { color: var(--muted-foreground); }
+.infoColumn .taxNoteText { margin: 4px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
+.infoColumn .summaryText { margin: 12px 0 0 0; line-height: 26px; color: var(--muted-foreground); }
+.infoColumn .highlightsList { margin: 16px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.highlightsList .highlightItem { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--foreground); }
+.highlightItem .checkIcon { margin-top: 2px; width: 18px; height: 18px; flex-shrink: 0; color: var(--success); }
+.infoColumn .surchargesBox { margin-top: 16px; border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.35); background-color: rgba(255, 251, 235, 0.75); padding: 16px; font-size: 14px; }
+:global(.dark) .infoColumn .surchargesBox { border-color: rgba(120, 53, 15, 0.55); background-color: rgba(69, 26, 3, 0.25); }
+.surchargesBox .surchargeHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.surchargeHeading .infoIcon { width: 16px; height: 16px; }
+.surchargesBox .surchargeList { margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.surchargeList .surchargeLabel { font-weight: 500; }
+.surchargeList .surchargeReason { display: block; color: var(--muted-foreground); }
+.surchargesBox .surchargeFooterNote { margin: 8px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
+.infoColumn .actionsMount { margin-top: 20px; }
+.infoColumn .perksCard { margin: 16px 0 0 0; padding: 0 16px; list-style: none; border-radius: 18px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); font-size: 14px; }
+.perksCard .perkRow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.perksCard .perkRow:last-child { border-bottom: 0; }
+.perkRow .perkIconCircle { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: var(--secondary); color: var(--primary); }
+.perkIconCircle .perkIcon { width: 16px; height: 16px; }
+.infoColumn .aboutSection { margin-top: 28px; border: 0; padding-top: 8px; }
+.aboutSection .subHeading { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.aboutSection .readMoreWrap { margin-top: 12px; }
+.readMoreWrap .descriptionProse { line-height: 26px; white-space: pre-line; color: var(--muted-foreground); }
+.infoColumn .specsSection { margin-top: 24px; }
+.specsSection .subHeading { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.specsSection .specsCard { margin: 12px 0 0 0; border-radius: 18px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 16px; }
+.specsCard .specRow { display: grid; grid-template-columns: 112px 1fr; gap: 16px; padding: 12px 0; font-size: 14px; border-bottom: 1px solid var(--border); }
+.specsCard .specRow:last-child { border-bottom: 0; }
+.specRow .specTerm { color: var(--muted-foreground); }
+.specRow .specValue { margin: 0; font-weight: 500; color: var(--foreground); }
+.infoColumn .accordionMount { margin-top: 24px; }
+.relatedSection { margin: 36px auto 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .thumbRail .thumbBtn { width: 80px; }
+  .galleryLayout .mainStage { border-radius: 24px; }
+  .mainStage .navArrowPrev { width: 40px; height: 40px; }
+  .mainStage .navArrowNext { width: 40px; height: 40px; }
+  .crumbsBar { padding: 24px 24px 16px 24px; }
+  .detailGrid { padding: 0 24px; gap: 32px; }
+  .infoColumn .productHeading { font-size: 38px; line-height: 44px; }
+  .infoColumn .priceHeaderRow { margin-top: 20px; }
+  .infoColumn .summaryText { margin-top: 20px; }
+  .infoColumn .highlightsList { margin-top: 20px; gap: 10px; }
+  .infoColumn .surchargesBox { margin-top: 20px; }
+  .infoColumn .actionsMount { margin-top: 32px; }
+  .infoColumn .perksCard { margin-top: 24px; }
+  .perksCard .perkRow { padding: 12px 0; }
+  .infoColumn .aboutSection { margin-top: 40px; padding-top: 32px; }
+  .aboutSection .subHeading { font-size: 24px; line-height: 30px; }
+  .infoColumn .specsSection { margin-top: 32px; }
+  .specsSection .subHeading { font-size: 24px; line-height: 30px; }
+  .specsSection .specsCard { padding: 0 20px; }
+  .specsCard .specRow { grid-template-columns: 144px 1fr; }
+  .infoColumn .accordionMount { margin-top: 32px; }
+  .relatedSection { margin-top: 48px; padding: 0 24px; }
+}
+@media (min-width: 768px) {
+  .galleryLayout { flex-direction: row; }
+  .galleryLayout .thumbRail { width: 92px; flex-direction: column; gap: 12px; }
+}
+@media (min-width: 1024px) {
+  .crumbsBar { padding: 24px 32px 16px 32px; }
+  .detailGrid { padding: 0 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: flex-start; gap: 64px; }
+  .detailGrid .galleryColumn { position: sticky; top: calc(var(--store-header-h) + 20px); }
+  .infoColumn .productHeading { font-size: 46px; line-height: 52px; }
+  .relatedSection { padding: 0 32px; }
+}

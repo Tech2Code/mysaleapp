@@ -38,6 +38,7 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 import { useAuth } from "@/store/auth"
+import styles from "./order-status.module.css"
 
 const formSchema = z.object({ reference: paymentReferenceSchema })
 type FormValues = z.input<typeof formSchema>
@@ -59,11 +60,11 @@ type PaymentPanelProps = {
 
 function CopyRow({ label, value }: { label: string; value: string }) {
   return (
-    <div data-ui="store/CopyRow" className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-3 py-2 text-sm">
-      <span data-ui="store/CopyRow/span" className="text-muted-foreground">{label}</span>
-      <span data-ui="store/CopyRow/span-flex" className="flex min-w-0 items-center gap-1 font-mono font-semibold">
-        <span data-ui="store/CopyRow/span-2" className="truncate">{value}</span>
-        <button data-ui="store/CopyRow/button-grid"
+    <div className={styles.copyRowBox}>
+      <span className={styles.copyRowLabel}>{label}</span>
+      <span className={styles.copyRowValWrap}>
+        <span className={styles.copyRowValText}>{value}</span>
+        <button
           type="button"
           aria-label={`Copy ${label}`}
           onClick={async () => {
@@ -74,9 +75,9 @@ function CopyRow({ label, value }: { label: string; value: string }) {
               toast.error("Couldn't copy. Please select and copy it.")
             }
           }}
-          className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
+          className={styles.copyRowIconBtn}
         >
-          <CopyIcon className="size-3.5" />
+          <CopyIcon className={styles.copyMiniSvg} />
         </button>
       </span>
     </div>
@@ -131,7 +132,7 @@ function ReferenceForm({
   })
 
   return (
-    <form data-ui="store/ReferenceForm" onSubmit={onSubmit} noValidate className="space-y-1">
+    <form onSubmit={onSubmit} noValidate className={styles.refFormStack}>
       <TextField
         label="UTR / UPI reference number" kind="paymentRef"
         required
@@ -142,8 +143,8 @@ function ReferenceForm({
         error={form.formState.errors.reference?.message ?? (Boolean(prevClean) && refClean === prevClean ? "This is already your submitted reference number" : undefined)}
         {...form.register("reference")}
       />
-      <Button data-ui="store/ReferenceForm/Button" type="submit" size="lg" disabled={pending || isUnchangedOrEmpty} className="w-full rounded-full">
-        {pending && <Loader2Icon className="animate-spin" />} {submitLabel}
+      <Button type="submit" size="lg" disabled={pending || isUnchangedOrEmpty} className={styles.refSubmitBtn}>
+        {pending && <Loader2Icon className={styles.spinIcon} />} {submitLabel}
       </Button>
     </form>
   )
@@ -171,35 +172,35 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   // ---- Paid: receipt ------------------------------------------------------
   if (payment.paymentStatus === "paid") {
     return (
-      <section data-ui="store/PaymentPanel" aria-label="Payment" className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <h3 data-ui="store/PaymentPanel/h3-payment-received" className="flex items-center gap-2 font-sans text-base font-semibold text-emerald-900 dark:text-emerald-200">
-          <BadgeCheckIcon className="size-5" /> Payment received
+      <section aria-label="Payment" className={styles.paidReceiptBox}>
+        <h3 className={styles.paidHeading}>
+          <BadgeCheckIcon className={styles.badgeIcon} /> Payment received
         </h3>
-        <dl data-ui="store/PaymentPanel/dl" className="mt-3 space-y-1.5 text-sm">
-          <div data-ui="store/PaymentPanel/div-flex" className="flex justify-between gap-4">
-            <dt data-ui="store/PaymentPanel/dt" className="text-muted-foreground">Amount</dt>
-            <dd data-ui="store/PaymentPanel/dd" className="font-semibold">{formatPrice(payment.paymentAmount ?? total)}</dd>
+        <dl className={styles.receiptDl}>
+          <div className={styles.receiptRow}>
+            <dt className={styles.receiptTerm}>Amount</dt>
+            <dd className={styles.receiptValBold}>{formatPrice(payment.paymentAmount ?? total)}</dd>
           </div>
           {payment.paymentMethod && (
-            <div data-ui="store/PaymentPanel/div-flex-2" className="flex justify-between gap-4">
-              <dt data-ui="store/PaymentPanel/dt-2" className="text-muted-foreground">Method</dt>
-              <dd data-ui="store/PaymentPanel/dd-2" className="font-medium">{PAYMENT_METHOD_LABEL[payment.paymentMethod]}</dd>
+            <div className={styles.receiptRow}>
+              <dt className={styles.receiptTerm}>Method</dt>
+              <dd className={styles.receiptValMed}>{PAYMENT_METHOD_LABEL[payment.paymentMethod]}</dd>
             </div>
           )}
           {payment.paymentReference && (
-            <div data-ui="store/PaymentPanel/div-flex-3" className="flex justify-between gap-4">
-              <dt data-ui="store/PaymentPanel/dt-3" className="text-muted-foreground">Reference</dt>
-              <dd data-ui="store/PaymentPanel/dd-3" className="min-w-0 text-right font-medium"><CopyableReference value={payment.paymentReference} /></dd>
+            <div className={styles.receiptRow}>
+              <dt className={styles.receiptTerm}>Reference</dt>
+              <dd className={styles.receiptValMed}><CopyableReference value={payment.paymentReference} /></dd>
             </div>
           )}
           {payment.paymentPaidAt && (
-            <div data-ui="store/PaymentPanel/div-flex-4" className="flex justify-between gap-4">
-              <dt data-ui="store/PaymentPanel/dt-4" className="text-muted-foreground">Date</dt>
-              <dd data-ui="store/PaymentPanel/dd-4" className="font-medium">{formatDateTime(payment.paymentPaidAt)}</dd>
+            <div className={styles.receiptRow}>
+              <dt className={styles.receiptTerm}>Date</dt>
+              <dd className={styles.receiptValMed}>{formatDateTime(payment.paymentPaidAt)}</dd>
             </div>
           )}
         </dl>
-        {payment.paymentNote && <p data-ui="store/PaymentPanel/p" className="mt-3 text-sm text-muted-foreground">{payment.paymentNote}</p>}
+        {payment.paymentNote && <p className={styles.paymentNoteText}>{payment.paymentNote}</p>}
       </section>
     )
   }
@@ -207,19 +208,19 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   // ---- Submitted: waiting for the shop to verify ---------------------------
   if (payment.paymentStatus === "submitted" && !changing) {
     return (
-      <section data-ui="store/PaymentPanel" aria-label="Payment" className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
-        <h3 data-ui="store/PaymentPanel/h3-we-apos-re-verifying-y" className="flex items-center gap-2 font-sans text-base font-semibold text-amber-900 dark:text-amber-200">
-          <HourglassIcon className="size-5 animate-pulse" /> We&apos;re verifying your payment
+      <section aria-label="Payment" className={styles.verifyingBox}>
+        <h3 className={styles.verifyingHeading}>
+          <HourglassIcon className={styles.hourglassIcon} /> We&apos;re verifying your payment
         </h3>
-        <p data-ui="store/PaymentPanel/p-2" className="mt-2 text-sm text-muted-foreground">
-          Reference <CopyableReference value={payment.paymentReference ?? ""} className="font-semibold text-foreground" />
+        <p className={styles.verifyingSub}>
+          Reference <CopyableReference value={payment.paymentReference ?? ""} className={styles.refHighlight} />
           {payment.paymentSubmittedAt && <> · sent {formatDateTime(payment.paymentSubmittedAt)}</>}. Your order is
           confirmed as soon as we see the payment, usually within a few hours.
         </p>
-        <button data-ui="store/PaymentPanel/button-entered-the-wrong-refe"
+        <button
           type="button"
           onClick={() => setChanging(true)}
-          className="mt-3 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          className={styles.changeRefBtn}
         >
           Entered the wrong reference? Change it
         </button>
@@ -235,12 +236,12 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const deadline = expiryHours > 0 ? { exact: at ? formatDeadline(at) : null, within: describeHours(expiryHours) } : null
 
   return (
-    <section data-ui="store/PaymentPanel" aria-label="Pay for your order" className="space-y-5 rounded-2xl border-2 border-primary/30 bg-card p-5 shadow-sm sm:p-6">
-      <div data-ui="store/PaymentPanel/div">
-        <h3 data-ui="store/PaymentPanel/h3" className="font-heading text-xl font-semibold">
+    <section aria-label="Pay for your order" className={styles.payNowPanel}>
+      <div>
+        <h3 className={styles.payPanelTitle}>
           {rejected ? `Update payment reference (${formatPrice(total)})` : changing ? `Change payment reference (${formatPrice(total)})` : `Pay ${formatPrice(total)} to confirm your order`}
         </h3>
-        <p data-ui="store/PaymentPanel/p-3" className="mt-1 text-sm text-muted-foreground">
+        <p className={styles.payPanelSub}>
           {rejected
             ? "Enter the correct 12-digit UPI reference number (UTR) below, or pay by UPI and enter the new UTR."
             : changing
@@ -248,16 +249,16 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
               : "Cash on delivery isn't available. Pay by UPI now, then enter the reference number below."}
         </p>
         {deadline && !changing && (
-          <p data-ui="store/PaymentPanel/p-flex" className="mt-2 flex items-start gap-2 rounded-xl bg-amber-100 p-3 text-xs/snug  text-amber-950 dark:bg-amber-900/30 dark:text-amber-100">
-            <ClockIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span data-ui="store/PaymentPanel/span">
+          <p className={styles.deadlineNotice}>
+            <ClockIcon className={styles.clockIcon} aria-hidden />
+            <span>
               {deadline.exact ? (
                 <>
-                  Please submit a valid UTR by <span data-ui="store/PaymentPanel/span-2" className="font-semibold">{deadline.exact}</span>. If we can&apos;t verify the payment by then, this order is cancelled automatically and the items go back on sale.
+                  Please submit a valid UTR by <span className={styles.deadlineStrong}>{deadline.exact}</span>. If we can&apos;t verify the payment by then, this order is cancelled automatically and the items go back on sale.
                 </>
               ) : (
                 <>
-                  Please submit a valid UTR within <span data-ui="store/PaymentPanel/span-3" className="font-semibold">{deadline.within}</span>. If we can&apos;t verify the payment after that, this order is cancelled automatically and the items go back on sale.
+                  Please submit a valid UTR within <span className={styles.deadlineStrong}>{deadline.within}</span>. If we can&apos;t verify the payment after that, this order is cancelled automatically and the items go back on sale.
                 </>
               )}
             </span>
@@ -266,70 +267,69 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
       </div>
 
       {rejected && (
-        <p data-ui="store/PaymentPanel/p-flex-2" role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
-          <span data-ui="store/PaymentPanel/span-4">
-            <span data-ui="store/PaymentPanel/span-5" className="font-semibold">We couldn&apos;t verify your last payment.</span>{" "}
+        <p role="alert" className={styles.rejectedAlert}>
+          <AlertCircleIcon className={styles.alertCircleIcon} />
+          <span>
+            <span className={styles.rejectedStrong}>We couldn&apos;t verify your last payment.</span>{" "}
             {payment.paymentNote ?? "Please check the reference number and submit it again."}
           </span>
         </p>
       )}
 
       {upiUrl && upiId ? (
-        <div data-ui="store/PaymentPanel/div-2" className="space-y-4">
-          <p data-ui="store/PaymentPanel/p-flex-3" className="flex items-center gap-2 text-sm font-semibold">
-            <span data-ui="store/PaymentPanel/span-grid" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">1</span>
+        <div className={styles.upiStepStack}>
+          <p className={styles.stepLabelRow}>
+            <span className={styles.stepNumCircle}>1</span>
             Pay with any UPI app
           </p>
 
           {/* On a phone: open the UPI app or toggle QR code. On desktop: scan the QR with your phone. */}
-          <a data-ui="store/PaymentPanel/a-pay"
+          <a
             href={upiUrl}
-            className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 md:hidden"
+            className={styles.upiAppBtn}
           >
-            <SmartphoneIcon className="size-5" /> Pay {formatPrice(total)} with UPI app
+            <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(total)} with UPI app
           </a>
           <button
-            data-ui="store/PaymentPanel/button-flex"
+
             type="button"
             onClick={() => setShowMobileQr((v) => !v)}
             aria-expanded={showMobileQr}
-            className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/80 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 md:hidden"
+            className={styles.toggleQrBtn}
           >
-            <QrCodeIcon className="size-4 text-primary" />
+            <QrCodeIcon className={styles.qrSvg} />
             {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
           </button>
           <div
-            data-ui="store/PaymentPanel/div-3"
-            className={cn(
-              "items-center gap-4 rounded-2xl border bg-white p-4 md:flex",
-              showMobileQr ? "flex" : "hidden",
-            )}
+
+            className={cn(styles.qrCardBox, showMobileQr && styles.qrCardVisible)}
           >
-            <QRCodeSVG value={upiUrl} size={132} marginSize={1} title={`UPI QR code to pay ${formatPrice(total)}`} />
-            <div data-ui="store/PaymentPanel/div-4" className="text-sm text-neutral-700">
-              <p data-ui="store/PaymentPanel/p-flex-4" className="flex items-center gap-2 font-semibold text-neutral-900">
-                <QrCodeIcon className="size-4" /> Scan with any UPI app
+            <div className={styles.qrWhitePad}>
+              <QRCodeSVG value={upiUrl} size={132} marginSize={1} title={`UPI QR code to pay ${formatPrice(total)}`} />
+            </div>
+            <div className={styles.qrTextCol}>
+              <p className={styles.qrTitleRow}>
+                <QrCodeIcon className={styles.qrIcon} /> Scan with any UPI app
               </p>
-              <p data-ui="store/PaymentPanel/p-4" className="mt-1">Amount {formatPrice(total)} is filled in for you.</p>
+              <p className={styles.qrSubNote}>Amount {formatPrice(total)} is filled in for you.</p>
             </div>
           </div>
 
-          <div data-ui="store/PaymentPanel/div-5" className="space-y-2">
+          <div className={styles.copyRowsStack}>
             <CopyRow label="UPI ID" value={upiId} />
             {upiPayeeName && <CopyRow label="Name" value={upiPayeeName} />}
             <CopyRow label="Amount" value={total.toFixed(2)} />
           </div>
         </div>
       ) : (
-        <p data-ui="store/PaymentPanel/p-5" className="rounded-xl bg-muted p-4 text-sm">
+        <p className={styles.noUpiFallback}>
           Payment details aren&apos;t set up on the website yet. Please message us on WhatsApp and we&apos;ll share them.
         </p>
       )}
 
-      <div data-ui="store/PaymentPanel/div-6" className="space-y-3">
-        <p data-ui="store/PaymentPanel/p-flex-5" className="flex items-center gap-2 text-sm font-semibold">
-          <span data-ui="store/PaymentPanel/span-grid-2" className="grid size-6 place-items-center rounded-full bg-primary text-xs text-primary-foreground">2</span>
+      <div className={styles.utrStepStack}>
+        <p className={styles.stepLabelRow}>
+          <span className={styles.stepNumCircle}>2</span>
           After paying, enter the reference number
         </p>
         <ReferenceForm
@@ -345,22 +345,22 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
       </div>
 
       {changing && (
-        <button data-ui="store/PaymentPanel/button-keep-my-earlier-refere"
+        <button
           type="button"
           onClick={() => setChanging(false)}
-          className="block text-sm font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className={styles.keepPrevRefBtn}
         >
           Keep my earlier reference
         </button>
       )}
 
-      <a data-ui="store/PaymentPanel/a-send-payment-screensho"
+      <a
         href={shopWhatsappLink(shop, `Hi! I paid for order ${orderCode}. Sending the payment screenshot.`)}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn("inline-flex items-center gap-2 text-sm font-semibold text-whatsapp hover:underline")}
+        className={styles.waScreenshotLink}
       >
-        <WhatsAppIcon className="size-4" /> Send payment screenshot on WhatsApp (optional)
+        <WhatsAppIcon className={styles.waIcon} /> Send payment screenshot on WhatsApp (optional)
       </a>
     </section>
   )

@@ -1,20 +1,32 @@
 "use client"
 
-/** Green circle with a tick that pops in and draws itself. Used inside the busy overlay's centre pill. */
+import styles from "./shared.module.css"
+
+/**
+ * Multi-stage animated emerald checkmark micro-interaction (expanding halo ring +
+ * spring-overshoot gradient badge + sequenced SVG ring sweep & checkmark stroke draw).
+ * Used inside the busy overlay's centre pill on sign-in, checkout, and account actions.
+ */
 export function SuccessTick() {
   return (
-    <span data-ui="shared/SuccessTick" aria-hidden className="tick-pop grid size-7 place-items-center rounded-full bg-success-solid">
-      <svg data-ui="shared/SuccessTick/svg" viewBox="0 0 24 24" className="size-4.5" fill="none">
-        <path
-          className="tick-draw"
-          d="M6 12.5 L10.5 17 L18 8"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          pathLength={1}
-        />
-      </svg>
+    <span aria-hidden="true" className={styles.successTickWrap}>
+      <span className={styles.successTickHalo} />
+      <span className={styles.successTickCircle}>
+        <svg viewBox="0 0 24 24" className={styles.tickSvg} fill="none">
+          <circle
+            className={styles.tickRingPath}
+            cx="12"
+            cy="12"
+            r="9.2"
+            pathLength={1}
+          />
+          <path
+            className={styles.tickCheckPath}
+            d="M7.2 12.5L10.4 15.7L16.8 8.7"
+            pathLength={1}
+          />
+        </svg>
+      </span>
     </span>
   )
 }

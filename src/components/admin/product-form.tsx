@@ -40,6 +40,7 @@ import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-views.module.css"
 
 function hasDirtyValue(val: unknown): boolean {
   if (val === true) return true
@@ -67,48 +68,39 @@ function Section({
 }) {
   return (
     <section
-      data-ui="admin/Section"
-      className={cn(
-        "adminCard overflow-hidden rounded-xl border transition-colors",
-        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
-      )}
+
+      className={cn("adminCard", styles.sectionCard, dirty && styles.sectionCardDirty)}
     >
-      <div data-ui="admin/Section/div"
-        className={cn(
-          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
-          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
-        )}
+      <div
+        className={cn(styles.sectionHeader, dirty && styles.sectionHeaderDirty)}
       >
-        <div data-ui="admin/Section/div-flex" className="flex min-w-0 items-start gap-3">
+        <div className={styles.sectionHeaderLeft}>
           {Icon && (
-            <span data-ui="admin/Section/span"
-              className={cn(
-                "mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl transition-colors",
-                dirty ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary"
-              )}
+            <span
+              className={cn(styles.sectionIconBox, dirty && styles.sectionIconBoxDirty)}
             >
-              <Icon className="size-4" aria-hidden />
+              <Icon className={styles.iconMd} aria-hidden />
             </span>
           )}
-          <div data-ui="admin/Section/div-2" className="min-w-0">
-            <h2 data-ui="admin/Section/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+          <div className={styles.sectionTitleGroup}>
+            <h2 className={styles.sectionTitle}>
               {title}
             </h2>
             {description && (
-              <p data-ui="admin/Section/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+              <p className={styles.sectionDesc}>
                 {description}
               </p>
             )}
           </div>
         </div>
         {dirty && (
-          <span data-ui="admin/Section/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
-            <span data-ui="admin/Section/span-2" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+          <span className={styles.editedPill}>
+            <span className={styles.editedDot} aria-hidden />
             Edited
           </span>
         )}
       </div>
-      <div data-ui="admin/Section/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+      <div className={styles.sectionBody}>
         {children}
       </div>
     </section>
@@ -268,10 +260,10 @@ function ProductFormInner({
   const previewDesc = (seoDescription as string) || (description as string)?.slice(0, 155) || "Product description…"
 
   return (
-    <form data-ui="admin/ProductFormInner" onSubmit={onSubmit} noValidate className="space-y-5">
-      <div data-ui="admin/ProductFormInner/div-grid" className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+    <form onSubmit={onSubmit} noValidate className={styles.formStack}>
+      <div className={styles.productFormGrid}>
         {/* ------------------------------------------------ main column */}
-        <div data-ui="admin/ProductFormInner/div" className="min-w-0 space-y-4 sm:space-y-5">
+        <div className={styles.formColumn}>
           <Section title="Basic details" description="Title, storefront link and product story." icon={FileTextIcon} dirty={basicDirty}>
             <TextField
               label="Product name" maxLength={LIMITS.productName.max}
@@ -286,7 +278,7 @@ function ProductFormInner({
             <TextField
               label="URL slug" kind="slug"
               fieldSize="md"
-              className="font-mono text-sm"
+              className={styles.monoInput}
               hint={`${siteConfig.url}/products/${slug || "…"}`}
               error={errors.slug?.message}
               {...form.register("slug", { onChange: () => setSlugTouched(true) })}
@@ -322,13 +314,13 @@ function ProductFormInner({
               {...form.register("highlights")}
             />
 
-            <div data-ui="admin/ProductFormInner/div-2" className="space-y-3">
-              <div data-ui="admin/ProductFormInner/div-3">
-                <p data-ui="admin/ProductFormInner/p" className="text-sm font-medium">Specifications</p>
-                <p data-ui="admin/ProductFormInner/p-2" className="text-xs text-muted-foreground">Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
+            <div className={styles.specsBlock}>
+              <div>
+                <p className={styles.specsTitle}>Specifications</p>
+                <p className={styles.specsSub}>Material, size, weight, colour… shown as a table. Up to {MAX_SPECS}.</p>
               </div>
               {specs.map((field, i) => (
-                <div data-ui="admin/ProductFormInner/div-grid-2" key={field.id} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[200px_1fr_auto]">
+                <div key={field.id} className={styles.specRow}>
                   <TextField
                     label={`Detail ${i + 1} name`} maxLength={LIMITS.specLabel.max}
                     hideLabel
@@ -343,18 +335,18 @@ function ProductFormInner({
                     hideLabel
                     fieldSize="md"
                     placeholder="e.g. Natural soy wax, glass jar"
-                    containerClassName="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto"
+                    containerClassName={styles.specValueCol}
                     error={errors.specs?.[i]?.value?.message}
                     {...form.register(`specs.${i}.value`)}
                   />
-                  <Button data-ui="admin/ProductFormInner/Button" type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
+                  <Button type="button" variant="ghost" size="icon" aria-label={`Remove detail ${i + 1}`} onClick={() => removeSpec(i)}>
                     <Trash2Icon />
                   </Button>
                 </div>
               ))}
-              {errors.specs?.message && <p data-ui="admin/ProductFormInner/p-3" className="text-xs font-medium text-destructive">{errors.specs.message}</p>}
+              {errors.specs?.message && <p className={styles.errorText}>{errors.specs.message}</p>}
               {specs.length < MAX_SPECS && (
-                <Button data-ui="admin/ProductFormInner/Button-add-a-detail" type="button" variant="outline" size="sm" className="rounded-full" onClick={() => appendSpec({ label: "", value: "" })}>
+                <Button type="button" variant="outline" size="sm" className={styles.pillBtn} onClick={() => appendSpec({ label: "", value: "" })}>
                   <PlusIcon /> Add a detail
                 </Button>
               )}
@@ -384,16 +376,16 @@ function ProductFormInner({
               name="images"
               render={({ field }) => <ImageUploader savedRef={savedRef} onUploadingChange={setUploading} value={(field.value as string[]) ?? []} onChange={(update) => field.onChange(typeof update === "function" ? update((form.getValues("images") as string[]) ?? []) : update)} />}
             />
-            {errors.images && <p data-ui="admin/ProductFormInner/p-4" className="text-xs font-medium text-destructive">{errors.images.message ?? "Invalid image"}</p>}
+            {errors.images && <p className={styles.errorText}>{errors.images.message ?? "Invalid image"}</p>}
           </Section>
 
           <Section title="Search engine listing" description="How this product appears on Google. Leave blank to auto-fill." icon={SearchIcon} dirty={seoDirty}>
-            <div data-ui="admin/ProductFormInner/div-4" className="rounded-xl border border-border/70 bg-muted/25 p-4">
-              <p data-ui="admin/ProductFormInner/p-5" className="truncate text-xs text-muted-foreground">
+            <div className={styles.seoPreviewBox}>
+              <p className={styles.seoUrl}>
                 {siteConfig.url.replace(/^https?:\/\//, "")} › products › {slug || "…"}
               </p>
-              <p data-ui="admin/ProductFormInner/p-6" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{previewTitle}</p>
-              <p data-ui="admin/ProductFormInner/p-7" className="line-clamp-2 text-sm text-muted-foreground">{previewDesc}</p>
+              <p className={styles.seoTitle}>{previewTitle}</p>
+              <p className={styles.seoDesc}>{previewDesc}</p>
             </div>
             <TextField
               label="SEO title" maxLength={LIMITS.seoTitle.max}
@@ -413,7 +405,7 @@ function ProductFormInner({
         </div>
 
         {/* ------------------------------------------------ side column (settings for this product) */}
-        <div data-ui="admin/ProductFormInner/div-5" className="min-w-0 space-y-4 sm:space-y-5">
+        <div className={styles.formColumn}>
           <Section title="Visibility" description="Control store and homepage placement." icon={EyeIcon} dirty={visibilityDirty}>
             <Controller
               control={form.control}
@@ -437,7 +429,7 @@ function ProductFormInner({
           </Section>
 
           <Section title="Pricing & stock" description="Selling price, MRP, inventory & category." icon={IndianRupeeIcon} dirty={pricingDirty}>
-            <div data-ui="admin/ProductFormInner/div-grid-3" className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className={styles.priceGrid}>
               <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
               <TextField
                 label="MRP" kind="money"
@@ -504,7 +496,7 @@ function ProductFormInner({
               error={errors.returnWindowDays?.message}
               {...form.register("returnWindowDays")}
             />
-            <p data-ui="admin/ProductFormInner/p-8" className="rounded-xl bg-secondary/70 p-3 text-xs text-muted-foreground">
+            <p className={styles.shippingNote}>
               {shippingClassVal === "oversized"
                 ? storeSettings.oversizedFee > 0
                   ? `Large / bulky handling (${formatPrice(storeSettings.oversizedFee)}) is added once per order.`

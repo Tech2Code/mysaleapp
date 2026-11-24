@@ -186,9 +186,10 @@ function AuthRouteSync() {
       const hashRaw = window.location.hash.replace(/^#/, "")
       const hashParams = new URLSearchParams(hashRaw)
 
-      // 1. If Supabase landed on a non-callback route with ?code=... or ?token_hash=..., forward to /auth/callback
+      // 1. If Supabase landed on the Site URL root with ?code=... or ?token_hash=..., forward to /auth/callback
+      // (Never intercept /order-placed?code=... or /track?code=... where `code` is an order code!)
       if (
-        pathname !== "/auth/callback" &&
+        pathname === "/" &&
         (searchParams.has("code") || searchParams.has("token_hash"))
       ) {
         window.location.replace(`/auth/callback${window.location.search}`)

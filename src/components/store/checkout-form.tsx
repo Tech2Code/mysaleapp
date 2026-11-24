@@ -42,7 +42,9 @@ import { FreeShippingBar } from "./cart-drawer"
 import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
 import { LIMITS } from "@/lib/validation"
-import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
+import { LegalQuickModal, type LegalDocTab } from "@/components/shared/cookie-banner"
+import styles from "./checkout-form.module.css"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 const EMPTY_ADDRESSES: Address[] = []
@@ -66,10 +68,10 @@ export function CheckoutForm({
   const { user, ready: authReady } = useAuth()
   const signedIn = Boolean(user) || (!authReady && (initialProfile !== null || initialAddresses.length > 0))
   const [pending, startTransition] = useTransition()
-  useBlockWhile(pending)
+  const showBusySuccess = useBusySuccess()
   const initialDefault = initialAddresses[0]
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
-  const [clientProfile, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
+  const [, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
   const initialAddressesKey = initialAddresses.map((a) => `${a.id}:${a.fullName}:${a.phone}:${a.address}:${a.city}:${a.pincode}`).join("|")
   const [prevInitialAddressesKey, setPrevInitialAddressesKey] = useState(initialAddressesKey)
@@ -80,7 +82,6 @@ export function CheckoutForm({
     }
   }
   const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? initialAddresses)
-  const activeProfile = clearedOnSignOut ? clientProfile : (clientProfile ?? initialProfile)
   /** id of the saved address in use, or "new" when typing a different one */
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
   const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
@@ -94,11 +95,21 @@ export function CheckoutForm({
   const [promoInput, setPromoInput] = useState("")
   const [appliedPromo, setAppliedPromo] = useState<ValidatedPromo | null>(null)
   const [promoError, setPromoError] = useState<string | null>(null)
+  const [legalModalOpen, setLegalModalOpen] = useState(false)
+  const [legalModalTab, setLegalModalTab] = useState<LegalDocTab>("terms")
   const [redirecting, setRedirecting] = useState(false)
+  const [frozenAvailable, setFrozenAvailable] = useState<typeof available | null>(null)
+  useBlockWhile(pending || redirecting)
   const [promoPending, startPromoTransition] = useTransition()
   const fetchedForUser = useRef<string | null>(null)
   const prevUserId = useRef<string | null>(user?.id ?? null)
   const wasSignedIn = useRef(signedIn)
+
+  useEffect(() => {
+    if (payDialogOpen) {
+      router.prefetch("/order-placed")
+    }
+  }, [payDialogOpen, router])
 
   useLayoutEffect(() => {
     return () => {
@@ -109,6 +120,7 @@ export function CheckoutForm({
       setValidatedCustomer(null)
       setPromoError(null)
       setRedirecting(false)
+      setFrozenAvailable(null)
     }
   }, [])
 
@@ -346,40 +358,18 @@ export function CheckoutForm({
           toast.error(res.error)
           return
         }
+        showBusySuccess("Order placed!")
+        setFrozenAvailable(available)
         setRedirecting(true)
-        setPayDialogOpen(false)
-        setAppliedPromo(null)
-        setPromoInput("")
-        setPromoError(null)
-        setPaymentRef("")
-        setPaymentRefError(null)
-        setValidatedCustomer(null)
-        setHasOrderNote(false)
-        const defaultAddr = addresses[0]
-        if (signedIn && defaultAddr) {
-          setSelected(defaultAddr.id)
-          form.reset({
-            name: defaultAddr.fullName,
-            phone: defaultAddr.phone,
-            address: defaultAddr.address,
-            ...splitCityState(defaultAddr.city),
-            pincode: defaultAddr.pincode,
-            note: "",
-          })
-        } else {
-          setSelected("new")
-          form.reset({
-            name: signedIn ? (activeProfile?.fullName ?? "") : "",
-            phone: signedIn ? (activeProfile?.phone ?? "") : "",
-            address: "",
-            city: "",
-            state: NO_STATE,
-            pincode: "",
-            note: "",
-          })
-        }
         try {
-          sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(res.data))
+          sessionStorage.setItem(
+            LAST_ORDER_KEY,
+            JSON.stringify({
+              ...res.data,
+              paymentReference: res.data.paymentReference ?? parsedRef.data,
+              createdAt: res.data.createdAt ?? new Date().toISOString(),
+            })
+          )
         } catch {
           // private mode: the success page falls back to the code in the URL
         }
@@ -392,9 +382,11 @@ export function CheckoutForm({
   }
 
   // The real cart is in localStorage (unknown until hydration): show a placeholder order in the real layout meanwhile.
+  // While redirecting to /order-placed, keep the snapshot of items/charges frozen so the dialog/page never flashes ₹0.
   const placeholder = !ready || preview
-  const shown = placeholder ? placeholderCartLines() : available
-  const baseCharges = placeholder ? calculateCharges(shown, shop) : charges
+  const activeAvailable = redirecting && frozenAvailable ? frozenAvailable : available
+  const shown = placeholder ? placeholderCartLines() : activeAvailable
+  const baseCharges = placeholder || redirecting ? calculateCharges(shown, shop) : charges
   const shownCharges = placeholder ? baseCharges : applyPromoToCharges(baseCharges, appliedPromo)
   const shownCount = shown.reduce((n, l) => n + l.quantity, 0)
   const promoBelowMin = Boolean(
@@ -403,9 +395,9 @@ export function CheckoutForm({
 
   if (!placeholder && !redirecting && available.length === 0) {
     return (
-      <div data-ui="store/CheckoutForm" className="flex flex-col items-center gap-4 rounded-3xl border border-dashed py-14 sm:py-20 text-center">
-        <p data-ui="store/CheckoutForm/p" className="font-heading text-2xl">Your cart is empty</p>
-        <Link data-ui="store/CheckoutForm/Link-browse-products" href="/products" className={cn(buttonVariants({ size: "lg" }), "rounded-full px-6")}>
+      <div className={styles.emptyCartBox}>
+        <p className={styles.emptyTitle}>Your cart is empty</p>
+        <Link href="/products" className={cn(buttonVariants({ size: "lg" }), styles.browsePillBtn)}>
           Browse products
         </Link>
       </div>
@@ -418,25 +410,25 @@ export function CheckoutForm({
   const showAddressInputs = !signedIn || addresses.length === 0 || selected === "new" || hasAddressFieldError
 
   const view = (
-    <form data-ui="store/CheckoutForm/form-grid" onSubmit={onSubmit} noValidate className="grid gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
-      <div data-ui="store/CheckoutForm/div-flex" className="flex min-w-0 flex-col gap-6">
+    <form onSubmit={onSubmit} noValidate className={styles.checkoutFormGrid}>
+      <div className={styles.mainColumn}>
         {/* Step 1: Delivery details */}
-        <div data-ui="store/CheckoutForm/div" className="space-y-4 rounded-3xl border bg-card p-5 sm:p-7">
-          <div data-ui="store/CheckoutForm/div-flex-2" className="flex flex-wrap items-start justify-between gap-2">
-            <div data-ui="store/CheckoutForm/div-2">
-              <h2 data-ui="store/CheckoutForm/h2-delivery-details" className="flex items-center gap-2.5 text-xl sm:text-2xl font-semibold">
-                <span data-ui="store/CheckoutForm/span-grid" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 font-sans text-xs font-bold text-primary">
+        <div className={styles.stepCard}>
+          <div className={styles.stepHeaderRow}>
+            <div>
+              <h2 className={styles.stepTitle}>
+                <span className={styles.stepBadge}>
                   1
                 </span>
                 Delivery details
               </h2>
-              <p data-ui="store/CheckoutForm/p-2" className="mt-1 text-sm text-muted-foreground">
+              <p className={styles.stepSubtext}>
                 {signedIn ? (
                   addresses.length > 0 ? "Select a delivery address or add a new one." : "Enter where we should deliver."
                 ) : authReady ? (
                   <>
                     Checking out as a guest.{" "}
-                    <Link data-ui="store/CheckoutForm/Link-sign-in" href="/login?next=/checkout" className="font-medium text-primary underline-offset-4 hover:underline">
+                    <Link href="/login?next=/checkout" className={styles.inlineAccentLink}>
                       Sign in
                     </Link>{" "}
                     to save your address and track orders.
@@ -448,9 +440,9 @@ export function CheckoutForm({
             </div>
             {signedIn && addresses.length > 0 && (
               <Link
-                data-ui="store/CheckoutForm/Link-manage-addresses"
+
                 href="/account/profile?tab=addresses"
-                className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                className={styles.smallActionLink}
               >
                 Manage addresses
               </Link>
@@ -458,53 +450,51 @@ export function CheckoutForm({
           </div>
 
           {signedIn && addresses.length > 0 && (
-            <fieldset data-ui="store/CheckoutForm/fieldset" className="space-y-3">
-              <legend data-ui="store/CheckoutForm/legend-saved-addresses" className="sr-only">Saved addresses</legend>
-              <div data-ui="store/CheckoutForm/div-grid" className="grid gap-3 sm:grid-cols-2">
+            <fieldset className={styles.addressFieldset}>
+              <legend className={styles.srOnly}>Saved addresses</legend>
+              <div className={styles.savedAddrGrid}>
                 {addresses.map((a) => {
                   const active = selected === a.id
                   return (
-                    <label data-ui="store/CheckoutForm/label"
+                    <label
                       key={a.id}
                       className={cn(
-                        "relative flex cursor-pointer flex-col rounded-2xl border p-4 text-sm transition-colors has-focus-visible:ring-3 has-focus-visible:ring-ring/40",
-                        active ? "border-primary bg-primary/5 shadow-xs" : "hover:bg-muted/50"
+                        styles.savedAddrCard,
+                        active && styles.savedAddrCardActive
                       )}
                     >
-                      <input data-ui="store/CheckoutForm/input-saved-address" type="radio" name="saved-address" className="sr-only" checked={active} onChange={() => fillFrom(a)} />
-                      <span data-ui="store/CheckoutForm/span-flex" className="flex items-center gap-2 font-semibold">
-                        <MapPinIcon className="size-4 text-primary" aria-hidden /> {a.label}
-                        {a.isDefault && <span data-ui="store/CheckoutForm/span" className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem]">Default</span>}
-                        {active && <CheckCircle2Icon className="ml-auto size-4 text-primary" aria-hidden />}
+                      <input type="radio" name="saved-address" className={styles.srOnly} checked={active} onChange={() => fillFrom(a)} />
+                      <span className={styles.addrTitleRow}>
+                        <MapPinIcon className={styles.pinSvg} aria-hidden /> {a.label}
+                        {a.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                        {active && <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden />}
                       </span>
-                      <span data-ui="store/CheckoutForm/span-2" className="mt-1.5 font-medium">
-                        {a.fullName} <span data-ui="store/CheckoutForm/span-3" className="font-normal text-muted-foreground">· +91 {a.phone}</span>
+                      <span className={styles.addrPersonLine}>
+                        {a.fullName} <span className={styles.addrPhoneMuted}>· +91 {a.phone}</span>
                       </span>
-                      <span data-ui="store/CheckoutForm/span-4" className="mt-0.5 line-clamp-2 text-muted-foreground">
+                      <span className={styles.addrStreetLine}>
                         {a.address}, {a.city} - {a.pincode}
                       </span>
                     </label>
                   )
                 })}
-                <button data-ui="store/CheckoutForm/button-add-new-address"
+                <button
                   type="button"
                   onClick={useNewAddress}
                   aria-pressed={selected === "new"}
                   className={cn(
-                    "flex min-h-14 items-center justify-center gap-2 rounded-2xl border p-4 text-sm font-semibold transition-colors sm:min-h-24",
-                    selected === "new"
-                      ? "border-primary bg-primary/5 text-primary shadow-xs"
-                      : "border-input bg-muted/25 text-foreground/80 hover:border-foreground/30 hover:bg-muted/50 hover:text-foreground"
+                    styles.addNewAddrBtn,
+                    selected === "new" && styles.addNewAddrBtnActive
                   )}
                 >
-                  <PlusIcon className="size-4 shrink-0 text-primary" /> Add new address
+                  <PlusIcon className={styles.plusSvg} /> Add new address
                 </button>
               </div>
             </fieldset>
           )}
 
           {showAddressInputs && (
-            <div data-ui="store/CheckoutForm/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.addressFieldsGrid}>
               <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
               <TextField
                 label="WhatsApp / mobile number" kind="phone"
@@ -522,7 +512,7 @@ export function CheckoutForm({
                 autoComplete="street-address"
                 rows={3}
                 placeholder="House no., street, landmark"
-                containerClassName="sm:col-span-2"
+                containerClassName={styles.spanTwoCols}
                 error={errors.address?.message}
                 {...form.register("address")}
               />
@@ -536,7 +526,7 @@ export function CheckoutForm({
                 {...form.register("pincode")}
               />
               <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
-              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName="sm:col-span-2" />
+              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.spanTwoCols} />
             </div>
           )}
 
@@ -551,42 +541,42 @@ export function CheckoutForm({
         </div>
 
         {/* Step 2: Order items & optional note (fills the main column on desktop, sits above Price Summary on mobile) */}
-        <div data-ui="store/CheckoutForm/div-flex-3" className="flex flex-1 flex-col gap-5 rounded-3xl border bg-card p-5 sm:p-7">
-          <div data-ui="store/CheckoutForm/div-flex-4" className="flex flex-wrap items-center justify-between gap-2">
-            <h2 data-ui="store/CheckoutForm/h2-your-order" className="flex items-center gap-2.5 text-xl sm:text-2xl font-semibold">
-              <span data-ui="store/CheckoutForm/span-grid-2" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 font-sans text-xs font-bold text-primary">
+        <div className={styles.orderStepCard}>
+          <div className={styles.stepHeaderCenterRow}>
+            <h2 className={styles.stepTitle}>
+              <span className={styles.stepBadge}>
                 2
               </span>
               Your order
-              <span data-ui="store/CheckoutForm/span-5" className="rounded-full bg-secondary px-2.5 py-0.5 font-sans text-xs font-semibold text-foreground/80">
+              <span className={styles.itemCountPill}>
                 {shownCount} item{shownCount === 1 ? "" : "s"}
               </span>
             </h2>
-            <Link data-ui="store/CheckoutForm/Link-edit-cart"
+            <Link
               href="/cart"
-              className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+              className={styles.smallActionLink}
             >
               Edit cart
             </Link>
           </div>
 
-          <ul data-ui="store/CheckoutForm/ul" className="space-y-3">
+          <ul className={styles.orderItemsUl}>
             {shown.map((l) => (
-              <li data-ui="store/CheckoutForm/li" key={l.productId}>
+              <li key={l.productId}>
                 <Link
-                  data-ui="store/CheckoutForm/Link-flex"
+
                   href={`/products/${l.slug}`}
-                  className="group flex items-center gap-3.5 rounded-2xl border bg-background/60 p-3 transition-colors hover:border-primary/40 hover:bg-muted/40 sm:p-3.5"
+                  className={styles.orderLineLink}
                 >
-                  <div data-ui="store/CheckoutForm/div-relative" className="relative size-15 shrink-0 overflow-hidden rounded-xl bg-muted @container">
-                    <ProductImage src={l.image} alt={l.name} sizes="60px" className="transition-transform duration-300 ease-out group-hover:scale-105" />
-                    <span data-ui="store/CheckoutForm/span-grid-3" className="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-foreground text-[0.65rem] font-bold text-background">
+                  <div className={styles.lineThumbWrap}>
+                    <ProductImage src={l.image} alt={l.name} sizes="60px" className={styles.lineThumbImg} />
+                    <span className={styles.qtyBubble}>
                       {l.quantity}
                     </span>
                   </div>
-                  <span data-ui="store/CheckoutForm/span-6" className="min-w-0 flex-1 text-sm font-medium">
-                    <span data-ui="store/CheckoutForm/span-7" className="line-clamp-2 transition-colors group-hover:text-primary">{l.name}</span>
-                    <span data-ui="store/CheckoutForm/span-8" className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                  <span className={styles.lineTextCol}>
+                    <span className={styles.lineNameText}>{l.name}</span>
+                    <span className={styles.lineMetaText}>
                       {formatPrice(l.price)} × {l.quantity}
                       {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
                         <>
@@ -601,17 +591,17 @@ export function CheckoutForm({
                       )}
                     </span>
                   </span>
-                  <span data-ui="store/CheckoutForm/span-9" className="shrink-0 text-sm font-semibold tabular-nums">{formatPrice(l.price * l.quantity)}</span>
+                  <span className={styles.lineTotalPrice}>{formatPrice(l.price * l.quantity)}</span>
                 </Link>
               </li>
             ))}
           </ul>
 
           {!placeholder && hasUnavailable && (
-            <p data-ui="store/CheckoutForm/p-3" className="text-xs text-destructive">Unavailable items were left out of this order.</p>
+            <p className={styles.unavailableWarning}>Unavailable items were left out of this order.</p>
           )}
 
-          <div data-ui="store/CheckoutForm/div-3" className="mt-auto space-y-3 border-t pt-4">
+          <div className={styles.noteFooterSection}>
             <SwitchField
               label="Add an order note or gift message"
               description="Custom name, gift message, preferred colour…"
@@ -637,44 +627,44 @@ export function CheckoutForm({
       </div>
 
       {/* Right column (sticky on desktop, bottom summary card on mobile): Price breakdown & Pay CTA */}
-      <aside data-ui="store/CheckoutForm/aside" className="h-fit space-y-5 rounded-3xl border bg-card p-5 sm:p-6 lg:sticky-store">
-        <h2 data-ui="store/CheckoutForm/h2-price-summary" className="text-xl font-semibold">Price summary</h2>
+      <aside className={styles.summaryAside}>
+        <h2 className={styles.summaryHeading}>Price summary</h2>
         <FreeShippingBar subtotal={shownCharges.subtotal} />
 
         {/* Promo code section */}
-        <div data-ui="store/CheckoutForm/div-4" className="space-y-2 border-t pt-4">
+        <div className={styles.promoSection}>
           {appliedPromo && !promoBelowMin ? (
-            <div data-ui="store/CheckoutForm/div-flex-5" className="flex items-start justify-between gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-3 text-xs">
-              <div data-ui="store/CheckoutForm/div-5" className="min-w-0 space-y-0.5">
-                <p data-ui="store/CheckoutForm/p-flex" className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
-                  <TicketPercentIcon className="size-4 shrink-0" aria-hidden />
-                  <span data-ui="store/CheckoutForm/span-10" className="font-mono tracking-wider">{appliedPromo.code}</span>
-                  <span data-ui="store/CheckoutForm/span-11">applied</span>
+            <div className={styles.appliedPromoCard}>
+              <div className={styles.promoInfoCol}>
+                <p className={styles.promoCodeRow}>
+                  <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
+                  <span className={styles.monoCode}>{appliedPromo.code}</span>
+                  <span>applied</span>
                 </p>
-                <p data-ui="store/CheckoutForm/p-4" className="text-muted-foreground">
+                <p className={styles.promoSavingsNote}>
                   {appliedPromo.description
                     ? `${appliedPromo.description} · Saving ${formatPrice(shownCharges.discountAmount ?? 0)}`
                     : `Saving ${formatPrice(shownCharges.discountAmount ?? 0)} on this order`}
                 </p>
               </div>
               <button
-                data-ui="store/CheckoutForm/button-remove"
+
                 type="button"
                 aria-label={`Remove promo code ${appliedPromo.code}`}
                 onClick={handleRemovePromo}
-                className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                className={styles.removePromoBtn}
               >
-                <XIcon className="size-3.5" aria-hidden /> Remove
+                <XIcon className={styles.xSmallSvg} aria-hidden /> Remove
               </button>
             </div>
           ) : (
-            <div data-ui="store/CheckoutForm/div-6" className="space-y-1.5">
-              <div data-ui="store/CheckoutForm/div-flex-6" className="flex items-end gap-2">
+            <div className={styles.promoInputStack}>
+              <div className={styles.promoInputRow}>
                 <TextField
                   label="Have a promo code?"
                   fieldSize="md"
                   noErrorSpace
-                  containerClassName="min-w-0 flex-1"
+                  containerClassName={styles.promoFieldContainer}
                   value={promoInput}
                   maxLength={24}
                   disabled={promoPending || pending || placeholder}
@@ -692,34 +682,34 @@ export function CheckoutForm({
                   placeholder="Enter code (e.g. WELCOME10)"
                   autoCapitalize="characters"
                   autoComplete="off"
-                  className="font-mono text-xs font-semibold tracking-wider uppercase placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:normal-case"
+                  className={styles.promoCodeInput}
                 />
                 <Button
-                  data-ui="store/CheckoutForm/Button"
+
                   type="button"
                   variant="outline"
                   disabled={promoPending || pending || placeholder || !promoInput.trim()}
                   onClick={handleApplyPromo}
-                  className="shrink-0 rounded-xl px-4 text-xs font-semibold"
+                  className={styles.applyPromoBtn}
                 >
-                  {promoPending ? <Loader2Icon className="size-3.5 animate-spin" /> : "Apply"}
+                  {promoPending ? <Loader2Icon className={styles.spinSmallSvg} /> : "Apply"}
                 </Button>
               </div>
               {promoError && (
-                <p data-ui="store/CheckoutForm/p-5" role="alert" className="text-xs font-medium text-destructive">
+                <p role="alert" className={styles.promoErrorMsg}>
                   {promoError}
                 </p>
               )}
               {promoBelowMin && appliedPromo && (
-                <div data-ui="store/CheckoutForm/div-flex-7" className="flex items-center justify-between gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
-                  <p data-ui="store/CheckoutForm/p-6" role="alert">
-                    Add {formatPrice(appliedPromo.minOrderAmount - baseCharges.subtotal)} more to use <span data-ui="store/CheckoutForm/span-12" className="font-mono font-bold">{appliedPromo.code}</span>.
+                <div className={styles.promoBelowMinRow}>
+                  <p role="alert" className={styles.promoBelowMinMsg}>
+                    Add {formatPrice(appliedPromo.minOrderAmount - baseCharges.subtotal)} more to use <span className={styles.monoBold}>{appliedPromo.code}</span>.
                   </p>
                   <button
-                    data-ui="store/CheckoutForm/button-remove-2"
+
                     type="button"
                     onClick={handleRemovePromo}
-                    className="shrink-0 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    className={styles.removeInlineBtn}
                   >
                     Remove
                   </button>
@@ -729,57 +719,97 @@ export function CheckoutForm({
           )}
         </div>
 
-        <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className="border-t pt-4" />
-        <Button data-ui="store/CheckoutForm/Button-hidden"
+        <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className={styles.breakdownTopBorder} />
+        <Button
           type="submit"
           size="lg"
           disabled={pending || placeholder}
-          className="hidden h-14 w-full flex-col gap-0.5 rounded-full py-1.5 shadow-lg shadow-primary/25 sm:inline-flex"
+          className={styles.desktopPayBtn}
         >
           {pending ? (
-            <span data-ui="store/CheckoutForm/span-inline-flex" className="inline-flex items-center gap-2 text-base font-semibold">
-              <Loader2Icon className="size-5 animate-spin" /> Placing order…
+            <span className={styles.payBtnBusySpan}>
+              <Loader2Icon className={styles.spinMdSvg} /> Placing order…
             </span>
           ) : (
             <>
-              <span data-ui="store/CheckoutForm/span-13" className="text-sm/tight font-semibold">Proceed to pay</span>
-              <span data-ui="store/CheckoutForm/span-14" className="text-base/tight font-extrabold tracking-tight tabular-nums">{formatPrice(shownCharges.total)}</span>
+              <span className={styles.payBtnTopLine}>Proceed to pay</span>
+              <span className={styles.payBtnAmountLine}>{formatPrice(shownCharges.total)}</span>
             </>
           )}
         </Button>
-        <div data-ui="store/CheckoutForm/div-7" className="space-y-2 rounded-xl bg-muted/40 px-3.5 py-3 text-xs text-muted-foreground">
-          <p data-ui="store/CheckoutForm/p-flex-2" className="flex items-center gap-2">
-            <CheckCircle2Icon className="size-4 shrink-0 text-primary" />
-            <span data-ui="store/CheckoutForm/span-15">Order is placed after UPI payment</span>
+        <div className={styles.trustChecklistBox}>
+          <p className={styles.trustRow}>
+            <CheckCircle2Icon className={styles.checkSvg} />
+            <span>Order is placed after UPI payment</span>
           </p>
-          <p data-ui="store/CheckoutForm/p-flex-3" className="flex items-center gap-2">
-            <CheckCircle2Icon className="size-4 shrink-0 text-primary" />
-            <span data-ui="store/CheckoutForm/span-16" className="font-medium text-foreground/80">100% Safe Checkout</span>
+          <p className={styles.trustRow}>
+            <CheckCircle2Icon className={styles.checkSvg} />
+            <span className={styles.safeText}>100% Safe Checkout</span>
+          </p>
+          <p className={styles.policyNoteLine}>
+            By placing your order, you agree to our{" "}
+            <button
+
+              type="button"
+              onClick={() => {
+                setLegalModalTab("terms")
+                setLegalModalOpen(true)
+              }}
+              className={styles.policyInlineLink}
+            >
+              Terms
+            </button>
+            ,{" "}
+            <button
+
+              type="button"
+              onClick={() => {
+                setLegalModalTab("privacy")
+                setLegalModalOpen(true)
+              }}
+              className={styles.policyInlineLink}
+            >
+              Privacy
+            </button>{" "}
+            &amp;{" "}
+            <button
+
+              type="button"
+              onClick={() => {
+                setLegalModalTab("refund")
+                setLegalModalOpen(true)
+              }}
+              className={styles.policyInlineLink}
+            >
+              Refund Policy
+            </button>
+            .
           </p>
         </div>
+        <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
       </aside>
 
       {/* Native e-commerce sticky bottom pay bar on phones */}
       <div
-        data-ui="store/CheckoutForm/div-flex-8"
+
         data-mobile-bottom-bar
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-border/80 bg-background/95 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_28px_-8px_rgb(0_0_0/0.16)] backdrop-blur-xl sm:hidden in-data-skeleton:hidden"
+        className={cn(styles.mobileBottomBar, "glass")}
       >
         <Button
-          data-ui="store/CheckoutForm/Button-2"
+
           type="submit"
           size="lg"
           disabled={pending || placeholder}
-          className="h-13 min-w-0 w-full flex-col gap-0.5 rounded-full px-5 py-1.5 shadow-md shadow-primary/25 active:scale-97"
+          className={styles.mobilePayBtn}
         >
           {pending ? (
-            <span data-ui="store/CheckoutForm/span-inline-flex-2" className="inline-flex items-center gap-2 text-sm font-semibold">
-              <Loader2Icon className="size-4 animate-spin" /> Placing order…
+            <span className={styles.mobilePayBusySpan}>
+              <Loader2Icon className={styles.spinSmSvg} /> Placing order…
             </span>
           ) : (
             <>
-              <span data-ui="store/CheckoutForm/span-17" className="text-sm/tight font-semibold">Proceed to pay</span>
-              <span data-ui="store/CheckoutForm/span-18" className="text-sm/tight font-extrabold tracking-tight tabular-nums">{formatPrice(shownCharges.total)}</span>
+              <span className={styles.payBtnTopLine}>Proceed to pay</span>
+              <span className={styles.mobilePayAmountLine}>{formatPrice(shownCharges.total)}</span>
             </>
           )}
         </Button>
@@ -796,7 +826,7 @@ export function CheckoutForm({
           }
         }}
       >
-        <DialogContent data-ui="store/CheckoutForm/DialogContent" mobileFullScreen className="sm:max-w-md">
+        <DialogContent mobileFullScreen className={styles.payDialogContent}>
           <DialogHeader>
             <DialogTitle>Pay {formatPrice(shownCharges.total)} to place your order</DialogTitle>
             <DialogDescription>
@@ -804,7 +834,7 @@ export function CheckoutForm({
             </DialogDescription>
           </DialogHeader>
 
-          <DialogBody className="space-y-5">
+          <DialogBody className={styles.payDialogBody}>
             {(() => {
               const { upiId, upiPayeeName, orderCodePrefix } = shop
               const upiUrl = upiId
@@ -819,58 +849,58 @@ export function CheckoutForm({
               return (
                 <>
                   {upiUrl && upiId ? (
-                    <div data-ui="store/CheckoutForm/div-8" className="space-y-3.5">
-                      <p data-ui="store/CheckoutForm/p-flex-4" className="flex items-center gap-2.5 text-sm font-semibold">
-                        <span data-ui="store/CheckoutForm/span-grid-4" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
+                    <div className={styles.upiStepBlock}>
+                      <p className={styles.dialogStepHeading}>
+                        <span className={styles.solidStepNum}>1</span>
                         Pay with any UPI app
                       </p>
-                      <a data-ui="store/CheckoutForm/a-pay"
+                      <a
                         href={upiUrl}
-                        className="flex h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-transform active:scale-[0.99] md:hidden"
+                        className={styles.upiDeepLinkBtn}
                       >
-                        <SmartphoneIcon className="size-4" /> Pay {formatPrice(shownCharges.total)} with UPI app
+                        <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(shownCharges.total)} with UPI app
                       </a>
                       <button
-                        data-ui="store/CheckoutForm/button-flex"
+
                         type="button"
                         onClick={() => setShowMobileQr((v) => !v)}
                         aria-expanded={showMobileQr}
-                        className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/80 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 md:hidden"
+                        className={styles.qrToggleBtn}
                       >
-                        <QrCodeIcon className="size-4 text-primary" />
+                        <QrCodeIcon className={styles.qrSvg} />
                         {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
                       </button>
                       <div
-                        data-ui="store/CheckoutForm/div-9"
+
                         className={cn(
-                          "items-center gap-4 rounded-2xl border border-border/80 bg-white p-3.5 shadow-2xs md:flex",
-                          showMobileQr ? "flex" : "hidden",
+                          styles.qrCardRow,
+                          showMobileQr && styles.qrCardRowVisible,
                         )}
                       >
-                        <div data-ui="store/CheckoutForm/div-10" className="shrink-0 rounded-xl border border-neutral-200/80 bg-white p-1.5">
+                        <div className={styles.qrWhiteFrame}>
                           <QRCodeSVG value={upiUrl} size={104} marginSize={0} title={`UPI QR code to pay ${formatPrice(shownCharges.total)}`} />
                         </div>
-                        <div data-ui="store/CheckoutForm/div-11" className="space-y-1 text-sm text-neutral-700">
-                          <p data-ui="store/CheckoutForm/p-flex-5" className="flex items-center gap-2 font-semibold text-neutral-900">
-                            <QrCodeIcon className="size-4 text-primary" /> Scan with any UPI app
+                        <div className={styles.qrCopyCol}>
+                          <p className={styles.qrCopyTitle}>
+                            <QrCodeIcon className={styles.qrSvg} /> Scan with any UPI app
                           </p>
-                          <p data-ui="store/CheckoutForm/p-7" className="text-xs/relaxed text-neutral-600">
-                            Amount <strong data-ui="store/CheckoutForm/strong" className="font-semibold text-neutral-900">{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
+                          <p className={styles.qrCopySub}>
+                            Amount <strong className={styles.strongFg}>{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
                           </p>
                         </div>
                       </div>
 
-                      <div data-ui="store/CheckoutForm/div-12" className="space-y-2">
+                      <div className={styles.upiCopyRowsList}>
                         {[
                           { label: "UPI ID", value: upiId },
                           ...(upiPayeeName ? [{ label: "Name", value: upiPayeeName }] : []),
                           { label: "Amount", value: shownCharges.total.toFixed(2) },
                         ].map((row) => (
-                          <div data-ui="store/CheckoutForm/div-flex-9" key={row.label} className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/45 px-3.5 py-2 text-xs">
-                            <span data-ui="store/CheckoutForm/span-19" className="font-medium text-muted-foreground">{row.label}</span>
-                            <span data-ui="store/CheckoutForm/span-flex-2" className="flex min-w-0 items-center gap-1.5 font-mono font-semibold text-foreground">
-                              <span data-ui="store/CheckoutForm/span-20" className="truncate">{row.value}</span>
-                              <button data-ui="store/CheckoutForm/button-grid"
+                          <div key={row.label} className={styles.upiCopyRow}>
+                            <span className={styles.upiRowLabel}>{row.label}</span>
+                            <span className={styles.upiRowValueWrap}>
+                              <span className={styles.upiValueTrunc}>{row.value}</span>
+                              <button
                                 type="button"
                                 aria-label={`Copy ${row.label}`}
                                 onClick={async () => {
@@ -881,9 +911,9 @@ export function CheckoutForm({
                                     toast.error("Couldn't copy. Please select and copy it.")
                                   }
                                 }}
-                                className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                className={styles.copyMiniBtn}
                               >
-                                <CopyIcon className="size-3.5" />
+                                <CopyIcon className={styles.copyTinySvg} />
                               </button>
                             </span>
                           </div>
@@ -891,13 +921,13 @@ export function CheckoutForm({
                       </div>
                     </div>
                   ) : (
-                    <p data-ui="store/CheckoutForm/p-8" className="rounded-2xl border bg-muted/50 p-4 text-sm/relaxed">
+                    <p className={styles.upiMissingNotice}>
                       UPI details aren&apos;t configured yet.{" "}
-                      <a data-ui="store/CheckoutForm/a-message-us-on-whatsapp"
+                      <a
                         href={shopWhatsappLink(shop, `Hi! I'd like to pay ${formatPrice(shownCharges.total)} and place my order.`)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-semibold text-primary underline underline-offset-4"
+                        className={styles.waAccentLink}
                       >
                         Message us on WhatsApp
                       </a>{" "}
@@ -905,9 +935,9 @@ export function CheckoutForm({
                     </p>
                   )}
 
-                  <div data-ui="store/CheckoutForm/div-13" className="space-y-3 border-t pt-4">
-                    <p data-ui="store/CheckoutForm/p-flex-6" className="flex items-center gap-2.5 text-sm font-semibold">
-                      <span data-ui="store/CheckoutForm/span-grid-5" className="grid size-6 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
+                  <div className={styles.utrStepSection}>
+                    <p className={styles.dialogStepHeading}>
+                      <span className={styles.solidStepNum}>2</span>
                       Enter your UTR / UPI reference number
                     </p>
                     <TextField
@@ -939,24 +969,24 @@ export function CheckoutForm({
           </DialogBody>
 
           <DialogFooter>
-            <Button data-ui="store/CheckoutForm/Button-back"
+            <Button
               type="button"
               variant="outline"
               size="lg"
               disabled={pending}
               onClick={() => setPayDialogOpen(false)}
-              className="rounded-full px-5"
+              className={styles.footerBackBtn}
             >
               Back
             </Button>
-            <Button data-ui="store/CheckoutForm/Button-3"
+            <Button
               type="button"
               size="lg"
               disabled={pending}
               onClick={confirmPaymentAndPlaceOrder}
-              className="gap-1.5 rounded-full px-6"
+              className={styles.footerConfirmBtn}
             >
-              {pending && <Loader2Icon className="animate-spin" />}
+              {pending && <Loader2Icon className={styles.spinSmSvg} />}
               {pending ? "Placing order…" : "Confirm payment & place order"}
             </Button>
           </DialogFooter>

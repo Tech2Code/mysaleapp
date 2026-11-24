@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { netReturnRefund } from "@/features/orders/refund"
 import { isOpenRequest, returnableQuantities, type ReturnStage } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
+import styles from "./admin-orders.module.css"
 
 type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create" | "revert_shipped"
 
@@ -103,27 +104,27 @@ export function ReturnStatusControl({
   const picked: Choice = options.some((o) => o.value === choice) ? choice : "current"
 
   return (
-    <div data-ui="admin/ReturnStatusControl" className="min-w-0 max-w-full space-y-3">
+    <div className={styles.returnControlRoot}>
       <SelectField label="Order status" fieldSize="md" options={options} value={picked} onValueChange={(v) => setChoice(v as Choice)} />
-      {stage && picked === "current" && <p data-ui="admin/ReturnStatusControl/p" className="text-sm text-muted-foreground">{stage.detail}</p>}
+      {stage && picked === "current" && <p className={styles.stageDetailText}>{stage.detail}</p>}
       {picked === "approve" && open && <DecideDialog request={open} approve orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "reject" && open && <DecideDialog request={open} approve={false} orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "picked_up" && open && <PickedUpButton requestId={open.id} />}
       {picked === "create" && <CreateReturnRequest orderId={orderId} orderCode={orderCode} items={items} returns={returns} />}
       {picked === "undo" && undoTarget && undoText && <UndoStepButton requestId={undoTarget.id} title={undoText.title} description={undoText.description} />}
       {picked === "revert_shipped" && canRevertDelivered && (
-        <div data-ui="admin/ReturnStatusControl/div" className="space-y-2.5">
-          <p data-ui="admin/ReturnStatusControl/p-flex" className="flex items-center gap-2 rounded-xl border border-amber-300/80 bg-amber-50/70 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
-            <RotateCcwIcon className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
-            <span data-ui="admin/ReturnStatusControl/span">Moves this order one step back (Delivered → Shipped). Requires a reason in the next popup.</span>
+        <div className={styles.revertShippedBlock}>
+          <p className={styles.revertWarnBanner}>
+            <RotateCcwIcon className={styles.revertWarnIcon} aria-hidden />
+            <span>Moves this order one step back (Delivered → Shipped). Requires a reason in the next popup.</span>
           </p>
-          <Button data-ui="admin/ReturnStatusControl/Button-revert-to-shipped"
+          <Button
             type="button"
             variant="outline"
             onClick={() => setRevertOpen(true)}
-            className="w-full gap-1.5 rounded-full border-amber-400 bg-amber-500/15 font-semibold text-amber-950 hover:bg-amber-500/25 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-900/50"
+            className={styles.revertSubmitBtn}
           >
-            <RotateCcwIcon className="size-4" /> Revert to Shipped
+            <RotateCcwIcon className={styles.iconMd} /> Revert to Shipped
           </Button>
           <RevertOrderStatusDialog
             open={revertOpen}
@@ -154,15 +155,15 @@ export function ReturnStatusControl({
         />
       )}
       {picked === "refund" && (
-        <ul data-ui="admin/ReturnStatusControl/ul" className="space-y-2">
+        <ul className={styles.unrefundedList}>
           {unrefunded.map((r) => (
-            <li data-ui="admin/ReturnStatusControl/li" key={r.id}>
+            <li key={r.id}>
               <RefundReturnButton returnId={r.id} value={returnValue(r, items, returns, discountAmount, refundedAmount)} expectedRefunded={refundedAmount} />
             </li>
           ))}
         </ul>
       )}
-      <p data-ui="admin/ReturnStatusControl/p-2" className="text-xs text-muted-foreground">Pick the next step; its button asks for details and confirms before saving.</p>
+      <p className={styles.stepHintText}>Pick the next step; its button asks for details and confirms before saving.</p>
     </div>
   )
 }

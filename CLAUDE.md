@@ -2,6 +2,21 @@
 
 See `AGENTS.md` too: this is Next.js 16 with Cache Components, so read `node_modules/next/dist/docs/` before using framework APIs.
 
+## CSS Architecture & Styling Standards (Plain CSS Modules Only — Zero Tailwind)
+
+100% of the application (`Storefront`, `Account`, `Admin Panel`, `Shared`, `Form`, `UI`, and `App Routes`) uses **plain CSS Modules (`*.module.css`)** with **zero Tailwind CSS**:
+- **Mandatory Component + CSS Module Pairing**: Every new or updated UI component, section, modal, or page MUST be built as a modular component paired with a plain CSS Module (`*.module.css`) imported as `import styles from "./..."`. Never use Tailwind utility classes or inline styles.
+- **`camelCase` Class Names Only**: All CSS Module selectors must use descriptive `camelCase` identifiers (`styles.storeHeader`, `styles.stickyFilterBar`, `styles.productCard`, `styles.paginationBar`).
+- **Nearest Parent-to-Child Hierarchy**: Scope child rules under their nearest parent (`.parentBox .childItem`, max 2 levels) rather than deep chains or generic tag selectors.
+- **1-Line Compact Formatting**: Write one compact CSS rule per line (`selector { prop: val; prop2: val2; }`) with **zero blank lines** between rules. Use `/* Section: ... */` comments to group sections.
+- **`px` Units Only**: Use explicit `px` units for spacing, font sizes, line heights, dimensions, and radii (never `rem` or `em`).
+- **Colocated Responsive `@media` Queries**: Place `@media (min-width: 640px)`, `@media (min-width: 768px)`, `@media (min-width: 1024px)`, and `@media (min-width: 1280px)` blocks at the bottom of each `.module.css` file.
+- **Dual Theme Architecture (Borderless Tonal Layering & Specular Elevation)**:
+  - **Storefront ("Sky, Ocean & Vibrant Coral")**: Scoped to `:root:not(:has([data-slot="admin-layout"]))` and `.dark:not(:has([data-slot="admin-layout"]))` in `src/app/globals.css` (pure `#FFFFFF` / `#0B0F17` canvas, Soft Sky Chrome `--store-sky-surface: #EEF6FC` on Header/Hero/PageHeader/Footer, Cool Ice section tint `--store-section-tint: #F5F8FC`, Ocean Navy support `--foreground: #0B3550`, Vibrant Coral accent `--primary: #FF6B5A`, and borderless ambient elevation tokens `--store-elevation-sm` / `--store-elevation-md`).
+  - **Admin Panel**: Scoped to `[data-slot="admin-layout"]` in `src/app/admin/admin.css` and `:root` in `src/app/globals.css` (SaaS Slate surface + Warm Artisanal Terracotta accent + borderless specular shadows).
+- **Frosted Glass Chrome & Sticky Filter Bar**: The Storefront `Header` (`.storeHeader` in `header.module.css`) uses frosted Sky glass (`backdrop-filter: blur(24px) saturate(180%)`). In `ProductBrowser` (`product-browser.tsx` + `product-browser.module.css`), `.stickyFilterBar` is seamless/transparent by default (`background-color: transparent; box-shadow: none`) and only applies `.stickyFilterBarStuck` (frosted glass + ambient shadow) when scrolled to its sticky threshold below the store header.
+- **Ultra-Minimalistic Scrollbars**: All popups, dialogs, sheets, dropdowns, review feeds, search results, admin tables, and pages use a `3px` pill scrollbar (`scrollbar-width: thin` + `::-webkit-scrollbar { width: 3px; height: 3px; }`) in `src/app/globals.css`, `src/app/admin/admin.css`, and `src/components/store/search-dialog.module.css`.
+
 ## Forms: always use the shared inputs
 
 All form inputs come from `@/components/form` (`src/components/form/`):
@@ -32,10 +47,12 @@ Rules:
   3. Add `loading.tsx` next to the page: `<Skeletonize><XView {...placeholders} /></Skeletonize>`. Busy states inside client components do the same (`pending ? <Skeletonize><Table rows={placeholders}/></Skeletonize> : children`); a component whose content lives in the browser (cart, wishlist) takes a `preview` prop and wraps itself in `<Skeletonize>` until hydrated.
   - Never write skeleton markup (`<Skeleton>`, `animate-pulse bg-muted`, `h-*`/`w-*` blocks, `fallback={<div…>}`). `src/app/loading-contract.test.ts` fails if a dynamic page has no own `loading.tsx`, if a `loading.tsx` contains raw markup/classes or doesn't reuse the page's view, or if hand-built skeletons appear anywhere. Every dynamic admin or store page needs its own `loading.tsx`; in dynamic `[param]` pages (`[slug]`, `[id]`, `[code]`), `await params` must be read inside an inner async component wrapped in `<Suspense fallback={<Loading />}>` so PPR / refresh never blocks on an uncached param promise.
   - Opt-outs inside a view: `data-skeleton-block` makes an element one block; real text stays hidden, so keep placeholder strings realistic in length.
-- **Never leave a column empty on wide screens.** Use a two-column grid (`xl:grid-cols-2`) or a main + side layout, and keep the side column short.
-- Button heights match inputs: default = `h-10` (admin, `fieldSize="md"`), `size="lg"` = `h-11` (storefront). Don't hand-set heights on buttons that sit next to fields.
+- **Never leave a column empty on wide screens.** Use a two-column CSS Grid in the component's `.module.css` (`grid-template-columns: repeat(2, minmax(0, 1fr))`) or a main + side layout, and keep the side column short.
+- **Catalog Pagination (`<Pagination />`)**: Reusable client pagination lives in `src/components/shared/pagination.tsx` + `src/components/shared/pagination.module.css`. `ProductBrowser` (`src/components/store/product-browser.tsx`) displays `PRODUCTS_PER_PAGE = 12` products per page, syncs `?page=` with the URL, resets to page `1` when search/category/sort changes, and automatically hides `<Pagination />` when `totalPages <= 1` (`<= 12` matching products).
+- Button heights match inputs: default = `40px` (admin, `fieldSize="md"`), `size="lg"` = `44px` (storefront). Don't hand-set conflicting heights on buttons that sit next to fields.
 - A payment status must be shown with `paymentDisplay()` / `<PaymentBadge orderStatus>` so a cancelled order never says "awaiting payment".
 - Order extra charges (fragile/oversized handling tier once per order + heavy-parcel weight slabs) are computed from product `shipping_class` and `weight_grams` (`features/orders/pricing.ts` and `create_order` in migration 0046), never multiplied per item quantity, and are always shown with a clear label and reason.
+- **Auth callback `?code=` guard (`proxy.ts` & `auth-listener.tsx`)**: Only forward `?code=` or `?token_hash=` to `/auth/callback` when `pathname === "/"` (Supabase's Site URL root fallback). Never intercept `?code=` on `/order-placed?code=...` or `/track?code=...`, where `code` is an order code.
 
 ## Scroll position after a change (never leave the reader at the bottom)
 
@@ -106,9 +123,9 @@ Every pincode field fills the `City / District` and `State` via `usePincodeLooku
 
 `SelectField` is a custom (Base UI) dropdown, not a native `<select>`. With react-hook-form use `FormSelectField` (`control`, `name`).
 
-## UI ids for "change this part"
+## Semantic CSS Module Classes & `data-slot` Hooks
 
-Every element in components and pages carries `data-ui`: the root is `area/Component` (pages: `page:/route`), anything inside is `area/Component/tag-hint`, e.g. `store/Header/button-open-cart`. In dev press **Alt+I** (or the corner button), hover an element, click to copy its id. `grep -rn 'data-ui="store/Header/button-open-cart"' src` finds it. After editing components run `npm run ui:tag` (ids are regenerated; counters like `-2` can shift when siblings are added). Skips `components/ui/*` and image/SEO files. Stripped from production builds (`next.config.ts`).
+Every component uses descriptive `camelCase` CSS Module classes (`styles.className`), which compile to self-documenting DevTools class names (`component-module__hash__camelCaseName`). Structural global hooks use `data-slot="..."` (e.g., `data-slot="dialog-content"`, `data-slot="sticky-save-bar"`, `data-slot="store-footer"`, `data-slot="admin-layout"`).
 
 ## Admin orders lists and dashboard
 
@@ -126,7 +143,7 @@ Every element in components and pages carries `data-ui`: the root is `area/Compo
 
 ## Dark mode
 
-Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-success-solid`…). A fill that carries white text must be a `*-solid` token (same dark shade in both themes). Never hard-code `bg-white`/`text-black`/`text-neutral-*` except for a QR code or a brand logo. All form fields share `bg-background`.
+Use theme CSS variables only (`var(--background)`, `var(--card)`, `var(--foreground)`, `var(--muted)`, `var(--border)`, `var(--success-solid)`…). A fill that carries white text must use a `*-solid` variable (same dark shade in both themes). Never hard-code `#ffffff` / `#000000` for page surfaces except for a QR code frame or a brand logo.
 
 ## Admin account and launch
 
@@ -136,9 +153,9 @@ Use theme tokens only (`bg-background`, `bg-card`, `text-foreground`, `bg-succes
 
 ## Form spacing and typography
 
-- **Errors never move the layout.** `FieldShell` reserves a strip under every field and draws the error absolutely inside it (11px). So stacks of fields use `FIELD_STACK` (`space-y-1.5`) and grids use `FIELD_GRID` (`gap-x-4 gap-y-1.5`), not bigger gaps. Filters and search boxes that never show errors pass `noErrorSpace` (pill fields do it automatically). Keep validation messages short (about 45 characters or less) so they fit on one line on a phone.
-- **Type is fluid.** `text-lg … text-7xl` are `clamp()` tokens in `globals.css` with matching line heights; don't hard-code sizes like `text-[2.6rem]`. Big unprefixed spacing (`py-20`, `gap-12`, `p-8`, `mt-24`…) needs a smaller phone value first (`py-14 sm:py-20`).
-- Check a change at 360px: no horizontal scroll, body text at least 14px, helper text at least 11px.
+- **Errors never move the layout.** `FieldShell` reserves a strip under every field and draws the error absolutely inside it (`11px`). So stacks of fields use `FIELD_STACK` (`styles.fieldStack` in `form.module.css`, `gap: 6px`) and grids use `FIELD_GRID` (`styles.fieldGrid` in `form.module.css`, `column-gap: 16px; row-gap: 6px`), not bigger gaps. Filters and search boxes that never show errors pass `noErrorSpace` (pill fields do it automatically). Keep validation messages short (about 45 characters or less) so they fit on one line on a phone.
+- **Explicit `px` typography & responsive spacing.** All CSS Modules use explicit `px` font sizes, line heights, and spacing with mobile-first defaults and `@media (min-width: 640px)` / `768px` / `1024px` / `1280px` overrides at the bottom of each `.module.css` file.
+- Check every change at `360px`: no horizontal scroll, body text at least `14px`, helper text at least `11px`.
 
 ## Stock, unpaid orders and returns
 
@@ -191,15 +208,11 @@ In a `useTransition` flow that ends with `router.refresh()`, show the SUCCESS to
 
 ## Modals, popups and dialogs (unified pattern)
 
-- **Always use the standard Dialog structure**: Every modal must use `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, and `DialogFooter` from `@/components/ui/dialog`.
-  - **Sizing & Scrolling**: `DialogContent` must always carry `className="max-h-[90dvh] overflow-y-auto sm:max-w-md"` (or `sm:max-w-lg` for large multi-item lists). This ensures responsive presentation on mobile and desktop without viewport overflows.
-  - **Header & Close Button**: `DialogHeader` renders the title, description, and an accessible 'X' close button. Close triggers in header/footer must always have `type="button"` so they do not inadvertently trigger form submit inside `<form>`.
-  - **Form Fields inside Modals**: Use standard shared form components from `@/components/form` (`TextField`, `TextAreaField`, `SelectField`, `SwitchField`) inside `FIELD_STACK` (`space-y-1.5`) or `FIELD_GRID` (`gap-x-4 gap-y-1.5`).
-  - **Footer Action Buttons**: Footer buttons must consistently use `rounded-full`, have `gap-1.5`, and pair text with an action icon:
-    - Cancel / Close: `<Button type="button" variant="outline" className="gap-1.5 rounded-full"><XIcon className="size-4" /> Cancel</Button>`
-    - Primary Save / Submit: `<Button type="submit" className="gap-1.5 rounded-full">{pending ? <Loader2Icon className="animate-spin" /> : <CheckIcon className="size-4" />} Save</Button>`
-    - Action Send / Submit: `<SendIcon className="size-4" />`
-    - Destructive: `<Button type="button" variant="destructive" className="gap-1.5 rounded-full">{pending ? <Loader2Icon className="animate-spin" /> : <Trash2Icon className="size-4" />} Delete</Button>`
+- **Always use the standard Dialog structure**: Every modal must use `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogBody`, and `DialogFooter` from `@/components/ui/dialog` (`ui.module.css`).
+  - **Sizing & Scrolling**: `DialogContent` applies `styles.dialogPopup` (`max-height: min(90dvh, 850px)` on desktop or `mobileFullScreen` for full-screen mobile sheets), with `DialogBody` providing the scrollable middle container while keeping `DialogHeader` and `DialogFooter` pinned.
+  - **Header & Close Button**: `DialogHeader` renders the title, description, and an accessible 'X' close button (`showCloseButton`). Close triggers in header/footer must always have `type="button"` so they do not inadvertently trigger form submit inside `<form>`.
+  - **Form Fields inside Modals**: Use standard shared form components from `@/components/form` (`TextField`, `TextAreaField`, `SelectField`, `SwitchField`) inside `FIELD_STACK` or `FIELD_GRID` (`form.module.css`).
+  - **Footer Action Buttons**: Footer buttons must use pill styling (`border-radius: 9999px` via CSS Module class) and pair text with an action icon (`XIcon`, `CheckIcon`, `SendIcon`, `Trash2Icon`, `Loader2Icon`).
 - **Confirmations**: **Never build custom inline "Are you sure?" confirmation dialogs.** Always reuse `<ConfirmDialog>` (`components/shared/confirm-dialog.tsx`):
   - Any click that changes data and is hard to undo opens `<ConfirmDialog>` first: cancel, delete, refund, verify/reject payment, status change, pickup, withdraw request, sign out.
   - Not for add-to-cart, wishlist, filters, or forms saved with `StickySaveBar`.
@@ -223,7 +236,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 805 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, `npm run ui:tag`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 808 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
 - **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 

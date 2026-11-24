@@ -1,6 +1,5 @@
 "use client"
 
-import { UiInspector } from "./ui-inspector"
 import { domMax, LazyMotion, MotionConfig } from "motion/react"
 import { ThemeProvider } from "next-themes"
 import { Suspense, type ReactNode } from "react"
@@ -26,7 +25,6 @@ export function Providers({ children }: { children: ReactNode }) {
           </Suspense>
           <AuthListener />
           <ServiceWorkerRegister />
-          <UiInspector />
         </LazyMotion>
       </MotionConfig>
     </ThemeProvider>

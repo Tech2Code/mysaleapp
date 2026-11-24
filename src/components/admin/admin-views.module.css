@@ -1,0 +1,279 @@
+/* Shared Utilities & Icons */
+@keyframes spin { to { transform: rotate(360deg); } }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.spinIcon { width: 16px; height: 16px; animation: spin 1s linear infinite; }
+.iconXs { width: 12px; height: 12px; flex-shrink: 0; }
+.iconSm { width: 14px; height: 14px; flex-shrink: 0; }
+.iconMd { width: 16px; height: 16px; flex-shrink: 0; }
+.iconLg { width: 20px; height: 20px; flex-shrink: 0; }
+.pillBtn { border-radius: 9999px; }
+.pillBtnGap { gap: 6px; border-radius: 9999px; }
+.errorText { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--destructive); }
+.monoInput { font-family: var(--font-mono); font-size: 14px; line-height: 20px; }
+.monoUpperInput { font-family: var(--font-mono); text-transform: uppercase; }
+.monoStrong { font-family: var(--font-mono); font-weight: 600; color: var(--foreground); }
+/* Products View Header & Switcher */
+.headerActions { display: flex; align-items: center; gap: 8px; }
+.headerActions .viewSwitcher { display: flex; align-items: center; border-radius: 8px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 60%, transparent); padding: 2px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.viewSwitcher .viewBtn { display: flex; align-items: center; gap: 6px; border-radius: 6px; padding: 4px 10px; color: var(--muted-foreground); cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
+.viewSwitcher .viewBtn:hover { color: var(--foreground); }
+.viewSwitcher .viewBtnActive { background-color: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); font-weight: 600; }
+.headerActions .addProductBtn { height: 36px; border-radius: 8px; padding-left: 14px; padding-right: 14px; font-size: 12px; line-height: 16px; font-weight: 600; }
+/* Products Filter Bar */
+.filterBar { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
+.filterBar .chipRow { display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+.chipRow .filterChip { display: inline-flex; height: 32px; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 12px; font-size: 12px; line-height: 1; font-weight: 500; color: var(--muted-foreground); transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease; }
+.chipRow .filterChip:hover { border-color: color-mix(in oklab, var(--foreground) 30%, transparent); color: var(--foreground); }
+.chipRow .filterChipActive { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.chipRow .filterChipActive:hover { border-color: var(--primary); color: var(--primary-foreground); }
+.filterChip .chipCount { border-radius: 9999px; background-color: var(--muted); padding: 2px 6px; font-size: 10px; line-height: 1; font-weight: 600; color: var(--muted-foreground); }
+.filterChip .chipCountActive { background-color: color-mix(in oklab, var(--primary-foreground) 20%, transparent); color: var(--primary-foreground); }
+.filterBar .searchWrap { width: 100%; }
+/* Products Empty State & Tiles */
+.emptyState { overflow: hidden; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 32px; text-align: center; }
+.emptyState .emptyTitle { font-weight: 500; }
+.emptyState .emptySubtitle { margin-top: 4px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.emptyState .showAllBtn { margin-top: 16px; border-radius: 9999px; }
+.tilesGrid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 16px; }
+.tilesGrid .productTile { position: relative; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); padding: 14px; }
+.productTile .tileBody { display: flex; flex-direction: column; gap: 12px; }
+.tileBody .tileImageWrap { position: relative; aspect-ratio: 1 / 1; width: 100%; overflow: hidden; border-radius: 12px; background-color: var(--muted); container-type: inline-size; }
+.tileImageWrap .stockBadgeWrap { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 4px; }
+.stockBadgeWrap .stockBadge { border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.stockBadgeWrap .stockBadgeNormal { background-color: color-mix(in oklab, var(--background) 90%, transparent); color: var(--foreground); }
+.stockBadgeWrap .stockBadgeLow { background-color: #f59e0b; color: #ffffff; }
+.stockBadgeWrap .stockBadgeOut { background-color: var(--destructive-solid); color: #ffffff; }
+.tileBody .tileMeta { display: flex; flex-direction: column; gap: 4px; }
+.tileMeta .tileMetaHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tileMetaHeader .tileCategory { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }
+.tileMetaHeader .tilePrice { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.tileMeta .tileTitleLink { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 19px; font-weight: 500; color: var(--foreground); transition: color 150ms ease; }
+.tileMeta .tileTitleLink:hover { color: var(--primary); }
+.productTile .tileFooter { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.tileFooter .tileSwitches { display: flex; align-items: center; gap: 12px; }
+.tileSwitches .switchItem { display: flex; align-items: center; gap: 6px; }
+.switchItem .switchLabel { font-size: 11px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }
+/* Products Table */
+.tableCard { overflow: hidden; border-radius: 12px; border: 1px solid var(--border); }
+.tableCard:focus-visible { outline: 2px solid var(--ring); }
+.tableCard .tableHeaderSticky { position: sticky; top: 0; z-index: 10; background-color: var(--muted); }
+.cellPl { padding-left: 20px; }
+.cellPr { padding-right: 20px; }
+.cellPrRight { padding-right: 20px; text-align: right; }
+.cellRight { text-align: right; }
+.cellCenter { text-align: center; }
+.cellHiddenSmRight { display: none; text-align: right; }
+.cellHiddenSmCenter { display: none; text-align: center; }
+.cellHiddenMd { display: none; }
+.cellCategory { display: none; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.cellPrice { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.cellStockOut { font-weight: 600; color: var(--destructive); }
+.productCellLink { display: flex; align-items: center; gap: 12px; }
+.productCellLink .productThumb { position: relative; width: 44px; height: 44px; flex-shrink: 0; overflow: hidden; border-radius: 8px; background-color: var(--muted); container-type: inline-size; }
+.productCellLink .productName { max-width: 224px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.productCellLink .productName:hover { color: var(--primary); }
+/* Product Row Actions */
+.rowActions { display: flex; justify-content: flex-end; gap: 4px; }
+.rowActions .deleteBtn { color: var(--destructive); }
+.rowActions .deleteBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+/* Section & Settings Card */
+.sectionCard { overflow: hidden; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 80%, transparent); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.sectionCardDirty { border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2); }
+.settingsCard { margin-bottom: 16px; break-inside: avoid; }
+.sectionCard .sectionHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); background-color: color-mix(in oklab, var(--muted) 20%, transparent); padding: 14px 16px; transition: background-color 150ms ease, border-color 150ms ease; }
+.sectionCard .sectionHeaderDirty { border-bottom-color: rgba(245, 158, 11, 0.3); background-color: rgba(245, 158, 11, 0.08); }
+.sectionHeader .sectionHeaderLeft { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
+.sectionHeaderLeft .sectionIconBox { margin-top: 2px; display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 12px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); transition: background-color 150ms ease, color 150ms ease; }
+.sectionHeaderLeft .sectionIconBoxDirty { background-color: rgba(245, 158, 11, 0.15); color: #b45309; }
+:global(.dark) .sectionHeaderLeft .sectionIconBoxDirty { color: #fcd34d; }
+.sectionHeaderLeft .sectionTitleGroup { min-width: 0; }
+.sectionTitleGroup .sectionTitle { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.4px; }
+.sectionTitleGroup .sectionDesc { margin-top: 2px; font-size: 12px; line-height: 19px; color: var(--muted-foreground); }
+.sectionHeader .editedPill { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 9999px; background-color: rgba(245, 158, 11, 0.15); padding: 4px 10px; font-size: 11px; line-height: 1; font-weight: 600; color: #92400e; }
+:global(.dark) .sectionHeader .editedPill { color: #fcd34d; }
+.editedPill .editedDot { width: 6px; height: 6px; border-radius: 9999px; background-color: #f59e0b; }
+.sectionCard .sectionBody { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+/* Product Form Layout & Details */
+.formStack { display: flex; flex-direction: column; gap: 20px; }
+.productFormGrid { display: grid; gap: 16px; }
+.productFormGrid .formColumn { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.specsBlock { display: flex; flex-direction: column; gap: 12px; }
+.specsBlock .specsTitle { font-size: 14px; line-height: 20px; font-weight: 500; }
+.specsBlock .specsSub { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.specsBlock .specRow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.specRow .specValueCol { grid-column: span 2 / span 2; grid-row-start: 2; }
+.seoPreviewBox { border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 70%, transparent); background-color: color-mix(in oklab, var(--muted) 25%, transparent); padding: 16px; }
+.seoPreviewBox .seoUrl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.seoPreviewBox .seoTitle { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 26px; color: #1a0dab; }
+:global(.dark) .seoPreviewBox .seoTitle { color: #8ab4f8; }
+.seoPreviewBox .seoDesc { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.priceGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.shippingNote { border-radius: 12px; background-color: color-mix(in oklab, var(--secondary) 70%, transparent); padding: 12px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+/* Category Manager */
+.dialogSmMax { width: 100%; }
+.dialogLgMax { width: 100%; }
+.dialogForm { display: flex; flex-direction: column; min-height: 0; flex: 1 1 0%; overflow: hidden; }
+.dialogBodyStack { display: flex; flex-direction: column; gap: 8px; }
+.dialogBodySpace4 { display: flex; flex-direction: column; gap: 16px; }
+.sortFieldContainer { width: 160px; }
+.topActionRow { margin-bottom: 16px; display: flex; justify-content: flex-end; }
+.topActionRow .addCategoryBtn { height: 36px; border-radius: 8px; padding-left: 14px; padding-right: 14px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.categoryList { overflow: hidden; border-radius: 12px; border: 1px solid var(--border); list-style: none; padding: 0; margin: 0; }
+.categoryList .categoryEmpty { padding: 28px; text-align: center; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.categoryList .categoryItem { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); transition: background-color 150ms ease; }
+.categoryList .categoryItem:first-child { border-top: 0; }
+.categoryList .categoryItem:hover { background-color: color-mix(in oklab, var(--muted) 35%, transparent); }
+.categoryItem .categoryAvatar { display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 8px; background-color: var(--muted); font-family: var(--font-heading); font-size: 16px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.categoryItem .categoryInfo { min-width: 0; flex: 1 1 0%; }
+.categoryInfo .categoryName { font-weight: 500; }
+.categoryInfo .categoryMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.categoryItem .deleteBtn { color: var(--destructive); }
+.categoryItem .deleteBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+/* Image Uploader */
+.uploaderRoot { display: flex; flex-direction: column; gap: 12px; }
+.uploaderRoot .photoGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.photoGrid .photoItem { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); background-color: var(--muted); }
+.photoItem .photoPlaceholder { position: absolute; inset: 0; background-color: var(--muted); }
+.photoItem .photoImg { object-fit: cover; }
+.photoItem .coverBadge { position: absolute; top: 6px; left: 6px; border-radius: 9999px; background-color: var(--primary); padding: 2px 8px; font-size: 10px; line-height: 14px; font-weight: 600; color: var(--primary-foreground); }
+.photoItem .photoControls { position: absolute; left: 6px; right: 6px; bottom: 6px; display: flex; justify-content: space-between; gap: 4px; opacity: 1; transition: opacity 150ms ease; }
+.photoControls .photoMoveBtn { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9999px; background-color: color-mix(in oklab, var(--background) 90%, transparent); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.photoControls .photoMoveBtn:disabled { opacity: 0.3; }
+.photoControls .photoRemoveBtn { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9999px; background-color: var(--destructive-solid); color: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.photoGrid .uploadDropzone { display: flex; aspect-ratio: 1 / 1; cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; border: 2px dashed var(--border); font-size: 14px; line-height: 20px; color: var(--muted-foreground); transition: color 150ms ease, border-color 150ms ease; }
+.photoGrid .uploadDropzone:hover, .photoGrid .uploadDropzone:focus-within { border-color: var(--primary); color: var(--primary); }
+.photoGrid .uploadDropzoneBusy { pointer-events: none; opacity: 0.6; }
+.uploadDropzone .uploadIcon { width: 24px; height: 24px; }
+.uploadDropzone .uploadLabel { font-size: 12px; line-height: 16px; font-weight: 500; }
+.uploaderRoot .uploaderHint { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+/* Store Settings Form & Promo Codes */
+.settingsColumns { width: 100%; }
+.contentsGroup { display: contents; }
+.twoColFields { display: grid; column-gap: 20px; row-gap: 4px; }
+.dialogTwoCol { display: grid; column-gap: 16px; row-gap: 4px; }
+.seoCardPreview { border-radius: 12px; border: 1px solid var(--border); background-color: var(--background); padding: 16px; }
+.seoCardPreview .seoUrl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.seoCardPreview .seoTitle { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 26px; color: #1a0dab; }
+:global(.dark) .seoCardPreview .seoTitle { color: #8ab4f8; }
+.seoCardPreview .seoDesc { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.mutedHintText { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.deliveryPreviewBox { border-radius: 12px; background-color: color-mix(in oklab, var(--secondary) 70%, transparent); padding: 12px; font-size: 14px; line-height: 20px; }
+.ordersFieldsGrid { display: grid; gap: 16px; }
+.ordersFieldsGrid .returnWindowCol { width: 100%; }
+.promoSection { margin-bottom: 24px; display: flex; flex-direction: column; gap: 20px; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 20px; }
+.promoSection .promoHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.promoHeader .promoTitle { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
+.promoTitle .promoTitleIcon { width: 20px; height: 20px; color: var(--primary); }
+.promoHeader .promoSub { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.promoHeader .newPromoBtn { border-radius: 9999px; padding-left: 16px; padding-right: 16px; }
+.promoSection .promoEmpty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; border: 1px dashed var(--border); background-color: color-mix(in oklab, var(--muted) 20%, transparent); padding: 32px 16px; text-align: center; }
+.promoEmpty .promoEmptyTitle { font-size: 14px; line-height: 20px; font-weight: 500; color: color-mix(in oklab, var(--foreground) 80%, transparent); }
+.promoEmpty .promoEmptySub { max-width: 448px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.promoEmptySub .codeExample { font-family: var(--font-mono); font-weight: 600; color: var(--foreground); }
+.promoSection .promoGrid { display: grid; gap: 12px; }
+.promoGrid .promoCard { display: flex; flex-direction: column; justify-content: space-between; gap: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; transition: background-color 150ms ease, opacity 150ms ease; }
+.promoGrid .promoCardActive { background-color: var(--background); }
+.promoGrid .promoCardInactive { background-color: color-mix(in oklab, var(--muted) 30%, transparent); opacity: 0.85; }
+.promoCard .promoCardTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.promoCardTop .promoCardInfo { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.promoCardInfo .promoTagRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.promoTagRow .promoCodeTag { border-radius: 8px; border: 1px solid color-mix(in oklab, var(--primary) 30%, transparent); background-color: color-mix(in oklab, var(--primary) 8%, transparent); padding: 4px 10px; font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 700; letter-spacing: 0.8px; color: var(--primary); }
+.promoTagRow .copyBtn { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9999px; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.promoTagRow .copyBtn:hover { background-color: var(--muted); color: var(--foreground); }
+.promoTagRow .statusPill { border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.promoTagRow .statusDisabled { background-color: var(--muted); color: var(--muted-foreground); }
+.promoTagRow .statusExpired { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive); }
+.promoTagRow .statusLimit { background-color: rgba(245, 158, 11, 0.15); color: #b45309; }
+:global(.dark) .promoTagRow .statusLimit { color: #fcd34d; }
+.promoTagRow .statusActive { background-color: rgba(16, 185, 129, 0.15); color: #047857; }
+:global(.dark) .promoTagRow .statusActive { color: #6ee7b7; }
+.promoCardInfo .promoDiscountText { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.promoCardInfo .promoDescText { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.promoCardTop .deletePromoBtn { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 9999px; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.promoCardTop .deletePromoBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); color: var(--destructive); }
+.promoCard .promoCardBottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.promoCardBottom .promoUsageMeta { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 4px; }
+.promoUsageMeta .promoUsedCount { font-weight: 500; color: color-mix(in oklab, var(--foreground) 80%, transparent); }
+.promoCardBottom .promoActions { display: flex; align-items: center; gap: 8px; }
+.promoActions .togglePromoBtn { border-radius: 9999px; padding-left: 12px; padding-right: 12px; }
+.createSubmitBtn { border-radius: 9999px; padding-left: 20px; padding-right: 20px; }
+/* Launch Panel */
+.launchGrid { display: grid; gap: 16px; }
+.launchGrid .launchCard { display: flex; flex-direction: column; gap: 16px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
+.launchGrid .launchCardDanger { border-color: color-mix(in oklab, var(--destructive) 30%, transparent); }
+.launchCard .launchTitle { font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
+.launchCard .launchDangerTitle { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; color: var(--destructive); }
+.launchCard .launchSub { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.launchCard .placeholderAlert { border-radius: 12px; border: 1px solid #fcd34d; background-color: #fffbeb; padding: 14px; font-size: 14px; line-height: 20px; color: #451a03; }
+:global(.dark) .launchCard .placeholderAlert { border-color: rgba(146, 64, 14, 0.6); background-color: rgba(69, 26, 3, 0.3); color: #fef3c7; }
+.placeholderAlert .alertHeading { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.placeholderAlert .alertBody { margin-top: 4px; }
+.alertBody .alertLink { font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.launchCard .checklist { overflow: hidden; border-radius: 12px; border: 1px solid var(--border); list-style: none; padding: 0; margin: 0; }
+.checklist .checklistItem { border-top: 1px solid var(--border); }
+.checklist .checklistItem:first-child { border-top: 0; }
+.checklistItem .checklistLink { display: flex; align-items: center; gap: 12px; padding: 14px; transition: background-color 150ms ease; }
+.checklistItem .checklistLink:hover { background-color: color-mix(in oklab, var(--muted) 50%, transparent); }
+.checklistLink .iconDone { width: 20px; height: 20px; flex-shrink: 0; color: var(--success); }
+.checklistLink .iconTodo { width: 20px; height: 20px; flex-shrink: 0; color: #d97706; }
+:global(.dark) .checklistLink .iconTodo { color: #fbbf24; }
+.checklistLink .checklistText { min-width: 0; flex: 1 1 0%; }
+.checklistText .checklistLabel { display: block; font-size: 14px; line-height: 20px; font-weight: 500; }
+.checklistText .checklistHint { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.launchCard .scopeFieldset { display: flex; flex-direction: column; gap: 8px; border: 0; padding: 0; margin: 0; }
+.scopeFieldset .scopeLabel { display: flex; cursor: pointer; align-items: flex-start; gap: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 14px; transition: background-color 150ms ease, border-color 150ms ease; }
+.scopeFieldset .scopeLabel:hover { background-color: color-mix(in oklab, var(--muted) 50%, transparent); }
+.scopeFieldset .scopeLabelSelected { border-color: color-mix(in oklab, var(--destructive) 50%, transparent); background-color: color-mix(in oklab, var(--destructive) 5%, transparent); }
+.scopeFieldset .scopeLabelSelected:hover { background-color: color-mix(in oklab, var(--destructive) 5%, transparent); }
+.scopeLabel .scopeCheckbox { margin-top: 4px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--destructive); }
+.scopeLabel .scopeContent { min-width: 0; flex: 1 1 0%; }
+.scopeContent .scopeTop { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px; }
+.scopeTop .scopeName { font-size: 14px; line-height: 20px; font-weight: 600; }
+.scopeTop .scopeCount { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.scopeContent .scopeDesc { display: block; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+/* Responsive Media Queries */
+@media (min-width: 640px) {
+  .filterBar { flex-direction: row; align-items: center; justify-content: space-between; padding: 14px; }
+  .filterBar .searchWrap { max-width: 320px; }
+  .emptyState { padding: 48px; }
+  .tilesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cellHiddenSmRight { display: table-cell; }
+  .cellHiddenSmCenter { display: table-cell; }
+  .sectionCard .sectionHeader { padding: 16px 24px; }
+  .sectionTitleGroup .sectionTitle { font-size: 17px; }
+  .sectionTitleGroup .sectionDesc { font-size: 14px; line-height: 20px; }
+  .sectionCard .sectionBody { gap: 20px; padding: 24px; }
+  .productFormGrid { gap: 20px; }
+  .productFormGrid .formColumn { gap: 20px; }
+  .specsBlock .specRow { grid-template-columns: 200px 1fr auto; }
+  .specRow .specValueCol { grid-column: span 1 / span 1; grid-row-start: auto; }
+  .priceGrid { gap: 16px; }
+  .dialogSmMax { max-width: 448px; }
+  .dialogLgMax { max-width: 512px; }
+  .categoryList .categoryEmpty { padding: 40px; }
+  .uploaderRoot .photoGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .photoItem .photoControls { opacity: 0; }
+  .photoItem:hover .photoControls, .photoItem:focus-within .photoControls { opacity: 1; }
+  .twoColFields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dialogTwoCol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ordersFieldsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ordersFieldsGrid .returnWindowCol { grid-column: span 2 / span 2; }
+  .promoSection { padding: 24px; }
+  .launchGrid .launchCard { padding: 20px; }
+}
+@media (min-width: 768px) {
+  .tilesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cellHiddenMd { display: table-cell; }
+  .cellCategory { display: table-cell; }
+  .promoSection .promoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .ordersFieldsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ordersFieldsGrid .returnWindowCol { grid-column: span 1 / span 1; }
+}
+@media (min-width: 1280px) {
+  .tilesGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .productFormGrid { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+  .settingsColumns { column-count: 2; column-gap: 20px; }
+  .launchGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}

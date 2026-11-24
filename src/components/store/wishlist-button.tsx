@@ -4,6 +4,7 @@ import { HeartIcon } from "lucide-react"
 import * as m from "motion/react-m"
 import { useWishlistToggle } from "@/hooks/use-wishlist-toggle"
 import { cn } from "@/lib/utils"
+import styles from "./product-card.module.css"
 
 export function WishlistButton({
   productId,
@@ -19,7 +20,7 @@ export function WishlistButton({
   const { active, toggle } = useWishlistToggle(productId, productName)
 
   return (
-    <m.button data-ui="store/WishlistButton"
+    <m.button
       type="button"
       whileTap={{ scale: 0.85 }}
       onClick={(e) => {
@@ -30,12 +31,12 @@ export function WishlistButton({
       aria-pressed={active}
       aria-label={active ? `Remove ${productName} from wishlist` : `Add ${productName} to wishlist`}
       className={cn(
-        "grid place-items-center rounded-full border bg-background/85 shadow-sm backdrop-blur transition-colors hover:bg-background",
-        size === "md" ? "size-9" : "size-11",
+        styles.wishlistTrigger,
+        size === "md" ? styles.wishlistSizeMd : styles.wishlistSizeLg,
         className
       )}
     >
-      <m.span data-ui="store/WishlistButton/m.span"
+      <m.span
         key={active ? "on" : "off"}
         initial={{ scale: 0.6 }}
         animate={{ scale: 1 }}
@@ -43,8 +44,8 @@ export function WishlistButton({
       >
         <HeartIcon
           className={cn(
-            size === "md" ? "size-4" : "size-5",
-            active ? "fill-rose-500 text-rose-500" : "text-foreground/70"
+            size === "md" ? styles.heartIconMd : styles.heartIconLg,
+            active ? styles.heartActive : styles.heartInactive
           )}
         />
       </m.span>

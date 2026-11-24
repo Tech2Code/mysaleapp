@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { FIELD_KINDS, type FieldKind } from "@/lib/validation/fields"
 import { cn } from "@/lib/utils"
 import { describedBy, FieldShell, FIELD_HEIGHT, PILL, type FieldSize } from "./field-shell"
+import styles from "./form.module.css"
 
 export type TextFieldProps = ComponentProps<"input"> & {
   label: string
@@ -33,14 +34,14 @@ export type TextFieldProps = ComponentProps<"input"> & {
 function Leading({ children }: { children: ReactNode }) {
   const wide = typeof children === "string" && children.length > 1
   return (
-    <span data-ui="form/Leading"
+    <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute inset-y-0 left-0 grid place-items-center text-sm leading-none font-medium text-muted-foreground",
-        wide ? "w-12" : "w-9"
+        styles.leadingAffix,
+        wide ? styles.leadingWide : styles.leadingNarrow
       )}
     >
-      {children === "+" ? <PlusIcon className="size-3.5" strokeWidth={2.5} /> : children}
+      {children === "+" ? <PlusIcon className={styles.icon14} strokeWidth={2.5} /> : children}
     </span>
   )
 }
@@ -86,7 +87,7 @@ export function TextField({
 
   return (
     <FieldShell id={id} label={label} hideLabel={hideLabel} error={error} hint={hint} className={containerClassName} noErrorSpace={noErrorSpace || pill}>
-      <div data-ui="form/TextField/div-relative" className="relative">
+      <div className={styles.relativeWrap}>
         {leading && <Leading>{leading}</Leading>}
         <Input
           id={id}
@@ -100,8 +101,8 @@ export function TextField({
           spellCheck={props.spellCheck ?? spec?.spellCheck}
           className={cn(
             pill ? PILL : FIELD_HEIGHT[fieldSize],
-            leading && (wideLeading ? "pl-12" : "pl-9"),
-            isPassword && "pr-10 [&::-ms-clear]:hidden [&::-ms-reveal]:hidden",
+            leading && (wideLeading ? styles.inputPlWide : styles.inputPlNarrow),
+            isPassword && styles.inputPasswordPr,
             className
           )}
           {...props}
@@ -110,21 +111,21 @@ export function TextField({
         />
         {isPassword && (
           <button
-            data-ui="form/TextField/button-grid"
+
             type="button"
             disabled={props.disabled}
             aria-label={showPassword ? `Hide ${label}` : `Show ${label}`}
             aria-pressed={showPassword}
             onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground disabled:pointer-events-none disabled:opacity-50 in-data-skeleton:hidden"
+            className={styles.passwordToggleBtn}
           >
-            {showPassword ? <EyeOffIcon className="size-4" aria-hidden /> : <EyeIcon className="size-4" aria-hidden />}
+            {showPassword ? <EyeOffIcon className={styles.icon16} aria-hidden /> : <EyeIcon className={styles.icon16} aria-hidden />}
           </button>
         )}
         {listId && (
-          <datalist data-ui="form/TextField/datalist" id={listId}>
+          <datalist id={listId}>
             {suggestions!.map((s) => (
-              <option data-ui="form/TextField/option" key={s} value={s} />
+              <option key={s} value={s} />
             ))}
           </datalist>
         )}

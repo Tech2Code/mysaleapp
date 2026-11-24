@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import styles from "@/components/admin/admin-core.module.css"
 import { getStoreSettings } from "@/features/settings/queries"
 import "./admin.css"
 
@@ -11,5 +12,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function AdminRootLayout({ children }: LayoutProps<"/admin">) {
-  return <div data-ui="layout:/admin" data-slot="admin-layout" className="min-h-dvh">{children}</div>
+  return <div data-slot="admin-layout" className={styles.adminRootLayout}>{children}</div>
 }

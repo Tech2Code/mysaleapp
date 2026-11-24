@@ -1,0 +1,39 @@
+/* Section: Product Browser Sticky Filter Bar & Grid (Seamless Default + Frosted Glass When Sticky) */
+.stickyFilterBar { position: sticky; top: var(--store-header-h); z-index: 20; margin: 0 calc(50% - 50vw) 32px calc(50% - 50vw); display: flex; flex-direction: column; gap: 12px; border: 0; background-color: transparent; box-shadow: none; padding: 14px calc(50vw - 50%); transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), backdrop-filter 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.stickyFilterBarStuck { background-color: color-mix(in oklab, var(--background) 82%, transparent); box-shadow: 0 14px 32px -16px rgba(11, 53, 80, 0.08); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); }
+:global(body):has(.stickyFilterBar) { overflow-x: clip; }
+.stickyFilterBar .controlsRow { display: flex; flex-direction: column; gap: 12px; }
+.controlsRow .searchGrow { flex: 1 1 0%; }
+.stickyFilterBar :global([data-slot="input"]), .stickyFilterBar :global([data-slot="select-trigger"]) { background-color: var(--card); border: 0; box-shadow: var(--store-elevation-sm); transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.stickyFilterBar :global([data-slot="input"]):hover, .stickyFilterBar :global([data-slot="select-trigger"]):hover { box-shadow: var(--store-elevation-md); }
+.stickyFilterBar :global([data-slot="input"]):focus-visible, .stickyFilterBar :global([data-slot="select-trigger"]):focus-visible, .stickyFilterBar :global([data-slot="select-trigger"])[data-popup-open] { background-color: var(--card); box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md); }
+.stickyFilterBar .chipsRow { overflow-x: auto; padding: 6px; margin: -6px; scrollbar-width: none; display: flex; gap: 8px; }
+.stickyFilterBar .chipsRow::-webkit-scrollbar { display: none; }
+.chipsRow .categoryChip { position: relative; flex-shrink: 0; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 8px 16px; font-size: 14px; font-weight: 500; color: var(--foreground); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.chipsRow .categoryChip:hover { background-color: var(--card); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.chipsRow .categoryChip:active { transform: translateY(0) scale(0.97); }
+.chipsRow .categoryChipActive { color: var(--primary-foreground); background-color: transparent; box-shadow: 0 6px 18px -4px color-mix(in oklab, var(--primary) 45%, transparent); }
+.chipsRow .categoryChipActive:hover { background-color: transparent; color: var(--primary-foreground); box-shadow: 0 8px 22px -4px color-mix(in oklab, var(--primary) 55%, transparent); }
+.categoryChip .activeChipBg { position: absolute; inset: 0; z-index: 0; border-radius: 9999px; background-color: var(--primary); }
+.categoryChip .chipLabel { position: relative; }
+/* Section: Results Count & Empty State */
+.resultsCountText { margin: 0 0 16px 0; font-size: 14px; color: var(--muted-foreground); }
+.noMatchStack { display: flex; flex-direction: column; gap: 24px; }
+.noMatchStack .noMatchBanner { display: flex; flex-direction: column; align-items: center; gap: 8px; border-radius: 16px; border: 1px dashed var(--border); background-color: color-mix(in oklab, var(--muted) 40%, transparent); padding: 24px 16px; text-align: center; }
+.noMatchBanner .noMatchTitle { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--foreground); }
+.noMatchBanner .clearFiltersBtn { border: 0; background: transparent; padding: 0; font-size: 12px; font-weight: 600; color: var(--primary); }
+.noMatchBanner .clearFiltersBtn:hover { text-decoration: underline; }
+.browserGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 32px; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .stickyFilterBar .controlsRow { flex-direction: row; align-items: center; }
+  .controlsRow .sortSelectWidth { width: 224px; }
+  .stickyFilterBar .chipsRow { flex-wrap: wrap; }
+  .browserGrid { column-gap: 24px; }
+}
+@media (min-width: 768px) {
+  .browserGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .browserGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

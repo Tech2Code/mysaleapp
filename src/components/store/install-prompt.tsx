@@ -10,6 +10,7 @@ import { useInstallPrompt } from "@/hooks/use-install-prompt"
 import { cn } from "@/lib/utils"
 import { LogoMark } from "@/components/shared/logo"
 import { useStoreSettings } from "./store-settings-provider"
+import styles from "./store-widgets.module.css"
 
 /**
  * A small "Install app" banner at the bottom of the screen, shown a few seconds after arriving.
@@ -32,47 +33,44 @@ export function InstallPrompt() {
     <AnimatePresence>
       {show && (
         <m.aside
-          data-ui="store/InstallPrompt/m.aside"
+
           role="dialog"
           aria-label={`Install ${shop.shopName}`}
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 40 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
-          className={cn(
-            "fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-2xl border bg-card p-4 shadow-2xl shadow-black/15",
-            "sm:right-auto sm:left-6 sm:mx-0 sm:bottom-6"
-          )}
+          className={styles.installBanner}
         >
-          <button data-ui="store/InstallPrompt/button-not-now"
+          <button
             type="button"
             onClick={dismiss}
             aria-label="Not now"
-            className="absolute top-2 right-2 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={styles.dismissBtn}
           >
-            <XIcon className="size-4" />
+            <XIcon className={styles.closeSvg} />
           </button>
-          <div data-ui="store/InstallPrompt/div-flex" className="flex items-start gap-3 pr-6">
-            <LogoMark className="size-11 shrink-0 text-xl" />
-            <div data-ui="store/InstallPrompt/div" className="min-w-0">
-              <p data-ui="store/InstallPrompt/p" className="text-sm/snug  font-semibold">Get the {shop.shopName} app</p>
-              <p data-ui="store/InstallPrompt/p-2" className="mt-0.5 text-xs/snug  text-muted-foreground">
+          <div className={styles.bannerHeaderRow}>
+            <LogoMark className={styles.logoMarkBox} />
+            <div className={styles.bannerTextCol}>
+              <p className={styles.bannerTitle}>Get the {shop.shopName} app</p>
+              <p className={styles.bannerDesc}>
                 Faster shopping, order tracking and offers, right from your home screen.
               </p>
             </div>
           </div>
 
           {needsManualSteps ? (
-            <ol data-ui="store/InstallPrompt/ol" className="mt-3 space-y-2 rounded-xl bg-muted/60 p-3 text-xs/snug ">
-              <li data-ui="store/InstallPrompt/li-flex" className="flex items-center gap-2">
-                <ShareIcon className="size-4 shrink-0 text-primary" aria-hidden /> Tap <span data-ui="store/InstallPrompt/span" className="font-semibold">Share</span> in Safari&apos;s toolbar
+            <ol className={styles.manualStepsList}>
+              <li className={styles.stepRow}>
+                <ShareIcon className={styles.stepSvg} aria-hidden /> Tap <span className={styles.stepStrong}>Share</span> in Safari&apos;s toolbar
               </li>
-              <li data-ui="store/InstallPrompt/li-flex-2" className="flex items-center gap-2">
-                <SquarePlusIcon className="size-4 shrink-0 text-primary" aria-hidden /> Choose <span data-ui="store/InstallPrompt/span-2" className="font-semibold">Add to Home Screen</span>
+              <li className={styles.stepRow}>
+                <SquarePlusIcon className={styles.stepSvg} aria-hidden /> Choose <span className={styles.stepStrong}>Add to Home Screen</span>
               </li>
             </ol>
           ) : (
-            <Button data-ui="store/InstallPrompt/Button-install-app" type="button" onClick={() => void install()} className="mt-3 h-10 w-full rounded-full">
+            <Button type="button" onClick={() => void install()} className={styles.installActionBtn}>
               <DownloadIcon /> Install app
             </Button>
           )}
@@ -89,14 +87,11 @@ export function InstallButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      data-ui="store/InstallButton"
+
       onClick={() => (needsManualSteps ? toast.info("Tap Share in Safari, then “Add to Home Screen”.", { duration: 6000 }) : void install())}
-      className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-full border bg-card px-4 text-sm font-semibold transition-colors hover:bg-muted",
-        className
-      )}
+      className={cn(styles.footerInstallBtn, className)}
     >
-      <DownloadIcon className="size-4" aria-hidden /> Install app
+      <DownloadIcon className={styles.downloadSvg} aria-hidden /> Install app
     </button>
   )
 }

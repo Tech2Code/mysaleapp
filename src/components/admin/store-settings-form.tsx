@@ -54,6 +54,7 @@ import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
+import styles from "./admin-views.module.css"
 
 function hasDirtyValue(val: unknown): boolean {
   if (val === true) return true
@@ -81,47 +82,38 @@ function Card({
 }) {
   return (
     <section
-      data-ui="admin/Card"
-      className={cn(
-        "adminCard mb-4 break-inside-avoid overflow-hidden rounded-xl border transition-colors",
-        dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
-      )}
+
+      className={cn("adminCard", styles.sectionCard, styles.settingsCard, dirty && styles.sectionCardDirty)}
     >
       <div
-        data-ui="admin/Card/div"
-        className={cn(
-          "flex items-start justify-between gap-3 border-b px-4 py-3.5 transition-colors sm:px-6 sm:py-4",
-          dirty ? "border-amber-500/30 bg-amber-500/8" : "border-border/60 bg-muted/20"
-        )}
+
+        className={cn(styles.sectionHeader, dirty && styles.sectionHeaderDirty)}
       >
-        <div data-ui="admin/Card/div-flex" className="flex min-w-0 items-start gap-3">
+        <div className={styles.sectionHeaderLeft}>
           {Icon && (
-            <span data-ui="admin/Card/span"
-              className={cn(
-                "mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl transition-colors",
-                dirty ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-primary/10 text-primary"
-              )}
+            <span
+              className={cn(styles.sectionIconBox, dirty && styles.sectionIconBoxDirty)}
             >
-              <Icon className="size-4" aria-hidden />
+              <Icon className={styles.iconMd} aria-hidden />
             </span>
           )}
-          <div data-ui="admin/Card/div-2" className="min-w-0">
-            <h2 data-ui="admin/Card/h2" className="font-sans text-base font-semibold tracking-tight sm:text-[1.0625rem]">
+          <div className={styles.sectionTitleGroup}>
+            <h2 className={styles.sectionTitle}>
               {title}
             </h2>
-            <p data-ui="admin/Card/p" className="mt-0.5 text-xs/relaxed text-muted-foreground sm:text-sm">
+            <p className={styles.sectionDesc}>
               {description}
             </p>
           </div>
         </div>
         {dirty && (
-          <span data-ui="admin/Card/span-inline-flex" className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] leading-none font-semibold text-amber-800 dark:text-amber-300">
-            <span data-ui="admin/Card/span-2" className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+          <span className={styles.editedPill}>
+            <span className={styles.editedDot} aria-hidden />
             Edited
           </span>
         )}
       </div>
-      <div data-ui="admin/Card/div-3" className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+      <div className={styles.sectionBody}>
         {children}
       </div>
     </section>
@@ -324,17 +316,17 @@ function StoreSettingsFormInner({
     )(e)
 
   return (
-    <form data-ui="admin/StoreSettingsFormInner" onSubmit={onSubmit} noValidate className="space-y-5">
-      <div data-ui="admin/StoreSettingsFormInner/div" className="xl:columns-2 xl:gap-5">
+    <form onSubmit={onSubmit} noValidate className={styles.formStack}>
+      <div className={styles.settingsColumns}>
         {/* ----------------------------------------------- column 1: your shop */}
-        <div data-ui="admin/StoreSettingsFormInner/div-2" className="contents">
+        <div className={styles.contentsGroup}>
           <Card
             title="Shop profile"
             description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
             icon={StoreIcon}
             dirty={shopDirty}
           >
-            <div data-ui="admin/StoreSettingsFormInner/div-grid" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
               <TextField label="Tagline" maxLength={LIMITS.tagline.max} fieldSize="md" error={errors.tagline?.message} {...form.register("tagline")} />
             </div>
@@ -352,7 +344,7 @@ function StoreSettingsFormInner({
               error={errors.announcement?.message}
               {...form.register("announcement")}
             />
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-2" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Product page highlight" maxLength={LIMITS.highlightText.max} fieldSize="md"
                 hint="Short line with an icon on every product page. Leave empty for the default."
@@ -369,7 +361,7 @@ function StoreSettingsFormInner({
           </Card>
 
           <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link." icon={GlobeIcon} dirty={socialDirty}>
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-3" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Instagram" kind="url"
                 fieldSize="md"
@@ -402,16 +394,16 @@ function StoreSettingsFormInner({
               error={errors.keywords?.message}
               {...form.register("keywords")}
             />
-            <div data-ui="admin/StoreSettingsFormInner/div-3" className="rounded-xl border bg-background p-4">
-              <p data-ui="admin/StoreSettingsFormInner/p" className="truncate text-xs text-muted-foreground">{siteConfig.url.replace(/^https?:\/\//, "")}</p>
-              <p data-ui="admin/StoreSettingsFormInner/p-2" className="mt-1 truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{String(name ?? "")}</p>
-              <p data-ui="admin/StoreSettingsFormInner/p-3" className="line-clamp-2 text-sm text-muted-foreground">{String(description ?? "")}</p>
+            <div className={styles.seoCardPreview}>
+              <p className={styles.seoUrl}>{siteConfig.url.replace(/^https?:\/\//, "")}</p>
+              <p className={styles.seoTitle}>{String(name ?? "")}</p>
+              <p className={styles.seoDesc}>{String(description ?? "")}</p>
             </div>
           </Card>
         </div>
 
         {/* ----------------------------------------------- column 2: contact, money, orders */}
-        <div data-ui="admin/StoreSettingsFormInner/div-4" className="contents">
+        <div className={styles.contentsGroup}>
           <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message." icon={PhoneIcon} dirty={contactDirty}>
             <TextField
               label="WhatsApp number" kind="intlPhone"
@@ -447,7 +439,7 @@ function StoreSettingsFormInner({
                 {...form.register("phone")}
               />
             )}
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-4" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
               <TextField
                 label="Pincode"
@@ -471,7 +463,7 @@ function StoreSettingsFormInner({
                 options={stateOptions}
               />
             </div>
-            <p data-ui="admin/StoreSettingsFormInner/p-4" className="text-xs text-muted-foreground">Anything you leave empty is simply hidden on the website.</p>
+            <p className={styles.mutedHintText}>Anything you leave empty is simply hidden on the website.</p>
           </Card>
 
           <Card
@@ -480,7 +472,7 @@ function StoreSettingsFormInner({
             icon={IndianRupeeIcon}
             dirty={paymentDirty}
           >
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-5" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="UPI ID" kind="upiId"
                 fieldSize="md"
@@ -521,7 +513,7 @@ function StoreSettingsFormInner({
               )}
             />
             {gstOn && (
-              <div data-ui="admin/StoreSettingsFormInner/div-grid-6" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+              <div className={styles.twoColFields}>
                 <TextField
                   label="GSTIN" kind="gstin" fieldSize="md"
                   placeholder="22AAAAA0000A1Z5"
@@ -548,7 +540,7 @@ function StoreSettingsFormInner({
               error={errors.priceNote?.message}
               {...form.register("priceNote")}
             />
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-7" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Name on invoices" maxLength={LIMITS.legalName.max} fieldSize="md"
                 hint="Leave empty to use your shop name."
@@ -571,7 +563,7 @@ function StoreSettingsFormInner({
             icon={TruckIcon}
             dirty={deliveryDirty}
           >
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-8" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Standard delivery charge" kind="money"
                 fieldSize="md"
@@ -591,7 +583,7 @@ function StoreSettingsFormInner({
                 {...form.register("freeDeliveryAbove")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-9" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Fragile packaging fee" kind="money"
                 fieldSize="md"
@@ -611,7 +603,7 @@ function StoreSettingsFormInner({
                 {...form.register("oversizedFee")}
               />
             </div>
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-10" className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+            <div className={styles.twoColFields}>
               <TextField
                 label="Included parcel weight (grams)" kind="digits"
                 fieldSize="md"
@@ -631,15 +623,15 @@ function StoreSettingsFormInner({
                 {...form.register("extraWeightFeePerKg")}
               />
             </div>
-            {deliveryPreview && <p data-ui="admin/StoreSettingsFormInner/p-5" className="rounded-xl bg-secondary/70 p-3 text-sm">{deliveryPreview}</p>}
+            {deliveryPreview && <p className={styles.deliveryPreviewBox}>{deliveryPreview}</p>}
           </Card>
 
           <Card title="Orders" description="Order code format, rejected-UTR expiry, and the return window." icon={ShoppingCartIcon} dirty={ordersDirty}>
-            <div data-ui="admin/StoreSettingsFormInner/div-grid-11" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={styles.ordersFieldsGrid}>
               <TextField
                 label="Order code prefix" kind="orderPrefix"
                 fieldSize="md"
-                className="font-mono uppercase"
+                className={styles.monoUpperInput}
                 maxLength={5}
                 hint={`Preview: ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
                 error={errors.orderCodePrefix?.message}
@@ -659,7 +651,7 @@ function StoreSettingsFormInner({
                 fieldSize="md"
                 inputMode="numeric"
                 maxLength={2}
-                containerClassName="sm:col-span-2 lg:col-span-1"
+                containerClassName={styles.returnWindowCol}
                 hint="Days after delivery to request a return or exchange (max 90). 0 = off."
                 error={errors.returnWindowDays?.message}
                 {...form.register("returnWindowDays")}
@@ -788,47 +780,47 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
   }
 
   return (
-    <section data-ui="admin/PromoCodeManager" className="mb-6 space-y-5 rounded-2xl border bg-card p-5 sm:p-6">
-      <div data-ui="admin/PromoCodeManager/div-flex" className="flex flex-wrap items-start justify-between gap-3">
-        <div data-ui="admin/PromoCodeManager/div">
-          <h2 data-ui="admin/PromoCodeManager/h2-promo-codes-amp-discou" className="flex items-center gap-2 font-sans text-lg font-semibold">
-            <TicketPercentIcon className="size-5 text-primary" aria-hidden />
+    <section className={styles.promoSection}>
+      <div className={styles.promoHeader}>
+        <div>
+          <h2 className={styles.promoTitle}>
+            <TicketPercentIcon className={styles.promoTitleIcon} aria-hidden />
             Promo codes &amp; discount coupons
           </h2>
-          <p data-ui="admin/PromoCodeManager/p" className="mt-0.5 text-sm text-muted-foreground">
+          <p className={styles.promoSub}>
             Create discount codes for sales or festive offers. Toggle codes on or off anytime without deleting them.
           </p>
         </div>
         <Button
-          data-ui="admin/PromoCodeManager/Button-new-promo-code"
+
           type="button"
           size="sm"
           onClick={() => setCreateOpen(true)}
-          className="rounded-full px-4"
+          className={styles.newPromoBtn}
         >
-          <PlusIcon className="size-4" /> New promo code
+          <PlusIcon className={styles.iconMd} /> New promo code
         </Button>
       </div>
 
       {promoCodes.length === 0 ? (
-        <div data-ui="admin/PromoCodeManager/div-flex-2" className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center">
-          <p data-ui="admin/PromoCodeManager/p-2" className="text-sm font-medium text-foreground/80">No promo codes yet</p>
-          <p data-ui="admin/PromoCodeManager/p-3" className="max-w-md text-xs text-muted-foreground">
-            Create a code like <span data-ui="admin/PromoCodeManager/span" className="font-mono font-semibold text-foreground">WELCOME10</span> or <span data-ui="admin/PromoCodeManager/span-2" className="font-mono font-semibold text-foreground">DIWALI100</span> so customers can apply it at checkout.
+        <div className={styles.promoEmpty}>
+          <p className={styles.promoEmptyTitle}>No promo codes yet</p>
+          <p className={styles.promoEmptySub}>
+            Create a code like <span className={styles.codeExample}>WELCOME10</span> or <span className={styles.codeExample}>DIWALI100</span> so customers can apply it at checkout.
           </p>
         </div>
       ) : (
-        <div data-ui="admin/PromoCodeManager/div-grid" className="grid gap-3 md:grid-cols-2">
+        <div className={styles.promoGrid}>
           {promoCodes.map((promo) => {
             const isExpired = Boolean(today && promo.expiresAt && promo.expiresAt < today)
             const isLimitReached = Boolean(promo.maxUses !== null && promo.usedCount >= promo.maxUses)
             const effectiveStatus = !promo.isActive
-              ? { label: "Disabled", tone: "bg-muted text-muted-foreground" }
+              ? { label: "Disabled", tone: styles.statusDisabled }
               : isExpired
-                ? { label: "Expired", tone: "bg-destructive/12 text-destructive" }
+                ? { label: "Expired", tone: styles.statusExpired }
                 : isLimitReached
-                  ? { label: "Limit reached", tone: "bg-amber-500/15 text-amber-700 dark:text-amber-300" }
-                  : { label: "Active", tone: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
+                  ? { label: "Limit reached", tone: styles.statusLimit }
+                  : { label: "Active", tone: styles.statusActive }
 
             const discountSummary =
               promo.discountType === "percent"
@@ -837,21 +829,21 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
 
             return (
               <div
-                data-ui="admin/PromoCodeManager/div-2"
+
                 key={promo.id}
                 className={cn(
-                  "flex flex-col justify-between gap-3 rounded-xl border p-4 transition-colors",
-                  promo.isActive && !isExpired && !isLimitReached ? "bg-background" : "bg-muted/30 opacity-85"
+                  styles.promoCard,
+                  promo.isActive && !isExpired && !isLimitReached ? styles.promoCardActive : styles.promoCardInactive
                 )}
               >
-                <div data-ui="admin/PromoCodeManager/div-flex-3" className="flex items-start justify-between gap-2">
-                  <div data-ui="admin/PromoCodeManager/div-3" className="min-w-0 space-y-1">
-                    <div data-ui="admin/PromoCodeManager/div-flex-4" className="flex flex-wrap items-center gap-2">
-                      <span data-ui="admin/PromoCodeManager/span-3" className="rounded-lg border border-primary/30 bg-primary/8 px-2.5 py-1 font-mono text-sm font-bold tracking-wider text-primary">
+                <div className={styles.promoCardTop}>
+                  <div className={styles.promoCardInfo}>
+                    <div className={styles.promoTagRow}>
+                      <span className={styles.promoCodeTag}>
                         {promo.code}
                       </span>
                       <button
-                        data-ui="admin/PromoCodeManager/button-grid"
+
                         type="button"
                         aria-label={`Copy promo code ${promo.code}`}
                         onClick={async () => {
@@ -862,62 +854,62 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                             toast.error("Could not copy code")
                           }
                         }}
-                        className="grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className={styles.copyBtn}
                       >
-                        <CopyIcon className="size-3.5" />
+                        <CopyIcon className={styles.iconSm} />
                       </button>
                       <span
-                        data-ui="admin/PromoCodeManager/span-4"
-                        className={cn(" rounded-full px-2.5 py-0.5 text-xs font-semibold", effectiveStatus.tone)}
+
+                        className={cn(styles.statusPill, effectiveStatus.tone)}
                       >
                         {effectiveStatus.label}
                       </span>
                     </div>
-                    <p data-ui="admin/PromoCodeManager/p-4" className="text-sm font-semibold text-foreground">
+                    <p className={styles.promoDiscountText}>
                       {discountSummary}
                       {promo.minOrderAmount > 0 ? ` · Min order ${formatPrice(promo.minOrderAmount)}` : " · No min order"}
                     </p>
                     {promo.description && (
-                      <p data-ui="admin/PromoCodeManager/p-5" className="text-xs text-muted-foreground">{promo.description}</p>
+                      <p className={styles.promoDescText}>{promo.description}</p>
                     )}
                   </div>
 
                   <button
-                    data-ui="admin/PromoCodeManager/button-grid-2"
+
                     type="button"
                     aria-label={`Delete promo code ${promo.code}`}
                     disabled={pending}
                     onClick={() => setDeleteTarget(promo)}
-                    className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    className={styles.deletePromoBtn}
                   >
-                    <Trash2Icon className="size-4" />
+                    <Trash2Icon className={styles.iconMd} />
                   </button>
                 </div>
 
-                <div data-ui="admin/PromoCodeManager/div-flex-5" className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
-                  <div data-ui="admin/PromoCodeManager/div-flex-6" className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span data-ui="admin/PromoCodeManager/span-5" className="font-medium text-foreground/80">
+                <div className={styles.promoCardBottom}>
+                  <div className={styles.promoUsageMeta}>
+                    <span className={styles.promoUsedCount}>
                       Used: {promo.usedCount}
                       {promo.maxUses !== null ? ` / ${promo.maxUses}` : " (unlimited)"}
                     </span>
                     {promo.expiresAt && (
-                      <span data-ui="admin/PromoCodeManager/span-6">
+                      <span>
                         {isExpired ? "Expired" : "Expires"} {formatDate(`${promo.expiresAt}T00:00:00`)}
                       </span>
                     )}
                   </div>
 
-                  <div data-ui="admin/PromoCodeManager/div-flex-7" className="flex items-center gap-2">
+                  <div className={styles.promoActions}>
                     <Button
-                      data-ui="admin/PromoCodeManager/Button"
+
                       type="button"
                       variant={promo.isActive ? "outline" : "default"}
                       size="xs"
                       disabled={pending}
                       onClick={() => handleToggle(promo, !promo.isActive)}
-                      className="rounded-full px-3"
+                      className={styles.togglePromoBtn}
                     >
-                      {togglingId === promo.id && <Loader2Icon className="size-3 animate-spin" />}
+                      {togglingId === promo.id && <Loader2Icon className={cn(styles.iconXs, styles.spinIcon)} />}
                       {promo.isActive ? "Disable" : "Enable"}
                     </Button>
                   </div>
@@ -939,16 +931,16 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
           setCreateOpen(next)
         }}
       >
-        <DialogContent data-ui="admin/PromoCodeManager/DialogContent" mobileFullScreen className="sm:max-w-lg">
+        <DialogContent mobileFullScreen className={styles.dialogLgMax}>
           <DialogHeader>
             <DialogTitle>Create promo code</DialogTitle>
             <DialogDescription>
               Customers can apply this code at checkout. You can disable or delete it anytime.
             </DialogDescription>
           </DialogHeader>
-          <form data-ui="admin/PromoCodeManager/form-flex" onSubmit={onCreateSubmit} noValidate className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <DialogBody className="space-y-4">
-              <div data-ui="admin/PromoCodeManager/div-grid-2" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+          <form onSubmit={onCreateSubmit} noValidate className={styles.dialogForm}>
+            <DialogBody className={styles.dialogBodySpace4}>
+              <div className={styles.dialogTwoCol}>
                 <TextField
                   label="Promo code"
                   fieldSize="md"
@@ -956,7 +948,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                   maxLength={24}
                   autoCapitalize="characters"
                   autoComplete="off"
-                  className="font-mono uppercase"
+                  className={styles.monoUpperInput}
                   hint="3–24 letters, numbers, - or _"
                   error={errors.code?.message}
                   {...form.register("code")}
@@ -970,7 +962,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                 />
               </div>
 
-              <div data-ui="admin/PromoCodeManager/div-grid-3" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <div className={styles.dialogTwoCol}>
                 <TextField
                   label={discountType === "percent" ? "Discount percentage (%)" : "Flat discount amount (₹)"}
                   kind="money"
@@ -995,7 +987,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                 />
               </div>
 
-              <div data-ui="admin/PromoCodeManager/div-grid-4" className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <div className={styles.dialogTwoCol}>
                 {discountType === "percent" && (
                   <TextField
                     label="Max discount cap (optional)"
@@ -1042,7 +1034,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
             </DialogBody>
             <DialogFooter>
               <Button
-                data-ui="admin/PromoCodeManager/Button-cancel"
+
                 type="button"
                 variant="outline"
                 disabled={pending}
@@ -1051,17 +1043,17 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                   form.clearErrors()
                   setCreateOpen(false)
                 }}
-                className="rounded-full"
+                className={styles.pillBtn}
               >
                 Cancel
               </Button>
               <Button
-                data-ui="admin/PromoCodeManager/Button-create-promo-code"
+
                 type="submit"
                 disabled={pending}
-                className="rounded-full px-5"
+                className={styles.createSubmitBtn}
               >
-                {pending && <Loader2Icon className="animate-spin" />}
+                {pending && <Loader2Icon className={styles.spinIcon} />}
                 Create promo code
               </Button>
             </DialogFooter>
@@ -1075,7 +1067,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
         title={`Delete promo code ${deleteTarget?.code ?? ""}?`}
         description={
           <>
-            Customers will no longer be able to use <strong data-ui="admin/PromoCodeManager/strong" className="font-mono font-semibold text-foreground">{deleteTarget?.code}</strong>. Past orders that used this code keep their discount history.
+            Customers will no longer be able to use <strong className={styles.monoStrong}>{deleteTarget?.code}</strong>. Past orders that used this code keep their discount history.
           </>
         }
         confirmLabel="Delete promo code"

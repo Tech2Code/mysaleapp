@@ -15,6 +15,7 @@ import { updateOrderStatus } from "@/features/orders/admin-actions"
 import { COURIER_SUGGESTIONS, expectedDeliveryProblem, shippingSchema } from "@/features/orders/schema"
 import type { ShippingDetails } from "@/features/orders/types"
 import { LIMITS } from "@/lib/validation"
+import styles from "./admin-orders.module.css"
 
 export type CourierPayload = z.output<typeof shippingSchema>
 type Values = { carrier: string; trackingNumber: string; trackingUrl: string; expectedDelivery: string }
@@ -97,13 +98,13 @@ export function CourierDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent data-ui="admin/CourierDialog/DialogContent" className="sm:max-w-md">
+      <DialogContent className={styles.dialogSmMax}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form data-ui="admin/CourierDialog/form-flex" onSubmit={submit} noValidate className="flex flex-col min-h-0 flex-1 overflow-hidden">
-          <DialogBody className="space-y-2">
+        <form onSubmit={submit} noValidate className={styles.dialogForm}>
+          <DialogBody className={styles.dialogBodyStack2}>
             <TextField
               label="Courier"
               required
@@ -119,7 +120,7 @@ export function CourierDialog({
               kind="trackingNumber"
               fieldSize="md"
               hint={`Optional. ${LIMITS.trackingNumber.min}-${LIMITS.trackingNumber.max} letters, numbers, - / _ (no spaces).`}
-              className="font-mono"
+              className={styles.monoText}
               error={errors.trackingNumber?.message}
               {...form.register("trackingNumber")}
             />
@@ -152,11 +153,11 @@ export function CourierDialog({
             />
           </DialogBody>
           <DialogFooter>
-            <Button data-ui="admin/CourierDialog/Button-cancel" type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending} className="gap-1.5 rounded-full">
-              <XIcon className="size-4" /> Cancel
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending} className={styles.pillBtnGap}>
+              <XIcon className={styles.iconMd} /> Cancel
             </Button>
-            <Button data-ui="admin/CourierDialog/Button" type="submit" disabled={pending || !canSubmit} className="gap-1.5 rounded-full">
-              {pending ? <Loader2Icon className="animate-spin" /> : <TruckIcon className="size-4" />} {saveLabel}
+            <Button type="submit" disabled={pending || !canSubmit} className={styles.pillBtnGap}>
+              {pending ? <Loader2Icon className={styles.spinIcon} /> : <TruckIcon className={styles.iconMd} />} {saveLabel}
             </Button>
           </DialogFooter>
         </form>
@@ -189,8 +190,8 @@ export function CourierEditButton({ orderId, shipping }: { orderId: string; ship
 
   return (
     <>
-      <Button data-ui="admin/CourierEditButton/Button-edit" type="button" variant="outline" size="sm" onClick={() => setOpen(true)} className="h-6 gap-1 rounded-full px-2.5 text-xs">
-        <PencilIcon className="size-3" aria-hidden /> Edit
+      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} className={styles.courierEditSmallBtn}>
+        <PencilIcon className={styles.iconXs} aria-hidden /> Edit
       </Button>
       {open && (
         <CourierDialog

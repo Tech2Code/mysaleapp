@@ -1,0 +1,29 @@
+/* Section: How It Works 4-Step Flow */
+.howSection { margin: 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; }
+.howSection .headerBlock { margin: 0 auto; max-width: 672px; text-align: center; }
+.headerBlock .eyebrowText { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 1.4px; color: var(--muted-foreground); text-transform: uppercase; }
+.headerBlock .sectionTitle { margin: 6px 0 0 0; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
+.howSection .stepsGrid { margin: 24px 0 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.stepsGrid .stepItem { margin: 0; }
+.stepItem .stepCard { position: relative; height: 100%; border-radius: 20px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 16px; transition: box-shadow 200ms ease, transform 200ms ease; }
+.stepItem .stepCard:hover { box-shadow: var(--store-elevation-md); transform: translateY(-2px); }
+.stepCard .stepTopRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stepTopRow .iconBox { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; background-color: color-mix(in oklab, var(--primary) 24%, transparent); color: var(--foreground); }
+.iconBox .stepIcon { width: 20px; height: 20px; }
+.stepTopRow .stepNumber { font-family: var(--font-heading); font-size: 12px; font-weight: 600; letter-spacing: 0.8px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.stepCard .stepTitle { margin: 16px 0 0 0; font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.stepCard .stepDescription { margin: 4px 0 0 0; font-size: 12px; line-height: 19px; color: var(--muted-foreground); }
+@media (min-width: 640px) {
+  .howSection { padding: 0 24px; }
+  .headerBlock .eyebrowText { font-size: 14px; }
+  .headerBlock .sectionTitle { margin-top: 12px; font-size: 36px; line-height: 42px; }
+  .howSection .stepsGrid { margin-top: 40px; gap: 20px; }
+  .stepItem .stepCard { padding: 24px; }
+  .stepTopRow .iconBox { width: 44px; height: 44px; }
+  .stepCard .stepTitle { margin-top: 20px; font-size: 16px; line-height: 22px; }
+  .stepCard .stepDescription { margin-top: 6px; font-size: 14px; line-height: 22px; }
+}
+@media (min-width: 1024px) {
+  .howSection { padding: 0 32px; }
+  .howSection .stepsGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

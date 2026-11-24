@@ -21,6 +21,7 @@ import { ReturnsList } from "@/components/shared/returns-list"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS, addDays, todayIST } from "@/lib/validation"
+import styles from "./admin-orders.module.css"
 
 /** Approve (with instructions) or reject (with a reason) one pending request. */
 export function DecideDialog({
@@ -110,15 +111,15 @@ export function DecideDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger data-ui="admin/DecideDialog/DialogTrigger"
+      <DialogTrigger
         className={cn(
-          "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition-colors",
-          approve ? "bg-primary text-primary-foreground hover:bg-primary/90" : "border border-destructive/40 text-destructive hover:bg-destructive/10"
+          styles.decideTrigger,
+          approve ? styles.decideTriggerApprove : styles.decideTriggerReject
         )}
       >
         {approve ? "Approve" : "Reject"}
       </DialogTrigger>
-      <DialogContent data-ui="admin/DecideDialog/DialogContent" className="sm:max-w-md">
+      <DialogContent className={styles.dialogSmMax}>
         <DialogHeader>
           <DialogTitle>
             {approve
@@ -137,24 +138,24 @@ export function DecideDialog({
         </DialogHeader>
         <DialogBody>
           {request.resolutionType === "exchange" && (
-            <div data-ui="admin/DecideDialog/div" className="rounded-xl border border-indigo-500/25 bg-indigo-500/8 p-3 text-xs text-indigo-900 dark:text-indigo-200">
-              <p data-ui="admin/DecideDialog/p-flex" className="flex items-center gap-1.5 font-semibold">
-                <ArrowLeftRightIcon className="size-3.5" aria-hidden /> Customer requested an Exchange / Replacement
+            <div className={styles.exchangeRequestAlert}>
+              <p className={styles.alertTitle}>
+                <ArrowLeftRightIcon className={styles.iconSm} aria-hidden /> Customer requested an Exchange / Replacement
               </p>
               {request.exchangePreference && (
-                <p data-ui="admin/DecideDialog/p" className="mt-1 text-indigo-800 dark:text-indigo-300">
-                  <span data-ui="admin/DecideDialog/span" className="font-semibold">Preference: </span>
+                <p className={styles.exchangePrefText}>
+                  <span className={styles.boldSpan}>Preference: </span>
                   {request.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}
                 </p>
               )}
             </div>
           )}
           {splitReturnDetails(request.details).pickupAddress && (
-            <div data-ui="admin/DecideDialog/div-2" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-950 dark:text-amber-200">
-              <p data-ui="admin/DecideDialog/p-flex-2" className="flex items-center gap-1.5 font-semibold">
-                <MapPinIcon className="size-3.5 shrink-0" aria-hidden /> Alternate pickup address requested
+            <div className={styles.altPickupAlert}>
+              <p className={styles.alertTitle}>
+                <MapPinIcon className={styles.iconSm} aria-hidden /> Alternate pickup address requested
               </p>
-              <p data-ui="admin/DecideDialog/p-2" className="mt-1">
+              <p className={styles.altPickupText}>
                 {splitReturnDetails(request.details).pickupAddress}
               </p>
             </div>
@@ -192,18 +193,18 @@ export function DecideDialog({
           />
         </DialogBody>
         <DialogFooter>
-          <Button data-ui="admin/DecideDialog/Button-cancel" type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className="gap-1.5 rounded-full">
-            <XIcon className="size-4" /> Cancel
+          <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtnGap}>
+            <XIcon className={styles.iconMd} /> Cancel
           </Button>
           <Button
-            data-ui="admin/DecideDialog/Button"
+
             type="button"
             variant={approve ? "default" : "destructive"}
             onClick={submit}
             disabled={pending}
-            className="gap-1.5 rounded-full"
+            className={styles.pillBtnGap}
           >
-            {pending ? <Loader2Icon className="animate-spin" /> : approve ? <CheckIcon className="size-4" /> : <BanIcon className="size-4" />}{" "}
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : approve ? <CheckIcon className={styles.iconMd} /> : <BanIcon className={styles.iconMd} />}{" "}
             {approve ? (request.resolutionType === "exchange" ? "Approve exchange" : "Approve return") : request.resolutionType === "exchange" ? "Reject exchange" : "Reject return"}
           </Button>
         </DialogFooter>
@@ -237,11 +238,11 @@ export function PickedUpButton({ requestId }: { requestId: string }) {
   return (
     <>
       <Button
-        data-ui="admin/PickedUpButton/Button-pickup-successful"
+
         type="button"
         variant="outline"
         onClick={() => setOpen(true)}
-        className="rounded-full border-primary/40 text-primary hover:bg-primary/10"
+        className={styles.pickupSuccessBtn}
       >
         Pickup successful
       </Button>
@@ -282,7 +283,7 @@ export function UndoStepButton({ requestId, title, description }: { requestId: s
 
   return (
     <>
-      <Button data-ui="admin/UndoStepButton/Button-undo-this-step" type="button" variant="outline" onClick={() => setOpen(true)} className="rounded-full">
+      <Button type="button" variant="outline" onClick={() => setOpen(true)} className={styles.pillBtn}>
         Undo this step
       </Button>
       <ConfirmDialog
@@ -312,17 +313,17 @@ export function AdminReturnRequests({
 }) {
   if (requests.length === 0 && returns.length === 0) return null
   return (
-    <section data-ui="admin/AdminReturnRequests" id="returns" aria-label="Returns" className="scroll-mt-24 space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
-      <div data-ui="admin/AdminReturnRequests/div-flex" className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 data-ui="admin/AdminReturnRequests/h2-returns" className="flex items-center gap-2 font-sans text-lg font-semibold">
-          <PackageOpenIcon className="size-5 text-primary" aria-hidden /> Returns
+    <section id="returns" aria-label="Returns" className={styles.returnsSection}>
+      <div className={styles.returnsHeader}>
+        <h2 className={styles.returnsHeading}>
+          <PackageOpenIcon className={styles.returnsIcon} aria-hidden /> Returns
         </h2>
         <ReturnStageBadge stage={returnStage} audience="admin" alwaysShow />
       </div>
       {/* Newest stage first: goods received back (the later stage) above the requests. */}
       <ReturnsList bare returns={returns.toReversed()} audience="admin" admin={admin} />
-      {requests.length > 0 && <h4 data-ui="admin/AdminReturnRequests/h4-return-requests" className="text-sm font-semibold text-muted-foreground">Return requests</h4>}
-      <ul data-ui="admin/AdminReturnRequests/ul" className={requests.length === 0 ? "hidden" : "space-y-3"}>
+      {requests.length > 0 && <h4 className={styles.requestsSubheading}>Return requests</h4>}
+      <ul className={requests.length === 0 ? styles.requestsListHidden : styles.requestsList}>
         {requests.toReversed().map((r) => {
           const meta = requestStatusMeta(r.status, "admin", r.resolutionType)
           const isExchange = r.resolutionType === "exchange"
@@ -330,73 +331,73 @@ export function AdminReturnRequests({
           const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
           const { details: cleanDetails, pickupAddress } = splitReturnDetails(r.details)
           return (
-            <li data-ui="admin/AdminReturnRequests/li" key={r.id} className="space-y-2.5 rounded-xl border p-4">
-              <div data-ui="admin/AdminReturnRequests/div-flex-2" className="flex flex-wrap items-center justify-between gap-2">
-                <div data-ui="admin/AdminReturnRequests/div-flex-3" className="flex flex-wrap items-center gap-1.5">
-                  <span data-ui="admin/AdminReturnRequests/span" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", TONES[meta.tone])}>{meta.label}</span>
+            <li key={r.id} className={styles.requestCard}>
+              <div className={styles.requestTopRow}>
+                <div className={styles.requestBadges}>
+                  <span className={cn(styles.requestStatusPill, TONES[meta.tone])}>{meta.label}</span>
                   <span
-                    data-ui="admin/AdminReturnRequests/span-2"
+
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+                      styles.resolutionPill,
                       isExchange
-                        ? "bg-indigo-500/12 text-indigo-700 dark:text-indigo-300"
-                        : "bg-muted text-muted-foreground"
+                        ? styles.resolutionExchange
+                        : styles.resolutionRefund
                     )}
                   >
                     {isExchange ? (
                       <>
-                        <ArrowLeftRightIcon className="size-3" aria-hidden /> {isReplacement ? "Replacement" : "Exchange"}
+                        <ArrowLeftRightIcon className={styles.iconXs} aria-hidden /> {isReplacement ? "Replacement" : "Exchange"}
                       </>
                     ) : (
                       "Refund"
                     )}
                   </span>
                 </div>
-                <span data-ui="admin/AdminReturnRequests/span-3" className="text-xs text-muted-foreground">{formatDateTime(r.createdAt)}</span>
+                <span className={styles.requestDate}>{formatDateTime(r.createdAt)}</span>
               </div>
-              <ul data-ui="admin/AdminReturnRequests/ul-2" className="space-y-0.5 text-sm font-medium">
+              <ul className={styles.requestItems}>
                 {r.items.map((i) => (
-                  <li data-ui="admin/AdminReturnRequests/li-2" key={i.productId}>
+                  <li key={i.productId}>
                     {i.quantity} × {i.name}
                   </li>
                 ))}
               </ul>
               {isExchange && cleanPref && (
-                <p data-ui="admin/AdminReturnRequests/p" className="rounded-lg border border-indigo-500/20 bg-indigo-500/8 px-3 py-2 text-xs text-indigo-900 dark:text-indigo-200">
-                  <span data-ui="admin/AdminReturnRequests/span-4" className="font-semibold">
+                <p className={styles.exchangeDetailPill}>
+                  <span className={styles.boldSpan}>
                     {isReplacement ? "Replacement details: " : "Requested exchange: "}
                   </span>
                   {cleanPref}
                 </p>
               )}
-              <p data-ui="admin/AdminReturnRequests/p-2" className="text-sm">
-                <span data-ui="admin/AdminReturnRequests/span-5" className="text-muted-foreground">Reason: </span>
+              <p className={styles.reasonLine}>
+                <span className={styles.mutedSpan}>Reason: </span>
                 {r.reason}
-                {cleanDetails && <span data-ui="admin/AdminReturnRequests/span-6" className="text-muted-foreground"> — {cleanDetails}</span>}
+                {cleanDetails && <span className={styles.mutedSpan}> — {cleanDetails}</span>}
               </p>
               {pickupAddress && (
-                <p data-ui="admin/AdminReturnRequests/p-flex" className="flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-200">
-                  <MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
-                  <span data-ui="admin/AdminReturnRequests/span-7">
-                    <span data-ui="admin/AdminReturnRequests/span-8" className="font-semibold">Alternate pickup address: </span>
+                <p className={styles.pickupAddrBanner}>
+                  <MapPinIcon className={styles.pickupPinIcon} aria-hidden />
+                  <span>
+                    <span className={styles.boldSpan}>Alternate pickup address: </span>
                     {pickupAddress}
                   </span>
                 </p>
               )}
               {r.adminNote && (
-                <p data-ui="admin/AdminReturnRequests/p-3" className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-9" className="font-semibold">Your note: </span>
+                <p className={styles.adminNoteBox}>
+                  <span className={styles.boldSpan}>Your note: </span>
                   {r.adminNote}
                 </p>
               )}
               {r.status === "approved" && (
-                <p data-ui="admin/AdminReturnRequests/p-4" className="text-sm">
-                  <span data-ui="admin/AdminReturnRequests/span-10" className="text-muted-foreground">Pickup: </span>
+                <p className={styles.reasonLine}>
+                  <span className={styles.mutedSpan}>Pickup: </span>
                   {r.pickedUpAt ? `successful on ${formatDateTime(r.pickedUpAt)}` : r.pickupDate ? `scheduled for ${formatDate(r.pickupDate)}` : "date not set"}
                 </p>
               )}
               {r.status === "withdrawn" && (
-                <p data-ui="admin/AdminReturnRequests/p-5" className="text-xs text-muted-foreground">
+                <p className={styles.withdrawnDate}>
                   Cancelled on {formatDateTime(r.decidedAt ?? r.createdAt)}
                 </p>
               )}

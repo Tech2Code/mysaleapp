@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { CheckIcon, Loader2Icon, Trash2Icon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import styles from "./shared.module.css"
 
 /**
  * THE "are you sure?" step. Every click that changes data and is hard to undo (cancel, delete, refund,
@@ -34,23 +35,23 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent data-ui="shared/ConfirmDialog/DialogContent" showCloseButton={!pending} className="sm:max-w-md">
+      <DialogContent showCloseButton={!pending} className={styles.confirmDialogMax}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {description && (
           <DialogBody>
-            <DialogDescription className="text-sm/relaxed text-muted-foreground">
+            <DialogDescription className={styles.confirmDescText}>
               {description}
             </DialogDescription>
           </DialogBody>
         )}
         <DialogFooter>
-          <DialogClose render={<Button data-ui="shared/ConfirmDialog/Button" type="button" variant="outline" className="gap-1.5 rounded-full" disabled={pending} />}>
-            <XIcon className="size-4" /> {cancelLabel}
+          <DialogClose render={<Button type="button" variant="outline" className={styles.confirmPillBtn} disabled={pending} />}>
+            <XIcon className={styles.icon16} /> {cancelLabel}
           </DialogClose>
-          <Button data-ui="shared/ConfirmDialog/Button-2" type="button" variant={destructive ? "destructive" : "default"} className="gap-1.5 rounded-full" disabled={pending} onClick={onConfirm}>
-            {pending ? <Loader2Icon className="animate-spin" /> : destructive ? <Trash2Icon className="size-4" /> : <CheckIcon className="size-4" />} {confirmLabel}
+          <Button type="button" variant={destructive ? "destructive" : "default"} className={styles.confirmPillBtn} disabled={pending} onClick={onConfirm}>
+            {pending ? <Loader2Icon className={styles.icon16Spin} /> : destructive ? <Trash2Icon className={styles.icon16} /> : <CheckIcon className={styles.icon16} />} {confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
