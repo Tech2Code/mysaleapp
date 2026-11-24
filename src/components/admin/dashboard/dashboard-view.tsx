@@ -1,4 +1,4 @@
-import { ExternalLinkIcon, PlusIcon, SparklesIcon } from "lucide-react"
+import { ExternalLinkIcon, PlusIcon } from "lucide-react"
 import Link from "next/link"
 import { DashboardBody } from "@/components/admin/dashboard/dashboard-body"
 import { DashboardRangeShell } from "@/components/admin/dashboard-range"
@@ -12,26 +12,25 @@ export function DashboardView({ d, range, today }: { d: DashboardData; range: Pi
   const attentionTotal = d.attention.toVerify + d.attention.awaitingPayment + d.attention.toFulfil + d.attention.returnRequests + d.attention.returnsToReceive + d.attention.refundsToSend + d.lowStock.length
 
   return (
-    <div data-ui="admin/DashboardView" className="space-y-6">
-      <header data-ui="admin/DashboardView/header-flex" className="flex flex-wrap items-end justify-between gap-4">
-        <div data-ui="admin/DashboardView/div">
-          <p data-ui="admin/DashboardView/p" className="text-sm text-muted-foreground">{d.todayLabel}</p>
-          <h1 data-ui="admin/DashboardView/h1-flex" className="mt-1 flex items-center gap-2 text-2xl font-semibold sm:text-3xl">
+    <div data-ui="admin/DashboardView" className="space-y-5">
+      <header data-ui="admin/DashboardView/header-flex" className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div data-ui="admin/DashboardView/div" className="min-w-0">
+          <p data-ui="admin/DashboardView/p" className="text-xs font-medium text-muted-foreground">{d.todayLabel}</p>
+          <h1 data-ui="admin/DashboardView/h1" className="mt-1 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             <span data-ui="admin/DashboardView/span">{d.greeting}</span>
-            <SparklesIcon className="size-5 shrink-0 text-primary sm:size-6" aria-hidden />
           </h1>
           <p data-ui="admin/DashboardView/p-2" className="mt-1 text-sm text-muted-foreground">
             {attentionTotal > 0
-              ? `You have ${attentionTotal} thing${attentionTotal === 1 ? "" : "s"} that need attention.`
-              : "Everything is under control."}
+              ? `${attentionTotal} item${attentionTotal === 1 ? "" : "s"} across orders, returns, and inventory need review.`
+              : "All orders, payments, and stock levels are in good shape."}
           </p>
         </div>
-        <div data-ui="admin/DashboardView/div-flex" className="flex flex-wrap gap-2">
-          <Link data-ui="admin/DashboardView/Link-view-store" href="/" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}>
-            <ExternalLinkIcon /> View store
+        <div data-ui="admin/DashboardView/div-flex" className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <Link data-ui="admin/DashboardView/Link-view-store" href="/" target="_blank" rel="noopener noreferrer" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-9 rounded-lg bg-card px-3.5 text-xs font-medium")}>
+            <ExternalLinkIcon className="size-3.5" /> View store
           </Link>
-          <Link data-ui="admin/DashboardView/Link-add-product" href="/admin/products/new" className={cn(buttonVariants(), "rounded-full px-5")}>
-            <PlusIcon /> Add product
+          <Link data-ui="admin/DashboardView/Link-add-product" href="/admin/products/new" className={cn(buttonVariants({ size: "sm" }), "h-9 rounded-lg px-4 text-xs font-semibold")}>
+            <PlusIcon className="size-3.5" /> Add product
           </Link>
         </div>
       </header>

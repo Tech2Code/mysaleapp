@@ -1,0 +1,163 @@
+/* Kalakriti Admin Design System — strictly scoped to [data-slot="admin-layout"] so the public storefront is untouched. */
+
+[data-slot="admin-layout"] {
+  --admin-surface: #f6f7f9;
+  --admin-card: #ffffff;
+  --admin-card-hover: #fafbfc;
+  --admin-well: #f1f3f6;
+  --admin-border: rgba(15, 23, 42, 0.08);
+  --admin-border-strong: rgba(15, 23, 42, 0.14);
+  --admin-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --admin-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  --admin-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.07), 0 12px 28px -6px rgba(15, 23, 42, 0.07);
+  background-color: var(--admin-surface);
+}
+
+.dark [data-slot="admin-layout"] {
+  --admin-surface: #0b0d11;
+  --admin-card: #13161c;
+  --admin-card-hover: #181c24;
+  --admin-well: #1b1f28;
+  --admin-border: rgba(255, 255, 255, 0.08);
+  --admin-border-strong: rgba(255, 255, 255, 0.14);
+  --admin-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --admin-shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.4), 0 6px 18px -4px rgba(0, 0, 0, 0.25);
+  --admin-shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+}
+
+[data-slot="admin-layout"] .adminCard {
+  background-color: var(--admin-card);
+  border-color: var(--admin-border);
+  box-shadow: var(--admin-shadow-xs);
+}
+
+[data-slot="admin-layout"] .adminCardInteractive {
+  background-color: var(--admin-card);
+  border-color: var(--admin-border);
+  box-shadow: var(--admin-shadow-xs);
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease, border-color 160ms ease;
+}
+
+[data-slot="admin-layout"] .adminCardInteractive:hover {
+  border-color: var(--admin-border-strong);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+[data-slot="admin-layout"] .adminWell {
+  background-color: var(--admin-well);
+}
+
+/* Single scroll container for admin tables so sticky <thead> stays pinned and scrollbars stay minimalistic. */
+[data-slot="admin-layout"] [data-slot="table-container"] {
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+}
+
+[data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.28);
+  border-radius: 9999px;
+}
+
+[data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.45);
+}
+
+.dark [data-slot="admin-layout"] [data-slot="table-container"] {
+  scrollbar-color: rgba(148, 163, 184, 0.24) transparent;
+}
+
+.dark [data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.24);
+}
+
+.dark [data-slot="admin-layout"] [data-slot="table-container"]::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.42);
+}
+
+[data-slot="admin-layout"] .adminHighlightCard {
+  background: linear-gradient(155deg, #fff8f4 0%, #ffffff 56%, #fff4ed 100%);
+  border-color: rgba(194, 89, 52, 0.22);
+  color: #18181b;
+  box-shadow: 0 2px 10px -2px rgba(194, 89, 52, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dark [data-slot="admin-layout"] .adminHighlightCard {
+  background: linear-gradient(155deg, #1f1714 0%, #13161c 65%);
+  border-color: rgba(251, 146, 60, 0.22);
+  color: #fafafa;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+}
+
+[data-slot="admin-layout"] .adminAuthShowcase {
+  background: radial-gradient(circle at 18% 18%, oklch(0.65 0.14 40 / 0.12), transparent 52%),
+    radial-gradient(circle at 82% 80%, oklch(0.6 0.08 240 / 0.08), transparent 50%),
+    linear-gradient(145deg, #f1f3f6 0%, #e9ecf1 100%);
+}
+
+.dark [data-slot="admin-layout"] .adminAuthShowcase {
+  background: radial-gradient(circle at 18% 18%, oklch(0.58 0.14 40 / 0.18), transparent 52%),
+    radial-gradient(circle at 82% 80%, oklch(0.5 0.08 240 / 0.12), transparent 50%),
+    linear-gradient(145deg, #13161c 0%, #0b0d11 100%);
+}
+
+@keyframes adminBarGrow {
+  from {
+    transform: scaleY(0);
+    opacity: 0.35;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes adminArcDraw {
+  from {
+    stroke-dashoffset: 170;
+  }
+}
+
+@keyframes adminLineDraw {
+  from {
+    stroke-dashoffset: 1200;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+[data-slot="admin-layout"] .adminBarGrow {
+  transform-origin: bottom;
+  animation: adminBarGrow 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-slot="admin-layout"] .adminArcDraw {
+  animation: adminArcDraw 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-slot="admin-layout"] .adminLineDraw {
+  stroke-dasharray: 1200;
+  animation: adminLineDraw 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="admin-layout"] .adminCardInteractive {
+    transition: none;
+  }
+  [data-slot="admin-layout"] .adminBarGrow,
+  [data-slot="admin-layout"] .adminArcDraw,
+  [data-slot="admin-layout"] .adminLineDraw {
+    animation: none;
+  }
+}

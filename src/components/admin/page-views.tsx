@@ -33,6 +33,7 @@ export function ProductFormView({ product, categories }: { product: Product | nu
       </div>
       {product ? (
         <AdminPageHeader
+          eyebrow="Catalogue"
           title={product.name}
           description="Changes go live on the store as soon as you save."
           actions={
@@ -49,7 +50,7 @@ export function ProductFormView({ product, categories }: { product: Product | nu
           }
         />
       ) : (
-        <AdminPageHeader title="Add product" description="Fill in the details and hit create — it goes live instantly." />
+        <AdminPageHeader eyebrow="Catalogue" title="Add product" description="Fill in the details and hit create — it goes live instantly." />
       )}
       <ProductForm product={product} categories={categories} />
     </>
@@ -59,7 +60,7 @@ export function ProductFormView({ product, categories }: { product: Product | nu
 export function CategoriesView({ categories }: { categories: (Category & { productCount: number })[] }) {
   return (
     <>
-      <AdminPageHeader title="Categories" description="Organise products into collections." />
+      <AdminPageHeader eyebrow="Catalogue" title="Categories" description="Organise products into collections." />
       <CategoryManager categories={categories} />
     </>
   )
@@ -68,7 +69,7 @@ export function CategoriesView({ categories }: { categories: (Category & { produ
 export function LaunchView({ counts, checklist }: { counts: LaunchCounts; checklist: ChecklistItem[] }) {
   return (
     <>
-      <AdminPageHeader title="Data & launch" description="Check you're ready to go live, and clear the practice data from testing." />
+      <AdminPageHeader eyebrow="Store" title="Data & launch" description="Check you're ready to go live, and clear the practice data from testing." />
       <LaunchPanel counts={counts} checklist={checklist} />
     </>
   )
@@ -78,6 +79,7 @@ export function SettingsView({ settings, promoCodes = [] }: { settings: StoreSet
   return (
     <>
       <AdminPageHeader
+        eyebrow="Store"
         title="Settings"
         description="Your shop's name, promo codes, contact details, payment, delivery and SEO. Changes go live on the website as soon as you save."
       />
@@ -100,7 +102,7 @@ export function AdminAccountView({
 }) {
   return (
     <>
-      <AdminPageHeader title="My account" description="Manage your display name, 4-digit Quick PIN, login email, and password." />
+      <AdminPageHeader eyebrow="Store" title="My account" description="Manage your display name, 4-digit Quick PIN, login email, and password." />
       <AccountSettings name={name} phone={phone} email={email} pinStatus={pinStatus} />
     </>
   )

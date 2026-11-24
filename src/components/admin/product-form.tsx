@@ -69,7 +69,7 @@ function Section({
     <section
       data-ui="admin/Section"
       className={cn(
-        "overflow-hidden rounded-2xl border bg-card shadow-2xs transition-colors",
+        "adminCard overflow-hidden rounded-xl border transition-colors",
         dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
       )}
     >

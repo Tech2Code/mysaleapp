@@ -191,7 +191,7 @@ export function OrdersBrowser({
 
   return (
     <div data-ui="admin/OrdersBrowser">
-      <div data-ui="admin/OrdersBrowser/div" className="mb-4 space-y-3 rounded-2xl border bg-card p-3.5 shadow-2xs sm:p-4">
+      <div data-ui="admin/OrdersBrowser/div" className="adminCard mb-4 space-y-3 rounded-xl border p-3 sm:p-3.5">
         {/* Row 1: Search + Mobile Filter Toggle + Financial Year & Month */}
         <div data-ui="admin/OrdersBrowser/div-flex" className="flex flex-wrap items-center gap-2.5">
           <form
