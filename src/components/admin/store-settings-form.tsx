@@ -83,7 +83,7 @@ function Card({
     <section
       data-ui="admin/Card"
       className={cn(
-        "mb-5 break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-2xs transition-colors",
+        "adminCard mb-4 break-inside-avoid overflow-hidden rounded-xl border transition-colors",
         dirty ? "border-amber-500/60 ring-1 ring-amber-500/20" : "border-border/80"
       )}
     >

@@ -61,8 +61,8 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
     })
 
   return (
-    <div data-ui="admin/LaunchPanel" className="grid gap-6 xl:grid-cols-2 xl:items-stretch">
-      <section data-ui="admin/LaunchPanel/section" className="space-y-4 rounded-2xl border bg-card p-5 sm:p-6">
+    <div data-ui="admin/LaunchPanel" className="grid gap-4 xl:grid-cols-2 xl:items-stretch">
+      <section data-ui="admin/LaunchPanel/section" className="adminCard space-y-4 rounded-xl border p-4 sm:p-5">
         <div data-ui="admin/LaunchPanel/div">
           <h2 data-ui="admin/LaunchPanel/h2-ready-to-launch" className="font-sans text-lg font-semibold">Ready to launch?</h2>
           <p data-ui="admin/LaunchPanel/p" className="mt-0.5 text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
         </ul>
       </section>
 
-      <section data-ui="admin/LaunchPanel/section-2" className="space-y-5 rounded-2xl border border-destructive/30 bg-card p-5 sm:p-6">
+      <section data-ui="admin/LaunchPanel/section-2" className="adminCard space-y-4 rounded-xl border border-destructive/30 p-4 sm:p-5">
         <div data-ui="admin/LaunchPanel/div-3">
           <h2 data-ui="admin/LaunchPanel/h2-clear-test-data" className="flex items-center gap-2 font-sans text-lg font-semibold text-destructive">
             <TriangleAlertIcon className="size-5" aria-hidden /> Clear test data

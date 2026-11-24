@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { applyClientSignOut } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { signOutCustomer } from "@/features/auth/actions"
@@ -50,7 +51,15 @@ export function AccountMenu() {
   const showSuccess = useBusySuccess()
   const later = useToastAfter(signingOut)
 
-  if (!ready) return <span data-ui="store/AccountMenu" className="size-10 max-sm:size-9" aria-hidden />
+  if (!ready) {
+    return (
+      <Skeletonize label="Loading account">
+        <span data-ui="store/AccountMenu/span-grid" className="grid size-10 place-items-center rounded-full border max-sm:size-9">
+          <UserRoundIcon className="size-4.5" />
+        </span>
+      </Skeletonize>
+    )
+  }
 
   const loginHref = buildLoginHref(pathname)
 

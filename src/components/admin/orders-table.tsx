@@ -106,7 +106,7 @@ export function OrdersTable({
 
   if (orders.length === 0) {
     return (
-      <div data-ui="admin/OrdersTable" className="overflow-hidden rounded-2xl border bg-card p-8 text-center sm:p-12">
+      <div data-ui="admin/OrdersTable" className="adminCard overflow-hidden rounded-2xl border p-8 text-center sm:p-12">
         <p data-ui="admin/OrdersTable/p" className="text-sm text-muted-foreground">No orders match these filters.</p>
       </div>
     )
@@ -121,13 +121,13 @@ export function OrdersTable({
             ? `Showing ${(page - 1) * pageSize + 1}–${(page - 1) * pageSize + orders.length} of ${total} orders`
             : `Showing ${orders.length} order${orders.length === 1 ? "" : "s"}`}
         </span>
-        <div data-ui="admin/OrdersTable/div-view-format" className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
+        <div data-ui="admin/OrdersTable/div-view-format" className="flex items-center rounded-lg border bg-muted/60 p-0.5 text-xs font-medium" role="group" aria-label="View format">
           <button data-ui="admin/OrdersTable/button-list-view"
             type="button"
             onClick={() => changeView("table")}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors cursor-pointer",
-              viewMode === "table" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
+              viewMode === "table" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
             aria-pressed={viewMode === "table"}
             aria-label="List view"
@@ -139,8 +139,8 @@ export function OrdersTable({
             type="button"
             onClick={() => changeView("tiles")}
             className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors cursor-pointer",
-              viewMode === "tiles" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
+              viewMode === "tiles" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
             aria-pressed={viewMode === "tiles"}
             aria-label="Tile view"
@@ -160,7 +160,7 @@ export function OrdersTable({
                 key={o.id}
                 data-ui="admin/OrdersTable/div"
                 className={cn(
-                  "group flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md",
+                  "adminCardInteractive group flex flex-col justify-between rounded-xl border p-4 hover:border-ring/40",
                   isNew && "border-primary/45 bg-primary/2"
                 )}
               >
@@ -259,10 +259,10 @@ export function OrdersTable({
           tabIndex={0}
           role="region"
           aria-label="Orders table"
-          className="overflow-x-auto rounded-2xl border border-border/80 bg-card focus-visible:outline-2 focus-visible:outline-ring"
+          className="adminCard overflow-hidden rounded-xl border focus-visible:outline-2 focus-visible:outline-ring"
         >
           <Table data-ui="admin/OrdersTable/Table">
-            <TableHeader data-ui="admin/OrdersTable/TableHeader">
+            <TableHeader data-ui="admin/OrdersTable/TableHeader-sticky" className="sticky top-0 z-10 bg-muted">
               <TableRow data-ui="admin/OrdersTable/TableRow">
                 <TableHead data-ui="admin/OrdersTable/TableHead-order" className="pl-5">Order</TableHead>
                 <TableHead data-ui="admin/OrdersTable/TableHead-customer">Customer</TableHead>

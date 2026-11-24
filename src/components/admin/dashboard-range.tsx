@@ -94,8 +94,8 @@ export function DashboardRangeShell({
       : `${fys.find((o) => o.value === fyYear)?.label.replace(" (current)", "") ?? ""}${monthSel === "all" ? "" : ` · ${months.find((o) => o.value === monthSel)?.label ?? monthSel}`}`
 
   return (
-    <div data-ui="admin/DashboardRangeShell" className="space-y-6">
-      <div data-ui="admin/DashboardRangeShell/div-flex" className="flex flex-wrap items-end gap-x-4 gap-y-3">
+    <div data-ui="admin/DashboardRangeShell" className="space-y-4">
+      <div data-ui="admin/DashboardRangeShell/div-flex" className="adminCard flex flex-wrap items-end gap-3 rounded-xl border p-3 sm:px-4">
         <SelectField
           label="Financial year"
           hideLabel

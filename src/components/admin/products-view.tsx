@@ -87,17 +87,18 @@ export function ProductsView({ products }: { products: Product[] }) {
   return (
     <>
       <AdminPageHeader
+        eyebrow="Catalogue"
         title="Products"
         description={`${products.length} product${products.length === 1 ? "" : "s"} · ${products.filter((p) => p.isActive).length} visible in store`}
         actions={
           <div data-ui="admin/ProductsView/div-flex" className="flex items-center gap-2">
-            <div data-ui="admin/ProductsView/div-view-format" className="flex items-center rounded-full border bg-muted/40 p-1 text-xs font-medium" role="group" aria-label="View format">
+            <div data-ui="admin/ProductsView/div-view-format" className="flex items-center rounded-lg border bg-muted/60 p-0.5 text-xs font-medium" role="group" aria-label="View format">
               <button data-ui="admin/ProductsView/button-list-view"
                 type="button"
                 onClick={() => changeView("table")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors cursor-pointer",
-                  viewMode === "table" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
+                  viewMode === "table" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
                 )}
                 aria-pressed={viewMode === "table"}
                 aria-label="List view"
@@ -109,8 +110,8 @@ export function ProductsView({ products }: { products: Product[] }) {
                 type="button"
                 onClick={() => changeView("tiles")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors cursor-pointer",
-                  viewMode === "tiles" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground hover:text-foreground"
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors cursor-pointer",
+                  viewMode === "tiles" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground hover:text-foreground"
                 )}
                 aria-pressed={viewMode === "tiles"}
                 aria-label="Tile view"
@@ -119,15 +120,15 @@ export function ProductsView({ products }: { products: Product[] }) {
                 <span data-ui="admin/ProductsView/span-2">Tiles</span>
               </button>
             </div>
-            <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" prefetch={true} className={cn(buttonVariants(), "rounded-full px-4")}>
-              <PlusIcon /> Add product
+            <Link data-ui="admin/ProductsView/Link-add-product" href="/admin/products/new" prefetch={true} className={cn(buttonVariants({ size: "sm" }), "h-9 rounded-lg px-3.5 text-xs font-semibold")}>
+              <PlusIcon className="size-3.5" /> Add product
             </Link>
           </div>
         }
       />
 
       {products.length > 0 && (
-        <div data-ui="admin/ProductsView/div-flex-2" className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div data-ui="admin/ProductsView/div-flex-2" className="adminCard mb-4 flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3.5">
           <div data-ui="admin/ProductsView/div-filter-products" className="scroll-row flex items-center gap-1.5 overflow-x-auto" role="group" aria-label="Filter products">
             {filterChips.map((chip) => {
               const active = filter === chip.id
@@ -198,7 +199,7 @@ export function ProductsView({ products }: { products: Product[] }) {
             <div
               key={p.id}
               data-ui="admin/ProductsView/div-flex-3"
-              className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-4 transition-all duration-200 hover:border-ring/40 hover:shadow-md"
+              className="adminCardInteractive group relative flex flex-col justify-between overflow-hidden rounded-xl border p-3.5 hover:border-ring/40"
             >
               <div data-ui="admin/ProductsView/div-4" className="space-y-3">
                 <div data-ui="admin/ProductsView/div-relative" className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted @container">
@@ -251,10 +252,10 @@ export function ProductsView({ products }: { products: Product[] }) {
           tabIndex={0}
           role="region"
           aria-label="Products table"
-          className="overflow-x-auto rounded-2xl border border-border/80 bg-card focus-visible:outline-2 focus-visible:outline-ring"
+          className="adminCard overflow-hidden rounded-xl border focus-visible:outline-2 focus-visible:outline-ring"
         >
           <Table data-ui="admin/ProductsView/Table">
-            <TableHeader data-ui="admin/ProductsView/TableHeader">
+            <TableHeader data-ui="admin/ProductsView/TableHeader-sticky" className="sticky top-0 z-10 bg-muted">
               <TableRow data-ui="admin/ProductsView/TableRow">
                 <TableHead data-ui="admin/ProductsView/TableHead-product" className="pl-5">Product</TableHead>
                 <TableHead data-ui="admin/ProductsView/TableHead-category" className="hidden md:table-cell">Category</TableHead>

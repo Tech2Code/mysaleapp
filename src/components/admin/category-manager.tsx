@@ -197,21 +197,22 @@ export function CategoryManager({ categories }: { categories: Row[] }) {
     <>
       <div data-ui="admin/CategoryManager/div-flex" className="mb-4 flex justify-end">
         <Button data-ui="admin/CategoryManager/Button-add-category"
-          className="rounded-full px-4"
+          size="sm"
+          className="h-9 rounded-lg px-3.5 text-xs font-semibold"
           onClick={() => {
             setEditing(null)
             setOpen(true)
           }}
         >
-          <PlusIcon /> Add category
+          <PlusIcon className="size-3.5" /> Add category
         </Button>
       </div>
 
-      <ul data-ui="admin/CategoryManager/ul" className="divide-y overflow-hidden rounded-2xl border bg-card">
+      <ul data-ui="admin/CategoryManager/ul" className="adminCard divide-y divide-border/70 overflow-hidden rounded-xl border">
         {categories.length === 0 && <li data-ui="admin/CategoryManager/li" className="p-7 sm:p-10 text-center text-sm text-muted-foreground">No categories yet.</li>}
         {categories.map((c) => (
-          <li data-ui="admin/CategoryManager/li-flex" key={c.id} className="flex items-center gap-4 p-4">
-            <span data-ui="admin/CategoryManager/span-grid" className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary font-heading text-lg font-semibold text-primary">
+          <li data-ui="admin/CategoryManager/li-flex" key={c.id} className="flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-muted/35">
+            <span data-ui="admin/CategoryManager/span-grid" className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted font-heading text-base font-semibold text-foreground">
               {c.name.charAt(0)}
             </span>
             <div data-ui="admin/CategoryManager/div" className="min-w-0 flex-1">

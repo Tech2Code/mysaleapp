@@ -22,9 +22,13 @@ import { formatDateTime } from "@/lib/format"
 
 function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <section data-ui="admin/Card" className="rounded-2xl border bg-card p-5 sm:p-6">
-      {title && <h2 data-ui="admin/Card/h2" className="mb-4 font-sans text-lg font-semibold">{title}</h2>}
-      {children}
+    <section data-ui="admin/Card" className="adminCard overflow-hidden rounded-xl border">
+      {title && (
+        <div data-ui="admin/Card/div" className="border-b border-border/60 px-4 py-3 sm:px-5">
+          <h2 data-ui="admin/Card/h2" className="font-sans text-sm font-semibold tracking-tight">{title}</h2>
+        </div>
+      )}
+      <div data-ui="admin/Card/div-2" className="p-4 sm:p-5">{children}</div>
     </section>
   )
 }
@@ -52,23 +56,27 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
         <ArrowLeftIcon className="size-4" /> All orders
       </Link>
 
-      <header data-ui="admin/AdminOrderView/header-flex" className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <h1 data-ui="admin/AdminOrderView/h1" className="font-mono text-2xl font-semibold sm:text-3xl">{order.orderCode}</h1>
-        <CopyButton value={order.orderCode} label="Order ID" />
-        <div data-ui="admin/AdminOrderView/div-flex" className="flex flex-wrap items-center gap-2">
-          <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="admin" className="text-sm" pulse alwaysShow />
+      <header data-ui="admin/AdminOrderView/header-flex" className="adminCard mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 sm:px-5">
+        <div data-ui="admin/AdminOrderView/div-flex" className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 data-ui="admin/AdminOrderView/h1" className="font-mono text-2xl font-semibold tracking-tight sm:text-3xl">{order.orderCode}</h1>
+          <CopyButton value={order.orderCode} label="Order ID" />
+          <div data-ui="admin/AdminOrderView/div-flex-2" className="flex flex-wrap items-center gap-2">
+            <OrderStatusBadge status={order.status} returnStage={order.returnStage} paymentStatus={order.paymentStatus} audience="admin" className="text-sm" pulse alwaysShow />
+          </div>
+          <span data-ui="admin/AdminOrderView/span" className="text-xs font-medium text-muted-foreground sm:text-sm">Placed {formatDateTime(order.createdAt)}</span>
         </div>
-        <span data-ui="admin/AdminOrderView/span" className="text-sm text-muted-foreground">Placed {formatDateTime(order.createdAt)}</span>
-        {order.status !== "cancelled" && (
-          <Link data-ui="admin/AdminOrderView/Link-invoice" href={`/admin/orders/${encodeURIComponent(order.orderCode)}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm font-semibold hover:bg-muted">
-            <ReceiptTextIcon className="size-4" /> Invoice
-          </Link>
-        )}
-        {autoCancelAt && (
-          <span data-ui="admin/AdminOrderView/span-2" className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
-            Auto-cancels {formatDeadline(autoCancelAt)} if UTR not updated
-          </span>
-        )}
+        <div data-ui="admin/AdminOrderView/div-flex-3" className="flex flex-wrap items-center gap-2">
+          {autoCancelAt && (
+            <span data-ui="admin/AdminOrderView/span-2" className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+              Auto-cancels {formatDeadline(autoCancelAt)} if UTR not updated
+            </span>
+          )}
+          {order.status !== "cancelled" && (
+            <Link data-ui="admin/AdminOrderView/Link-invoice" href={`/admin/orders/${encodeURIComponent(order.orderCode)}/invoice`} className="inline-flex h-9 items-center gap-2 rounded-full border bg-background px-4 text-sm font-semibold transition-colors hover:bg-muted">
+              <ReceiptTextIcon className="size-4" /> Invoice
+            </Link>
+          )}
+        </div>
       </header>
 
       <div data-ui="admin/AdminOrderView/div-grid" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
@@ -144,7 +152,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
             <p data-ui="admin/AdminOrderView/p" className="font-medium">{order.customerName}</p>
             <p data-ui="admin/AdminOrderView/p-2" className="text-sm text-muted-foreground">+91 {order.phone}</p>
             <p data-ui="admin/AdminOrderView/p-3" className="mt-1 text-xs text-muted-foreground">{order.userId ? "Signed-in customer" : "Guest checkout"}</p>
-            <div data-ui="admin/AdminOrderView/div-flex-2" className="mt-4 flex flex-wrap gap-2">
+            <div data-ui="admin/AdminOrderView/div-flex-4" className="mt-4 flex flex-wrap gap-2">
               <a data-ui="admin/AdminOrderView/a-whatsapp"
                 href={whatsappLink(`91${order.phone}`)}
                 target="_blank"

@@ -384,7 +384,7 @@ export function CheckoutForm({
           // private mode: the success page falls back to the code in the URL
         }
         clearCart()
-        router.push(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+        router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
       } catch {
         toast.error("Couldn't place your order. Please check your connection and try again.")
       }
@@ -918,6 +918,13 @@ export function CheckoutForm({
                       onChange={(e) => {
                         setPaymentRef(e.target.value)
                         if (paymentRefError) setPaymentRefError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          if (!pending) confirmPaymentAndPlaceOrder()
+                        }
                       }}
                       placeholder="e.g. 412345678901"
                       autoCapitalize="characters"

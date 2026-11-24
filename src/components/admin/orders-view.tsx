@@ -41,7 +41,7 @@ export function OrdersView({
 
   return (
     <>
-      <AdminPageHeader title="Orders" description={`${total} order${total === 1 ? "" : "s"} found`} />
+      <AdminPageHeader eyebrow="Sales" title="Orders" description={`${total} order${total === 1 ? "" : "s"} found`} />
       <OrdersBrowser
         status={filters.status}
         payment={filters.payment}
@@ -61,20 +61,20 @@ export function OrdersView({
               href={pageHref(page - 1)}
               aria-disabled={page <= 1}
               tabIndex={page <= 1 ? -1 : undefined}
-              className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page <= 1 && "pointer-events-none opacity-50")}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8.5 rounded-lg bg-card px-3 text-xs", page <= 1 && "pointer-events-none opacity-50")}
             >
-              <ChevronLeftIcon /> Previous
+              <ChevronLeftIcon className="size-3.5" /> Previous
             </Link>
-            <span data-ui="admin/OrdersView/span" className="text-sm text-muted-foreground">
+            <span data-ui="admin/OrdersView/span" className="text-xs font-medium text-muted-foreground tabular-nums">
               Page {page} of {pages}
             </span>
             <Link data-ui="admin/OrdersView/Link-next"
               href={pageHref(page + 1)}
               aria-disabled={page >= pages}
               tabIndex={page >= pages ? -1 : undefined}
-              className={cn(buttonVariants({ variant: "outline" }), "rounded-full", page >= pages && "pointer-events-none opacity-50")}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-8.5 rounded-lg bg-card px-3 text-xs", page >= pages && "pointer-events-none opacity-50")}
             >
-              Next <ChevronRightIcon />
+              Next <ChevronRightIcon className="size-3.5" />
             </Link>
           </nav>
         )}

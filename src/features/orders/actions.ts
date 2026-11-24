@@ -194,7 +194,6 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
   })
 
   revalidatePath("/account", "layout")
-  revalidatePath("/checkout")
   revalidatePath("/admin", "layout")
 
   return {
