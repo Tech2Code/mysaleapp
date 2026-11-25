@@ -32,11 +32,42 @@ type OverlayHistoryEntry = {
 
 const overlayStack: OverlayHistoryEntry[] = []
 let ignorePopCount = 0
+let suppressPopUntil = 0
+let lastOverlayLinkNavAt = 0
 let popListenerAttached = false
+
+export function isOverlayHistoryPop(): boolean {
+  return ignorePopCount > 0 || (typeof performance !== "undefined" && performance.now() < suppressPopUntil)
+}
+
+function writeOverlayHistoryState(mode: "push" | "replace", nextState: Record<string, unknown>) {
+  try {
+    const fn = mode === "push" ? History.prototype.pushState : History.prototype.replaceState
+    fn.call(window.history, nextState, "")
+  } catch {}
+}
 
 function ensureOverlayPopListener() {
   if (popListenerAttached || typeof window === "undefined") return
   popListenerAttached = true
+
+  // Track internal link clicks inside an open overlay so closing the overlay for route navigation never triggers history.back()
+  document.addEventListener(
+    "click",
+    (e: MouseEvent) => {
+      if (overlayStack.length === 0 || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const anchor = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null
+      if (!anchor || (anchor.target && anchor.target !== "_self") || anchor.hasAttribute("download")) return
+      try {
+        const url = new URL(anchor.href, window.location.href)
+        if (url.origin !== window.location.origin) return
+        if (url.pathname + url.search !== window.location.pathname + window.location.search) {
+          lastOverlayLinkNavAt = performance.now()
+        }
+      } catch {}
+    },
+    true
+  )
 
   // Register in capture phase so we intercept mobile Back BEFORE Next.js App Router's popstate listener
   window.addEventListener(
@@ -44,6 +75,7 @@ function ensureOverlayPopListener() {
     (e: PopStateEvent) => {
       if (ignorePopCount > 0) {
         ignorePopCount--
+        if (ignorePopCount === 0) suppressPopUntil = 0
         e.stopImmediatePropagation()
         return
       }
@@ -54,11 +86,9 @@ function ensureOverlayPopListener() {
       e.stopImmediatePropagation()
       if (top.onBack && top.onBack()) {
         // Handled as an internal step-back inside the dialog; re-push the guard entry so the dialog stays protected
-        try {
-          const prevState =
-            window.history.state && typeof window.history.state === "object" ? window.history.state : {}
-          window.history.pushState({ ...prevState, __overlayId: top.id }, "")
-        } catch {}
+        const prevState =
+          window.history.state && typeof window.history.state === "object" ? window.history.state : {}
+        writeOverlayHistoryState("push", { ...prevState, __overlayId: top.id })
         return
       }
 
@@ -95,24 +125,37 @@ export function useOverlayHistory(
     overlayStack.push(entry)
     const pushedUrl = window.location.pathname + window.location.search
 
-    try {
-      const prevState =
-        window.history.state && typeof window.history.state === "object" ? window.history.state : {}
-      window.history.pushState({ ...prevState, __overlayId: id }, "")
-    } catch {}
+    const prevState =
+      window.history.state && typeof window.history.state === "object" ? window.history.state : {}
+    writeOverlayHistoryState("push", { ...prevState, __overlayId: id })
 
     return () => {
       const idx = overlayStack.indexOf(entry)
       if (idx !== -1) {
         overlayStack.splice(idx, 1)
         const currentUrl = window.location.pathname + window.location.search
-        // Only pop the synthetic history entry if the user closed the dialog via UI while still on the same URL
+        const navigatingViaLink = performance.now() - lastOverlayLinkNavAt < 800
+        if (navigatingViaLink || currentUrl !== pushedUrl) {
+          // Closing an overlay to navigate via <Link>: never call history.back(), which aborts Next.js App Router transitions.
+          if (currentUrl === pushedUrl && window.history.state?.__overlayId === id) {
+            const nextState = { ...window.history.state }
+            delete nextState.__overlayId
+            writeOverlayHistoryState("replace", nextState)
+          }
+          return
+        }
+        // Only pop the synthetic history entry if the user closed the dialog via UI while staying on the same URL
         if (currentUrl === pushedUrl && window.history.state?.__overlayId === id) {
           ignorePopCount++
+          suppressPopUntil = performance.now() + 400
+          window.setTimeout(() => {
+            if (ignorePopCount > 0) ignorePopCount = 0
+          }, 400)
           try {
             window.history.back()
           } catch {
             ignorePopCount = Math.max(0, ignorePopCount - 1)
+            suppressPopUntil = 0
           }
         }
       }

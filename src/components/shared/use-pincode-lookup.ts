@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckCircle2Icon, Loader2Icon } from "lucide-react"
-import { createElement, useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { createElement, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { lookupPincode, type PincodeInfo } from "@/features/location/actions"
 import { PATTERNS } from "@/lib/validation"
 import styles from "./shared.module.css"
@@ -81,22 +81,29 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
   const error = isInvalid ? "Enter a valid 6-digit Indian pincode" : undefined
   const loading = valid && result?.pin !== pincode
   const matched = valid && result?.pin === pincode && result.info.ok ? result.info : null
-  const hint: ReactNode = loading
-    ? createElement(
-        "span",
-        { className: styles.pincodeHintLoading },
-        createElement(Loader2Icon, { className: styles.pincodeSpinSvg, "aria-hidden": true }),
-        createElement("span", null, "Finding your area…")
-      )
-    : error
-      ? undefined
-      : matched
+  const hint: ReactNode = useMemo(
+    () =>
+      loading
         ? createElement(
             "span",
-            { className: styles.pincodeHintMatched },
-            createElement(CheckCircle2Icon, { className: styles.pincodeCheckSvg, "aria-hidden": true }),
-            createElement("span", null, `${matched.city}, ${matched.state} — filled from pincode`)
+            { className: styles.pincodeHintLoading },
+            createElement(Loader2Icon, { className: styles.pincodeSpinSvg, "aria-hidden": true }),
+            createElement("span", null, "Finding your area…")
           )
-        : "City / district and state are filled in from the pincode"
-  return { loading, hint, error, matched: Boolean(matched), prime }
+        : error
+          ? undefined
+          : matched
+            ? createElement(
+                "span",
+                { className: styles.pincodeHintMatched },
+                createElement(CheckCircle2Icon, { className: styles.pincodeCheckSvg, "aria-hidden": true }),
+                createElement("span", null, `${matched.city}, ${matched.state} — filled from pincode`)
+              )
+            : "City / district and state are filled in from the pincode",
+    [loading, error, matched]
+  )
+  return useMemo(
+    () => ({ loading, hint, error, matched: Boolean(matched), prime }),
+    [loading, hint, error, matched, prime]
+  )
 }

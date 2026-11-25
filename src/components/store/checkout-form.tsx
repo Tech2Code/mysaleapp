@@ -169,11 +169,19 @@ export function CheckoutForm({
     getState: () => form.getValues("state"),
     setState: (state) => form.setValue("state", state as IndianState, { shouldValidate: true, shouldDirty: true }),
   })
+  const { prime: primeArea } = area
+  const lastAppliedSavedKey = useRef<string>(
+    initialDefault
+      ? `${initialDefault.id}:${initialDefault.fullName}:${initialDefault.phone}:${initialDefault.address}:${initialDefault.city}:${initialDefault.pincode}`
+      : ""
+  )
+  const appliedInitialProfile = useRef<boolean>(Boolean(!initialDefault && initialProfile))
 
   const fillFrom = (a: Address) => {
     setSelected(a.id)
     const split = splitCityState(a.city)
-    area.prime(a.pincode, split.city, split.state)
+    lastAppliedSavedKey.current = `${a.id}:${a.fullName}:${a.phone}:${a.address}:${a.city}:${a.pincode}`
+    primeArea(a.pincode, split.city, split.state)
     form.reset({
       name: a.fullName,
       phone: a.phone,
@@ -186,7 +194,8 @@ export function CheckoutForm({
 
   const useNewAddress = () => {
     setSelected("new")
-    area.prime("", "", NO_STATE)
+    lastAppliedSavedKey.current = ""
+    primeArea("", "", NO_STATE)
     const current = form.getValues()
     form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
   }
@@ -199,9 +208,10 @@ export function CheckoutForm({
   // Pre-fill form when saved addresses load or the selected saved address updates
   useEffect(() => {
     if (activeSavedAddress) {
-      if (form.formState.isDirty) return
+      if (lastAppliedSavedKey.current === activeSavedKey || form.formState.isDirty) return
+      lastAppliedSavedKey.current = activeSavedKey
       const split = splitCityState(activeSavedAddress.city)
-      area.prime(activeSavedAddress.pincode, split.city, split.state)
+      primeArea(activeSavedAddress.pincode, split.city, split.state)
       form.reset({
         name: activeSavedAddress.fullName,
         phone: activeSavedAddress.phone,
@@ -212,12 +222,18 @@ export function CheckoutForm({
       })
       return
     }
+    if (selected === "new") {
+      lastAppliedSavedKey.current = ""
+    }
     if (form.formState.isDirty) return
     const first = canUseInitial ? initialAddresses[0] : undefined
     if (first && !form.getValues("address")) {
+      const firstKey = `${first.id}:${first.fullName}:${first.phone}:${first.address}:${first.city}:${first.pincode}`
+      if (lastAppliedSavedKey.current === firstKey) return
+      lastAppliedSavedKey.current = firstKey
       queueMicrotask(() => setSelected(first.id))
       const split = splitCityState(first.city)
-      area.prime(first.pincode, split.city, split.state)
+      primeArea(first.pincode, split.city, split.state)
       form.reset({
         name: first.fullName,
         phone: first.phone,
@@ -226,7 +242,14 @@ export function CheckoutForm({
         pincode: first.pincode,
         note: form.getValues("note"),
       })
-    } else if (!first && canUseInitial && initialProfile && (!form.getValues("name") || !form.getValues("phone"))) {
+    } else if (
+      !first &&
+      canUseInitial &&
+      initialProfile &&
+      !appliedInitialProfile.current &&
+      ((initialProfile.fullName && !form.getValues("name")) || (initialProfile.phone && !form.getValues("phone")))
+    ) {
+      appliedInitialProfile.current = true
       const current = form.getValues()
       form.reset({
         ...current,
@@ -234,7 +257,7 @@ export function CheckoutForm({
         phone: current.phone || initialProfile.phone,
       })
     }
-  }, [activeSavedAddress, activeSavedKey, canUseInitial, initialAddresses, initialProfile, form, area])
+  }, [activeSavedAddress, activeSavedKey, selected, canUseInitial, initialAddresses, initialProfile, form, primeArea])
 
   // Clear cached account addresses/autofill if the user signs out while CheckoutForm stays mounted
   useEffect(() => {
@@ -245,7 +268,9 @@ export function CheckoutForm({
     if (!authReady || !wasSignedIn.current) return
     wasSignedIn.current = false
     fetchedForUser.current = null
-    area.prime("", "", NO_STATE)
+    lastAppliedSavedKey.current = ""
+    appliedInitialProfile.current = false
+    primeArea("", "", NO_STATE)
     form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     queueMicrotask(() => {
       setClearedOnSignOut(true)
@@ -260,7 +285,7 @@ export function CheckoutForm({
       setAppliedPromo(null)
       setPromoError(null)
     })
-  }, [authReady, signedIn, form, area])
+  }, [authReady, signedIn, form, primeArea])
 
   // Signed-in customers: fallback if server did not preload addresses (or after sign-out/account switch)
   useEffect(() => {
@@ -273,6 +298,8 @@ export function CheckoutForm({
     prevUserId.current = user.id
     if (switchedAccount) {
       fetchedForUser.current = null
+      lastAppliedSavedKey.current = ""
+      appliedInitialProfile.current = false
       form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     }
     if ((!switchedAccount && initialAddresses.length > 0) || fetchedForUser.current === user.id) return

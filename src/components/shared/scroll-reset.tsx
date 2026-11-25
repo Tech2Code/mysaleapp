@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { useInsertionEffect, useLayoutEffect, useSyncExternalStore } from "react"
+import { isOverlayHistoryPop } from "@/components/ui/dialog"
 import { SCROLL_HOLD, holdFinished, shouldResetScroll } from "@/lib/scroll-reset"
 
 const emptySubscribe = () => () => {}
@@ -191,6 +192,7 @@ export function ScrollReset() {
     // Navigation API fires synchronously BEFORE popstate and before Next.js Router's popstate handler
     const onNavigate = (e: Event & { navigationType?: string }) => {
       if (e.navigationType === "traverse") {
+        if (isOverlayHistoryPop()) return
         if (committedKey && committedPath && window.location.pathname === committedPath) {
           saveScrollPosition(committedKey, committedPath, lastScrollY)
         }
