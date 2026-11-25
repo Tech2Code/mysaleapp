@@ -8,6 +8,7 @@ import { ProductForm } from "@/components/admin/product-form"
 import { PromoCodeManager, StoreSettingsForm } from "@/components/admin/store-settings-form"
 import { buttonVariants } from "@/components/ui/button"
 import type { AdminPinStatus } from "@/features/auth/account-schema"
+import type { PaymentGatewayProvider } from "@/features/orders/types"
 import type { Category, Product } from "@/features/products/types"
 import type { LaunchCounts } from "@/features/settings/launch"
 import type { ChecklistItem } from "@/features/settings/launch-queries"
@@ -76,7 +77,15 @@ export function LaunchView({ counts, checklist }: { counts: LaunchCounts; checkl
   )
 }
 
-export function SettingsView({ settings, promoCodes = [] }: { settings: StoreSettings; promoCodes?: PromoCode[] }) {
+export function SettingsView({
+  settings,
+  promoCodes = [],
+  configuredGateways = [],
+}: {
+  settings: StoreSettings
+  promoCodes?: PromoCode[]
+  configuredGateways?: PaymentGatewayProvider[]
+}) {
   return (
     <>
       <AdminPageHeader
@@ -85,7 +94,7 @@ export function SettingsView({ settings, promoCodes = [] }: { settings: StoreSet
         description="Your shop's name, promo codes, contact details, payment, delivery and SEO. Changes go live on the website as soon as you save."
       />
       <PromoCodeManager promoCodes={promoCodes} />
-      <StoreSettingsForm settings={settings} />
+      <StoreSettingsForm settings={settings} configuredGateways={configuredGateways} />
     </>
   )
 }

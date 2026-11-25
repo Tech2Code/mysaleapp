@@ -107,11 +107,9 @@ export function OrdersBrowser({
   const payment =
     view === "to-verify"
       ? "submitted"
-      : view === "awaiting-payment"
-        ? "failed"
-        : view
-          ? "all"
-          : (applied.payment ?? "all")
+      : view
+        ? "all"
+        : (applied.payment ?? "all")
   const returnView = view && (RETURN_VIEWS as readonly string[]).includes(view) ? view : "none"
 
   const sc = filterCounts?.status
@@ -143,7 +141,7 @@ export function OrdersBrowser({
   ]
 
   const pc = filterCounts?.payment
-  const paymentAttentionCount = pc ? pc.submitted + pc.failed + pc["refund-due"] : 0
+  const paymentAttentionCount = pc ? pc.submitted + pc.failed + pc.pending + pc["refund-due"] : 0
   const paymentOptions: SelectOption[] = [
     {
       value: "all",
@@ -153,6 +151,7 @@ export function OrdersBrowser({
     },
     { value: "submitted", label: "To verify", badge: pc ? String(pc.submitted) : undefined, tone: (pc?.submitted ?? 0) > 0 ? "attention" : "default" },
     { value: "failed", label: "Rejected", badge: pc ? String(pc.failed) : undefined, tone: (pc?.failed ?? 0) > 0 ? "attention" : "default" },
+    { value: "pending", label: "Awaiting payment", badge: pc ? String(pc.pending) : undefined, tone: (pc?.pending ?? 0) > 0 ? "attention" : "default" },
     { value: "paid", label: "Paid", badge: pc ? String(pc.paid) : undefined },
     { value: "refund-due", label: "Refund due", badge: pc ? String(pc["refund-due"]) : undefined, tone: (pc?.["refund-due"] ?? 0) > 0 ? "attention" : "default" },
     { value: "refunded", label: "Refunded", badge: pc ? String(pc.refunded) : undefined },

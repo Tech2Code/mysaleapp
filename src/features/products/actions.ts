@@ -72,6 +72,12 @@ function refreshCatalogue() {
   revalidatePath("/", "layout")
 }
 
+function refreshReviews() {
+  updateTag(CACHE_TAGS.products)
+  revalidatePath("/products", "layout")
+  revalidatePath("/account/orders", "layout")
+}
+
 /**
  * `expectedStock` is the stock the form was loaded with. On edit the server applies the admin's
  * change as a delta to the CURRENT stock (customers reserve stock when ordering, so overwriting with
@@ -179,7 +185,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     targetType: "product",
     targetId: id,
   })
-  refreshCatalogue()
+  refreshReviews()
   return { ok: true }
 }
 
@@ -213,7 +219,7 @@ export async function toggleProductFlag(
     targetId: id,
     metadata: { flag: parsedFlag.data, value: parsedValue.data },
   })
-  refreshCatalogue()
+  refreshReviews()
   return { ok: true }
 }
 
@@ -248,7 +254,7 @@ export async function saveCategory(id: string | null, input: unknown): Promise<A
     targetId: id ?? parsed.data.slug,
     metadata: { name: parsed.data.name, slug: parsed.data.slug },
   })
-  refreshCatalogue()
+  refreshReviews()
   return { ok: true }
 }
 
@@ -268,7 +274,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     targetType: "category",
     targetId: id,
   })
-  refreshCatalogue()
+  refreshReviews()
   return { ok: true }
 }
 
@@ -334,6 +340,78 @@ export async function getMyProductReviewState(
   }
 }
 
+export async function getMyReviewEligibilitySnapshot(): Promise<{
+  isAdmin: boolean
+  deliveredProductIds: string[]
+  reviews: ProductReview[]
+} | null> {
+  const supabase = await getServerSupabase()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const sessionUserId = session?.user?.id
+  if (!sessionUserId) return null
+
+  const [userRes, isAdminRes, ordersRes, reviewsRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc("is_admin"),
+    supabase
+      .from("orders")
+      .select("items")
+      .eq("user_id", sessionUserId)
+      .eq("status", "delivered"),
+    supabase
+      .from("product_reviews")
+      .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
+      .eq("user_id", sessionUserId),
+  ])
+
+  const user = userRes.data.user
+  if (!user || user.id !== sessionUserId) return null
+
+  const deliveredSet = new Set<string>()
+  for (const row of (ordersRes.data ?? []) as { items?: { productId?: string }[] | null }[]) {
+    if (!Array.isArray(row.items)) continue
+    for (const item of row.items) {
+      if (item && typeof item.productId === "string" && item.productId) {
+        deliveredSet.add(item.productId)
+      }
+    }
+  }
+
+  const reviews: ProductReview[] = (
+    (reviewsRes.data ?? []) as {
+      id: string
+      product_id: string
+      user_id: string
+      reviewer_name: string
+      rating: number
+      title: string | null
+      comment: string
+      is_verified_purchase: boolean
+      created_at: string
+      updated_at: string
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    productId: r.product_id,
+    userId: r.user_id,
+    reviewerName: r.reviewer_name,
+    rating: Number(r.rating),
+    title: r.title,
+    comment: r.comment,
+    isVerifiedPurchase: Boolean(r.is_verified_purchase),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }))
+
+  return {
+    isAdmin: Boolean(isAdminRes.data),
+    deliveredProductIds: Array.from(deliveredSet),
+    reviews,
+  }
+}
+
 export async function submitProductReview(input: unknown): Promise<ActionResult<{ id: string }>> {
   const parsed = productReviewSchema.safeParse(input)
   if (!parsed.success) {
@@ -367,15 +445,22 @@ export async function submitProductReview(input: unknown): Promise<ActionResult<
     return fail("Could not save your review. Please try again.")
   }
 
-  refreshCatalogue()
+  refreshReviews()
   const res = data as { id?: string } | null
   return { ok: true, data: { id: res?.id ?? "" } }
 }
 
-export async function deleteProductReview(input: { reviewId: string; productId: string }): Promise<ActionResult> {
-  if (!z.uuid().safeParse(input.reviewId).success || !z.uuid().safeParse(input.productId).success) {
+const deleteReviewSchema = z.object({
+  reviewId: z.uuid(),
+  productId: z.uuid(),
+})
+
+export async function deleteProductReview(input: unknown): Promise<ActionResult> {
+  const parsed = deleteReviewSchema.safeParse(input)
+  if (!parsed.success) {
     return fail("Invalid review.")
   }
+  const { reviewId, productId } = parsed.data
 
   const supabase = await getServerSupabase()
   const {
@@ -387,8 +472,8 @@ export async function deleteProductReview(input: { reviewId: string; productId: 
   const { data: target } = await supabase
     .from("product_reviews")
     .select("id, user_id")
-    .eq("id", input.reviewId)
-    .eq("product_id", input.productId)
+    .eq("id", reviewId)
+    .eq("product_id", productId)
     .maybeSingle<{ id: string; user_id: string }>()
 
   if (!target) return fail("Review not found.")
@@ -401,8 +486,8 @@ export async function deleteProductReview(input: { reviewId: string; productId: 
   const { data: deleted, error } = await supabase
     .from("product_reviews")
     .delete()
-    .eq("id", input.reviewId)
-    .eq("product_id", input.productId)
+    .eq("id", reviewId)
+    .eq("product_id", productId)
     .select("id, user_id")
 
   if (error || !deleted || deleted.length === 0) return fail("Could not delete review.")
@@ -412,11 +497,11 @@ export async function deleteProductReview(input: { reviewId: string; productId: 
       actorId: user.id,
       action: "review.delete",
       targetType: "product",
-      targetId: input.productId,
-      metadata: { reviewId: input.reviewId },
+      targetId: productId,
+      metadata: { reviewId },
     })
   }
 
-  refreshCatalogue()
+  refreshReviews()
   return { ok: true }
 }

@@ -4,7 +4,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect } from "react"
 import { toast } from "sonner"
 import { getMyProfile } from "@/features/account/actions"
+import { getMyReviewEligibilitySnapshot } from "@/features/products/actions"
 import { syncWishlist } from "@/features/wishlist/actions"
+import { clearUserReviewStateCache, primeUserReviewStateCache } from "@/components/store/product-actions"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
 import { readCachedAuthSnapshot, useAuth, type SessionUser } from "@/store/auth"
@@ -13,6 +15,7 @@ import { useWishlist } from "@/store/wishlist"
 import type { User } from "@supabase/supabase-js"
 
 let lastSyncedUserId: string | null = null
+let explicitSignOutUntil = 0
 const profileOverrides = new Map<string, { name?: string; email?: string; avatarUrl?: string | null }>()
 
 function clearOrderSession() {
@@ -68,11 +71,15 @@ function runBackgroundAccountSync(userId: string, skipWishlist = false) {
   }
   const snapshot = new Set(localIds)
   setTimeout(async () => {
-    const [wishRes, profile] = await Promise.all([
+    const [wishRes, profile, reviewSnapshot] = await Promise.all([
       skipWishlist ? Promise.resolve(null) : syncWishlist(localIds),
       getMyProfile({ consumeReactivated: true }).catch(() => null),
+      getMyReviewEligibilitySnapshot().catch(() => null),
     ])
     if (useAuth.getState().user?.id !== userId) return
+    if (reviewSnapshot) {
+      primeUserReviewStateCache(userId, reviewSnapshot)
+    }
     if (profile) {
       applyClientProfileUpdate({
         name: profile.fullName || undefined,
@@ -119,8 +126,10 @@ export function applyClientSignIn(user: SessionUser, wishlistIds?: string[]) {
  * Immediately clears client auth and account-bound wishlist state on sign-out.
  */
 export function applyClientSignOut() {
+  explicitSignOutUntil = Date.now() + 5000
   lastSyncedUserId = null
   profileOverrides.clear()
+  clearUserReviewStateCache()
   useAuth.getState().setUser(null)
   useWishlist.getState().clear()
   clearOrderSession()
@@ -130,12 +139,17 @@ function handleSessionChange(user: User | null, isSignedOutEvent = false) {
   const currentUser = useAuth.getState().user
   if (!user) {
     useAuth.getState().setUser(null)
+    clearUserReviewStateCache()
     if (isSignedOutEvent || currentUser !== null || useWishlist.getState().ownerId !== null) {
       lastSyncedUserId = null
       profileOverrides.clear()
       useWishlist.getState().clear()
       clearOrderSession()
-      if (typeof window !== "undefined" && (isSignedOutEvent || currentUser !== null)) {
+      if (
+        typeof window !== "undefined" &&
+        Date.now() >= explicitSignOutUntil &&
+        (isSignedOutEvent || currentUser !== null)
+      ) {
         const p = window.location.pathname
         if (p === "/account" || p.startsWith("/account/")) {
           window.location.replace(`/login?next=${encodeURIComponent(p)}`)

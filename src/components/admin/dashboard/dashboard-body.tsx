@@ -54,7 +54,7 @@ function FulfilmentGauge({ rate }: { rate: number }) {
 
 /** Everything under the date-range picker. Rendered by the page, by loading.tsx (placeholder data) and while the range reloads. */
 export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" | "month" }) {
-  const aovSeries = d.days.map((p) => (p.orders ? p.revenue / p.orders : 0))
+  const aovSeries = d.days.map((p) => ((p.paidOrders ?? p.orders) ? p.revenue / (p.paidOrders ?? p.orders) : 0))
   const totalOrdersInPipeline = ORDER_STATUSES.reduce((acc, s) => acc + d.byStatus[s], 0)
   const deliveredCount = d.byStatus.delivered ?? 0
   const cancelledCount = d.byStatus.cancelled ?? 0
@@ -83,7 +83,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
         },
         {
           href: "/admin/orders?view=awaiting-payment",
-          label: "Payment rejected",
+          label: "Awaiting / rejected payment",
           hint: "Waiting for UTR update",
           count: d.attention.awaitingPayment,
           dot: styles.dotBgAmber,
@@ -326,7 +326,7 @@ export function DashboardBody({ d, bucket }: { d: DashboardData; bucket: "day" |
                 </span>
                 <span className={styles.legendCountMono}>{deliveredCount}</span>
               </Link>
-              <Link href="/admin/orders?view=to-ship" className={styles.pipelineLinkRow}>
+              <Link href="/admin/orders" className={styles.pipelineLinkRow}>
                 <span className={styles.legendLabelLeft}>
                   <span className={cn(styles.legendDot, styles.dotBgPrimary)} aria-hidden /> In progress
                 </span>

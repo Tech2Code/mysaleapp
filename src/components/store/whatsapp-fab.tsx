@@ -11,6 +11,7 @@ import styles from "./whatsapp-fab.module.css"
 
 function WhatsAppFabInner({ pathname }: { pathname: string | null }) {
   const shop = useStoreSettings()
+  if (pathname === "/contact") return null
   const hideOnMobile = pathname !== null && (/^\/products\/[^/]+$/.test(pathname) || pathname === "/checkout")
 
   return (

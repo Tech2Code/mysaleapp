@@ -246,7 +246,7 @@ function EmailForm({ email }: { email: string }) {
           <span>{callbackBanner.text}</span>
         </p>
       )}
-      {sentTo && (
+      {sentTo && sentTo.trim().toLowerCase() !== email.trim().toLowerCase() && (
         <p role="status" className={cn(styles.statusBanner, styles.statusBannerSuccess)}>
           <MailCheckIcon className={cn(styles.bannerIcon, styles.bannerIconSuccess)} aria-hidden />
           <span>

@@ -5,6 +5,7 @@ import { getPublicSupabase } from "@/lib/supabase/public"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { formatPhoneDisplay } from "@/lib/format"
 import { DEFAULT_SETTINGS } from "./defaults"
+import { PAYMENT_GATEWAY_PROVIDERS, type PaymentGatewayProvider } from "@/features/orders/types"
 import type { PromoCode, PromoDiscountType, StoreSettings } from "./types"
 
 export const SETTINGS_TAG = "settings"
@@ -18,6 +19,8 @@ type SettingsRow = {
   extra_weight_fee_per_kg?: number | string | null
   unpaid_order_expiry_hours: number | null
   return_window_days: number | null
+  payment_mode?: string | null
+  payment_gateway?: string | null
   upi_id: string | null
   upi_payee_name: string | null
   shop_name: string | null
@@ -105,6 +108,11 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     oversizedFee: Number(data.oversized_fee ?? d.oversizedFee),
     freeWeightGrams: Number(data.free_weight_grams ?? d.freeWeightGrams),
     extraWeightFeePerKg: Number(data.extra_weight_fee_per_kg ?? d.extraWeightFeePerKg),
+    paymentMode: data.payment_mode === "gateway" ? "gateway" : "manual_upi",
+    paymentGateway:
+      data.payment_gateway && (PAYMENT_GATEWAY_PROVIDERS as readonly string[]).includes(data.payment_gateway)
+        ? (data.payment_gateway as PaymentGatewayProvider)
+        : d.paymentGateway,
     upiId: data.upi_id,
     upiPayeeName: data.upi_payee_name,
   }

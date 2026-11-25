@@ -1,6 +1,7 @@
 "use client"
 
 import { useId, useState, type ReactNode } from "react"
+import { cn } from "@/lib/utils"
 import styles from "./shared.module.css"
 
 /**
@@ -10,7 +11,7 @@ import styles from "./shared.module.css"
  */
 export function ReadMore({
   children,
-  collapsedHeight = "9.5rem",
+  collapsedHeight = "152px",
   /** Rough size of the text (characters); below this the text is never clipped. */
   length,
   threshold = 420,
@@ -22,6 +23,7 @@ export function ReadMore({
   threshold?: number
   className?: string
 }) {
+  void collapsedHeight
   const [open, setOpen] = useState(false)
   const id = useId()
   const collapsible = length > threshold
@@ -30,8 +32,10 @@ export function ReadMore({
     <div className={className}>
       <div
         id={id}
-        className={styles.readMoreCollapsible}
-        style={collapsible && !open ? { maxHeight: collapsedHeight } : { maxHeight: "200rem" }}
+        className={cn(
+          styles.readMoreCollapsible,
+          collapsible && !open ? styles.readMoreCollapsed : styles.readMoreExpanded
+        )}
       >
         {children}
         {collapsible && !open && (

@@ -18,7 +18,7 @@ export function invoiceTitle(s: Pick<StoreSettings, "gstRegistered" | "gstin" | 
   return gstActive(s) ? "Tax Invoice" : "Bill of Supply"
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+const round2 = (n: number) => Math.round((n + (n >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
 
 /** Prices already include GST: split an amount into the taxable value and the GST inside it. */
 export function gstIncluded(amount: number, ratePercent: number): { taxable: number; gst: number } {

@@ -72,24 +72,20 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
   const [lookupFailed, setLookupFailed] = useState(false)
   const optimisticState = useMemo<TrackedOrder | null>(() => {
     if (!order) return null
+    const confirmed = order.paymentConfirmed === true
     return {
-      ...placeholderTrackedOrder({ paymentStatus: "submitted" }),
+      ...placeholderTrackedOrder({ paymentStatus: confirmed ? "paid" : "submitted" }),
       orderCode: order.orderCode,
       total: order.total,
-      status: "pending",
-      paymentStatus: "submitted",
+      status: confirmed ? "confirmed" : "pending",
+      paymentStatus: confirmed ? "paid" : "submitted",
       paymentReference: order.paymentReference ?? null,
-      createdAt: order.createdAt ?? new Date().toISOString(),
+      createdAt: order.createdAt ?? placeholderTrackedOrder().createdAt,
+      isOwner: signedIn,
     }
-  }, [order])
+  }, [order, signedIn])
   const activeState = state ?? optimisticState
-  const isOwner = Boolean(
-    signedIn &&
-      (!activeState ||
-        activeState.delivery ||
-        activeState.paymentMethod ||
-        (activeState.paymentReference && !activeState.paymentReference.includes("*")))
-  )
+  const isOwner = Boolean(signedIn && (state ? state.isOwner : true))
   const orderDetailHref = order && code ? myOrderHref : "/account/orders"
 
   const load = useCallback(async () => {
@@ -198,17 +194,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
                 </>
               )}
             </p>
-          ) : activeState ? (
-            <PaymentPanel
-              orderCode={activeState.orderCode}
-              phoneLast4={order.phoneLast4}
-              total={activeState.total}
-              orderStatus={activeState.status}
-              payment={activeState}
-              createdAt={activeState.createdAt}
-              onSubmitted={() => void load()}
-            />
-          ) : lookupFailed ? (
+          ) : lookupFailed && !state ? (
             <p role="alert" className={styles.statusFallbackCard}>
               {signedIn ? (
                 <>
@@ -232,6 +218,17 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
                 </>
               )}
             </p>
+          ) : activeState ? (
+            <PaymentPanel
+              orderCode={activeState.orderCode}
+              phoneLast4={order.phoneLast4}
+              total={activeState.total}
+              orderStatus={activeState.status}
+              payment={activeState}
+              createdAt={activeState.createdAt}
+              updatedAt={activeState.updatedAt}
+              onSubmitted={() => load()}
+            />
           ) : (
             // Show the compact "verifying payment" skeleton matching the newly placed order state
             <Skeletonize>

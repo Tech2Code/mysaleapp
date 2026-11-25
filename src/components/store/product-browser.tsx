@@ -227,6 +227,7 @@ export function ProductBrowser({
             label="Sort products"
             hideLabel
             pill
+            prefix="Sort:"
             containerClassName={styles.sortSelectWidth}
             value={sort}
             onValueChange={(next) => {

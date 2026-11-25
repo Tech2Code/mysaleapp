@@ -9,6 +9,7 @@ import { SearchField } from "@/components/form"
 import { getSearchDiscovery, searchProducts, type SearchDiscovery, type SearchHit, type SearchResult } from "@/features/products/search-actions"
 import { discountPercent, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { hasFunctionalConsent } from "@/components/shared/cookie-banner"
 import { ProductImage } from "./product-image"
 import styles from "./search-dialog.module.css"
 
@@ -22,6 +23,7 @@ const searchCache = new Map<string, SearchResult>()
 let cachedDiscovery: SearchDiscovery | null = null
 
 function readRecentSearches(): string[] {
+  if (!hasFunctionalConsent()) return []
   try {
     const raw = localStorage.getItem(RECENT_SEARCHES_KEY)
     if (!raw) return []
@@ -34,6 +36,12 @@ function readRecentSearches(): string[] {
 }
 
 function writeRecentSearches(items: string[]) {
+  if (!hasFunctionalConsent()) {
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY)
+    } catch {}
+    return
+  }
   try {
     localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(items.slice(0, MAX_RECENT_SEARCHES)))
   } catch {}
@@ -182,6 +190,10 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
   const navigateFromSearch = useCallback(
     (href: string, termToSave?: string) => {
       if (termToSave) saveRecentTerm(termToSave)
+      if (typeof window !== "undefined" && `${window.location.pathname}${window.location.search}` === href) {
+        close()
+        return
+      }
       closingModeRef.current = "nav"
       const hadPushedState = pushedHistoryRef.current && typeof window !== "undefined" && Boolean(window.history.state?.__searchDialog)
       pushedHistoryRef.current = false
@@ -195,7 +207,7 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
         router.push(href)
       }
     },
-    [onOpenChange, pathname, router, saveRecentTerm]
+    [close, onOpenChange, pathname, router, saveRecentTerm]
   )
 
   // Push a shallow history state when opened so the browser/phone Back button closes Global Search instead of staying stuck on it

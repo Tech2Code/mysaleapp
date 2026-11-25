@@ -85,7 +85,7 @@ export const productSchema = z
     name: z.string().trim().min(LIMITS.productName.min, "Name is too short").max(LIMITS.productName.max, `Keep it under ${LIMITS.productName.max} characters`),
     slug,
     description: z.string().trim().max(LIMITS.productDescription.max, `Keep it under ${LIMITS.productDescription.max} characters`).default(""),
-    price: v.money(LIMITS.money.max, "Price is required"),
+    price: v.money(LIMITS.money.max, "Price is required").refine((n) => n >= 1, "Selling price must be at least ₹1"),
     compareAtPrice: v.optionalMoney(LIMITS.money.max),
     images: z.array(imageUrl).max(8, "Up to 8 images"),
     categoryId: z.preprocess((v) => (v === "" || v === undefined ? null : v), z.uuid().nullable()),
@@ -150,7 +150,7 @@ export const productReviewSchema = z.object({
     .max(5, "Select a star rating from 1 to 5"),
   title: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? null : v),
-    z.string().trim().max(100, "Keep the headline under 100 characters").nullable().optional()
+    z.string().trim().max(400, "Keep the headline under 400 characters").nullable().optional()
   ),
   comment: z
     .string()

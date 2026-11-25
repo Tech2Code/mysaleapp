@@ -102,13 +102,16 @@ function TrackResult({
   refetch: (phoneLast4?: string) => Promise<void>
 }) {
   const itemCount = result.items.reduce((n, i) => n + i.quantity, 0)
-  // `track_order` only returns `delivery`, `paymentMethod`, and an unmasked `paymentReference` for the signed-in owner.
   const isOwner = Boolean(
     signedIn &&
-      (result.delivery ||
-        result.paymentMethod ||
-        (result.paymentReference && !result.paymentReference.includes("*")))
+      (result.isOwner ??
+        Boolean(
+          result.delivery ||
+            result.paymentMethod ||
+            (result.paymentReference && !result.paymentReference.includes("*"))
+        ))
   )
+  const needsOwnerSignIn = Boolean(result.requiresSignIn && !isOwner)
   return (
     <m.section
       initial={{ opacity: 0, y: 20 }}
@@ -136,14 +139,43 @@ function TrackResult({
                   canRequestAgain: result.status === "delivered" ? canRequestAgain(result.returnRequests, result.returnWindow.open) : undefined,
                 })}
               </p>
-      {query ? <ReturnRequestsPanel requests={result.returnRequests} returns={result.returns} refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} orderCode={result.orderCode} phoneLast4={isOwner ? undefined : query.phoneLast4} onChanged={() => void refetch()} /> : <ReturnsList returns={result.returns} audience="customer" refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"} />}
+      {query && !needsOwnerSignIn ? (
+        <ReturnRequestsPanel
+          requests={result.returnRequests}
+          returns={result.returns}
+          refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"}
+          orderCode={result.orderCode}
+          phoneLast4={isOwner ? undefined : query.phoneLast4}
+          onChanged={() => refetch()}
+        />
+      ) : (
+        <ReturnsList
+          returns={result.returns}
+          audience="customer"
+          refundedInFull={returnStage(stageInputOf(result))?.key === "refunded"}
+        />
+      )}
       <RefundSummary order={result} />
       {result.cancellation && (
-        <CancellationNotice cancellation={result.cancellation} paymentStatus={result.paymentStatus} audience="customer" />
+        <CancellationNotice
+          cancellation={result.cancellation}
+          paymentStatus={result.paymentStatus}
+          audience="customer"
+          showPrivateRefs={isOwner}
+        />
+      )}
+      {needsOwnerSignIn && (
+        <p className={styles.guestCityNotice}>
+          This order belongs to a signed-in account.{" "}
+          <Link href={`/login?next=${encodeURIComponent(`/account/orders/${result.orderCode}`)}`} className={styles.signInInlineLink}>
+            Sign in to view full details or manage this order
+          </Link>
+          .
+        </p>
       )}
       {/* Guests only get what they can act on (pay / "we're verifying"). The receipt, UTR and the priced item list
           need no code+4-digits lookup to be readable by anyone, so they stay in the signed-in order page. */}
-      {query && (result.paymentStatus !== "paid" || isOwner) && (
+      {query && !needsOwnerSignIn && (result.paymentStatus !== "paid" || isOwner) && (
         <PaymentPanel
           orderCode={result.orderCode}
           phoneLast4={query.phoneLast4}
@@ -151,11 +183,12 @@ function TrackResult({
           orderStatus={result.status}
           payment={result}
           createdAt={result.createdAt}
-          onSubmitted={() => void refetch()}
+          updatedAt={result.updatedAt}
+          onSubmitted={() => refetch()}
         />
       )}
       <OrderTimeline status={result.status} history={result.history} shipping={result.shipping} returnInput={stageInputOf(result)} audience="customer" />
-      {query && (
+      {query && !needsOwnerSignIn && (
         <div className={styles.orderActionsBar}>
           <RequestReturn
             orderCode={result.orderCode}
@@ -165,11 +198,17 @@ function TrackResult({
             history={result.history}
             returns={result.returns}
             requests={result.returnRequests}
-            charges={{ shippingFee: result.shippingFee, extraFees: result.extraFees, discountAmount: result.discountAmount }}
+            charges={{
+              shippingFee: result.shippingFee,
+              extraFees: result.extraFees,
+              discountAmount: result.discountAmount,
+              paidAmount: result.paymentAmount ?? result.total,
+              refundedAmount: result.refundedAmount,
+            }}
             orderDelivery={result.delivery ?? null}
             window={result.returnWindow}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I have a question about returning my order ${result.orderCode}.`)}
-            onDone={() => void refetch()}
+            onDone={() => refetch()}
           />
           <CancelOrder
             orderCode={result.orderCode}
@@ -178,7 +217,7 @@ function TrackResult({
             status={result.status}
             paymentStatus={result.paymentStatus}
             whatsappUrl={shopWhatsappLink(shop, `Hi! I want to cancel my order ${result.orderCode}.`)}
-            onCancelled={() => void refetch()}
+            onCancelled={() => refetch()}
           />
         </div>
       )}
@@ -219,14 +258,14 @@ function TrackResult({
           )}
         </p>
       </section>
-      {query && result.delivery && (
+      {query && !needsOwnerSignIn && result.delivery && (
         <DeliveryEditor
           orderCode={result.orderCode}
           delivery={result.delivery}
           editable={result.status === "pending"}
           status={result.status}
           phoneLast4={query.phoneLast4}
-          onChanged={(newLast4) => void refetch(newLast4)}
+          onChanged={(newLast4) => refetch(newLast4)}
         />
       )}
       {/* Guests don't get the address back (anyone with the code + 4-digits could read it): only the city,

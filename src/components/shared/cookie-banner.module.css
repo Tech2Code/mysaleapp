@@ -31,6 +31,7 @@
 .legalFooterLinks .inlinePolicyLink:hover { text-decoration: underline; }
 .prefsFooterBtn { gap: 6px; border-radius: 9999px; }
 .btnIcon16 { width: 16px; height: 16px; }
+.externalLinkIcon12 { display: inline; width: 12px; height: 12px; }
 .footerTriggerBtn { border: 0; background: transparent; padding: 2px 0; font-size: 14px; color: var(--muted-foreground); text-align: left; transition: color 150ms ease; }
 .footerTriggerBtn:hover { color: var(--foreground); }
 /* Section: Terms & Privacy Quick-View Modal */

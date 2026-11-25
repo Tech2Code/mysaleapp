@@ -11,7 +11,7 @@ import { describeProductSurcharges } from "@/features/orders/pricing"
 import type { Product, ProductCardData, ProductReview } from "@/features/products/types"
 import { priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
-import { discountPercent, formatPrice } from "@/lib/format"
+import { discountPercent, formatPrice, formatRating } from "@/lib/format"
 import styles from "./product-detail.module.css"
 
 /** Breadcrumb trail (also used for the page's structured data). */
@@ -105,7 +105,7 @@ export function ProductDetailView({
                 className={styles.reviewsAnchorPill}
               >
                 <StarIcon className={styles.starGoldIcon} aria-hidden />
-                <span className={styles.ratingScoreText}>{Number(product.ratingAvg ?? 0).toFixed(1)}</span>
+                <span className={styles.ratingScoreText}>{formatRating(Number(product.ratingAvg ?? 0))}</span>
                 <span className={styles.ratingCountText}>({product.reviewCount})</span>
               </a>
             )}
@@ -186,19 +186,11 @@ export function ProductDetailView({
           <div className={styles.accordionMount}>
             <Accordion>
               {product.careInstructions && <AccordionItem title="Care instructions">{product.careInstructions}</AccordionItem>}
-              <AccordionItem title="Delivery">{freeDelivery} We pack every order by hand and share the courier and tracking details with you once it ships.</AccordionItem>
-              <AccordionItem title="Returns & exchanges">
+              <AccordionItem title="Delivery & returns">
+                {freeDelivery} We pack every order by hand and share live courier tracking details once dispatched.{" "}
                 {returnDays > 0
-                  ? `You can request a return (for a refund of the item price) or an exchange/replacement for this item within ${returnDays} ${returnDays === 1 ? "day" : "days"} of delivery directly from your order page or the Track Order page.`
-                  : "This piece is non-returnable once delivered. If it arrives damaged in transit, message us on WhatsApp and we will help right away."}
-              </AccordionItem>
-              <AccordionItem title="Payment">
-                Pay securely by UPI at checkout and enter your 12-digit UTR / reference number to place the order. We confirm your order once the
-                payment is verified. Cash on delivery isn&apos;t available.
-              </AccordionItem>
-              <AccordionItem title="Handmade, so no two are identical">
-                Each piece is made by hand in small batches, so there can be small differences in colour, texture and size from the photos.
-                That is part of the charm.
+                  ? `You can request a return or exchange within ${returnDays} ${returnDays === 1 ? "day" : "days"} of delivery from your Order page.`
+                  : "This piece is non-returnable once delivered; if it arrives damaged in transit, message us on WhatsApp right away."}
               </AccordionItem>
             </Accordion>
           </div>

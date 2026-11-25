@@ -94,7 +94,7 @@
 .browserCard { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
 .topFilterRow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .topFilterRow .searchForm { min-width: 0; flex: 1 1 0%; }
-.topFilterRow .mobileFilterToggle { display: inline-flex; height: 40px; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--background); padding: 0 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
+.topFilterRow .mobileFilterToggle { display: inline-flex; height: 40px; flex-shrink: 0; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--background); padding: 0 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
 .topFilterRow .mobileFilterToggle:hover { background-color: var(--muted); }
 .topFilterRow .mobileFilterToggleActive { border-color: color-mix(in oklab, var(--primary) 60%, transparent); background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); }
 .mobileFilterToggle .filterCountBadge { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; border-radius: 9999px; background-color: var(--primary); padding: 0 6px; font-size: 11px; line-height: 1; font-weight: 700; color: var(--primary-foreground); font-variant-numeric: tabular-nums; }
@@ -149,7 +149,7 @@
 .orderHeaderCard .headerRightGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .headerRightGroup .autoCancelBadge { border-radius: 9999px; background-color: #fef3c7; padding: 4px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #78350f; }
 :global(.dark) .headerRightGroup .autoCancelBadge { background-color: rgba(120, 53, 15, 0.4); color: #fde68a; }
-.headerRightGroup .invoiceBtn { display: inline-flex; height: 36px; align-items: center; gap: 8px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
+.headerRightGroup .invoiceBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
 .headerRightGroup .invoiceBtn:hover { background-color: var(--muted); }
 .orderDetailGrid { display: grid; gap: 24px; }
 .orderDetailGrid .mainWorkCol { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
@@ -163,8 +163,8 @@
 .customerPhoneText { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .customerAccountType { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .contactBtnRow { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
-.contactBtnRow .whatsappContactBtn { display: inline-flex; height: 36px; align-items: center; gap: 6px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; }
-.contactBtnRow .callContactBtn { display: inline-flex; height: 36px; align-items: center; gap: 6px; border-radius: 9999px; border: 1px solid var(--border); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.contactBtnRow .whatsappContactBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; }
+.contactBtnRow .callContactBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; border: 1px solid var(--border); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; }
 .addressLine { font-size: 14px; line-height: 20px; }
 .deliveryUpdatedBadge { margin-top: 12px; display: inline-block; border-radius: 9999px; background-color: #fef3c7; padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #78350f; }
 :global(.dark) .deliveryUpdatedBadge { background-color: rgba(120, 53, 15, 0.4); color: #fde68a; }
@@ -201,7 +201,7 @@
 :global(.dark) .revertSubmitBtn { border-color: #b45309; background-color: rgba(69, 26, 3, 0.4); color: #fef3c7; }
 .revertSubmitBtn:hover { background-color: rgba(245, 158, 11, 0.25); }
 :global(.dark) .revertSubmitBtn:hover { background-color: rgba(120, 53, 15, 0.5); }
-.statusForm .whatsappSendBtn { display: flex; height: 36px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; transition: opacity 150ms ease; }
+.statusForm .whatsappSendBtn { display: flex; height: 40px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; transition: opacity 150ms ease; }
 .statusForm .whatsappSendBtn:hover { opacity: 0.9; }
 .cancelTriggerBtn { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--destructive); transition: background-color 150ms ease; }
 .cancelTriggerBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
@@ -232,7 +232,7 @@
 .refundHelperCard { display: flex; flex-direction: column; gap: 8px; border-radius: 10px; border: 1px solid var(--border); background-color: var(--card); padding: 12px; font-size: 12.5px; line-height: 18px; color: var(--foreground); }
 .refundHelperCard .refundHelperTitle { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--foreground); }
 .refundHelperCard .refundUpiHighlight { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 8px; background-color: color-mix(in oklab, var(--primary) 8%, transparent); padding: 8px 10px; }
-.refundUpiHighlight .payRefundUpiBtn { display: inline-flex; height: 30px; align-items: center; gap: 6px; border-radius: 9999px; background-color: var(--primary); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary-foreground); transition: opacity 150ms ease; }
+.refundUpiHighlight .payRefundUpiBtn { display: inline-flex; height: 30px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; background-color: var(--primary); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary-foreground); transition: opacity 150ms ease; }
 .refundUpiHighlight .payRefundUpiBtn:hover { opacity: 0.9; }
 .refundHelperCard .refundHelperStep { margin: 0; color: var(--muted-foreground); }
 .returnRefundActionStack { display: flex; flex-direction: column; gap: 10px; }
@@ -248,21 +248,21 @@
 /* Courier Dialog */
 .courierEditSmallBtn { height: 24px; gap: 4px; border-radius: 9999px; padding-left: 10px; padding-right: 10px; font-size: 12px; line-height: 16px; }
 /* Create Return Request & Return Order */
-.createReturnTrigger { display: inline-flex; height: 36px; align-items: center; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); transition: background-color 150ms ease; }
+.createReturnTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); transition: background-color 150ms ease; }
 .createReturnTrigger:hover { background-color: color-mix(in oklab, var(--primary) 10%, transparent); }
 .returnItemsList { display: flex; flex-direction: column; gap: 12px; list-style: none; padding: 0; margin: 0; }
 .returnItemsList .returnItemCard { display: flex; flex-direction: column; gap: 4px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
 .returnItemCard .returnItemName { font-size: 14px; line-height: 20px; font-weight: 500; }
 .exchangeBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 30%, transparent); padding: 14px; }
 .allReturnedNote { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
-.recordReturnTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid var(--border); font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
+.recordReturnTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; border: 1px solid var(--border); font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
 .recordReturnTrigger:hover { background-color: var(--muted); }
 .recordReturnList { display: flex; flex-direction: column; gap: 16px; list-style: none; padding: 0; margin: 0; }
 .recordReturnList .recordReturnItem { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
 .recordReturnItem .recordItemTitle { font-size: 14px; line-height: 20px; font-weight: 500; }
 .recordReturnItem .recordItemGrid { display: grid; align-items: start; column-gap: 16px; row-gap: 4px; }
 /* Return Requests & Return Status Control */
-.decideTrigger { display: inline-flex; height: 36px; align-items: center; border-radius: 9999px; padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease, opacity 150ms ease; }
+.decideTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease, opacity 150ms ease; }
 .decideTriggerApprove { background-color: var(--primary); color: var(--primary-foreground); }
 .decideTriggerApprove:hover { opacity: 0.9; }
 .decideTriggerReject { border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); color: var(--destructive); }

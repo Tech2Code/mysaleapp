@@ -85,7 +85,13 @@ export function placeholderTrackedOrder(overrides: Partial<TrackedOrder> = {}): 
 }
 
 /** The order the "order placed" page shows before the real one is known. */
-export const placeholderPlacedOrder = (): PlacedOrder => ({ orderCode: "KK-7F3K9Q", total: 1897, phoneLast4: "3210", whatsappUrl: "https://wa.me/" })
+export const placeholderPlacedOrder = (): PlacedOrder => ({
+  orderCode: "KK-7F3K9Q",
+  total: 1897,
+  phoneLast4: "3210",
+  whatsappUrl: "https://wa.me/",
+  createdAt: "2026-01-01T00:00:00.000Z",
+})
 
 export function placeholderDashboard(): DashboardData {
   const days = Array.from({ length: 12 }, (_, i) => ({ date: `2026-04-${String(i + 1).padStart(2, "0")}`, label: `${i + 1} Apr`, revenue: 4000 + ((i * 1700) % 9000), orders: 2 + (i % 5) }))

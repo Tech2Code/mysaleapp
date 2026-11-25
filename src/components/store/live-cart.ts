@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useMounted } from "@/hooks/use-mounted"
 import { calculateCharges } from "@/features/orders/pricing"
 import type { ShippingClass } from "@/features/products/types"
-import { useCart, type CartItem } from "@/store/cart"
+import { MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
 import { useStoreSettings } from "./store-settings-provider"
 
 export type LiveProduct = {
@@ -43,7 +43,7 @@ export function useLiveCart(products: LiveProduct[]) {
     const synced = items.map((item) => {
       const live = byId.get(item.productId)
       if (!live || live.stock <= 0) return item
-      const nextQty = Math.min(item.quantity, live.stock)
+      const nextQty = Math.min(item.quantity, live.stock, MAX_QTY_PER_ITEM)
       const nextImg = live.images[0] ?? item.image
       if (live.price !== item.price) {
         newlyChanged.push(item.productId)
@@ -97,7 +97,7 @@ export function useLiveCart(products: LiveProduct[]) {
         image: live.images[0] ?? item.image,
         price: live.price,
         maxQuantity: live.stock,
-        quantity: Math.min(item.quantity, live.stock),
+        quantity: Math.min(item.quantity, live.stock, MAX_QTY_PER_ITEM),
         available: true,
         priceChanged: priceChangedIds.has(item.productId) || live.price !== item.price,
         weightGrams: live.weightGrams,

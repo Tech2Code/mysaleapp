@@ -38,6 +38,35 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
 export const PAYMENT_METHODS = ["upi", "bank_transfer", "card", "cash", "other"] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
+export const PAYMENT_MODES = ["manual_upi", "gateway"] as const
+export type PaymentMode = (typeof PAYMENT_MODES)[number]
+
+export const PAYMENT_GATEWAY_PROVIDERS = ["razorpay", "cashfree", "phonepe", "stripe"] as const
+export type PaymentGatewayProvider = (typeof PAYMENT_GATEWAY_PROVIDERS)[number]
+
+export const PAYMENT_GATEWAY_LABEL: Record<PaymentGatewayProvider, string> = {
+  razorpay: "Razorpay",
+  cashfree: "Cashfree",
+  phonepe: "PhonePe",
+  stripe: "Stripe",
+}
+
+export type GatewayClientSession = {
+  provider: PaymentGatewayProvider
+  gatewayOrderId: string
+  amountPaise: number
+  currency: "INR"
+  keyId: string
+  orderCode: string
+  shopName: string
+  customerName: string
+  customerPhone: string
+  /** Optional hosted checkout URL for redirect-based gateways (e.g. PhonePe / Stripe Checkout). */
+  checkoutUrl?: string
+  /** Optional session token for SDKs like Cashfree (`payment_session_id`). */
+  sessionToken?: string
+}
+
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   pending: "Awaiting payment",
   submitted: "Submitted, to verify",
@@ -125,6 +154,8 @@ export type OrderItem = {
   image: string | null
   /** Per-item return & exchange window in days after delivery (snapshotted on order creation, or enriched from product). */
   returnWindowDays?: number | null
+  /** Optional product review aspects for delivered-item rating prompts. */
+  reviewAspects?: string[]
 }
 
 export type StatusHistoryEntry = { status: OrderStatus; changedAt: string }
@@ -166,7 +197,9 @@ export type OrderPricing = {
 export type OrderPayment = {
   paymentStatus: PaymentStatus
   paymentMethod: PaymentMethod | null
-  /** UPI reference (UTR) the customer submitted. */
+  paymentGateway?: PaymentGatewayProvider | null
+  gatewayOrderId?: string | null
+  /** UPI reference (UTR) or gateway payment ID. */
   paymentReference: string | null
   /** Amount the admin recorded as received. */
   paymentAmount: number | null
@@ -290,6 +323,9 @@ export type TrackedOrder = {
   items: OrderItem[]
   city: string
   createdAt: string
+  updatedAt?: string
+  isOwner?: boolean
+  requiresSignIn?: boolean
   shipping: ShippingDetails | null
   cancellation: Cancellation | null
   /** Present only while the order is pending (still editable). */
@@ -329,6 +365,8 @@ export type OrderRow = {
   total: number | string | null
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
+  payment_gateway?: PaymentGatewayProvider | null
+  gateway_order_id?: string | null
   payment_reference: string | null
   payment_amount: number | string | null
   payment_submitted_at: string | null
@@ -400,6 +438,8 @@ type RawPricing = {
   total?: number | string | null
   paymentStatus?: PaymentStatus | null
   paymentMethod?: PaymentMethod | null
+  paymentGateway?: PaymentGatewayProvider | null
+  gatewayOrderId?: string | null
   paymentReference?: string | null
   paymentAmount?: number | string | null
   paymentSubmittedAt?: string | null
@@ -422,6 +462,8 @@ export function normalizePricing(raw: RawPricing): OrderPricing & OrderPayment {
     total: Number(raw.total ?? subtotal),
     paymentStatus: raw.paymentStatus ?? "pending",
     paymentMethod: raw.paymentMethod ?? null,
+    ...(raw.paymentGateway ? { paymentGateway: raw.paymentGateway } : {}),
+    ...(raw.gatewayOrderId ? { gatewayOrderId: raw.gatewayOrderId } : {}),
     paymentReference: raw.paymentReference ?? null,
     paymentAmount: raw.paymentAmount == null ? null : Number(raw.paymentAmount),
     paymentSubmittedAt: raw.paymentSubmittedAt ?? null,
@@ -442,6 +484,8 @@ function mapPricing(row: OrderRow): OrderPricing & OrderPayment {
     total: row.total,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method,
+    paymentGateway: row.payment_gateway,
+    gatewayOrderId: row.gateway_order_id,
     paymentReference: row.payment_reference,
     paymentAmount: row.payment_amount,
     paymentSubmittedAt: row.payment_submitted_at,

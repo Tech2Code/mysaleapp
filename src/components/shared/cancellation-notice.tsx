@@ -13,10 +13,12 @@ export function CancellationNotice({
   cancellation,
   paymentStatus,
   audience,
+  showPrivateRefs = true,
 }: {
   cancellation: Cancellation
   paymentStatus: PaymentStatus
   audience: "customer" | "admin"
+  showPrivateRefs?: boolean
 }) {
   const paidOrSent = paymentStatus === "paid" || paymentStatus === "submitted"
   const refunded = paymentStatus === "refunded"
@@ -53,7 +55,7 @@ export function CancellationNotice({
           {cleanReason}
         </p>
       )}
-      {refundUpiId && (
+      {refundUpiId && showPrivateRefs && (
         <p className={styles.cancelReasonLine}>
           <WalletIcon className={styles.icon14} aria-hidden />{" "}
           <span className={styles.mutedLabel}>Refund UPI ID: </span>
@@ -73,7 +75,9 @@ export function CancellationNotice({
           <Clock3Icon className={styles.clockIcon} aria-hidden />
           <span>
             {audience === "customer"
-              ? "Your refund will be sent to the account you paid from within a few working days. We'll message you once it's done."
+              ? refundUpiId && showPrivateRefs
+                ? `Your refund will be sent to ${refundUpiId} within a few working days. We'll message you once it's done.`
+                : "Your refund will be sent to the account you paid from within a few working days. We'll message you once it's done."
               : "Payment was received. Send the refund and mark the payment as Refunded."}
           </span>
         </p>

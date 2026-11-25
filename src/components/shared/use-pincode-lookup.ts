@@ -1,7 +1,7 @@
 "use client"
 
 import { CheckCircle2Icon, Loader2Icon } from "lucide-react"
-import { createElement, useEffect, useRef, useState, type ReactNode } from "react"
+import { createElement, useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { lookupPincode, type PincodeInfo } from "@/features/location/actions"
 import { PATTERNS } from "@/lib/validation"
 import styles from "./shared.module.css"
@@ -25,11 +25,14 @@ type Fields = {
  */
 export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pincode: string; overwrite?: boolean } & Fields) {
   const [result, setResult] = useState<{ pin: string; info: PincodeInfo } | null>(null)
-  const filled = useRef({ pin: pincode, city: "", state: "" })
+  const filled = useRef({ pin: pincode, city: fields.getCity().trim(), state: fields.getState() })
   const latest = useRef<Fields>(fields)
   useEffect(() => {
     latest.current = fields
   })
+  const prime = useCallback((pin: string, city: string, state: string) => {
+    filled.current = { pin, city: city.trim(), state }
+  }, [])
 
   const valid = PATTERNS.pincode.test(pincode)
 
@@ -41,16 +44,15 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
       setResult({ pin: pincode, info })
       if (!info.ok) return
       const f = latest.current
-      const pinChanged = filled.current.pin !== pincode
       const city = f.getCity().trim()
-      if (overwrite || pinChanged || !city || city === filled.current.city) {
+      if (overwrite || !city || city === filled.current.city) {
         filled.current.city = info.city
         if (city !== info.city) f.setCity(info.city)
       } else if (!filled.current.city) {
         filled.current.city = city
       }
       const state = f.getState()
-      if (overwrite || pinChanged || !state || state === filled.current.state) {
+      if (overwrite || !state || state === filled.current.state) {
         filled.current.state = info.state
         if (state !== info.state) f.setState(info.state)
       } else if (!filled.current.state) {
@@ -63,7 +65,10 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
     else
       void lookupPincode(pincode)
         .then((info) => {
-          if (info.ok) found.set(pincode, info)
+          if (info.ok) {
+            if (found.size > 200) found.clear()
+            found.set(pincode, info)
+          }
           apply(info)
         })
         .catch(() => apply({ ok: false, reason: "unavailable" }))
@@ -93,5 +98,5 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
             createElement("span", null, `${matched.city}, ${matched.state} — filled from pincode`)
           )
         : "City / district and state are filled in from the pincode"
-  return { loading, hint, error, matched: Boolean(matched) }
+  return { loading, hint, error, matched: Boolean(matched), prime }
 }

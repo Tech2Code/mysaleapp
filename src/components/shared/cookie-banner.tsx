@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckIcon, CookieIcon, ExternalLinkIcon, ShieldCheckIcon, SlidersHorizontalIcon, XIcon } from "lucide-react"
+import { CheckIcon, CookieIcon, ExternalLinkIcon, ShieldCheckIcon, XIcon } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Switch } from "@/components/ui/switch"
+import { SwitchField } from "@/components/form"
 import { cn } from "@/lib/utils"
 import styles from "./cookie-banner.module.css"
 
@@ -64,6 +64,11 @@ function parsePreferences(raw: string | null): CookiePreferences {
   } catch {
     return { essential: true, functional: false, analytics: false, updatedAt: "" }
   }
+}
+
+/** True only when the visitor explicitly opted into functional preferences. */
+export function hasFunctionalConsent(): boolean {
+  return parsePreferences(readRawConsent()).functional
 }
 
 /** Opens the Cookie & Storage Preferences modal from anywhere (e.g. the Footer link). */
@@ -216,7 +221,7 @@ export function LegalQuickModal({
               rel="noopener noreferrer"
               className={styles.inlinePolicyLink}
             >
-              Read full policy page <ExternalLinkIcon className={styles.btnIcon16} style={{ display: "inline", width: 12, height: 12 }} />
+              Read full policy page <ExternalLinkIcon className={styles.externalLinkIcon12} aria-hidden />
             </Link>
           </div>
         </DialogBody>
@@ -367,42 +372,26 @@ export function CookieBanner() {
                 </span>
               </div>
               <p className={styles.categoryDesc}>
-                Required for your shopping cart (`kk-cart`), saved wishlist (`kk-wishlist`), theme mode, and secure login sessions. Cannot be switched off.
+                Required for your shopping cart (<code>kk-cart</code>), saved wishlist (<code>kk-wishlist</code>), theme mode, and secure login sessions. Cannot be switched off.
               </p>
             </div>
 
             <div className={styles.categoryCard}>
-              <div className={styles.categoryHeaderRow}>
-                <h3 className={styles.categoryTitle}>
-                  <SlidersHorizontalIcon className={styles.categoryIcon} aria-hidden />
-                  Functional Preferences
-                </h3>
-                <Switch
-                  aria-label="Enable functional preferences"
-                  checked={functional}
-                  onCheckedChange={setFunctional}
-                />
-              </div>
-              <p className={styles.categoryDesc}>
-                Remembers convenience features such as your recent product search chips on this device.
-              </p>
+              <SwitchField
+                label="Functional Preferences"
+                description="Remembers convenience features such as your recent product search chips on this device."
+                checked={functional}
+                onCheckedChange={setFunctional}
+              />
             </div>
 
             <div className={styles.categoryCard}>
-              <div className={styles.categoryHeaderRow}>
-                <h3 className={styles.categoryTitle}>
-                  <CookieIcon className={styles.categoryIcon} aria-hidden />
-                  Analytics &amp; Diagnostics
-                </h3>
-                <Switch
-                  aria-label="Enable anonymous analytics"
-                  checked={analytics}
-                  onCheckedChange={setAnalytics}
-                />
-              </div>
-              <p className={styles.categoryDesc}>
-                Helps us understand store performance and page reliability. We never use third-party advertising trackers or cross-site ad pixels.
-              </p>
+              <SwitchField
+                label="Analytics & Diagnostics"
+                description="Helps us understand store performance and page reliability. We never use third-party advertising trackers or cross-site ad pixels."
+                checked={analytics}
+                onCheckedChange={setAnalytics}
+              />
             </div>
 
             <div className={styles.legalFooterLinks}>

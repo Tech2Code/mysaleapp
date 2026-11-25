@@ -19,7 +19,8 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
-import { submitPayment } from "@/features/orders/actions"
+import { createGatewayRetrySession, submitPayment, verifyGatewayPayment } from "@/features/orders/actions"
+import { openGatewayCheckout } from "@/features/orders/gateway-client"
 import { CopyableReference } from "@/components/shared/copyable-reference"
 import { paymentReferenceSchema } from "@/features/orders/schema"
 import { buildUpiUrl } from "@/features/orders/upi"
@@ -51,7 +52,7 @@ type PaymentPanelProps = {
   orderStatus: OrderStatus
   payment: OrderPayment
   /** Called after a payment is submitted. Defaults to refreshing the current page. */
-  onSubmitted?: () => void
+  onSubmitted?: () => void | Promise<unknown>
   /** When the order was placed: lets us show the exact time an unpaid order is cancelled automatically. */
   createdAt?: string
   /** Last update time (e.g. when a rejected payment resets the auto-cancel clock). */
@@ -126,8 +127,8 @@ function ReferenceForm({
         )
         return
       }
+      await onSubmitted()
       later(() => toast.success("Payment submitted. We'll verify it shortly."))
-      onSubmitted()
     })
   })
 
@@ -163,6 +164,9 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const { upiId, upiPayeeName } = shop
   const [changing, setChanging] = useState(false)
   const [showMobileQr, setShowMobileQr] = useState(false)
+  const [gwPending, startGwTransition] = useTransition()
+  useBlockWhile(gwPending)
+  const gwLater = useToastAfter(gwPending)
   const done = onSubmitted ?? (() => router.refresh())
   // The pay form is tall and the "we're verifying" card is short: without this the reader is left at the bottom.
   useRevealOnChange(`${payment.paymentStatus}:${payment.paymentReference ?? ""}`)
@@ -234,6 +238,101 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
   const expiryHours = shop.unpaidOrderExpiryHours
   const at = createdAt ? paymentDeadline(createdAt, expiryHours, updatedAt) : null
   const deadline = expiryHours > 0 ? { exact: at ? formatDeadline(at) : null, within: describeHours(expiryHours) } : null
+
+  const payViaGateway = () => {
+    startGwTransition(async () => {
+      try {
+        const res = await createGatewayRetrySession({ code: orderCode, phoneLast4 })
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        const outcome = await openGatewayCheckout(res.data.session)
+        if (outcome.status === "dismissed") {
+          toast.info("Payment window closed.")
+          return
+        }
+        if (outcome.status === "failed" || outcome.status === "unsupported") {
+          toast.error(outcome.error)
+          return
+        }
+        const verified = await verifyGatewayPayment({
+          code: orderCode,
+          phoneLast4,
+          gatewayOrderId: outcome.gatewayOrderId,
+          paymentId: outcome.paymentId,
+          signature: outcome.signature,
+        })
+        if (!verified.ok) {
+          toast.error(verified.error)
+          return
+        }
+        await done()
+        gwLater(() => toast.success("Payment received! Your order is confirmed."))
+      } catch {
+        toast.error("Couldn't complete online payment. Please try again.")
+      }
+    })
+  }
+
+  if (shop.paymentMode === "gateway" && !changing) {
+    return (
+      <section aria-label="Pay for your order" className={styles.payNowPanel}>
+        <div>
+          <h3 className={styles.payPanelTitle}>
+            {rejected ? `Retry payment (${formatPrice(total)})` : `Pay ${formatPrice(total)} to confirm your order`}
+          </h3>
+          <p className={styles.payPanelSub}>
+            {rejected
+              ? "Your previous online payment could not be completed. Retry securely via UPI, card, or netbanking."
+              : "Complete your online payment securely via UPI, card, or netbanking for instant order confirmation."}
+          </p>
+          {deadline && (
+            <p className={styles.deadlineNotice}>
+              <ClockIcon className={styles.clockIcon} aria-hidden />
+              <span>
+                {deadline.exact ? (
+                  <>
+                    Please complete payment by <span className={styles.deadlineStrong}>{deadline.exact}</span>. Unpaid orders are cancelled automatically and items go back on sale.
+                  </>
+                ) : (
+                  <>
+                    Please complete payment within <span className={styles.deadlineStrong}>{deadline.within}</span>. Unpaid orders are cancelled automatically and items go back on sale.
+                  </>
+                )}
+              </span>
+            </p>
+          )}
+        </div>
+
+        {rejected && (
+          <p role="alert" className={styles.rejectedAlert}>
+            <AlertCircleIcon className={styles.alertCircleIcon} />
+            <span>
+              <span className={styles.rejectedStrong}>Previous payment attempt failed.</span>{" "}
+              {payment.paymentNote ?? "Please try again or choose another payment method."}
+            </span>
+          </p>
+        )}
+
+        <div className={styles.upiStepStack}>
+          <Button type="button" size="lg" disabled={gwPending} onClick={payViaGateway} className={styles.refSubmitBtn}>
+            {gwPending && <Loader2Icon className={styles.spinIcon} />}
+            {gwPending ? "Opening checkout…" : `Pay ${formatPrice(total)} securely`}
+          </Button>
+        </div>
+
+        <a
+          href={shopWhatsappLink(shop, `Hi! I need help paying for order ${orderCode}.`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.waScreenshotLink}
+        >
+          <WhatsAppIcon className={styles.waIcon} /> Need help? Message us on WhatsApp
+        </a>
+      </section>
+    )
+  }
 
   return (
     <section aria-label="Pay for your order" className={styles.payNowPanel}>

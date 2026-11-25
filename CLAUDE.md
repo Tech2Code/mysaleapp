@@ -226,7 +226,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 - The Supabase CLI is logged in and linked to the **production** project (`nepfgwfunxebhsfrfxeb`); there is no staging. Always pass `--remote` (without it the CLI targets a local Docker stack that isn't running).
 - Flow: write `supabase/migrations/00NN_name.sql`, read it, run `npx --no-install supabase db push --remote --dry-run` (its own command), read the output, then `npx --no-install supabase db push --remote --yes` (its own command, never chained with the dry run). Then verify against the real DB (see below).
-- Migrations 0001–0060 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
+- Migrations 0001–0062 are applied. Never edit an applied file; fix forward with a new one. Re-running an old file reverts newer function bodies (`create or replace`).
 - SQL conventions: `security definer` functions set `search_path = public, pg_temp`, check `is_admin()` inside, `revoke ... from public, anon` and grant only what is needed. `orders.status` is an enum: compare with `status::text` against text params. Lock order everywhere is **order row first, then products in id order**.
 
 ## Verifying against production (no staging)
@@ -237,8 +237,8 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 810 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
-- **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 30 test files / 829 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, `payment-gateway`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
+- **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `payment-gateway-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 
 ## Rate limiting and abuse
@@ -252,5 +252,6 @@ Default is the current **financial year** (April–March, India), compared with 
 - The catalogue cache (`getActiveProducts`) is `cacheLife("minutes")` because stock also changes from pg_cron expiry, which can't call `updateTag`. Server actions that change stock (place order, cancel, record return) call `updateTag(CACHE_TAGS.products)`.
 - The dashboard reads one RPC, `dashboard_stats` (revenue net of refunds, top products net of returns). Don't reintroduce per-row downloads.
 - Admin status / payment / cancel updates are compare-and-set (`.eq("status", …).select("id")`, plus `expectedStatus` from the client for status changes) so a stale tab can't overwrite a newer state.
+- **Dual-Mode Payments (`manual_upi` default vs. `gateway`):** `store_settings.payment_mode` defaults to `'manual_upi'` (₹0 fee, `v.utr()` 8–35 chars). When switched to `'gateway'` (with `SUPABASE_SERVICE_ROLE_KEY` + provider env keys configured, see `payment-gateway-setup.md`), checkout uses `createGatewayCheckoutSession` → `openGatewayCheckout` → `verifyGatewayPayment` + `POST /api/webhooks/payment` (`confirm_gateway_payment` / `record_gateway_failure` `service_role`-only RPCs in migration `0062`), storing `orders.payment_gateway` and `orders.gateway_order_id` (both guarded in `guard_payment_status` / `lock_finished_orders`) and supporting 8–64 char gateway payment/refund IDs (`v.gatewayRef()`).
 - `getCurrentUser` / `isAdminUser` are wrapped in React `cache()` (once per request). Don't read the user after changing the session inside the same request.
 - Motion: `LazyMotion` (the domMax chunk) is in `providers.tsx`; use `m.*` from `motion/react-m`, never `motion.*`, and never start above-the-fold content at `opacity: 0` (the server HTML must be visible).

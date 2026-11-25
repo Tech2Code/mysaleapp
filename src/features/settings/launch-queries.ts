@@ -1,5 +1,7 @@
 import "server-only"
 import { requireAdmin } from "@/features/auth/guards"
+import { isGatewayConfigured } from "@/features/orders/payment-gateway"
+import { PAYMENT_GATEWAY_LABEL } from "@/features/orders/types"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { DEFAULT_SETTINGS } from "./defaults"
 import { getStoreSettings } from "./queries"
@@ -38,7 +40,22 @@ export async function getLaunchOverview(): Promise<{ counts: LaunchCounts; check
     { settings: true, label: "Shop name", done: settings.shopName.trim() !== "" && settings.shopName !== DEFAULT_SETTINGS.shopName, href: "/admin/settings", hint: `Still the placeholder "${DEFAULT_SETTINGS.shopName}"` },
     { settings: true, label: "Tagline and description", done: settings.tagline !== DEFAULT_SETTINGS.tagline && settings.description !== DEFAULT_SETTINGS.description, href: "/admin/settings", hint: "Still the sample text" },
     { settings: true, label: "WhatsApp number", done: settings.whatsappNumber !== PLACEHOLDER_WHATSAPP && !settings.whatsappNumber.startsWith("999999"), href: "/admin/settings", hint: "Still the placeholder number, orders would go nowhere" },
-    { settings: true, label: "UPI ID for payments", done: Boolean(settings.upiId?.trim()) && settings.upiId !== DEFAULT_SETTINGS.upiId, href: "/admin/settings", hint: "Customers can't pay without it" },
+    {
+      settings: true,
+      label:
+        settings.paymentMode === "gateway"
+          ? `Payment gateway (${PAYMENT_GATEWAY_LABEL[settings.paymentGateway]})`
+          : "UPI ID for payments",
+      done:
+        settings.paymentMode === "gateway"
+          ? isGatewayConfigured(settings.paymentGateway)
+          : Boolean(settings.upiId?.trim()) && settings.upiId !== DEFAULT_SETTINGS.upiId,
+      href: "/admin/settings",
+      hint:
+        settings.paymentMode === "gateway"
+          ? "Gateway API keys or SUPABASE_SERVICE_ROLE_KEY are missing in environment variables"
+          : "Customers can't pay without it",
+    },
     { settings: true, label: "Contact email", done: Boolean(settings.email?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },
     { settings: true, label: "Contact phone", done: settings.phoneSameAsWhatsapp ? !settings.whatsappNumber.startsWith("999999") : Boolean(settings.phone?.trim()) && !/9{6}/.test(settings.phone ?? ""), href: "/admin/settings", hint: "Not set, or still a sample number" },
     { settings: true, label: "City / District", done: Boolean(settings.city?.trim()), href: "/admin/settings", hint: "Not set. Shown in the footer and on Google" },

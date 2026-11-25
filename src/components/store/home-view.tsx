@@ -1,5 +1,3 @@
-import { ArrowRightIcon } from "lucide-react"
-import Link from "next/link"
 import { FadeIn } from "@/components/shared/motion"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { CategoryGrid } from "@/components/store/category-grid"
@@ -76,12 +74,6 @@ export function HomeView({
               >
                 <WhatsAppIcon className={styles.chatBtnIcon} /> Chat with us
               </a>
-              <Link
-                href="/products"
-                className={styles.browseOutlineBtn}
-              >
-                Browse all <ArrowRightIcon className={styles.browseArrow} aria-hidden />
-              </Link>
             </div>
           </FadeIn>
         </section>

@@ -27,7 +27,8 @@ import { getMyProfile } from "@/features/account/actions"
 import type { Profile } from "@/features/account/schema"
 import { listMyAddresses } from "@/features/addresses/actions"
 import type { Address } from "@/features/addresses/types"
-import { placeOrder, validatePromoCode } from "@/features/orders/actions"
+import { cancelOrder, createGatewayCheckoutSession, placeOrder, trackOrder, validatePromoCode, verifyGatewayPayment } from "@/features/orders/actions"
+import { openGatewayCheckout } from "@/features/orders/gateway-client"
 import { applyPromoToCharges, calculateCharges, computePromoDiscount, formatWeightGrams, type ValidatedPromo } from "@/features/orders/pricing"
 import { placeholderCartLines } from "@/features/products/placeholders"
 import { checkoutSchema, paymentReferenceSchema, type CheckoutInput } from "@/features/orders/schema"
@@ -54,34 +55,31 @@ export function CheckoutForm({
   products,
   initialAddresses = EMPTY_ADDRESSES,
   initialProfile = null,
+  initialUserId = null,
   preview = false,
 }: {
   products: LiveProduct[]
   initialAddresses?: Address[]
   initialProfile?: Profile | null
+  initialUserId?: string | null
   preview?: boolean
 }) {
   const router = useRouter()
   const { ready, available, hasUnavailable, charges } = useLiveCart(products)
-  const clearCart = useCart((s) => s.clear)
+  const removeCartItem = useCart((s) => s.remove)
   const shop = useStoreSettings()
   const { user, ready: authReady } = useAuth()
-  const signedIn = Boolean(user) || (!authReady && (initialProfile !== null || initialAddresses.length > 0))
+  const ownerId = authReady ? (user?.id ?? null) : initialUserId
+  const signedIn = Boolean(ownerId)
   const [pending, startTransition] = useTransition()
   const showBusySuccess = useBusySuccess()
-  const initialDefault = initialAddresses[0]
+  const [trackedOwnerId, setTrackedOwnerId] = useState<string | null>(initialUserId)
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
   const [, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
-  const initialAddressesKey = initialAddresses.map((a) => `${a.id}:${a.fullName}:${a.phone}:${a.address}:${a.city}:${a.pincode}`).join("|")
-  const [prevInitialAddressesKey, setPrevInitialAddressesKey] = useState(initialAddressesKey)
-  if (initialAddressesKey !== prevInitialAddressesKey) {
-    setPrevInitialAddressesKey(initialAddressesKey)
-    if (!clearedOnSignOut) {
-      setClientAddresses(null)
-    }
-  }
-  const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? initialAddresses)
+  const canUseInitial = !clearedOnSignOut && (ownerId ?? null) === (initialUserId ?? null)
+  const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? (canUseInitial ? initialAddresses : []))
+  const initialDefault = canUseInitial ? initialAddresses[0] : undefined
   /** id of the saved address in use, or "new" when typing a different one */
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
   const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
@@ -104,6 +102,24 @@ export function CheckoutForm({
   const fetchedForUser = useRef<string | null>(null)
   const prevUserId = useRef<string | null>(user?.id ?? null)
   const wasSignedIn = useRef(signedIn)
+
+  if (ownerId !== trackedOwnerId) {
+    setTrackedOwnerId(ownerId)
+    setClientAddresses(ownerId ? null : [])
+    setClientProfile(null)
+    setClearedOnSignOut(!ownerId)
+    setSelected("new")
+    setSaveAddress(true)
+    setHasOrderNote(false)
+    setPayDialogOpen(false)
+    setShowMobileQr(false)
+    setValidatedCustomer(null)
+    setPaymentRef("")
+    setPaymentRefError(null)
+    setPromoInput("")
+    setAppliedPromo(null)
+    setPromoError(null)
+  }
 
   useEffect(() => {
     if (payDialogOpen) {
@@ -156,11 +172,13 @@ export function CheckoutForm({
 
   const fillFrom = (a: Address) => {
     setSelected(a.id)
+    const split = splitCityState(a.city)
+    area.prime(a.pincode, split.city, split.state)
     form.reset({
       name: a.fullName,
       phone: a.phone,
       address: a.address,
-      ...splitCityState(a.city),
+      ...split,
       pincode: a.pincode,
       note: form.getValues("note"),
     })
@@ -168,25 +186,47 @@ export function CheckoutForm({
 
   const useNewAddress = () => {
     setSelected("new")
+    area.prime("", "", NO_STATE)
     const current = form.getValues()
     form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
   }
 
-  // Pre-fill form if initialAddresses or initialProfile arrives from server revalidation while form is still blank
+  const activeSavedAddress = signedIn && selected !== "new" ? addresses.find((a) => a.id === selected) : undefined
+  const activeSavedKey = activeSavedAddress
+    ? `${activeSavedAddress.id}:${activeSavedAddress.fullName}:${activeSavedAddress.phone}:${activeSavedAddress.address}:${activeSavedAddress.city}:${activeSavedAddress.pincode}`
+    : ""
+
+  // Pre-fill form when saved addresses load or the selected saved address updates
   useEffect(() => {
+    if (activeSavedAddress) {
+      if (form.formState.isDirty) return
+      const split = splitCityState(activeSavedAddress.city)
+      area.prime(activeSavedAddress.pincode, split.city, split.state)
+      form.reset({
+        name: activeSavedAddress.fullName,
+        phone: activeSavedAddress.phone,
+        address: activeSavedAddress.address,
+        ...split,
+        pincode: activeSavedAddress.pincode,
+        note: form.getValues("note"),
+      })
+      return
+    }
     if (form.formState.isDirty) return
-    const first = initialAddresses[0]
+    const first = canUseInitial ? initialAddresses[0] : undefined
     if (first && !form.getValues("address")) {
       queueMicrotask(() => setSelected(first.id))
+      const split = splitCityState(first.city)
+      area.prime(first.pincode, split.city, split.state)
       form.reset({
         name: first.fullName,
         phone: first.phone,
         address: first.address,
-        ...splitCityState(first.city),
+        ...split,
         pincode: first.pincode,
         note: form.getValues("note"),
       })
-    } else if (!first && initialProfile && (!form.getValues("name") || !form.getValues("phone"))) {
+    } else if (!first && canUseInitial && initialProfile && (!form.getValues("name") || !form.getValues("phone"))) {
       const current = form.getValues()
       form.reset({
         ...current,
@@ -194,7 +234,7 @@ export function CheckoutForm({
         phone: current.phone || initialProfile.phone,
       })
     }
-  }, [initialAddresses, initialProfile, form])
+  }, [activeSavedAddress, activeSavedKey, canUseInitial, initialAddresses, initialProfile, form, area])
 
   // Clear cached account addresses/autofill if the user signs out while CheckoutForm stays mounted
   useEffect(() => {
@@ -205,6 +245,7 @@ export function CheckoutForm({
     if (!authReady || !wasSignedIn.current) return
     wasSignedIn.current = false
     fetchedForUser.current = null
+    area.prime("", "", NO_STATE)
     form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     queueMicrotask(() => {
       setClearedOnSignOut(true)
@@ -219,7 +260,7 @@ export function CheckoutForm({
       setAppliedPromo(null)
       setPromoError(null)
     })
-  }, [authReady, signedIn, form])
+  }, [authReady, signedIn, form, area])
 
   // Signed-in customers: fallback if server did not preload addresses (or after sign-out/account switch)
   useEffect(() => {
@@ -274,13 +315,142 @@ export function CheckoutForm({
     }
   }, [authReady, user, form, initialAddresses.length, clearedOnSignOut])
 
+  const runGatewayCheckout = (customerPayload: CheckoutInput) => {
+    startTransition(async () => {
+      try {
+        const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
+        const res = await createGatewayCheckoutSession({
+          customer: customerPayload,
+          items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
+          expectedTotal: shownCharges.total,
+          saveAddress: signedIn && selected === "new" && saveAddress,
+        })
+        if (!res.ok) {
+          if (res.error.toLowerCase().includes("promo code")) {
+            setAppliedPromo(null)
+            setPromoError(res.error)
+            toast.error(res.error)
+            return
+          }
+          if (res.error.toLowerCase().includes("updated")) {
+            toast.error(res.error)
+            router.refresh()
+            return
+          }
+          for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+            const msg = messages?.[0]
+            if (msg && field in customerPayload) {
+              form.setError(field as keyof CheckoutInput, { message: msg })
+            }
+          }
+          toast.error(res.error)
+          return
+        }
+
+        const outcome = await openGatewayCheckout(res.data.session)
+        if (outcome.status === "dismissed" || outcome.status === "failed" || outcome.status === "unsupported") {
+          // If the customer already completed payment (e.g. via QR) and the webhook confirmed it just before dismiss, do NOT cancel.
+          if (outcome.status !== "unsupported") {
+            const latest = await trackOrder({ code: res.data.orderCode, phoneLast4: res.data.phoneLast4 })
+            if (latest.ok && latest.data.paymentStatus === "paid") {
+              showBusySuccess("Payment confirmed!")
+              setFrozenAvailable(available)
+              setRedirecting(true)
+              try {
+                sessionStorage.setItem(
+                  LAST_ORDER_KEY,
+                  JSON.stringify({
+                    orderCode: res.data.orderCode,
+                    total: res.data.total,
+                    phoneLast4: res.data.phoneLast4,
+                    whatsappUrl: res.data.whatsappUrl,
+                    paymentReference: latest.data.paymentReference ?? undefined,
+                    paymentConfirmed: true,
+                    createdAt: res.data.createdAt ?? new Date().toISOString(),
+                  })
+                )
+              } catch {
+                // private mode: the success page falls back to the code in the URL
+              }
+              for (const l of available) removeCartItem(l.productId)
+              router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+              return
+            }
+          }
+          await cancelOrder({
+            code: res.data.orderCode,
+            phoneLast4: res.data.phoneLast4,
+            phone: customerPayload.phone,
+            reason: outcome.status === "dismissed" ? "Payment cancelled at checkout" : "Payment could not be completed at checkout",
+          })
+          if (outcome.status === "dismissed") {
+            toast.info("Payment was cancelled. Your cart is still saved.")
+          } else {
+            toast.error(outcome.error)
+          }
+          return
+        }
+
+        const verified = await verifyGatewayPayment({
+          code: res.data.orderCode,
+          phoneLast4: res.data.phoneLast4,
+          gatewayOrderId: outcome.gatewayOrderId,
+          paymentId: outcome.paymentId,
+          signature: outcome.signature,
+        })
+
+        showBusySuccess(verified.ok ? "Payment confirmed!" : "Order placed!")
+        setFrozenAvailable(available)
+        setRedirecting(true)
+        try {
+          sessionStorage.setItem(
+            LAST_ORDER_KEY,
+            JSON.stringify({
+              orderCode: res.data.orderCode,
+              total: res.data.total,
+              phoneLast4: res.data.phoneLast4,
+              whatsappUrl: res.data.whatsappUrl,
+              paymentReference: outcome.paymentId,
+              paymentConfirmed: verified.ok && verified.data.confirmed,
+              createdAt: res.data.createdAt ?? new Date().toISOString(),
+            })
+          )
+        } catch {
+          // private mode: the success page falls back to the code in the URL
+        }
+        for (const l of available) removeCartItem(l.productId)
+        if (!verified.ok) {
+          toast.info("Confirming your payment…")
+        }
+        router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+      } catch {
+        toast.error("Couldn't start online payment. Please check your connection and try again.")
+      }
+    })
+  }
+
   const onSubmit = form.handleSubmit((values) => {
-    if (area.error) {
+    if (!activeSavedAddress && area.error) {
       form.setError("pincode", { message: area.error })
       return
     }
+    const customerPayload: CheckoutInput = activeSavedAddress
+      ? {
+          name: activeSavedAddress.fullName,
+          phone: activeSavedAddress.phone,
+          address: activeSavedAddress.address,
+          ...splitCityState(activeSavedAddress.city),
+          pincode: activeSavedAddress.pincode,
+          note: values.note,
+        }
+      : values
+    if (shop.paymentMode === "gateway") {
+      runGatewayCheckout(customerPayload)
+      return
+    }
     setPaymentRefError(null)
-    setValidatedCustomer(values)
+    setValidatedCustomer(customerPayload)
     setPayDialogOpen(true)
   })
 
@@ -332,6 +502,7 @@ export function CheckoutForm({
           items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
           paymentReference: parsedRef.data,
           promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
+          expectedTotal: shownCharges.total,
           // only offer to save when the customer typed a new address
           saveAddress: signedIn && selected === "new" && saveAddress,
         })
@@ -346,6 +517,12 @@ export function CheckoutForm({
             setPromoError(res.error)
             setPayDialogOpen(false)
             toast.error(res.error)
+            return
+          }
+          if (res.error.toLowerCase().includes("updated")) {
+            setPayDialogOpen(false)
+            toast.error(res.error)
+            router.refresh()
             return
           }
           for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
@@ -373,7 +550,7 @@ export function CheckoutForm({
         } catch {
           // private mode: the success page falls back to the code in the URL
         }
-        clearCart()
+        for (const l of available) removeCartItem(l.productId)
         router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
       } catch {
         toast.error("Couldn't place your order. Please check your connection and try again.")
@@ -390,8 +567,12 @@ export function CheckoutForm({
   const shownCharges = placeholder ? baseCharges : applyPromoToCharges(baseCharges, appliedPromo)
   const shownCount = shown.reduce((n, l) => n + l.quantity, 0)
   const promoBelowMin = Boolean(
-    !placeholder && appliedPromo && baseCharges.subtotal < Math.max(appliedPromo.minOrderAmount, 2)
+    !placeholder && appliedPromo && computePromoDiscount(appliedPromo, baseCharges.subtotal) <= 0
   )
+  const promoEffectiveMin = appliedPromo ? Math.max(appliedPromo.minOrderAmount, 2) : 0
+  const promoShortfall = appliedPromo
+    ? Math.max(0.01, Math.round((promoEffectiveMin - baseCharges.subtotal + Number.EPSILON) * 100) / 100)
+    : 0
 
   if (!placeholder && !redirecting && available.length === 0) {
     return (
@@ -410,7 +591,8 @@ export function CheckoutForm({
   const showAddressInputs = !signedIn || addresses.length === 0 || selected === "new" || hasAddressFieldError
 
   const view = (
-    <form onSubmit={onSubmit} noValidate className={styles.checkoutFormGrid}>
+    <>
+      <form onSubmit={onSubmit} noValidate className={styles.checkoutFormGrid}>
       <div className={styles.mainColumn}>
         {/* Step 1: Delivery details */}
         <div className={styles.stepCard}>
@@ -578,6 +760,7 @@ export function CheckoutForm({
                     <span className={styles.lineNameText}>{l.name}</span>
                     <span className={styles.lineMetaText}>
                       {formatPrice(l.price)} × {l.quantity}
+                      {l.priceChanged && " · Price updated"}
                       {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
                         <>
                           {" · "}
@@ -703,7 +886,7 @@ export function CheckoutForm({
               {promoBelowMin && appliedPromo && (
                 <div className={styles.promoBelowMinRow}>
                   <p role="alert" className={styles.promoBelowMinMsg}>
-                    Add {formatPrice(appliedPromo.minOrderAmount - baseCharges.subtotal)} more to use <span className={styles.monoBold}>{appliedPromo.code}</span>.
+                    Add {formatPrice(promoShortfall)} more to use <span className={styles.monoBold}>{appliedPromo.code}</span>.
                   </p>
                   <button
 
@@ -740,7 +923,7 @@ export function CheckoutForm({
         <div className={styles.trustChecklistBox}>
           <p className={styles.trustRow}>
             <CheckCircle2Icon className={styles.checkSvg} />
-            <span>Order is placed after UPI payment</span>
+            <span>{shop.paymentMode === "gateway" ? "Instant confirmation via secure gateway" : "Order is placed after UPI payment"}</span>
           </p>
           <p className={styles.trustRow}>
             <CheckCircle2Icon className={styles.checkSvg} />
@@ -786,7 +969,6 @@ export function CheckoutForm({
             .
           </p>
         </div>
-        <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
       </aside>
 
       {/* Native e-commerce sticky bottom pay bar on phones */}
@@ -814,8 +996,11 @@ export function CheckoutForm({
           )}
         </Button>
       </div>
+    </form>
 
-      <Dialog
+    <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
+
+    <Dialog
         open={payDialogOpen}
         onOpenChange={(next) => {
           if (pending) return
@@ -992,7 +1177,7 @@ export function CheckoutForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </form>
+    </>
   )
   return preview || ready ? view : <Skeletonize>{view}</Skeletonize>
 }

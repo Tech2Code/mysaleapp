@@ -1,16 +1,19 @@
-import { createHmac, timingSafeEqual } from "node:crypto"
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import { ADMIN_SESSION_MAX_AGE_MS } from "@/features/auth/account-schema"
 import { isSupabaseConfigured, supabaseConfig } from "./config"
 
+const PROD_FALLBACK_SECRET =
+  process.env.NODE_ENV === "production" && !process.env.COOKIE_SECRET && !process.env.RATE_LIMIT_SALT && !process.env.CRON_SECRET
+    ? (() => {
+        console.warn("[proxy] Set COOKIE_SECRET or RATE_LIMIT_SALT in production.")
+        return randomBytes(32).toString("hex")
+      })()
+    : "kalakriti-local-dev-cookie-secret"
+
 function getCookieSecret(): string {
-  return (
-    process.env.RATE_LIMIT_SALT ||
-    process.env.CRON_SECRET ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "kalakriti-local-dev-cookie-secret"
-  )
+  return process.env.COOKIE_SECRET || process.env.RATE_LIMIT_SALT || process.env.CRON_SECRET || PROD_FALLBACK_SECRET
 }
 
 function hmacHex(payload: string): string {
@@ -91,6 +94,8 @@ export async function updateSession(request: NextRequest) {
   // If Supabase falls back to the Site URL root (e.g. /?code=... or /?error=access_denied&error_code=otp_expired),
   // forward immediately to /auth/callback so the user lands on the proper UI with a clean URL.
   // Never intercept /order-placed?code=... or /track?code=... where `code` is an order code!
+  const hasSessionOrAction =
+    request.cookies.getAll().some((c) => c.name.startsWith("sb-")) || request.headers.has("next-action")
   if (pathname === "/" && request.method === "GET") {
     const hasAuthCallbackParams =
       searchParams.has("code") ||
@@ -102,8 +107,8 @@ export async function updateSession(request: NextRequest) {
       callbackUrl.pathname = "/auth/callback"
       return NextResponse.redirect(callbackUrl)
     }
-    return NextResponse.next({ request })
-  } else if (pathname === "/") {
+    if (!hasSessionOrAction) return NextResponse.next({ request })
+  } else if (pathname === "/" && !hasSessionOrAction) {
     return NextResponse.next({ request })
   }
 
@@ -174,6 +179,19 @@ export async function updateSession(request: NextRequest) {
         redirectResponse.cookies.set(cookie)
       }
       redirectResponse.cookies.delete("kk_admin_pin_at")
+      return redirectResponse
+    }
+  }
+
+  if (user && isAccount) {
+    if (hasValidPasswordResetCookie(request.cookies.get("kk_cust_pw_reset")?.value, "customer", user.id)) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/login"
+      url.search = "?mode=reset-password"
+      const redirectResponse = NextResponse.redirect(url)
+      for (const cookie of response.cookies.getAll()) {
+        redirectResponse.cookies.set(cookie)
+      }
       return redirectResponse
     }
   }

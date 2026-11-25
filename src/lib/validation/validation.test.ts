@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { profileSchema } from "@/features/account/schema"
+import { createPromoCodeSchema } from "@/features/settings/schema"
 import { safeExternalUrl, safeNextPath } from "@/lib/safe-redirect"
 import { toNumberOrUndefined } from "@/lib/zod-helpers"
 import { FIELD_KINDS, PATTERNS, addDays, todayIST, v } from "./index"
@@ -48,6 +49,20 @@ describe("utr", () => {
     expect(ok(v.utr(), "A".repeat(36))).toBe(false)
     expect(ok(v.utr(), "ABC-12345")).toBe(false)
     expect(FIELD_KINDS.paymentRef.sanitize!("ab-c 12345")).toBe("ABC12345")
+  })
+})
+
+describe("gatewayRef", () => {
+  it("accepts gateway payment/refund IDs (with _ or -) and UTRs while rejecting bad input", () => {
+    expect(v.gatewayRef().parse(" pay_P9xK2mN8qR4sT1 ")).toBe("pay_P9xK2mN8qR4sT1")
+    expect(ok(v.gatewayRef(), "rfnd_12345678")).toBe(true)
+    expect(ok(v.gatewayRef(), "cf-order-99887766")).toBe(true)
+    expect(ok(v.gatewayRef(), "412345678901")).toBe(true)
+    expect(ok(v.gatewayRef(), "pay_123")).toBe(false)
+    expect(ok(v.gatewayRef(), "A".repeat(65))).toBe(false)
+    expect(ok(v.gatewayRef(), "pay 12345678")).toBe(false)
+    expect(ok(v.gatewayRef(), "<script>1234")).toBe(false)
+    expect(FIELD_KINDS.gatewayRef.sanitize!("pay_Ab-12! @#")).toBe("pay_Ab-12")
   })
 })
 
@@ -213,5 +228,21 @@ describe("urls, dates, quantities", () => {
     expect(safeExternalUrl("javascript:alert(1)")).toBeNull()
     expect(safeExternalUrl("http://example.com", true)).toBeNull()
     expect(safeExternalUrl("https://instagram.com/shop")).toBe("https://instagram.com/shop")
+  })
+
+  it("createPromoCodeSchema accepts maxDiscountAmount with 2 decimals and rejects >2 decimals", () => {
+    const basePromo = {
+      code: "SAVE10",
+      description: "",
+      discountType: "percent" as const,
+      discountValue: 10,
+      minOrderAmount: 0,
+      maxUses: "",
+      expiresAt: "",
+    }
+    expect(ok(createPromoCodeSchema, { ...basePromo, maxDiscountAmount: 1.1 })).toBe(true)
+    expect(ok(createPromoCodeSchema, { ...basePromo, maxDiscountAmount: 19.99 })).toBe(true)
+    expect(ok(createPromoCodeSchema, { ...basePromo, maxDiscountAmount: 149.9 })).toBe(true)
+    expect(ok(createPromoCodeSchema, { ...basePromo, maxDiscountAmount: 1.123 })).toBe(false)
   })
 })

@@ -166,7 +166,9 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
           </div>
           <div>
             <dt className={styles.metricDt}>Avg / {unit}</dt>
-            <dd className={styles.metricSubDd}>{fmt(Math.round(average))}</dd>
+            <dd className={styles.metricSubDd}>
+              {!money && average > 0 && average < 1 ? `${average.toFixed(1)} orders` : fmt(Math.round(average))}
+            </dd>
           </div>
           {best >= 0 && (
             <div>

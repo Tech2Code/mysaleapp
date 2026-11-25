@@ -66,7 +66,6 @@ export function AccountMenu() {
 
   const signOut = () =>
     startSignOut(async () => {
-      setAskSignOut(false)
       try {
         const res = await signOutCustomer()
         if (!res.ok) {
@@ -75,6 +74,7 @@ export function AccountMenu() {
         }
         applyClientSignOut()
         await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+        setAskSignOut(false)
         showSuccess("Signed out")
         later(() => toast.success("Signed out successfully"))
         router.replace("/")
@@ -163,7 +163,7 @@ export function AccountMenu() {
       </DropdownMenu>
       <ConfirmDialog
         open={askSignOut}
-        onOpenChange={setAskSignOut}
+        onOpenChange={(o) => !signingOut && setAskSignOut(o)}
         title="Sign out?"
         description="You can sign in again any time. Items in your cart stay on this device."
         confirmLabel="Sign out"

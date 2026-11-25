@@ -30,6 +30,7 @@ export function AdminReturnOrder({
   paymentStatus,
   refundedAmount = 0,
   discountAmount = 0,
+  paidAmount,
   items,
   returns,
   prefill,
@@ -44,6 +45,7 @@ export function AdminReturnOrder({
   paymentStatus: PaymentStatus
   refundedAmount?: number
   discountAmount?: number
+  paidAmount?: number
   items: OrderItem[]
   returns: OrderReturn[]
 }) {
@@ -153,7 +155,7 @@ export function AdminReturnOrder({
         {triggerLabel}
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.dialogLgMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>Return for {orderCode}</DialogTitle>
           <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
         </DialogHeader>
@@ -222,6 +224,7 @@ export function AdminReturnOrder({
               description={`Turn on once you have sent back ${formatPrice(
                 netReturnRefund(items, payload, {
                   discountAmount,
+                  paidAmount,
                   alreadyRefunded: refundedAmount,
                   priorReturnedLines: returns.filter((r) => r.refunded).flatMap((r) => r.items),
                 })

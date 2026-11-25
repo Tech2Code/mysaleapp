@@ -112,6 +112,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
                       paymentReference={order.paymentReference}
                       refundedAmount={order.refundedAmount}
                       discountAmount={order.discountAmount}
+                      paidAmount={order.paymentAmount ?? order.total}
                       items={order.items}
                       requests={order.returnRequests}
                       returns={order.returns}
@@ -143,9 +144,18 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
             requests={order.returnRequests}
             returns={order.returns}
             returnStage={order.returnStage}
-            admin={{ items: order.items, paymentStatus: order.paymentStatus, refundedAmount: order.refundedAmount, discountAmount: order.discountAmount }}
+            admin={{
+              items: order.items,
+              paymentStatus: order.paymentStatus,
+              refundedAmount: order.refundedAmount,
+              discountAmount: order.discountAmount,
+              paidAmount: order.paymentAmount ?? order.total,
+              paymentReference: order.paymentReference,
+              customerName: order.customerName,
+              orderCode: order.orderCode,
+            }}
           />
-          <RefundSummary order={order} />
+          <RefundSummary order={order} audience="admin" />
           <OrderSummary order={order} openLinksInNewTab audience="admin" />
         </div>
 

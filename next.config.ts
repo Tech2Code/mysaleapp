@@ -12,6 +12,34 @@ const isDev = process.env.NODE_ENV !== "production"
 const supabaseOrigin = supabaseHost ? `https://${supabaseHost}` : ""
 const supabaseWs = supabaseHost ? `wss://${supabaseHost}` : ""
 
+const gatewayCspOrigins = (() => {
+  const origins = new Set<string>()
+  const hasRazorpay = Boolean((process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "").trim())
+  const hasCashfree = Boolean((process.env.CASHFREE_APP_ID || "").trim())
+  const hasPhonePe = Boolean((process.env.PHONEPE_MERCHANT_ID || "").trim())
+  if (hasRazorpay) {
+    origins.add("https://checkout.razorpay.com")
+    origins.add("https://api.razorpay.com")
+  }
+  if (hasCashfree) {
+    origins.add("https://sdk.cashfree.com")
+  }
+  if (hasPhonePe) {
+    origins.add("https://mercury.phonepe.com")
+  }
+  for (const raw of (process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_ORIGINS ?? "").split(",")) {
+    const trimmed = raw.trim()
+    if (!trimmed) continue
+    try {
+      const parsed = new URL(trimmed)
+      if (parsed.protocol === "https:") origins.add(parsed.origin)
+    } catch {
+      // ignore invalid origin entries
+    }
+  }
+  return [...origins]
+})()
+
 /**
  * Content-Security-Policy.
  *
@@ -22,16 +50,20 @@ const supabaseWs = supabaseHost ? `wss://${supabaseHost}` : ""
  * object/base/form/frame/connect are locked down. 'unsafe-eval' and ws://localhost are for dev HMR only.
  * cdn.jsdelivr.net: browser-image-compression's web worker imports its own library from there (admin uploads).
  * Third-party calls such as India Post are server-side and need no entry.
+ * Payment gateway origins are added only when gateway env vars are configured.
  */
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://cdn.jsdelivr.net`,
+  [`script-src 'self' 'unsafe-inline'`, isDev ? "'unsafe-eval'" : "", "https://cdn.jsdelivr.net", ...gatewayCspOrigins]
+    .filter(Boolean)
+    .join(" "),
   "style-src 'self' 'unsafe-inline'",
   ["img-src 'self' data: blob:", supabaseOrigin, "https://lh3.googleusercontent.com"].filter(Boolean).join(" "),
   "font-src 'self' data:",
-  ["connect-src 'self'", supabaseOrigin, supabaseWs, "https://cdn.jsdelivr.net", ...(isDev ? ["ws://localhost:*", "http://localhost:*"] : [])]
+  ["connect-src 'self'", supabaseOrigin, supabaseWs, "https://cdn.jsdelivr.net", ...gatewayCspOrigins, ...(isDev ? ["ws://localhost:*", "http://localhost:*"] : [])]
     .filter(Boolean)
     .join(" "),
+  ...(gatewayCspOrigins.length ? [`frame-src 'self' ${gatewayCspOrigins.join(" ")}`] : []),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "frame-ancestors 'none'",

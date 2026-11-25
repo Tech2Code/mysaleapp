@@ -116,7 +116,7 @@ export function RequestReturn({
   orderDelivery,
 }: {
   /** Delivery + extra charges + promo discount of the order: shown in the refund estimate. */
-  charges?: { shippingFee: number; extraFees: OrderFee[]; discountAmount?: number }
+  charges?: { shippingFee: number; extraFees: OrderFee[]; discountAmount?: number; paidAmount?: number; refundedAmount?: number }
   /** Original delivery address of the order, shown as the default pickup address. */
   orderDelivery?: { name: string; phone: string; address: string; city: string; pincode: string } | null
   orderCode: string
@@ -128,7 +128,7 @@ export function RequestReturn({
   requests: ReturnRequest[]
   window: Window
   whatsappUrl: string
-  onDone?: () => void
+  onDone?: () => void | Promise<unknown>
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -267,7 +267,12 @@ export function RequestReturn({
     .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
     .filter((i) => i.quantity > 0)
   const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
-  const refundEstimateTotal = netReturnRefund(items, payload, { discountAmount: charges?.discountAmount ?? 0 })
+  const refundEstimateTotal = netReturnRefund(items, payload, {
+    discountAmount: charges?.discountAmount ?? 0,
+    paidAmount: charges?.paidAmount,
+    alreadyRefunded: charges?.refundedAmount,
+    priorReturnedLines: returns.filter((r) => r.refunded).flatMap((r) => r.items),
+  })
   const kept = charges ? notRefundedCharges(charges) : []
   const needsDetail = !reason || otherNeedsDetail(reason, details)
   const needsExchangeKind = resolutionType === "exchange" && !exchangeKind
@@ -522,6 +527,11 @@ export function RequestReturn({
           }
         }
         const submittedKind = resolutionType === "exchange" ? (exchangeKind === "replacement" ? "replacement" : "exchange") : "refund"
+        if (onDone) {
+          await onDone()
+        } else {
+          router.refresh()
+        }
         later(() => {
           setOpen(false)
           resetFormState()
@@ -533,8 +543,6 @@ export function RequestReturn({
                 : "Return request sent. We'll review it and update you here."
           )
         })
-        onDone?.()
-        router.refresh()
       } catch {
         toast.error("Couldn't submit your request. Please try again.")
       }
@@ -824,7 +832,7 @@ export function RequestReturn({
                     fieldSize="md"
                     value={pickupPincode}
                     onChange={(e) => setPickupPincode(e.target.value)}
-                    hint={pickupArea.loading ? "Looking up pincode…" : undefined}
+                    hint={pickupArea.hint}
                     error={pickupSubmitted || pickupPincode.length === 6 ? rawNewPickupErrors.pincode : undefined}
                   />
                   <TextField
@@ -1015,6 +1023,15 @@ export function RequestReturn({
                           const clamped = Math.min(max, Math.max(0, nextNum))
                           setQty((q) => ({ ...q, [i.productId]: clamped > 0 ? String(clamped) : "0" }))
                         }
+                        const windowText =
+                          itemWin && itemWin.days <= 0
+                            ? "Non-returnable item"
+                            : itemWin && !itemWin.open
+                              ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
+                              : itemWin
+                                ? `${itemWin.days}-day return & exchange window`
+                                : `${win.days}-day return & exchange window`
+                        const itemCheckId = `return-item-${i.productId}`
                         return (
                           <li
                             key={i.productId}
@@ -1024,40 +1041,42 @@ export function RequestReturn({
                               !eligible && styles.returnItemIneligible
                             )}
                           >
-                            <div
-                              onClick={() => {
-                                if (!eligible) return
-                                setItemQty(isChecked ? 0 : 1)
-                              }}
-                              className={cn(styles.itemClickRow, eligible && styles.itemClickRowInteractive)}
-                            >
-                              {eligible && (
+                            {eligible ? (
+                              <div className={styles.itemClickRow}>
                                 <Checkbox
+                                  id={itemCheckId}
                                   checked={isChecked}
-                                  onClick={(e) => e.stopPropagation()}
                                   onCheckedChange={(checked) => setItemQty(checked ? Math.max(1, currentQty || 1) : 0)}
                                   aria-label={`Select ${i.name}`}
                                 />
-                              )}
-                              <div className={styles.itemThumbWrap}>
-                                <ProductImage src={i.image ?? null} alt={i.name} sizes="48px" />
+                                <div className={styles.itemThumbWrap}>
+                                  <ProductImage src={i.image ?? null} alt={i.name} sizes="48px" />
+                                </div>
+                                <label
+                                  htmlFor={itemCheckId}
+                                  className={cn(styles.itemInfoCol, styles.itemClickRowInteractive)}
+                                >
+                                  <span className={styles.itemName}>{i.name}</span>
+                                  <span className={styles.itemPriceMeta}>
+                                    {formatPrice(i.price)} each · Ordered: {i.quantity}
+                                  </span>
+                                  <span className={styles.itemWindowText}>{windowText}</span>
+                                </label>
                               </div>
-                              <div className={styles.itemInfoCol}>
-                                <p className={styles.itemName}>{i.name}</p>
-                                <p className={styles.itemPriceMeta}>
-                                  {formatPrice(i.price)} each · Ordered: {i.quantity}
-                                </p>
-                                <p className={styles.itemWindowText}>
-                                  {itemWin && itemWin.days <= 0
-                                    ? "Non-returnable item"
-                                    : itemWin && !itemWin.open
-                                      ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
-                                      : itemWin
-                                        ? `${itemWin.days}-day return & exchange window`
-                                        : `${win.days}-day return & exchange window`}
-                                </p>
+                            ) : (
+                              <div className={styles.itemClickRow}>
+                                <div className={styles.itemThumbWrap}>
+                                  <ProductImage src={i.image ?? null} alt={i.name} sizes="48px" />
+                                </div>
+                                <div className={styles.itemInfoCol}>
+                                  <p className={styles.itemName}>{i.name}</p>
+                                  <p className={styles.itemPriceMeta}>
+                                    {formatPrice(i.price)} each · Ordered: {i.quantity}
+                                  </p>
+                                  <p className={styles.itemWindowText}>{windowText}</p>
+                                </div>
                               </div>
-                            </div>
+                            )}
 
                             {eligible ? (
                               <div className={styles.itemControlsBottom}>
@@ -1642,7 +1661,7 @@ export function ReturnRequestsPanel({
   refundedInFull?: boolean
   orderCode: string
   phoneLast4?: string
-  onChanged?: () => void
+  onChanged?: () => void | Promise<unknown>
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -1690,12 +1709,15 @@ export function ReturnRequestsPanel({
         toast.error(res.error)
         return
       }
+      if (onChanged) {
+        await onChanged()
+      } else {
+        router.refresh()
+      }
       later(() => {
         closeConfirm()
         toast.success(isEx ? "Exchange request cancelled" : "Return request cancelled")
       })
-      onChanged?.()
-      router.refresh()
     })
   }
 

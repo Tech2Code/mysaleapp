@@ -107,7 +107,12 @@ export const useCart = create<CartState>()(
       partialize: (state) => ({ items: state.items }),
       merge: (persisted, current) => {
         const raw = persisted && typeof persisted === "object" ? (persisted as Record<string, unknown>) : {}
-        const items = Array.isArray(raw.items) ? raw.items.filter(isValidCartItem) : []
+        const items = Array.isArray(raw.items)
+          ? raw.items
+              .filter(isValidCartItem)
+              .map((i) => ({ ...i, quantity: clampQty(i.quantity, Math.max(1, i.maxQuantity)) }))
+              .filter((i) => i.quantity >= 1)
+          : []
         return { ...current, items }
       },
     }
@@ -116,4 +121,4 @@ export const useCart = create<CartState>()(
 
 export const cartCount = (items: CartItem[]) => items.reduce((n, i) => n + i.quantity, 0)
 export const cartSubtotal = (items: CartItem[]) =>
-  Math.round(items.reduce((n, i) => n + i.price * i.quantity, 0) * 100) / 100
+  Math.round((items.reduce((n, i) => n + i.price * i.quantity, 0) + Number.EPSILON) * 100) / 100

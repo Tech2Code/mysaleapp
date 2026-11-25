@@ -66,6 +66,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   freeWeightGrams: 1000,
   extraWeightFeePerKg: 40,
 
+  paymentMode: "manual_upi",
+  paymentGateway: "razorpay",
   upiId: null,
   upiPayeeName: null,
 }

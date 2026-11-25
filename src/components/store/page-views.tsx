@@ -50,11 +50,13 @@ export function CheckoutPageView({
   products,
   initialAddresses,
   initialProfile,
+  initialUserId = null,
   preview,
 }: {
   products: LiveProduct[]
   initialAddresses?: Address[]
   initialProfile?: Profile | null
+  initialUserId?: string | null
   preview?: boolean
 }) {
   return (
@@ -69,6 +71,7 @@ export function CheckoutPageView({
           products={products}
           initialAddresses={initialAddresses}
           initialProfile={initialProfile}
+          initialUserId={initialUserId}
           preview={preview}
         />
       </Body>

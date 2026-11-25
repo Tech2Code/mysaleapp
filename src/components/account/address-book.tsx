@@ -104,6 +104,8 @@ function AddressDialog({
         return
       }
       later(() => {
+        const split = splitCityState(values.city + ", " + values.state)
+        area.prime(values.pincode, split.city || values.city, values.state)
         onOpenChange(false)
         toast.success(address ? "Address updated" : "Address added")
       })

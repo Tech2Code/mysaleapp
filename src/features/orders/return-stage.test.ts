@@ -35,7 +35,15 @@ describe("returnStage", () => {
   })
 
   it("guests (refundedAmount always 0) still see 'partly refunded' from the return rows", () => {
-    expect(returnStage({ ...base, returns: [ret(true)], refundedAmount: 0 })).toMatchObject({ key: "partly_refunded" })
+    expect(returnStage({ ...base, returns: [ret(true)], refundedAmount: 0 })).toMatchObject({ key: "partly_refunded", active: false })
+  })
+
+  it("clears active and marks timeline refund done when all return rows on a partial return are refunded, keeping active while another row is pending", () => {
+    expect(returnStage({ ...base, returns: [ret(true)], refundedAmount: 250 })).toMatchObject({ key: "partly_refunded", active: false })
+    expect(returnStage({ ...base, returns: [ret(true), ret(false)], refundedAmount: 250 })).toMatchObject({
+      key: "partly_refunded",
+      active: true,
+    })
   })
 
   it("an open request beats an earlier completed return; the newest request wins", () => {
@@ -146,6 +154,8 @@ describe("returnTimeline", () => {
     const received = { ...base, requests: [req("received")], returns: [ret()] }
     expect(keys(received)).toEqual(["requested:done", "approved:done", "pickup:done", "picked_up:done", "received:done", "refund:upcoming"])
     expect(keys({ ...received, refundedAmount: 1 })).toContain("refund:current")
+    expect(keys({ ...base, requests: [req("received")], returns: [ret(true)], refundedAmount: 250 })).toContain("refund:done")
+    expect(keys({ ...base, requests: [req("received")], returns: [ret(true), ret(false)], refundedAmount: 250 })).toContain("refund:current")
     expect(keys({ ...received, paymentStatus: "refunded" })).toContain("refund:done")
   })
 

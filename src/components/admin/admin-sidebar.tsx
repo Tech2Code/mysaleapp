@@ -137,7 +137,7 @@ function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
       }}
     >
       <DialogContent className={styles.quickJumpContent}>
-        <DialogHeader className={styles.srOnly}>
+        <DialogHeader showCloseButton={false} className={styles.srOnly}>
           <DialogTitle>Quick jump</DialogTitle>
         </DialogHeader>
         <div className={styles.quickJumpSearchRow}>

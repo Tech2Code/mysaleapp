@@ -218,7 +218,7 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     tab-size: 4;
-    scroll-padding-top: calc(var(--store-header-h) + 16px);
+    scroll-padding-top: calc(var(--store-header-h, 56px) + 16px);
     scrollbar-gutter: stable;
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
@@ -242,7 +242,7 @@
   }
   h1, h2, h3 {
     font-family: var(--font-heading);
-    letter-spacing: -0.025em;
+    letter-spacing: -0.4px;
     text-wrap: balance;
   }
   p, li {
@@ -265,7 +265,7 @@
   }
   code, kbd, samp, pre {
     font-family: var(--font-mono);
-    font-size: 1em;
+    font-size: inherit;
   }
   small {
     font-size: 80%;

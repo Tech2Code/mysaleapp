@@ -3,6 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 import { assertAdmin } from "@/features/auth/guards"
+import { isGatewayConfigured } from "@/features/orders/payment-gateway"
+import { PAYMENT_GATEWAY_LABEL } from "@/features/orders/types"
 import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
@@ -18,6 +20,13 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
     return fail("Please fix the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
   }
   const s = parsed.data
+
+  if (s.paymentMode === "gateway" && !isGatewayConfigured(s.paymentGateway)) {
+    return fail(
+      `${PAYMENT_GATEWAY_LABEL[s.paymentGateway]} server keys aren't configured in environment variables yet. Keep Direct UPI active until keys are added (see payment-gateway-setup.md).`,
+      { paymentMode: ["Configure server API keys first"] }
+    )
+  }
 
   const supabase = await getServerSupabase()
   const { data: saved, error } = await supabase
@@ -54,6 +63,8 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
       oversized_fee: s.oversizedFee,
       free_weight_grams: s.freeWeightGrams,
       extra_weight_fee_per_kg: s.extraWeightFeePerKg,
+      payment_mode: s.paymentMode,
+      payment_gateway: s.paymentGateway,
       upi_id: s.upiId,
       upi_payee_name: s.upiPayeeName,
     })
@@ -71,7 +82,7 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
     action: "settings.update",
     targetType: "settings",
     targetId: "store_settings",
-    metadata: { shopName: s.shopName, upiId: s.upiId, deliveryFee: s.deliveryFee },
+    metadata: { shopName: s.shopName, paymentMode: s.paymentMode, paymentGateway: s.paymentGateway, upiId: s.upiId, deliveryFee: s.deliveryFee },
   })
 
   // The name, contact details etc. appear on every page, so refresh the whole site.

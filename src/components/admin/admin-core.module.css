@@ -191,9 +191,10 @@
 .pinDialogForm .recoveryOptionsWrap { display: flex; flex-direction: column; gap: 6px; }
 .recoveryOptionsWrap .recoveryLabel { display: block; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .recoveryOptionsWrap .recoveryTabsGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; border-radius: 12px; background-color: var(--muted); padding: 4px; }
-.recoveryTabsGrid .recoveryTabBtn { border-radius: 8px; border: 0; background: transparent; padding: 6px 8px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.recoveryTabsGrid .recoveryTabBtn { min-width: 0; border-radius: 8px; border: 0; background: transparent; padding: 6px 4px; font-size: 11px; line-height: 14px; font-weight: 500; text-align: center; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
 .recoveryTabsGrid .recoveryTabBtn:hover { color: var(--foreground); }
 .recoveryTabsGrid .recoveryTabActive { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.pinLockedPlaceholder { display: grid; min-height: 240px; place-items: center; padding: 24px; text-align: center; font-size: 13px; color: var(--muted-foreground); }
 /* Section: Admin Page Header & Page Views */
 .pageHeader { margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
 .pageHeader .headerTextCol { min-width: 0; }

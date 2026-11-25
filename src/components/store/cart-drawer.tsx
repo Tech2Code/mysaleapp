@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { cartCount, cartSubtotal, MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
 import styles from "./cart.module.css"
+import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
 import { useStoreSettings } from "./store-settings-provider"
@@ -19,7 +20,7 @@ import { useStoreSettings } from "./store-settings-provider"
 export function FreeShippingBar({ subtotal }: { subtotal: number }) {
   const threshold = useStoreSettings().freeDeliveryAbove
   if (!threshold) return null
-  const remaining = Math.max(0, threshold - subtotal)
+  const remaining = Math.max(0, Math.round((threshold - subtotal + Number.EPSILON) * 100) / 100)
   const pct = Math.min(100, (subtotal / threshold) * 100)
   const unlocked = remaining === 0
 
@@ -44,7 +45,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
           )}
         </p>
         <span className={styles.percentBadge}>
-          {Math.round(pct)}%
+          {unlocked ? 100 : Math.min(99, Math.floor(pct))}%
         </span>
       </div>
       <div className={styles.progressTrack}>
@@ -62,12 +63,14 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
 
 function DrawerItem({
   item,
+  available = true,
   highlighted,
   onNavigate,
   onQuantity,
   onRemove,
 }: {
   item: CartItem
+  available?: boolean
   highlighted: boolean
   onNavigate: () => void
   onQuantity: (q: number) => void
@@ -80,7 +83,7 @@ function DrawerItem({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, x: 48, transition: { duration: 0.2 } }}
       transition={{ type: "spring", stiffness: 380, damping: 32 }}
-      className={cn(styles.drawerItemCard, highlighted && styles.drawerItemHighlighted)}
+      className={cn(styles.drawerItemCard, highlighted && styles.drawerItemHighlighted, !available && styles.drawerItemUnavailable)}
     >
       {highlighted && (
         <m.span
@@ -114,17 +117,19 @@ function DrawerItem({
             <Trash2Icon className={styles.trashIcon} />
           </button>
         </div>
-        <p className={styles.unitPriceText}>{formatPrice(item.price)} each</p>
+        <p className={styles.unitPriceText}>{available ? `${formatPrice(item.price)} each` : "Unavailable"}</p>
 
-        <div className={styles.itemBottomRow}>
-          <QuantityStepper
-            label={item.name}
-            value={item.quantity}
-            max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
-            onChange={onQuantity}
-          />
-          <span className={styles.lineTotalText}>{formatPrice(item.price * item.quantity)}</span>
-        </div>
+        {available && (
+          <div className={styles.itemBottomRow}>
+            <QuantityStepper
+              label={item.name}
+              value={item.quantity}
+              max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
+              onChange={onQuantity}
+            />
+            <span className={styles.lineTotalText}>{formatPrice(item.price * item.quantity)}</span>
+          </div>
+        )}
       </div>
     </m.li>
   )
@@ -134,7 +139,7 @@ function DrawerItem({
  * The slide-in cart. A side panel on larger screens, a bottom sheet on phones.
  * It opens whenever something is added and highlights that item.
  */
-export function CartDrawer() {
+export function CartDrawer({ products }: { products?: LiveProduct[] }) {
   const items = useCart((s) => s.items)
   const isOpen = useCart((s) => s.isOpen)
   const lastAddedId = useCart((s) => s.lastAddedId)
@@ -142,7 +147,13 @@ export function CartDrawer() {
   const setQuantity = useCart((s) => s.setQuantity)
   const remove = useCart((s) => s.remove)
   const isPhone = useMediaQuery("(max-width: 639px)")
-  const subtotal = cartSubtotal(items)
+  const hasLiveCatalogue = Boolean(products && products.length > 0)
+  const live = useLiveCart(products ?? [])
+  const displayLines = hasLiveCatalogue ? live.lines : items.map((item) => ({ ...item, available: true }))
+  const subtotal = hasLiveCatalogue ? live.subtotal : cartSubtotal(items)
+  const count = hasLiveCatalogue ? live.count : cartCount(items)
+  const hasUnavailable = hasLiveCatalogue ? live.hasUnavailable : false
+  const checkoutBlocked = hasUnavailable || (hasLiveCatalogue && count === 0)
   const close = () => setOpen(false)
 
   return (
@@ -160,7 +171,7 @@ export function CartDrawer() {
           <div className={styles.headerTitleGroup}>
             <SheetTitle className={styles.sheetTitleText}>Your cart</SheetTitle>
             <p className={styles.sheetSubtitleText}>
-              {items.length === 0 ? "Nothing here yet" : `${cartCount(items)} item${cartCount(items) === 1 ? "" : "s"} · ready to checkout`}
+              {items.length === 0 ? "Nothing here yet" : `${count} item${count === 1 ? "" : "s"} · ${hasUnavailable ? "review unavailable items" : "ready to checkout"}`}
             </p>
           </div>
         </SheetHeader>
@@ -180,12 +191,18 @@ export function CartDrawer() {
           <>
             <div className={styles.drawerScrollBody}>
               <FreeShippingBar subtotal={subtotal} />
+              {hasUnavailable && (
+                <p className={styles.drawerUnavailableAlert}>
+                  Some items are sold out or no longer available. Remove them to checkout.
+                </p>
+              )}
               <ul className={styles.drawerItemList}>
                 <AnimatePresence initial={false} mode="popLayout">
-                  {items.map((item) => (
+                  {displayLines.map((item) => (
                     <DrawerItem
                       key={item.productId}
                       item={item}
+                      available={item.available}
                       highlighted={item.productId === lastAddedId}
                       onNavigate={close}
                       onQuantity={(q) => setQuantity(item.productId, q)}
@@ -204,8 +221,20 @@ export function CartDrawer() {
               <p className={styles.deliveryHint}>Delivery and any product charges are added at checkout.</p>
               <Link
                 href="/checkout"
-                onClick={close}
-                className={cn(buttonVariants({ size: "lg" }), styles.checkoutBtn)}
+                aria-disabled={checkoutBlocked}
+                tabIndex={checkoutBlocked ? -1 : undefined}
+                onClick={(e) => {
+                  if (checkoutBlocked) {
+                    e.preventDefault()
+                    return
+                  }
+                  close()
+                }}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  styles.checkoutBtn,
+                  checkoutBlocked && styles.checkoutBtnDisabled
+                )}
               >
                 Checkout <ArrowRightIcon className={styles.checkoutArrow} />
               </Link>

@@ -5,7 +5,12 @@ const inr = new Intl.NumberFormat("en-IN", {
 })
 
 export function formatPrice(value: number): string {
-  return inr.format(value)
+  const v = Math.round((value + (value >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
+  return Math.abs(v - Math.round(v)) < 1e-6 ? inr.format(Math.round(v)) : inrExact.format(v)
+}
+
+export function formatRating(avg: number): string {
+  return (Math.round((Number(avg) + Number.EPSILON) * 10) / 10).toFixed(1)
 }
 
 const inrExact = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 })

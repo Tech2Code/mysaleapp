@@ -220,6 +220,7 @@
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }
 .toastIconLoading { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary); animation: spinKeyframes 1s linear infinite; }
 .toastBox { border-radius: 16px !important; border: 1px solid rgba(255, 255, 255, 0.16) !important; padding: 14px 16px !important; box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.4), 0 8px 18px -6px rgba(0, 0, 0, 0.25) !important; -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important; gap: 12px !important; }
+.sonnerToaster { --normal-bg: oklch(0.21 0.02 45 / 96%); --normal-text: oklch(0.98 0.005 80); --normal-border: oklch(1 0 0 / 16%); --success-bg: oklch(0.23 0.045 155 / 96%); --success-text: oklch(0.98 0.01 155); --success-border: oklch(0.68 0.17 155 / 50%); --error-bg: oklch(0.24 0.075 25 / 96%); --error-text: oklch(0.98 0.01 25); --error-border: oklch(0.66 0.2 25 / 55%); --warning-bg: oklch(0.25 0.06 75 / 96%); --warning-text: oklch(0.98 0.01 80); --warning-border: oklch(0.76 0.16 75 / 50%); --info-bg: oklch(0.23 0.04 240 / 96%); --info-text: oklch(0.98 0.01 240); --info-border: oklch(0.7 0.14 240 / 50%); --border-radius: 16px; }
 .toastTitle { font-size: 14px !important; font-weight: 600 !important; line-height: 19px !important; }
 .toastDescription { font-size: 12px !important; opacity: 0.85 !important; }
 .toastCloseBtn { background-color: #262626 !important; color: #ffffff !important; border-color: rgba(255, 255, 255, 0.20) !important; }

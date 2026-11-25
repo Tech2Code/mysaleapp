@@ -39,9 +39,43 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   return data.user
 })
 
+export async function assertActiveCustomer(): Promise<
+  { ok: true; user: User } | { ok: false; error: string }
+> {
+  const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()])
+  if (!user) return { ok: false, error: "Not signed in" }
+  if (hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)) {
+    return { ok: false, error: "Please finish setting your new password first." }
+  }
+  const supabase = await getServerSupabase()
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("deactivated_at")
+    .eq("id", user.id)
+    .maybeSingle<{ deactivated_at: string | null }>()
+  if (profile?.deactivated_at) {
+    await supabase.auth.signOut()
+    return { ok: false, error: "Your account is deactivated. Please sign in again to restore it." }
+  }
+  return { ok: true, user }
+}
+
 export async function requireUser(nextPath = "/account/orders"): Promise<User> {
-  const user = await getCurrentUser()
+  const [user, cookieStore] = await Promise.all([getCurrentUser(), cookies()])
   if (!user) redirect(`/login?next=${encodeURIComponent(nextPath)}`)
+  if (hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)) {
+    redirect("/login?mode=reset-password")
+  }
+  const supabase = await getServerSupabase()
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("deactivated_at")
+    .eq("id", user.id)
+    .maybeSingle<{ deactivated_at: string | null }>()
+  if (profile?.deactivated_at) {
+    await supabase.auth.signOut()
+    redirect("/login")
+  }
   return user
 }
 
@@ -118,14 +152,14 @@ export function hasRecentPasswordRecovery(user: User, windowMs = 60 * 60 * 1000)
   return !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < windowMs
 }
 
-async function isAdminPinLocked(): Promise<boolean> {
+export async function isAdminPinLocked(): Promise<boolean> {
   const pin = await getAdminPinStatus()
   if (pin.mode !== "enabled" || !pin.hasPin) return false
   if (pin.manualLock) return true
   return !pin.unlockedAt || Date.now() - pin.unlockedAt >= ADMIN_PIN_WINDOW_MS
 }
 
-export async function requireAdmin(): Promise<User> {
+export async function requireAdmin(options?: { allowWhenPinLocked?: boolean }): Promise<User> {
   const [user, admin, cookieStore] = await Promise.all([getCurrentUser(), isAdminUser(), cookies()])
   if (!user || !admin) redirect("/admin/login")
   if (hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
@@ -140,6 +174,9 @@ export async function requireAdmin(): Promise<User> {
       // Server Components cannot mutate cookies directly; proxy/signOut handles cookie cleanup.
     }
     redirect("/admin/login?reason=session-expired")
+  }
+  if (!options?.allowWhenPinLocked && (await isAdminPinLocked())) {
+    redirect("/admin")
   }
   return user
 }

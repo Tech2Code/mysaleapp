@@ -3,7 +3,7 @@ import { AdminAccountMenu } from "@/components/admin/admin-account-menu"
 import styles from "@/components/admin/admin-core.module.css"
 import { AdminMobileBottomNav, AdminSidebar, AdminTopbar } from "@/components/admin/admin-sidebar"
 import { Skeletonize } from "@/components/shared/skeletonize"
-import { getAdminPinStatus, getCurrentUser, isAdminUser, requireAdmin } from "@/features/auth/guards"
+import { getAdminPinStatus, getCurrentUser, isAdminPinLocked, isAdminUser, requireAdmin } from "@/features/auth/guards"
 import { placeholderAdminAccount } from "@/features/auth/placeholders"
 import { getPaymentsToVerifyCount } from "@/features/orders/admin-queries"
 import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
@@ -14,9 +14,16 @@ import { getServerSupabase } from "@/lib/supabase/server"
  * wrapping made the layout show its own fallback first and the page's loading.tsx only afterwards (two different
  * frames). Every admin query and action also calls requireAdmin() itself.
  */
-async function AdminGate() {
-  await requireAdmin()
-  return null
+async function AdminGate({ children }: { children: ReactNode }) {
+  await requireAdmin({ allowWhenPinLocked: true })
+  if (await isAdminPinLocked()) {
+    return (
+      <div className={styles.pinLockedPlaceholder} aria-live="polite">
+        Admin screen is locked. Enter your 4-digit PIN in the prompt to view this page.
+      </div>
+    )
+  }
+  return <>{children}</>
 }
 
 /** Avatar + email of the signed-in admin, top right. */
@@ -52,8 +59,8 @@ async function AccountSlot() {
 
 /** Red count on the "Orders" menu item: payments waiting to be verified. */
 async function OrdersBadge() {
-  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
-  if (!user || !admin) return null
+  const [user, admin, pinLocked] = await Promise.all([getCurrentUser(), isAdminUser(), isAdminPinLocked()])
+  if (!user || !admin || pinLocked) return null
   const count = await getPaymentsToVerifyCount()
   if (count === 0) return null
   return (
@@ -94,9 +101,8 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
         />
         <main data-slot="admin-main" className={styles.adminMainContent}>
           <Suspense fallback={null}>
-            <AdminGate />
+            <AdminGate>{children}</AdminGate>
           </Suspense>
-          {children}
         </main>
       </div>
       <AdminMobileBottomNav ordersBadge={badge} />

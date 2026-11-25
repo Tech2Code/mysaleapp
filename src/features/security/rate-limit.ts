@@ -42,6 +42,7 @@ async function clientIp(): Promise<string | null> {
     const realIp = h.get("x-real-ip")?.trim()
     if (realIp) return realIp
   }
+  if (process.env.TRUST_PROXY_IP !== "1") return null
   // Standard reverse proxies append the connecting client IP to X-Forwarded-For; the leftmost entry is client-controlled.
   const xff = h.get("x-forwarded-for")
   if (!xff) return null
@@ -63,9 +64,22 @@ export async function limited(scope: string, extra?: string): Promise<boolean> {
   try {
     const ip = await clientIp()
     if (!ip && !extra) return false
-    const key = hash(`${ip ?? "noip"}|${extra?.toLowerCase() ?? ""}`)
     const supabase = await getServerSupabase()
-    const { data, error } = await supabase.rpc("check_rate_limit", { p_scope: scope, p_key: key })
+    const cleanExtra = extra?.trim().toLowerCase() ?? ""
+    const targetKey = hash(`${ip ?? "noip"}|${cleanExtra}`)
+    if (ip && cleanExtra) {
+      const ipKey = hash(`${ip}|`)
+      const [ipRes, targetRes] = await Promise.all([
+        supabase.rpc("check_rate_limit", { p_scope: scope, p_key: ipKey }),
+        targetKey !== ipKey ? supabase.rpc("check_rate_limit", { p_scope: scope, p_key: targetKey }) : Promise.resolve({ data: true, error: null }),
+      ])
+      if (ipRes.error || targetRes.error) {
+        console.warn(`[rate-limit] check failed for scope "${scope}"; allowing`)
+        return false
+      }
+      return ipRes.data === false || targetRes.data === false
+    }
+    const { data, error } = await supabase.rpc("check_rate_limit", { p_scope: scope, p_key: targetKey })
     if (error) {
       console.warn(`[rate-limit] check failed for scope "${scope}" (${error.code ?? "error"}); allowing`)
       return false

@@ -29,10 +29,12 @@
 .copyBtnCopied { color: var(--success); }
 .copyableRefWrap { display: inline-flex; max-width: 100%; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 4px; vertical-align: middle; }
 .copyableRefWrap .refMonoText { word-break: break-all; font-family: var(--font-mono); }
-.refreshBtn { display: inline-flex; height: 36px; align-items: center; gap: 8px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.refreshBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .refreshBtn:hover { background-color: var(--card); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
 .refreshBtn:disabled { opacity: 0.7; }
 .readMoreCollapsible { position: relative; overflow: hidden; transition: max-height 500ms ease-out; }
+.readMoreCollapsed { max-height: 152px; }
+.readMoreExpanded { max-height: 3200px; }
 .readMoreCollapsible .readMoreFade { pointer-events: none; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background-image: linear-gradient(0deg, var(--background) 0%, transparent 100%); }
 .readMoreToggleBtn { margin-top: 8px; border: 0; background: transparent; padding: 0; font-size: 14px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .readMoreToggleBtn:hover { text-decoration: underline; }
@@ -144,7 +146,7 @@
 .trackingMonoDd .trackingBreak { min-width: 0; word-break: break-all; }
 .trackingMonoDd .compactCopyBtn { width: 24px; height: 24px; flex-shrink: 0; }
 .shippingInfoCard .shippingActionCorner { position: absolute; top: 12px; right: 12px; }
-.shippingInfoCard .trackShipmentBtn { display: inline-flex; height: 36px; align-self: flex-start; align-items: center; gap: 8px; border-radius: 9999px; background-color: #7c3aed; padding: 0 16px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 4px 10px -2px rgba(124, 58, 237, 0.25); transition: transform 150ms ease; }
+.shippingInfoCard .trackShipmentBtn { display: inline-flex; height: 36px; align-self: flex-start; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; background-color: #7c3aed; padding: 0 16px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 4px 10px -2px rgba(124, 58, 237, 0.25); transition: transform 150ms ease; }
 .shippingInfoCard .trackShipmentBtn:hover { transform: translateY(-2px); }
 /* Section: Cancellation Notice, Refund Summary & Returns List */
 .cancellationCard { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--destructive) 30%, transparent); background-color: color-mix(in oklab, var(--destructive) 5%, transparent); padding: 16px; }

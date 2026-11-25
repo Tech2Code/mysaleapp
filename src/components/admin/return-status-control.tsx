@@ -17,9 +17,16 @@ import styles from "./admin-orders.module.css"
 type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create" | "revert_shipped"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
-function returnValue(r: OrderReturn, items: OrderItem[], returns: OrderReturn[], discountAmount = 0, alreadyRefunded = 0): number {
+function returnValue(
+  r: OrderReturn,
+  items: OrderItem[],
+  returns: OrderReturn[],
+  discountAmount = 0,
+  alreadyRefunded = 0,
+  paidAmount?: number
+): number {
   const prior = returns.filter((o) => o.refunded && o.id !== r.id).flatMap((o) => o.items)
-  return netReturnRefund(items, r.items, { discountAmount, alreadyRefunded, priorReturnedLines: prior })
+  return netReturnRefund(items, r.items, { discountAmount, paidAmount, alreadyRefunded, priorReturnedLines: prior })
 }
 
 /**
@@ -37,6 +44,7 @@ export function ReturnStatusControl({
   paymentReference,
   refundedAmount,
   discountAmount = 0,
+  paidAmount,
   items,
   requests,
   returns,
@@ -51,6 +59,7 @@ export function ReturnStatusControl({
   paymentReference?: string | null
   refundedAmount: number
   discountAmount?: number
+  paidAmount?: number
   items: OrderItem[]
   requests: ReturnRequest[]
   returns: OrderReturn[]
@@ -146,6 +155,7 @@ export function ReturnStatusControl({
           paymentStatus={paymentStatus}
           refundedAmount={refundedAmount}
           discountAmount={discountAmount}
+          paidAmount={paidAmount}
           items={items}
           returns={returns}
           prefill={{
@@ -168,7 +178,7 @@ export function ReturnStatusControl({
               <li key={r.id}>
                 <RefundReturnButton
                   returnId={r.id}
-                  value={returnValue(r, items, returns, discountAmount, refundedAmount)}
+                  value={returnValue(r, items, returns, discountAmount, refundedAmount, paidAmount)}
                   expectedRefunded={refundedAmount}
                   refundUpiId={latestRefundUpi}
                   paymentReference={paymentReference}

@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { DownloadIcon, KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, ShieldCheckIcon, UserXIcon, XIcon } from "lucide-react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -405,17 +404,6 @@ function DataPrivacyCard() {
         <p className={styles.privacyCopy}>
           Download an easy-to-read, printable summary of your profile details, saved addresses, wishlist items, order history, and product reviews at any time.
         </p>
-        <div className={styles.policyLinksRow}>
-          <Link href="/privacy" className={styles.policySmallLink}>
-            Privacy Policy
-          </Link>
-          <Link href="/terms" className={styles.policySmallLink}>
-            Terms of Service
-          </Link>
-          <Link href="/refund-policy" className={styles.policySmallLink}>
-            Refund &amp; Return Policy
-          </Link>
-        </div>
       </div>
 
       <Button

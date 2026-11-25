@@ -51,6 +51,11 @@ describe("productSchema", () => {
     const tooMany = Array.from({ length: 9 }, (_, i) => `Opt ${i + 1}`).join(", ")
     expect(productSchema.safeParse({ ...base, reviewAspects: tooMany }).success).toBe(false)
   })
+
+  it("requires product price of at least ₹1", () => {
+    expect(productSchema.safeParse({ ...base, price: 0 }).success).toBe(false)
+    expect(productSchema.safeParse({ ...base, price: 1 }).success).toBe(true)
+  })
 })
 
 describe("categorySchema", () => {
@@ -179,6 +184,24 @@ describe("productReviewSchema", () => {
         productId: "00000000-0000-4000-8000-000000000001",
         rating: 4,
         comment: "Hi",
+      }).success
+    ).toBe(false)
+
+    expect(
+      productReviewSchema.safeParse({
+        productId: "00000000-0000-4000-8000-000000000001",
+        rating: 5,
+        title: "x".repeat(400),
+        comment: "Valid comment",
+      }).success
+    ).toBe(true)
+
+    expect(
+      productReviewSchema.safeParse({
+        productId: "00000000-0000-4000-8000-000000000001",
+        rating: 5,
+        title: "x".repeat(401),
+        comment: "Valid comment",
       }).success
     ).toBe(false)
   })

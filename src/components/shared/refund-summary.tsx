@@ -11,6 +11,7 @@ import styles from "./shared.module.css"
  */
 export function RefundSummary({
   order,
+  audience = "customer",
 }: {
   order: {
     items: OrderItem[]
@@ -23,6 +24,7 @@ export function RefundSummary({
     paymentAmount: number | null
     refundedAmount: number
   }
+  audience?: "customer" | "admin"
 }) {
   const b = refundBreakdown(order)
   if (!b) return null
@@ -40,7 +42,7 @@ export function RefundSummary({
 
       <div className={styles.refundSectionBlock}>
         <p className={styles.kickerLabel}>
-          {done ? "Items returned" : "Items you are returning"}
+          {done ? "Items returned" : audience === "admin" ? "Items being returned" : "Items you are returning"}
         </p>
         <ul className={styles.refundLinesUl}>
           {b.lines.map((l) => (
@@ -76,13 +78,19 @@ export function RefundSummary({
       )}
 
       <p className={styles.refundableTotalRow}>
-        <span>{done ? "Refund for these items" : "You get back"}</span>
+        <span>{done ? "Refund for these items" : audience === "admin" ? "Refund to customer" : b.alreadyRefunded > 0 ? "Cumulative refund" : "You get back"}</span>
         <span>{formatPrice(b.refundable)}</span>
       </p>
       {b.alreadyRefunded > 0 && (
         <p className={styles.alreadyRefundedRow}>
           <span>Already refunded</span>
           <span>{formatPrice(b.alreadyRefunded)}</span>
+        </p>
+      )}
+      {!done && b.alreadyRefunded > 0 && (
+        <p className={styles.alreadyRefundedRow}>
+          <span>Refund for this request</span>
+          <span>{formatPrice(Math.max(0, Math.round((b.refundable - b.alreadyRefunded + Number.EPSILON) * 100) / 100))}</span>
         </p>
       )}
       <p className={styles.refundFootnote}>

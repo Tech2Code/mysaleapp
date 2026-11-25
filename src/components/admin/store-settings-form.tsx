@@ -47,6 +47,7 @@ import {
   type StoreSettingsValues,
 } from "@/features/settings/schema"
 import type { PromoCode, StoreSettings } from "@/features/settings/types"
+import { PAYMENT_GATEWAY_LABEL, PAYMENT_GATEWAY_PROVIDERS, type PaymentGatewayProvider } from "@/features/orders/types"
 import { formatWeightGrams } from "@/features/orders/pricing"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -153,16 +154,34 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     oversizedFee: s.oversizedFee,
     freeWeightGrams: s.freeWeightGrams,
     extraWeightFeePerKg: s.extraWeightFeePerKg,
+    paymentMode: s.paymentMode,
+    paymentGateway: s.paymentGateway,
     upiId: s.upiId ?? "",
     upiPayeeName: s.upiPayeeName ?? "",
   }
 }
 
+const PAYMENT_MODE_OPTIONS = [
+  { value: "manual_upi", label: "Direct UPI (₹0 fee · manual UTR verification)" },
+  { value: "gateway", label: "Payment Gateway (Auto-verified online checkout)" },
+]
+
+const PAYMENT_GATEWAY_OPTIONS = PAYMENT_GATEWAY_PROVIDERS.map((p) => ({
+  value: p,
+  label: PAYMENT_GATEWAY_LABEL[p],
+}))
+
 /**
  * Everything the owner can change without touching code.
  * Two columns on wide screens so no side is left empty; one save bar covers the whole page.
  */
-export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
+export function StoreSettingsForm({
+  settings,
+  configuredGateways = [],
+}: {
+  settings: StoreSettings
+  configuredGateways?: PaymentGatewayProvider[]
+}) {
   const [visitKey, setVisitKey] = useState(0)
   const [baseline, setBaseline] = useState<StoreSettingsInput>(() => toFormValues(settings))
   const [prevSettings, setPrevSettings] = useState(settings)
@@ -178,15 +197,17 @@ export function StoreSettingsForm({ settings }: { settings: StoreSettings }) {
     }
   }, [])
 
-  return <StoreSettingsFormInner key={visitKey} baseline={baseline} onSaved={setBaseline} />
+  return <StoreSettingsFormInner key={visitKey} baseline={baseline} onSaved={setBaseline} configuredGateways={configuredGateways} />
 }
 
 function StoreSettingsFormInner({
   baseline,
   onSaved,
+  configuredGateways,
 }: {
   baseline: StoreSettingsInput
   onSaved: (next: StoreSettingsInput) => void
+  configuredGateways: PaymentGatewayProvider[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -202,12 +223,12 @@ function StoreSettingsFormInner({
   const socialDirty = hasDirty(df, "instagramUrl", "facebookUrl")
   const seoDirty = hasDirty(df, "keywords")
   const contactDirty = hasDirty(df, "whatsappNumber", "phoneSameAsWhatsapp", "phone", "email", "city", "region")
-  const paymentDirty = hasDirty(df, "upiId", "upiPayeeName")
+  const paymentDirty = hasDirty(df, "paymentMode", "paymentGateway", "upiId", "upiPayeeName")
   const taxDirty = hasDirty(df, "gstRegistered", "gstRate", "gstin", "priceNote", "legalName", "businessAddress")
   const deliveryDirty = hasDirty(df, "deliveryFee", "freeDeliveryAbove", "fragileFee", "oversizedFee", "freeWeightGrams", "extraWeightFeePerKg")
   const ordersDirty = hasDirty(df, "orderCodePrefix", "unpaidOrderExpiryHours", "returnWindowDays")
   const [pincode, setPincode] = useState("")
-  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal] = useWatch({
+  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, paymentModeNow, paymentGatewayNow] = useWatch({
     control: form.control,
     name: [
       "deliveryFee",
@@ -222,6 +243,8 @@ function StoreSettingsFormInner({
       "phoneSameAsWhatsapp",
       "gstRegistered",
       "region",
+      "paymentMode",
+      "paymentGateway",
     ],
   })
 
@@ -306,10 +329,13 @@ function StoreSettingsFormInner({
           oversizedFee: values.oversizedFee,
           freeWeightGrams: values.freeWeightGrams,
           extraWeightFeePerKg: values.extraWeightFeePerKg,
+          paymentMode: values.paymentMode,
+          paymentGateway: values.paymentGateway,
           upiId: values.upiId ?? "",
           upiPayeeName: values.upiPayeeName ?? "",
         }
         onSaved(nextBaseline)
+        setPincode("")
         form.reset(nextBaseline)
         router.refresh()
       })
@@ -468,10 +494,37 @@ function StoreSettingsFormInner({
 
           <Card
             title="Payment (UPI)"
-            description="Customers pay this UPI ID at checkout and enter the UTR to place their order. You verify it in your UPI/bank app and confirm the order. Cash on delivery isn't offered."
+            description="Direct UPI keeps fees at ₹0 with manual UTR verification. Switch to Payment Gateway anytime once your gateway API keys are configured in environment variables."
             icon={IndianRupeeIcon}
             dirty={paymentDirty}
           >
+            <div className={styles.twoColFields}>
+              <FormSelectField
+                control={form.control}
+                name="paymentMode"
+                label="Checkout payment mode"
+                fieldSize="md"
+                options={PAYMENT_MODE_OPTIONS}
+                error={errors.paymentMode?.message}
+              />
+              {paymentModeNow === "gateway" && (
+                <FormSelectField
+                  control={form.control}
+                  name="paymentGateway"
+                  label="Gateway provider"
+                  fieldSize="md"
+                  options={PAYMENT_GATEWAY_OPTIONS}
+                  error={errors.paymentGateway?.message}
+                />
+              )}
+            </div>
+            {paymentModeNow === "gateway" && (
+              <p className={styles.deliveryPreviewBox}>
+                {configuredGateways.includes((paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider)
+                  ? `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are configured and ready for auto-verified online payments.`
+                  : `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are not configured in environment variables yet. See payment-gateway-setup.md before enabling Gateway mode.`}
+              </p>
+            )}
             <div className={styles.twoColFields}>
               <TextField
                 label="UPI ID" kind="upiId"
@@ -479,7 +532,7 @@ function StoreSettingsFormInner({
                 placeholder="yourshop@okhdfcbank"
                 autoCapitalize="none"
                 autoComplete="off"
-                hint="Shown on the payment screen and used in the QR code."
+                hint={paymentModeNow === "gateway" ? "Optional fallback / refund reference UPI ID." : "Shown on the payment screen and used in the QR code."}
                 error={errors.upiId?.message}
                 {...form.register("upiId")}
               />
@@ -661,7 +714,15 @@ function StoreSettingsFormInner({
         </div>
       </div>
 
-      <StickySaveBar dirty={isDirty} pending={pending} saveLabel="Save settings" />
+      <StickySaveBar
+        dirty={isDirty}
+        pending={pending}
+        saveLabel="Save settings"
+        onCancel={() => {
+          form.reset(baseline)
+          setPincode("")
+        }}
+      />
     </form>
   )
 }
@@ -894,7 +955,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
                     </span>
                     {promo.expiresAt && (
                       <span>
-                        {isExpired ? "Expired" : "Expires"} {formatDate(`${promo.expiresAt}T00:00:00`)}
+                        {isExpired ? "Expired" : "Expires"} {formatDate(`${promo.expiresAt}T00:00:00+05:30`)}
                       </span>
                     )}
                   </div>
@@ -932,7 +993,7 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
         }}
       >
         <DialogContent mobileFullScreen className={styles.dialogLgMax}>
-          <DialogHeader>
+          <DialogHeader showCloseButton={!pending}>
             <DialogTitle>Create promo code</DialogTitle>
             <DialogDescription>
               Customers can apply this code at checkout. You can disable or delete it anytime.

@@ -9,7 +9,7 @@ import { fail, type ActionResult } from "@/lib/action-result"
 import { formatDateTime } from "@/lib/format"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { LIMITS, v } from "@/lib/validation"
-import { expectedDeliveryProblem, paymentReferenceSchema, shippingSchema } from "./schema"
+import { expectedDeliveryProblem, gatewayReferenceSchema, shippingSchema } from "./schema"
 import { lockedMessage } from "./locking"
 import { isPaymentMoneyLocked, paymentUpdateProblem } from "./payment-rules"
 import { mapRpcError } from "./rpc-errors"
@@ -223,8 +223,8 @@ const updatePaymentSchema = z.object({
   orderId: z.uuid(),
   status: z.enum(PAYMENT_STATUSES),
   method: z.preprocess(blankToNull, z.enum(PAYMENT_METHODS).nullable()),
-  /** UTR / transaction id. */
-  reference: z.preprocess(blankToNull, paymentReferenceSchema.nullable()),
+  /** UTR / transaction id / gateway payment or refund id. */
+  reference: z.preprocess(blankToNull, gatewayReferenceSchema.nullable()),
   /** Amount actually received (₹). Defaults to the order total when marking as paid. */
   amount: v.optionalMoney(LIMITS.paymentAmount.max),
   /** Shown to the customer (e.g. why a payment was rejected). */

@@ -167,6 +167,9 @@ function CartLayout({
           href="/checkout"
           aria-disabled={hasUnavailable}
           tabIndex={hasUnavailable ? -1 : undefined}
+          onClick={(e) => {
+            if (hasUnavailable) e.preventDefault()
+          }}
           className={cn(
             buttonVariants({ size: "lg" }),
             styles.proceedCheckoutBtn,

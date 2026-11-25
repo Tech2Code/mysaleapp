@@ -38,7 +38,7 @@ export type ValidatedPromo = {
   discountAmount: number
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+const round2 = (n: number) => Math.round((n + (n >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
 
 /**
  * Mirrors PostgreSQL `public.compute_promo_discount`:
@@ -54,7 +54,7 @@ export function computePromoDiscount(
   if (sub <= 1 || sub < promo.minOrderAmount) return 0
   let raw = 0
   if (promo.discountType === "percent") {
-    raw = round2((sub * promo.discountValue) / 100)
+    raw = Math.floor((Math.round(sub * 100) * Math.round(promo.discountValue * 100) + 5000) / 10000) / 100
     if (promo.maxDiscountAmount != null && raw > promo.maxDiscountAmount) {
       raw = round2(promo.maxDiscountAmount)
     }

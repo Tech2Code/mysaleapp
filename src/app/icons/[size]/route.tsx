@@ -15,7 +15,7 @@ export function generateStaticParams() {
 /** PWA icons (the brand glyph, independent of the shop name). */
 export async function GET(_req: Request, { params }: RouteContext<"/icons/[size]">) {
   const { size } = await params
+  if (!Object.hasOwn(VARIANTS, size)) return new Response("Not found", { status: 404 })
   const v = VARIANTS[size]
-  if (!v) return new Response("Not found", { status: 404 })
   return new ImageResponse(<BrandMark size={v.size} padding={v.padding} />, { width: v.size, height: v.size })
 }

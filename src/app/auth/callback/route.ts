@@ -127,6 +127,7 @@ export async function GET(request: NextRequest) {
 
     const isRecoveryFlow =
       !isNonRecoveryOtp &&
+      flow !== "oauth" &&
       (otpType === "recovery" ||
         flow === "recovery" ||
         nextPathname === "/admin/reset-password" ||

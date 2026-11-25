@@ -6,7 +6,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // "/" is included only to catch Supabase fallback redirects (/?code=... or /?error=...)
-  // and immediately forward them to /auth/callback; normal "/" requests return immediately.
-  matcher: ["/", "/admin/:path*", "/account/:path*", "/checkout", "/auth/:path*", "/login"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw\\.js|icons/|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)"],
 }

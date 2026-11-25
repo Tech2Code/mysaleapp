@@ -240,6 +240,7 @@ function ProductFormInner({
             weightGrams: values.weightGrams,
             shippingClass: values.shippingClass,
             returnWindowDays: values.returnWindowDays ?? null,
+            reviewAspects: values.reviewAspects,
             isActive: values.isActive,
             isFeatured: values.isFeatured,
             seoTitle: values.seoTitle ?? null,

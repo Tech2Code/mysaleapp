@@ -7,14 +7,28 @@ import { Header } from "@/components/store/header"
 import { InstallPrompt } from "@/components/store/install-prompt"
 import { MobileBottomNav } from "@/components/store/mobile-bottom-nav"
 import { WhatsAppFab } from "@/components/store/whatsapp-fab"
-import { getCategoriesWithCounts } from "@/features/products/queries"
+import { getCategoriesWithCounts, getActiveProducts } from "@/features/products/queries"
 import { getStoreSettings } from "@/features/settings/queries"
 import { organizationJsonLd } from "@/lib/seo"
 import styles from "./store-layout.module.css"
 
 export default async function StoreLayout({ children }: LayoutProps<"/">) {
-  const [categories, settings] = await Promise.all([getCategoriesWithCounts(), getStoreSettings()])
+  const [categories, products, settings] = await Promise.all([
+    getCategoriesWithCounts(),
+    getActiveProducts(),
+    getStoreSettings(),
+  ])
   const nav = categories.map(({ name, slug, count }) => ({ name, slug, count }))
+  const liveProducts = products.map(({ id, price, stock, name, images, slug, weightGrams, shippingClass }) => ({
+    id,
+    price,
+    stock,
+    name,
+    images,
+    slug,
+    weightGrams,
+    shippingClass,
+  }))
 
   return (
     <>
@@ -31,7 +45,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
       </main>
       <Footer categories={nav} shop={settings} />
       <MobileBottomNav />
-      <CartDrawer />
+      <CartDrawer products={liveProducts} />
       <WhatsAppFab />
       <InstallPrompt />
       <CookieBanner />

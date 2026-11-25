@@ -1,7 +1,8 @@
 import { z } from "zod"
+import { PAYMENT_GATEWAY_PROVIDERS, PAYMENT_MODES } from "@/features/orders/types"
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS, PATTERNS, todayIST, v } from "@/lib/validation"
-import { requiredNumber } from "@/lib/zod-helpers"
+import { hasMaxTwoDecimals, requiredNumber } from "@/lib/zod-helpers"
 
 /** 10-digit Indian numbers (including +91 / 0 prefixes) get 91 added; anything else must already include the country code. */
 export function normalizeWhatsappNumber(input: string): string {
@@ -87,6 +88,8 @@ export const storeSettingsSchema = z.object({
   extraWeightFeePerKg: v.money(LIMITS.deliveryFee.max, "Enter the rate per extra kg (0 = free)"),
 
   // ---- Payment ----
+  paymentMode: z.enum(PAYMENT_MODES).default("manual_upi"),
+  paymentGateway: z.enum(PAYMENT_GATEWAY_PROVIDERS).default("razorpay"),
   upiId: z.preprocess(
     (x) => (typeof x === "string" && x.trim() === "" ? null : x),
     v.upiId().nullable()
@@ -134,7 +137,7 @@ const optionalPositiveMoney = (max: number, label: string) =>
       .number({ error: label })
       .positive(label)
       .max(max, `At most ₹${max.toLocaleString("en-IN")}`)
-      .refine((n) => Math.round(n * 100) === n * 100, "Up to 2 decimal places")
+      .refine(hasMaxTwoDecimals, "Up to 2 decimal places")
       .nullable()
   )
 

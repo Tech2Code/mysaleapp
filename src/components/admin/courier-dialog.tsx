@@ -99,7 +99,7 @@ export function CourierDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent className={styles.dialogSmMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>

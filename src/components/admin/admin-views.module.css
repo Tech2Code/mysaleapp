@@ -49,7 +49,7 @@
 .tileMetaHeader .tilePrice { font-size: 16px; line-height: 24px; font-weight: 600; color: var(--foreground); }
 .tileMeta .tileTitleLink { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 19px; font-weight: 500; color: var(--foreground); transition: color 150ms ease; }
 .tileMeta .tileTitleLink:hover { color: var(--primary); }
-.productTile .tileFooter { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.productTile .tileFooter { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .tileFooter .tileSwitches { display: flex; align-items: center; gap: 12px; }
 .tileSwitches .switchItem { display: flex; align-items: center; gap: 6px; }
 .switchItem .switchLabel { font-size: 11px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }

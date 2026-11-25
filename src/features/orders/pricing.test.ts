@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { formatPrice, formatRating } from "@/lib/format"
 import type { StoreSettings } from "@/features/settings/types"
 import { applyPromoToCharges, calculateCharges, computePromoDiscount, describeProductSurcharges, formatWeightGrams } from "./pricing"
 
@@ -225,5 +226,27 @@ describe("computePromoDiscount & applyPromoToCharges", () => {
     expect(applied.promoCode).toBe("FLAT200")
     expect(applied.discountAmount).toBe(200)
     expect(applied.total).toBe(360)
+  })
+
+  it("rounds .xx5 percentage promos half-up in integer paise", () => {
+    const percent15 = {
+      code: "PCT15",
+      description: null,
+      discountType: "percent" as const,
+      discountValue: 15,
+      minOrderAmount: 0,
+      maxDiscountAmount: null,
+    }
+    expect(computePromoDiscount(percent15, 15.9)).toBe(2.39)
+  })
+})
+
+describe("price and rating formatting", () => {
+  it("formats whole rupees cleanly, preserves exact paise, and rounds ratings half-up", () => {
+    expect(formatPrice(505)).toBe("₹505")
+    expect(formatPrice(50.5)).toBe("₹50.50")
+    expect(formatPrice(454.5)).toBe("₹454.50")
+    expect(formatRating(4.35)).toBe("4.4")
+    expect(formatRating(3.85)).toBe("3.9")
   })
 })

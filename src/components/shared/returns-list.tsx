@@ -6,9 +6,16 @@ import { formatDateTime, formatPrice } from "@/lib/format"
 import styles from "./shared.module.css"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
-function returnValue(r: OrderReturn, items: OrderItem[], returns: OrderReturn[], discountAmount = 0, alreadyRefunded = 0): number {
+function returnValue(
+  r: OrderReturn,
+  items: OrderItem[],
+  returns: OrderReturn[],
+  discountAmount = 0,
+  alreadyRefunded = 0,
+  paidAmount?: number
+): number {
   const prior = returns.filter((o) => o.refunded && o.id !== r.id).flatMap((o) => o.items)
-  return netReturnRefund(items, r.items, { discountAmount, alreadyRefunded, priorReturnedLines: prior })
+  return netReturnRefund(items, r.items, { discountAmount, paidAmount, alreadyRefunded, priorReturnedLines: prior })
 }
 
 /**
@@ -27,7 +34,17 @@ export function ReturnsList({
   /** Customer view: say "Refund done" only when the whole order is refunded (else "Part refunded"). */
   refundedInFull?: boolean
   /** Admin only: lets a return recorded without a refund be refunded later (the order must still be 'paid'). */
-  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number; discountAmount?: number }
+  admin?: {
+    items: OrderItem[]
+    paymentStatus: string
+    refundedAmount: number
+    discountAmount?: number
+    paidAmount?: number
+    refundUpiId?: string | null
+    paymentReference?: string | null
+    customerName?: string
+    orderCode?: string
+  }
   /** Rendered inside another card (the Returns card): no outer card, a small sub-heading instead. */
   bare?: boolean
 }) {
@@ -63,7 +80,13 @@ export function ReturnsList({
             {r.reason && <p className={styles.returnReasonText}>Reason: {r.reason}</p>}
             {r.refunded ? (
               <p className={styles.refundSuccessText}>
-                {audience === "admin" && r.refundAmount ? `Refunded ${formatPrice(r.refundAmount)}` : refundedInFull ? "Refund done" : "Part refunded"}
+                {audience === "admin"
+                  ? r.refundAmount
+                    ? `Refunded ${formatPrice(r.refundAmount)}`
+                    : "Refund done"
+                  : refundedInFull
+                    ? "Refund done"
+                    : "Part refunded"}
               </p>
             ) : r.resolutionType === "exchange" ? (
               <p className={styles.exchangeBadgeText}>
@@ -76,8 +99,12 @@ export function ReturnsList({
                   {admin && admin.paymentStatus === "paid" && (
                     <RefundReturnButton
                       returnId={r.id}
-                      value={returnValue(r, admin.items, returns, admin.discountAmount ?? 0, admin.refundedAmount)}
+                      value={returnValue(r, admin.items, returns, admin.discountAmount ?? 0, admin.refundedAmount, admin.paidAmount)}
                       expectedRefunded={admin.refundedAmount}
+                      refundUpiId={admin.refundUpiId}
+                      paymentReference={admin.paymentReference}
+                      customerName={admin.customerName}
+                      orderCode={admin.orderCode}
                     />
                   )}
                 </div>

@@ -35,8 +35,8 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent showCloseButton={!pending} className={styles.confirmDialogMax}>
-        <DialogHeader>
+      <DialogContent className={styles.confirmDialogMax}>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {description && (

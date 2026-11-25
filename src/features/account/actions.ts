@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { cookies, headers } from "next/headers"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
-import { getCurrentUser, hasValidPasswordResetCookie } from "@/features/auth/guards"
+import { assertActiveCustomer, getCurrentUser, hasValidPasswordResetCookie } from "@/features/auth/guards"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { getStoreSettings } from "@/features/settings/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
@@ -40,17 +40,13 @@ export async function getMyProfile(opts?: { consumeReactivated?: boolean }): Pro
     .select("full_name, phone, avatar_url, deactivated_at")
     .eq("id", user.id)
     .maybeSingle<ProfileRow>()
+  if (data?.deactivated_at) return null
 
   const inRecovery = hasValidPasswordResetCookie(cookieStore.get("kk_cust_pw_reset")?.value, "customer", user.id)
   let reactivated = false
-  if (opts?.consumeReactivated && !inRecovery) {
-    if (cookieStore.get("kk_acct_reactivated")?.value === "1") {
-      cookieStore.delete("kk_acct_reactivated")
-      reactivated = true
-    } else if (data?.deactivated_at) {
-      const { data: restored } = await supabase.rpc("reactivate_my_account")
-      reactivated = Boolean(restored)
-    }
+  if (opts?.consumeReactivated && !inRecovery && cookieStore.get("kk_acct_reactivated")?.value === "1") {
+    cookieStore.delete("kk_acct_reactivated")
+    reactivated = true
   }
   const providers = Array.isArray(user.app_metadata?.providers) ? (user.app_metadata.providers as string[]) : []
   const hasEmailProvider =
@@ -72,8 +68,9 @@ export async function getMyProfile(opts?: { consumeReactivated?: boolean }): Pro
 export async function updateProfile(
   input: unknown
 ): Promise<ActionResult<{ email: string; emailConfirmationSentTo: string | null }>> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Not signed in")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  const user = auth.user
 
   const parsed = profileSchema.safeParse(input)
   if (!parsed.success) {
@@ -85,7 +82,7 @@ export async function updateProfile(
   const currentEmail = (user.email ?? "").trim()
   const requestedEmail = p.email?.trim().toLowerCase()
   const isEmailChanged = Boolean(requestedEmail && requestedEmail !== currentEmail.toLowerCase())
-  if (isEmailChanged && (await limited("password-reset", user.id))) {
+  if (await limited(isEmailChanged ? "password-reset" : "place-order", `profile:${user.id}`)) {
     return fail(RATE_LIMIT_MESSAGE)
   }
 
@@ -226,8 +223,9 @@ export async function changeCustomerPassword(input: unknown): Promise<ActionResu
  * Signing back in later automatically restores the account.
  */
 export async function deactivateMyAccount(input: unknown): Promise<ActionResult> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Not signed in")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  const user = auth.user
 
   const parsed = deactivateAccountSchema.safeParse(input ?? {})
   if (!parsed.success) {
@@ -285,8 +283,11 @@ function escapeHtml(value: unknown): string {
  * can open and read their data effortlessly on mobile or desktop.
  */
 export async function exportMyAccountData(): Promise<ActionResult<AccountDataExport>> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Please sign in to download your account data.")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) {
+    return fail(auth.error === "Not signed in" ? "Please sign in to download your account data." : auth.error)
+  }
+  const user = auth.user
 
   if (await limited("track-order", `export:${user.id}`)) {
     return fail(RATE_LIMIT_MESSAGE)

@@ -1,3 +1,5 @@
+import type { PaymentGatewayProvider, PaymentMode } from "@/features/orders/types"
+
 /**
  * Everything the shop owner can change from Admin → Settings, without touching code.
  * Defaults live in ./defaults.ts and are used until a value is saved.
@@ -66,6 +68,10 @@ export type StoreSettings = {
   extraWeightFeePerKg: number
 
   // ---- Payment ----
+  /** "manual_upi" (₹0 gateway fee, UTR verification) or "gateway" (auto-verified online checkout). */
+  paymentMode: PaymentMode
+  /** Selected provider when paymentMode === "gateway". */
+  paymentGateway: PaymentGatewayProvider
   /** UPI ID customers pay to (e.g. "shop@okhdfcbank"). null until set. */
   upiId: string | null
   /** Name shown in the customer's UPI app when paying. */

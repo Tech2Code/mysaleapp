@@ -166,14 +166,6 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
     getServerSupabase(),
   ])
 
-  // Only send the admin recovery email if this address actually belongs to an admin account.
-  const { data: isAdminEmail, error: rpcErr } = await supabase.rpc("is_admin_email", {
-    p_email: parsed.data.email,
-  })
-  if (!rpcErr && isAdminEmail !== true) {
-    return { ok: true }
-  }
-
   cookieStore.set("kk_recovery_intent", "admin", {
     httpOnly: true,
     sameSite: "lax",
@@ -182,17 +174,17 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
     path: "/",
   })
 
-  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+  // Only send the admin recovery email if this address actually belongs to an admin account.
+  const { data: isAdminEmail, error: rpcErr } = await supabase.rpc("is_admin_email", {
+    p_email: parsed.data.email,
+  })
+  if (!rpcErr && isAdminEmail !== true) {
+    return { ok: true }
+  }
+
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: origin ? `${origin}/auth/callback?flow=recovery&next=${encodeURIComponent("/admin/reset-password")}` : undefined,
   })
-  if (error) {
-    const msg = error.message.toLowerCase()
-    if (msg.includes("rate limit") || error.code === "over_email_send_rate_limit") {
-      return fail(
-        "Email limit reached on Supabase's free mail sender. Please wait a few minutes and try again."
-      )
-    }
-  }
   return { ok: true }
 }
 
@@ -308,7 +300,10 @@ export async function changeAdminPin(input: unknown): Promise<ActionResult<{ unl
     }
   }
 
-  const { error } = await supabase.rpc("set_admin_pin", { p_pin: parsed.data.next })
+  const { error } = await supabase.rpc("set_admin_pin", {
+    p_pin: parsed.data.next,
+    p_current_pin: parsed.data.authMethod === "pin" ? (parsed.data.currentPin ?? null) : null,
+  })
   if (error) return fail("Could not update your PIN. Please try again.")
 
   const now = Date.now()
@@ -331,13 +326,14 @@ export async function disableAdminPin(input?: unknown): Promise<ActionResult<{ u
   const { data: stateData } = await supabase.rpc("get_admin_pin_state")
   const state = (stateData ?? {}) as RpcPinState
 
+  let currentPinForRpc: string | null = null
   if (state.mode === "enabled" && state.hasPin) {
     const body = (input && typeof input === "object" ? input : {}) as {
-      currentPin?: string
-      password?: string
+      currentPin?: unknown
+      password?: unknown
     }
-    const pinCandidate = (body.currentPin ?? "").trim()
-    const pwCandidate = body.password ?? ""
+    const pinCandidate = typeof body.currentPin === "string" ? body.currentPin.trim() : ""
+    const pwCandidate = typeof body.password === "string" ? body.password : ""
     if (pinCandidate) {
       const { data: verifyRes, error: verifyErr } = await supabase.rpc("verify_admin_pin", {
         p_pin: pinCandidate,
@@ -348,6 +344,7 @@ export async function disableAdminPin(input?: unknown): Promise<ActionResult<{ u
           currentPin: [resObj.error || "Incorrect PIN"],
         })
       }
+      currentPinForRpc = pinCandidate
     } else if (pwCandidate) {
       if (!auth.user.email) return fail("This account has no email to verify with.")
       const check = await supabase.auth.signInWithPassword({
@@ -364,7 +361,9 @@ export async function disableAdminPin(input?: unknown): Promise<ActionResult<{ u
     }
   }
 
-  const { error } = await supabase.rpc("disable_admin_pin")
+  const { error } = await supabase.rpc("disable_admin_pin", {
+    p_current_pin: currentPinForRpc,
+  })
   if (error) return fail("Could not turn off PIN lock. Please try again.")
 
   const now = Date.now()

@@ -64,6 +64,11 @@ describe("returnableQuantities", () => {
   it("is empty with no items", () => {
     expect(returnableQuantities([], []).size).toBe(0)
   })
+  it("excludes exchange returns from subtracted quantities", () => {
+    const exchangeRet = { items: [{ productId: "a", quantity: 2 }], resolutionType: "exchange" } as unknown as OrderReturn
+    const m = returnableQuantities([item("a", 3)], [exchangeRet, ret(["a", 1])])
+    expect(m.get("a")).toBe(2)
+  })
 })
 
 describe("composeReturnDetails / splitReturnDetails", () => {

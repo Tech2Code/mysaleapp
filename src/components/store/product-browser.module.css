@@ -34,7 +34,7 @@
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
   .stickyFilterBar .controlsRow { flex-direction: row; align-items: center; gap: 12px; }
-  .controlsRow .sortSelectWidth { display: block; width: 224px; }
+  .controlsRow .sortSelectWidth { display: block; width: 232px; flex: 0 0 232px; }
   .controlsRow .mobileSortRow { display: none; }
   .stickyFilterBar .chipsRow { flex-wrap: wrap; }
   .browserGrid { column-gap: 24px; }

@@ -1,6 +1,6 @@
 // Admin account: login email / password schemas. The customer's profile schema lives in features/account/schema.ts.
 import { z } from "zod"
-import { v } from "@/lib/validation"
+import { PATTERNS, v } from "@/lib/validation"
 
 /** Shared by the admin account forms (browser) and the server actions, so both check the same rules. */
 
@@ -52,7 +52,7 @@ export const changePinSchema = z
   })
   .refine((d) => d.next === d.confirm, { message: "PINs don't match", path: ["confirm"] })
   .superRefine((d, ctx) => {
-    if (d.authMethod === "pin" && !/^\d{4}$/.test(d.currentPin ?? "")) {
+    if (d.authMethod === "pin" && !PATTERNS.adminPin.test(d.currentPin ?? "")) {
       ctx.addIssue({
         code: "custom",
         message: "Enter your current 4-digit PIN",
@@ -84,7 +84,7 @@ export const unlockPinWithPasswordSchema = z
     newPin: z.string().trim().optional(),
     confirmPin: z.string().trim().optional(),
   })
-  .refine((d) => d.action !== "reset" || /^\d{4}$/.test(d.newPin ?? ""), {
+  .refine((d) => d.action !== "reset" || PATTERNS.adminPin.test(d.newPin ?? ""), {
     message: "Enter a new 4-digit PIN",
     path: ["newPin"],
   })

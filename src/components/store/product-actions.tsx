@@ -9,6 +9,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { SearchField, SelectField, TextAreaField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { Carousel } from "@/components/shared/carousel"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Breadcrumbs } from "@/components/store/page-header"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -25,7 +26,7 @@ import {
 import { deleteProductReview, getMyProductReviewState, submitProductReview } from "@/features/products/actions"
 import { productReviewSchema, type ProductReviewInput, type ProductReviewValues } from "@/features/products/schema"
 import type { Product, ProductReview } from "@/features/products/types"
-import { discountPercent, formatDate, formatPrice } from "@/lib/format"
+import { discountPercent, formatDate, formatPrice, formatRating } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
@@ -193,12 +194,101 @@ type ReviewEligibilityState = {
   myReview: ProductReview | null
 }
 
+type PersistedReviewSnapshot = {
+  userId: string
+  isAdmin: boolean
+  deliveredProductIds: string[]
+  reviews: Record<string, ProductReview>
+}
+
+const REVIEW_SNAPSHOT_STORAGE_KEY = "kk-review-eligibility"
 const reviewStateCache = new Map<string, ReviewEligibilityState>()
 const reviewStateInFlight = new Map<string, Promise<ReviewEligibilityState>>()
+let memorySnapshot: PersistedReviewSnapshot | null = null
+
+function readPersistedSnapshot(userId: string): PersistedReviewSnapshot | null {
+  if (memorySnapshot && memorySnapshot.userId === userId) return memorySnapshot
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(REVIEW_SNAPSHOT_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PersistedReviewSnapshot | null
+    if (!parsed || parsed.userId !== userId) return null
+    memorySnapshot = parsed
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writePersistedSnapshot(snapshot: PersistedReviewSnapshot | null) {
+  memorySnapshot = snapshot
+  if (typeof window === "undefined") return
+  try {
+    if (!snapshot) {
+      window.localStorage.removeItem(REVIEW_SNAPSHOT_STORAGE_KEY)
+    } else {
+      window.localStorage.setItem(REVIEW_SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot))
+    }
+  } catch {}
+}
+
+export function primeUserReviewStateCache(
+  userId: string,
+  data: { isAdmin: boolean; deliveredProductIds: string[]; reviews: ProductReview[] }
+) {
+  const reviewsMap: Record<string, ProductReview> = {}
+  for (const r of data.reviews) {
+    reviewsMap[r.productId] = r
+  }
+  const snapshot: PersistedReviewSnapshot = {
+    userId,
+    isAdmin: data.isAdmin,
+    deliveredProductIds: data.deliveredProductIds,
+    reviews: reviewsMap,
+  }
+  writePersistedSnapshot(snapshot)
+  for (const pid of data.deliveredProductIds) {
+    reviewStateCache.set(`${userId}:${pid}`, {
+      canReview: true,
+      isAdmin: data.isAdmin,
+      myReview: reviewsMap[pid] ?? null,
+    })
+  }
+  for (const r of data.reviews) {
+    reviewStateCache.set(`${userId}:${r.productId}`, {
+      canReview: true,
+      isAdmin: data.isAdmin,
+      myReview: r,
+    })
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("kk-review-cache-primed"))
+  }
+}
+
+export function clearUserReviewStateCache() {
+  reviewStateCache.clear()
+  reviewStateInFlight.clear()
+  writePersistedSnapshot(null)
+}
 
 function getCachedReviewState(userId: string | undefined, productId: string): ReviewEligibilityState | null {
   if (!userId || productId.startsWith("ph-")) return null
-  return reviewStateCache.get(`${userId}:${productId}`) ?? null
+  const key = `${userId}:${productId}`
+  const direct = reviewStateCache.get(key)
+  if (direct) return direct
+  const snap = readPersistedSnapshot(userId)
+  if (!snap) return null
+  const myReview = snap.reviews[productId] ?? null
+  const canReview = Boolean(myReview) || snap.deliveredProductIds.includes(productId)
+  const resolved: ReviewEligibilityState = {
+    canReview,
+    isAdmin: snap.isAdmin,
+    myReview,
+  }
+  reviewStateCache.set(key, resolved)
+  return resolved
 }
 
 function fetchProductReviewStateCached(userId: string, productId: string): Promise<ReviewEligibilityState> {
@@ -211,6 +301,20 @@ function fetchProductReviewStateCached(userId: string, productId: string): Promi
     .then((res) => {
       reviewStateCache.set(key, res)
       reviewStateInFlight.delete(key)
+      const snap = readPersistedSnapshot(userId)
+      if (snap) {
+        const nextDelivered = new Set(snap.deliveredProductIds)
+        if (res.canReview) nextDelivered.add(productId)
+        const nextReviews = { ...snap.reviews }
+        if (res.myReview) nextReviews[productId] = res.myReview
+        else delete nextReviews[productId]
+        writePersistedSnapshot({
+          userId,
+          isAdmin: res.isAdmin,
+          deliveredProductIds: Array.from(nextDelivered),
+          reviews: nextReviews,
+        })
+      }
       return res
     })
     .catch((err) => {
@@ -221,7 +325,30 @@ function fetchProductReviewStateCached(userId: string, productId: string): Promi
   return req
 }
 
-function invalidateProductReviewStateCache(productId?: string) {
+function upsertPersistedProductReview(userId: string | undefined, review: ProductReview) {
+  if (!userId) return
+  const key = `${userId}:${review.productId}`
+  const prev = reviewStateCache.get(key)
+  const snap = readPersistedSnapshot(userId)
+  const isAdmin = prev?.isAdmin ?? snap?.isAdmin ?? false
+  const nextState: ReviewEligibilityState = {
+    canReview: true,
+    isAdmin,
+    myReview: review,
+  }
+  reviewStateCache.set(key, nextState)
+  const nextDelivered = new Set(snap?.deliveredProductIds ?? [])
+  nextDelivered.add(review.productId)
+  const nextReviews = { ...(snap?.reviews ?? {}), [review.productId]: review }
+  writePersistedSnapshot({
+    userId,
+    isAdmin,
+    deliveredProductIds: Array.from(nextDelivered),
+    reviews: nextReviews,
+  })
+}
+
+function invalidateProductReviewStateCache(productId?: string, removePersistedReview = false) {
   if (!productId) {
     reviewStateCache.clear()
     reviewStateInFlight.clear()
@@ -234,20 +361,70 @@ function invalidateProductReviewStateCache(productId?: string) {
   for (const key of reviewStateInFlight.keys()) {
     if (key.endsWith(suffix)) reviewStateInFlight.delete(key)
   }
+  if (removePersistedReview && memorySnapshot && memorySnapshot.reviews[productId]) {
+    const nextReviews = { ...memorySnapshot.reviews }
+    delete nextReviews[productId]
+    writePersistedSnapshot({
+      ...memorySnapshot,
+      reviews: nextReviews,
+    })
+  }
+}
+
+function reviewTimestampMs(review: Pick<ProductReview, "createdAt" | "updatedAt">): number {
+  const raw = review.updatedAt || review.createdAt
+  const ms = new Date(raw).getTime()
+  return Number.isFinite(ms) ? ms : 0
+}
+
+function formatReviewDateLabel(review: Pick<ProductReview, "createdAt" | "updatedAt">): string {
+  const createdMs = new Date(review.createdAt).getTime()
+  const updatedMs = review.updatedAt ? new Date(review.updatedAt).getTime() : createdMs
+  if (Number.isFinite(createdMs) && Number.isFinite(updatedMs) && updatedMs - createdMs >= 500) {
+    return `Edited · ${formatDate(review.updatedAt)}`
+  }
+  return formatDate(review.updatedAt || review.createdAt)
+}
+
+function mergeLiveReviews(
+  serverReviews: readonly ProductReview[],
+  liveMyReview: ProductReview | null,
+  deletedIds?: ReadonlySet<string>
+): ProductReview[] {
+  const base = deletedIds && deletedIds.size > 0
+    ? serverReviews.filter((r) => !deletedIds.has(r.id))
+    : [...serverReviews]
+  if (!liveMyReview || (deletedIds && deletedIds.has(liveMyReview.id))) {
+    return base
+  }
+  const idx = base.findIndex(
+    (r) => r.id === liveMyReview.id || (Boolean(liveMyReview.userId) && r.userId === liveMyReview.userId)
+  )
+  if (idx >= 0) {
+    const existing = base[idx]
+    const existingTime = reviewTimestampMs(existing)
+    const liveTime = reviewTimestampMs(liveMyReview)
+    if (!Number.isFinite(existingTime) || liveTime >= existingTime) {
+      base[idx] = { ...existing, ...liveMyReview, createdAt: existing.createdAt || liveMyReview.createdAt }
+    }
+    return base
+  }
+  return [liveMyReview, ...base]
 }
 
 function parseLovedAspects(title: string | null | undefined, aspects: readonly string[]): Record<string, "up" | "down"> {
+  void aspects
   if (!title) return {}
   const out: Record<string, "up" | "down"> = {}
   const segments = title.split("|").map((s) => s.trim())
   for (const seg of segments) {
     if (seg.startsWith(LOVED_PREFIX)) {
       for (const part of seg.slice(LOVED_PREFIX.length).split(",").map((s) => s.trim())) {
-        if (aspects.includes(part)) out[part] = "up"
+        if (part) out[part] = "up"
       }
     } else if (seg.startsWith(DISLIKED_PREFIX)) {
       for (const part of seg.slice(DISLIKED_PREFIX.length).split(",").map((s) => s.trim())) {
-        if (aspects.includes(part)) out[part] = "down"
+        if (part) out[part] = "down"
       }
     }
   }
@@ -283,16 +460,27 @@ function extractAspectPills(title?: string | null): { liked: string[]; disliked:
 }
 
 function formatLovedTitle(votes: Record<string, "up" | "down">, aspects: readonly string[], fallbackTitle?: string | null): string {
-  const liked = aspects.filter((aspect) => votes[aspect] === "up")
-  const disliked = aspects.filter((aspect) => votes[aspect] === "down")
-  const parts: string[] = []
-  if (liked.length > 0) parts.push(`${LOVED_PREFIX}${liked.join(", ")}`)
-  if (disliked.length > 0) parts.push(`${DISLIKED_PREFIX}${disliked.join(", ")}`)
-  if (parts.length > 0) {
-    return parts.join(" | ").slice(0, 100)
+  const orderedAspects = [...aspects, ...Object.keys(votes).filter((k) => !aspects.includes(k))]
+  const liked = orderedAspects.filter((aspect) => votes[aspect] === "up")
+  const disliked = orderedAspects.filter((aspect) => votes[aspect] === "down")
+  const build = () => {
+    const parts: string[] = []
+    if (liked.length > 0) parts.push(`${LOVED_PREFIX}${liked.join(", ")}`)
+    if (disliked.length > 0) parts.push(`${DISLIKED_PREFIX}${disliked.join(", ")}`)
+    return parts.join(" | ")
+  }
+  if (liked.length > 0 || disliked.length > 0) {
+    let text = build()
+    while (text.length > 400) {
+      if (disliked.length > 0) disliked.pop()
+      else if (liked.length > 0) liked.pop()
+      else break
+      text = build()
+    }
+    return text
   }
   if (fallbackTitle && !fallbackTitle.startsWith(LOVED_PREFIX) && !fallbackTitle.startsWith(DISLIKED_PREFIX)) {
-    return fallbackTitle.slice(0, 100)
+    return fallbackTitle.slice(0, 400)
   }
   return ""
 }
@@ -399,9 +587,10 @@ function ShareExperienceDialog({
   initialRating: number
   existingReview: ProductReview | null
   subtitle?: string
-  onSaved: (savedRating: number) => void
+  onSaved: (savedReview: ProductReview) => void
 }) {
   const router = useRouter()
+  const { user } = useAuth()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -464,9 +653,33 @@ function ShareExperienceDialog({
         toast.error(res.error)
         return
       }
+      const nowMs = Date.now()
+      const nowIso = new Date(nowMs).toISOString()
+      const createdAtIso = existingReview?.createdAt ?? nowIso
+      const createdMs = new Date(createdAtIso).getTime()
+      const updatedAtIso = existingReview
+        ? new Date(Math.max(nowMs, (Number.isFinite(createdMs) ? createdMs : nowMs) + 1000)).toISOString()
+        : nowIso
+      const savedReview: ProductReview = {
+        id: res.data.id || existingReview?.id || `temp-${nowMs}`,
+        productId: product.id,
+        userId: existingReview?.userId || user?.id || "",
+        reviewerName:
+          existingReview?.reviewerName ||
+          user?.name?.trim() ||
+          user?.email?.split("@")[0] ||
+          "Verified Buyer",
+        rating: values.rating,
+        title: computedTitle || null,
+        comment: values.comment.trim(),
+        isVerifiedPurchase: true,
+        createdAt: createdAtIso,
+        updatedAt: updatedAtIso,
+      }
+      upsertPersistedProductReview(user?.id, savedReview)
       later(() => {
         onOpenChange(false)
-        onSaved(values.rating)
+        onSaved(savedReview)
         toast.success(existingReview ? "Your review has been updated!" : "Thank you for sharing your experience!")
       })
       router.refresh()
@@ -611,7 +824,7 @@ function ShareExperienceDialog({
 export function OrderItemReviewWidget({
   item,
 }: {
-  item: { productId: string; slug: string; name: string; image: string | null }
+  item: { productId: string; slug: string; name: string; image: string | null; reviewAspects?: string[] }
 }) {
   const router = useRouter()
   const { user, ready: authReady } = useAuth()
@@ -654,15 +867,22 @@ export function OrderItemReviewWidget({
 
   useEffect(() => {
     const onReviewSync = (e: Event) => {
-      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      const detail = (e as CustomEvent<{ productId?: string; review?: ProductReview | null }>).detail
+      const pid = detail?.productId
       if (!pid || pid === item.productId) {
+        if (detail && "review" in detail) {
+          setMyReview(detail.review ?? null)
+          setDraftRating(detail.review?.rating ?? 0)
+          if (user) setLoadedKey(`${user.id}:${item.productId}`)
+          return
+        }
         invalidateProductReviewStateCache(item.productId)
         setLoadedKey(null)
       }
     }
     window.addEventListener("kk-review-updated", onReviewSync)
     return () => window.removeEventListener("kk-review-updated", onReviewSync)
-  }, [item.productId])
+  }, [item.productId, user])
 
   const handleStarSelect = (star: number) => {
     if (!user) {
@@ -675,44 +895,67 @@ export function OrderItemReviewWidget({
 
   return (
     <div className={styles.orderReviewWidget}>
-      <div className={styles.widgetHeaderRow}>
-        <div>
-          <p className={styles.widgetKicker}>
-            Rate your experience
-          </p>
-          <p className={styles.widgetTitle}>
-            {myReview ? "Your product rating (tap a star to edit)" : "Rate a product"}
-          </p>
+      {myReview ? (
+        <div className={styles.orderReviewedRow}>
+          <div className={styles.orderReviewedMeta}>
+            <span className={styles.orderReviewedLabel}>Your rating</span>
+            <StarRow rating={myReview.rating} size="sm" />
+            <span className={styles.ratingWordBadge}>
+              {RATING_LABELS[myReview.rating] ?? "Great"}
+            </span>
+          </div>
+          <div className={styles.orderReviewedActions}>
+            <button
+              type="button"
+              onClick={() => handleStarSelect(myReview.rating)}
+              className={styles.editMyReviewLink}
+            >
+              <PencilIcon className={styles.icon12} aria-hidden /> Edit
+            </button>
+            <Link
+              href={`/products/${item.slug}/reviews`}
+              className={styles.viewReviewsLink}
+            >
+              All reviews →
+            </Link>
+          </div>
         </div>
-        {myReview && (
-          <Link
-            href={`/products/${item.slug}/reviews`}
-            className={styles.viewReviewsLink}
-          >
-            View reviews →
-          </Link>
-        )}
-      </div>
+      ) : (
+        <>
+          <div className={styles.widgetHeaderRow}>
+            <div>
+              <p className={styles.widgetKicker}>
+                Rate your experience
+              </p>
+              <p className={styles.widgetTitle}>
+                Tap a star to rate this product
+              </p>
+            </div>
+          </div>
 
-      <div className={styles.widgetPickerWrap}>
-        <InteractiveStarPicker
-          size="sm"
-          value={myReview?.rating ?? draftRating}
-          onSelect={handleStarSelect}
-        />
-      </div>
+          <div className={styles.widgetPickerWrap}>
+            <InteractiveStarPicker
+              size="sm"
+              value={draftRating}
+              onSelect={handleStarSelect}
+            />
+          </div>
+        </>
+      )}
 
       <ShareExperienceDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        product={{ id: item.productId, name: item.name, image: item.image }}
+        product={{ id: item.productId, name: item.name, image: item.image, aspects: item.reviewAspects }}
         initialRating={draftRating || myReview?.rating || 5}
         existingReview={myReview}
-        onSaved={(savedRating) => {
-          invalidateProductReviewStateCache(item.productId)
-          setDraftRating(savedRating)
-          setLoadedKey(null)
-          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: item.productId } }))
+        onSaved={(savedReview) => {
+          setMyReview(savedReview)
+          setDraftRating(savedReview.rating)
+          if (user) setLoadedKey(`${user.id}:${item.productId}`)
+          window.dispatchEvent(
+            new CustomEvent("kk-review-updated", { detail: { productId: item.productId, review: savedReview } })
+          )
         }}
       />
     </div>
@@ -756,13 +999,11 @@ function computeReviewSummary(
   product: Pick<Product, "ratingAvg" | "reviewCount">,
   reviews: readonly ProductReview[]
 ) {
-  const totalCount = Math.max(reviews.length, product.reviewCount ?? 0)
+  const totalCount = reviews.length > 0 ? reviews.length : (product.reviewCount ?? 0)
   const avgRating =
-    product.reviewCount && product.reviewCount > reviews.length && product.ratingAvg
-      ? Number(product.ratingAvg)
-      : reviews.length > 0
-        ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
-        : Number(product.ratingAvg ?? 0)
+    reviews.length > 0
+      ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+      : Number(product.ratingAvg ?? 0)
 
   const distribution = [5, 4, 3, 2, 1].map((stars) => {
     const count = reviews.filter((r) => r.rating === stars).length
@@ -789,10 +1030,9 @@ export function ProductReviewsSection({
   }
   initialReviews?: ProductReview[]
 }) {
-  const router = useRouter()
   const { user, ready: authReady } = useAuth()
   const cachedInitial = getCachedReviewState(user?.id, product.id)
-  const seededMyReview = user ? (initialReviews.find((r) => r.userId === user.id) ?? null) : null
+  const seededMyReview = cachedInitial?.myReview ?? null
   const [dialogOpen, setDialogOpen] = useState(false)
   const [draftRating, setDraftRating] = useState(() => cachedInitial?.myReview?.rating ?? seededMyReview?.rating ?? 0)
   const [canReview, setCanReview] = useState(() => cachedInitial?.canReview ?? false)
@@ -801,7 +1041,6 @@ export function ProductReviewsSection({
     user && cachedInitial ? `${user.id}:${product.id}` : null
   )
   const activeMyReview = myReview ?? seededMyReview
-  const reviewStateReady = authReady && (!user || stateLoadedForUser === `${user.id}:${product.id}`)
 
   useEffect(() => {
     if (product.id.startsWith("ph-")) return
@@ -826,15 +1065,36 @@ export function ProductReviewsSection({
 
   useEffect(() => {
     const onReviewSync = (e: Event) => {
-      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      const detail = (e as CustomEvent<{ productId?: string; review?: ProductReview | null }>).detail
+      const pid = detail?.productId
       if (!pid || pid === product.id) {
+        if (detail && "review" in detail) {
+          setMyReview(detail.review ?? null)
+          setDraftRating(detail.review?.rating ?? 0)
+          if (user) setStateLoadedForUser(`${user.id}:${product.id}`)
+          return
+        }
         invalidateProductReviewStateCache(product.id)
         setStateLoadedForUser(null)
       }
     }
+    const onCachePrimed = () => {
+      if (!user) return
+      const primed = getCachedReviewState(user.id, product.id)
+      if (primed) {
+        setCanReview(primed.canReview)
+        setMyReview(primed.myReview)
+        setDraftRating(primed.myReview?.rating ?? 0)
+        setStateLoadedForUser(`${user.id}:${product.id}`)
+      }
+    }
     window.addEventListener("kk-review-updated", onReviewSync)
-    return () => window.removeEventListener("kk-review-updated", onReviewSync)
-  }, [product.id])
+    window.addEventListener("kk-review-cache-primed", onCachePrimed)
+    return () => {
+      window.removeEventListener("kk-review-updated", onReviewSync)
+      window.removeEventListener("kk-review-cache-primed", onCachePrimed)
+    }
+  }, [product.id, user])
 
   useEffect(() => {
     if (!authReady || product.id.startsWith("ph-")) return
@@ -850,10 +1110,20 @@ export function ProductReviewsSection({
     }
     const key = `${user.id}:${product.id}`
     if (stateLoadedForUser === key) return
+    const cached = getCachedReviewState(user.id, product.id)
+    if (cached) {
+      queueMicrotask(() => {
+        setCanReview(cached.canReview)
+        setMyReview(cached.myReview)
+        setDraftRating(cached.myReview?.rating ?? 0)
+        setStateLoadedForUser(key)
+      })
+    }
     let cancelled = false
-    fetchProductReviewStateCached(user.id, product.id)
+    getMyProductReviewState(product.id)
       .then((res) => {
         if (cancelled) return
+        reviewStateCache.set(key, res)
         setCanReview(res.canReview)
         setMyReview(res.myReview)
         setDraftRating(res.myReview?.rating ?? 0)
@@ -867,49 +1137,34 @@ export function ProductReviewsSection({
     }
   }, [authReady, user, product.id, stateLoadedForUser])
 
-  const openReviewModal = (star?: number, resolvedMyReview?: ProductReview | null) => {
-    const targetReview = resolvedMyReview !== undefined ? resolvedMyReview : activeMyReview
-    const chosen = star ?? targetReview?.rating ?? (draftRating || 5)
+  const openReviewModal = (star?: number) => {
+    const chosen = star ?? activeMyReview?.rating ?? (draftRating || 5)
     setDraftRating(chosen)
     setDialogOpen(true)
   }
 
-  const handleReviewTrigger = async (star?: number) => {
-    if (product.id.startsWith("ph-")) return
-    if (!user) {
-      toast.info("Please sign in to rate and review this product.")
-      router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`)
-      return
-    }
-    if (canReview || activeMyReview) {
-      openReviewModal(star)
-      return
-    }
-    if (!reviewStateReady) {
-      try {
-        const res = await fetchProductReviewStateCached(user.id, product.id)
-        setCanReview(res.canReview)
-        setMyReview(res.myReview)
-        setDraftRating(res.myReview?.rating ?? 0)
-        setStateLoadedForUser(`${user.id}:${product.id}`)
-        if (res.canReview || res.myReview) {
-          openReviewModal(star, res.myReview)
-          return
-        }
-      } catch {
-        // fall through to message
-      }
-    }
-    toast.info("Only customers who have received a delivered order for this item can submit a verified review.")
-  }
+  const showBuyerReviewActions = Boolean(user && (canReview || activeMyReview))
+  const liveReviews = mergeLiveReviews(initialReviews, activeMyReview)
 
-  const { totalCount, avgRating, distribution } = computeReviewSummary(product, initialReviews)
-  if (totalCount === 0 && !canReview && !activeMyReview) return null
+  const { totalCount, avgRating, distribution } = computeReviewSummary(product, liveReviews)
+  if (totalCount === 0 && !showBuyerReviewActions) return null
 
   const configuredAspects = resolveReviewAspects(product)
-  const aspectStats = computeAspectStats(initialReviews, configuredAspects)
+  const aspectStats = computeAspectStats(liveReviews, configuredAspects)
   const highlightedAspects = aspectStats.filter((a) => a.likedCount > 0)
   const displayAspects = highlightedAspects.length > 0 ? highlightedAspects : aspectStats.slice(0, 5)
+  const allReviewsHref = `/products/${encodeURIComponent(product.slug)}/reviews`
+  const topReviews = liveReviews
+    .slice()
+    .sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating
+      const aHasAspects = Number(Boolean(a.title && a.title.startsWith(LOVED_PREFIX)))
+      const bHasAspects = Number(Boolean(b.title && b.title.startsWith(LOVED_PREFIX)))
+      if (bHasAspects !== aHasAspects) return bHasAspects - aHasAspects
+      if (b.comment.length !== a.comment.length) return b.comment.length - a.comment.length
+      return reviewTimestampMs(b) - reviewTimestampMs(a)
+    })
+    .slice(0, 6)
 
   return (
     <section
@@ -918,54 +1173,102 @@ export function ProductReviewsSection({
       aria-labelledby="reviews-heading"
     >
       <div className={styles.pdpRatingsCard}>
-        {/* Left Column: Overall Rating + Read-only 5★–1★ Distribution Bars */}
+        {/* Left Column: Overall Rating + Read-only 5★–1★ Distribution Bars + Primary "See all reviews" CTA */}
         <div className={styles.pdpSummaryCol}>
-          <div className={styles.pdpSummaryHeader}>
-            <p className={styles.kickerAccent}>Verified buyers</p>
-            <h2 id="reviews-heading" className={styles.sectionHeading}>
-              Customer ratings
-            </h2>
-          </div>
-
-          <div className={styles.scoreAndBarsGrid}>
-            <div className={styles.scoreBigBox}>
-              <span className={styles.avgNumber}>
-                {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
+          <div className={styles.pdpSummaryTop}>
+            <div className={styles.pdpSummaryHeaderRow}>
+              <h2 id="reviews-heading" className={styles.sectionHeading}>
+                Customer ratings
+              </h2>
+              <span className={styles.verifiedBadgePill}>
+                <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified
               </span>
-              <div className={styles.starsAndCountCol}>
-                <StarRow rating={totalCount > 0 ? avgRating : 0} size="md" />
-                <p className={styles.verifiedCountText}>
-                  {totalCount > 0
-                    ? `Based on ${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
-                    : "No verified reviews yet — be the first!"}
-                </p>
+            </div>
+
+            <div className={styles.scoreAndBarsGrid}>
+              <div className={styles.scoreHeroBox}>
+                <span className={styles.avgNumber}>
+                  {totalCount > 0 ? formatRating(avgRating) : "0.0"}
+                </span>
+                <div className={styles.starsAndCountCol}>
+                  <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
+                  <p className={styles.verifiedCountText}>
+                    {totalCount > 0
+                      ? `Based on ${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
+                      : "No verified reviews yet — be the first!"}
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.distributionList} aria-label="Rating breakdown">
+                {distribution.map((row) => (
+                  <div
+                    key={row.stars}
+                    className={cn(styles.distRowStatic, row.count === 0 && styles.distRowMuted)}
+                  >
+                    <span className={styles.distStarLabel}>{row.stars}★</span>
+                    <div className={styles.distBarTrack}>
+                      <div className={styles.distBarFill} style={{ width: `${row.pct}%` }} />
+                    </div>
+                    <span className={styles.distCountNum}>{row.count}</span>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className={styles.distributionList} aria-label="Rating breakdown">
-              {distribution.map((row) => (
-                <div key={row.stars} className={styles.distRowStatic}>
-                  <span className={styles.distStarLabel}>{row.stars}★</span>
-                  <div className={styles.distBarTrack}>
-                    <div className={styles.distBarFill} style={{ width: `${row.pct}%` }} />
-                  </div>
-                  <span className={styles.distCountNum}>{row.count}</span>
-                </div>
-              ))}
-            </div>
           </div>
+
+          {(totalCount > 0 || showBuyerReviewActions) && (
+            <div className={styles.pdpSummaryFooter}>
+              <div className={styles.pdpReviewsFooterRow}>
+                {totalCount > 0 && (
+                  <Link
+                    href={allReviewsHref}
+                    className={cn(buttonVariants({ size: "lg" }), styles.seeAllPageBtn)}
+                  >
+                    <span>See all {totalCount} {totalCount === 1 ? "review" : "reviews"}</span>
+                    <ArrowRightIcon className={styles.icon16} aria-hidden />
+                  </Link>
+                )}
+
+                {showBuyerReviewActions && (
+                  activeMyReview ? (
+                    <div className={styles.myReviewSubmittedBar}>
+                      <div className={styles.myReviewSummaryLeft}>
+                        <StarRow rating={activeMyReview.rating} size="sm" />
+                        <span className={styles.myReviewSummaryText}>
+                          You rated {formatRating(activeMyReview.rating)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openReviewModal(activeMyReview.rating)}
+                        className={styles.editMyReviewLink}
+                      >
+                        <PencilIcon className={styles.icon12} aria-hidden /> Edit review
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="outline"
+                      onClick={() => openReviewModal()}
+                      className={styles.writeReviewOutlineBtn}
+                    >
+                      <MessageSquarePlusIcon className={styles.icon16} /> Write a review
+                    </Button>
+                  )
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Aspect Highlights + Rate Widget + "See all X reviews" CTA */}
+        {/* Right Column: Aspect Highlights + Top Customer Reviews Carousel */}
         <div className={styles.pdpHighlightsCol}>
           <div className={styles.pdpAspectsBlock}>
             <div className={styles.pdpAspectsHeader}>
-              <div>
-                <h3 className={styles.feedbackTitle}>What customers loved</h3>
-                <p className={styles.feedbackSub}>
-                  Highlights from verified delivered orders of {product.name}
-                </p>
-              </div>
+              <h3 className={styles.topReviewsHeading}>What customers loved</h3>
               <span className={styles.verifiedGuaranteePill}>
                 <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> 100% Verified
               </span>
@@ -973,68 +1276,84 @@ export function ProductReviewsSection({
 
             <div className={styles.pdpAspectsPillsGrid}>
               {displayAspects.map((stat) => (
-                <div key={stat.aspect} className={styles.pdpAspectCard}>
-                  <span className={styles.pdpAspectIcon}>
-                    <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden />
+                <div key={stat.aspect} className={styles.pdpAspectChip}>
+                  <ThumbsUpIcon className={styles.pdpAspectThumbSvg} aria-hidden />
+                  <span className={styles.pdpAspectName}>{stat.aspect}</span>
+                  <span className={styles.pdpAspectStatBadge}>
+                    {stat.likedCount > 0
+                      ? `${stat.positivePct}% (${stat.likedCount})`
+                      : "Verified"}
                   </span>
-                  <div className={styles.pdpAspectText}>
-                    <p className={styles.pdpAspectName}>{stat.aspect}</p>
-                    <p className={styles.pdpAspectMeta}>
-                      {stat.likedCount > 0
-                        ? `${stat.positivePct}% positive (${stat.likedCount})`
-                        : "Verified quality"}
-                    </p>
-                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className={styles.pdpBuyerRateStrip}>
-            <div className={styles.pdpBuyerRateText}>
-              <p className={styles.rateKicker}>Rate your experience</p>
-              <p className={styles.rateSub}>
-                {activeMyReview ? "Tap a star to update your review" : "Share your feedback on this piece"}
-              </p>
-            </div>
-            <div className={styles.pdpBuyerPickerWrap}>
-              <InteractiveStarPicker
-                size="sm"
-                value={activeMyReview?.rating ?? draftRating}
-                onSelect={(star) => void handleReviewTrigger(star)}
-              />
-            </div>
-          </div>
+          {topReviews.length > 0 && (
+            <div className={styles.topReviewsBlock}>
+              <div className={styles.topReviewsHeader}>
+                <h4 className={styles.topReviewsHeading}>Top customer reviews</h4>
+                <Link href={allReviewsHref} className={styles.topReviewsAllLink}>
+                  <span>Read all ({totalCount})</span>
+                  <ArrowRightIcon className={styles.icon12} aria-hidden />
+                </Link>
+              </div>
 
-          <div className={styles.pdpReviewsFooterRow}>
-            {totalCount > 0 && (
-              <Link
-                href={`/products/${encodeURIComponent(product.slug)}/reviews`}
-                className={cn(buttonVariants({ size: "lg" }), styles.seeAllPageBtn)}
-              >
-                <span>See all {totalCount} {totalCount === 1 ? "review" : "reviews"}</span>
-                <ArrowRightIcon className={styles.icon16} aria-hidden />
-              </Link>
-            )}
+              <Carousel label="Top customer reviews" className={styles.topReviewsCarousel}>
+                {topReviews.map((review) => {
+                  const aspectPills = extractAspectPills(review.title)
+                  const initial = (review.reviewerName.trim()[0] ?? "V").toUpperCase()
+                  return (
+                    <li
+                      key={review.id}
+                      className={cn(
+                        styles.topReviewSlide,
+                        topReviews.length === 1 && styles.topReviewSlideSingle
+                      )}
+                    >
+                      <article className={styles.topReviewCard}>
+                        <div className={styles.topReviewTopRow}>
+                          <div className={styles.topReviewStarsGroup}>
+                            <StarRow rating={review.rating} />
+                            <span className={styles.ratingWordBadge}>
+                              {RATING_LABELS[review.rating] ?? "Great"}
+                            </span>
+                          </div>
+                          <span className={styles.topReviewDate}>{formatReviewDateLabel(review)}</span>
+                        </div>
 
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              onClick={() => void handleReviewTrigger()}
-              className={styles.writeReviewOutlineBtn}
-            >
-              {activeMyReview ? (
-                <>
-                  <PencilIcon className={styles.icon16} /> Edit your review
-                </>
-              ) : (
-                <>
-                  <MessageSquarePlusIcon className={styles.icon16} /> Write a review
-                </>
-              )}
-            </Button>
-          </div>
+                        {aspectPills.liked.length > 0 && (
+                          <div className={styles.topReviewPillsRow}>
+                            {aspectPills.liked.slice(0, 3).map((pill) => (
+                              <span key={pill} className={styles.likedAspectPill}>
+                                <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className={styles.topReviewQuote}>{review.comment}</p>
+
+                        <div className={styles.topReviewAuthorRow}>
+                          <span className={styles.reviewerAvatarCircle} aria-hidden>
+                            {initial}
+                          </span>
+                          <div className={styles.reviewerAuthorMeta}>
+                            <span className={styles.reviewerName}>{review.reviewerName}</span>
+                            {review.isVerifiedPurchase && (
+                              <span className={styles.verifiedMiniText}>
+                                <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified buyer
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </Carousel>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1049,11 +1368,13 @@ export function ProductReviewsSection({
         }}
         initialRating={draftRating || activeMyReview?.rating || 5}
         existingReview={activeMyReview}
-        onSaved={(savedRating) => {
-          invalidateProductReviewStateCache(product.id)
-          setDraftRating(savedRating)
-          setStateLoadedForUser(null)
-          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
+        onSaved={(savedReview) => {
+          setMyReview(savedReview)
+          setDraftRating(savedReview.rating)
+          if (user) setStateLoadedForUser(`${user.id}:${product.id}`)
+          window.dispatchEvent(
+            new CustomEvent("kk-review-updated", { detail: { productId: product.id, review: savedReview } })
+          )
         }}
       />
     </section>
@@ -1090,10 +1411,11 @@ export function ProductReviewsPageView({
   const inCart = useCart((s) => s.items.find((i) => i.productId === product.id)?.quantity ?? 0)
 
   const cachedInitial = getCachedReviewState(user?.id, product.id)
-  const seededMyReview = user ? (reviews.find((r) => r.userId === user.id) ?? null) : null
+  const seededMyReview = cachedInitial?.myReview ?? null
   const [dialogOpen, setDialogOpen] = useState(false)
   const [draftRating, setDraftRating] = useState(() => cachedInitial?.myReview?.rating ?? seededMyReview?.rating ?? 0)
   const [deleteTarget, setDeleteTarget] = useState<ProductReview | null>(null)
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set())
   const [canReview, setCanReview] = useState(() => cachedInitial?.canReview ?? false)
   const [isAdmin, setIsAdmin] = useState(() => cachedInitial?.isAdmin ?? false)
   const [myReview, setMyReview] = useState<ProductReview | null>(() => cachedInitial?.myReview ?? null)
@@ -1104,7 +1426,6 @@ export function ProductReviewsPageView({
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   const activeMyReview = myReview ?? seededMyReview
-  const reviewStateReady = authReady && (!user || stateLoadedForUser === `${user.id}:${product.id}`)
 
   const [reviewSort, setReviewSort] = useState<ReviewSortKey>("recent")
   const [starFilter, setStarFilter] = useState<number | null>(null)
@@ -1115,15 +1436,45 @@ export function ProductReviewsPageView({
 
   useEffect(() => {
     const onReviewSync = (e: Event) => {
-      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      const detail = (e as CustomEvent<{ productId?: string; review?: ProductReview | null }>).detail
+      const pid = detail?.productId
       if (!pid || pid === product.id) {
+        if (detail && "review" in detail) {
+          setMyReview(detail.review ?? null)
+          setDraftRating(detail.review?.rating ?? 0)
+          if (detail.review) {
+            setDeletedIds((prev) => {
+              if (!prev.has(detail.review!.id)) return prev
+              const next = new Set(prev)
+              next.delete(detail.review!.id)
+              return next
+            })
+          }
+          if (user) setStateLoadedForUser(`${user.id}:${product.id}`)
+          return
+        }
         invalidateProductReviewStateCache(product.id)
         setStateLoadedForUser(null)
       }
     }
+    const onCachePrimed = () => {
+      if (!user) return
+      const primed = getCachedReviewState(user.id, product.id)
+      if (primed) {
+        setCanReview(primed.canReview)
+        setIsAdmin(primed.isAdmin)
+        setMyReview(primed.myReview)
+        setDraftRating(primed.myReview?.rating ?? 0)
+        setStateLoadedForUser(`${user.id}:${product.id}`)
+      }
+    }
     window.addEventListener("kk-review-updated", onReviewSync)
-    return () => window.removeEventListener("kk-review-updated", onReviewSync)
-  }, [product.id])
+    window.addEventListener("kk-review-cache-primed", onCachePrimed)
+    return () => {
+      window.removeEventListener("kk-review-updated", onReviewSync)
+      window.removeEventListener("kk-review-cache-primed", onCachePrimed)
+    }
+  }, [product.id, user])
 
   useEffect(() => {
     if (!authReady || product.id.startsWith("ph-")) return
@@ -1141,10 +1492,21 @@ export function ProductReviewsPageView({
     }
     const key = `${user.id}:${product.id}`
     if (stateLoadedForUser === key) return
+    const cached = getCachedReviewState(user.id, product.id)
+    if (cached) {
+      queueMicrotask(() => {
+        setCanReview(cached.canReview)
+        setIsAdmin(cached.isAdmin)
+        setMyReview(cached.myReview)
+        setDraftRating(cached.myReview?.rating ?? 0)
+        setStateLoadedForUser(key)
+      })
+    }
     let cancelled = false
-    fetchProductReviewStateCached(user.id, product.id)
+    getMyProductReviewState(product.id)
       .then((res) => {
         if (cancelled) return
+        reviewStateCache.set(key, res)
         setCanReview(res.canReview)
         setIsAdmin(res.isAdmin)
         setMyReview(res.myReview)
@@ -1159,42 +1521,13 @@ export function ProductReviewsPageView({
     }
   }, [authReady, user, product.id, stateLoadedForUser])
 
-  const openReviewModal = (star?: number, resolvedMyReview?: ProductReview | null) => {
-    const targetReview = resolvedMyReview !== undefined ? resolvedMyReview : activeMyReview
-    const chosen = star ?? targetReview?.rating ?? (draftRating || 5)
+  const openReviewModal = (star?: number) => {
+    const chosen = star ?? activeMyReview?.rating ?? (draftRating || 5)
     setDraftRating(chosen)
     setDialogOpen(true)
   }
 
-  const handleReviewTrigger = async (star?: number) => {
-    if (product.id.startsWith("ph-")) return
-    if (!user) {
-      toast.info("Please sign in to rate and review this product.")
-      router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}/reviews`)}`)
-      return
-    }
-    if (canReview || activeMyReview) {
-      openReviewModal(star)
-      return
-    }
-    if (!reviewStateReady) {
-      try {
-        const res = await fetchProductReviewStateCached(user.id, product.id)
-        setCanReview(res.canReview)
-        setIsAdmin(res.isAdmin)
-        setMyReview(res.myReview)
-        setDraftRating(res.myReview?.rating ?? 0)
-        setStateLoadedForUser(`${user.id}:${product.id}`)
-        if (res.canReview || res.myReview) {
-          openReviewModal(star, res.myReview)
-          return
-        }
-      } catch {
-        // fall through to message
-      }
-    }
-    toast.info("Only customers who have received a delivered order for this item can submit a verified review.")
-  }
+  const showBuyerReviewActions = Boolean(user && (canReview || activeMyReview))
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return
@@ -1206,14 +1539,27 @@ export function ProductReviewsPageView({
         return
       }
       later(() => {
-        invalidateProductReviewStateCache(product.id)
-        if (user && target.userId === user.id) {
+        const isMineDeleted = Boolean(activeMyReview && target.id === activeMyReview.id)
+        invalidateProductReviewStateCache(product.id, isMineDeleted)
+        setDeletedIds((prev) => new Set(prev).add(target.id))
+        if (isMineDeleted) {
           setMyReview(null)
           setDraftRating(0)
+          if (user) {
+            reviewStateCache.set(`${user.id}:${product.id}`, {
+              canReview: true,
+              isAdmin,
+              myReview: null,
+            })
+            setStateLoadedForUser(`${user.id}:${product.id}`)
+          }
         }
         setDeleteTarget(null)
-        setStateLoadedForUser(null)
-        window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
+        window.dispatchEvent(
+          new CustomEvent("kk-review-updated", {
+            detail: { productId: product.id, ...(isMineDeleted ? { review: null } : {}) },
+          })
+        )
         toast.success("Review removed.")
       })
       router.refresh()
@@ -1241,13 +1587,14 @@ export function ProductReviewsPageView({
     )
   }
 
-  const { totalCount, avgRating, distribution } = computeReviewSummary(product, reviews)
+  const liveReviews = mergeLiveReviews(reviews, activeMyReview, deletedIds)
+  const { totalCount, avgRating, distribution } = computeReviewSummary(product, liveReviews)
   const configuredAspects = resolveReviewAspects(product)
-  const aspectStats = computeAspectStats(reviews, configuredAspects).filter((s) => s.totalVotes > 0)
+  const aspectStats = computeAspectStats(liveReviews, configuredAspects).filter((s) => s.totalVotes > 0)
   const off = discountPercent(product.price, product.compareAtPrice)
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
-  const filteredReviews = reviews
+  const filteredReviews = liveReviews
     .filter((r) => {
       if (starFilter !== null && r.rating !== starFilter) return false
       if (aspectFilter !== null) {
@@ -1264,7 +1611,7 @@ export function ProductReviewsPageView({
     .sort((a, b) => {
       if (reviewSort === "highest" && b.rating !== a.rating) return b.rating - a.rating
       if (reviewSort === "lowest" && a.rating !== b.rating) return a.rating - b.rating
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      return reviewTimestampMs(b) - reviewTimestampMs(a)
     })
 
   const hasMore = filteredReviews.length > visibleCount
@@ -1335,7 +1682,7 @@ export function ProductReviewsPageView({
               {totalCount > 0 && (
                 <span className={styles.bannerRatingPill}>
                   <StarIcon className={styles.bannerStarIcon} aria-hidden />
-                  <span>{avgRating.toFixed(1)}</span>
+                  <span>{formatRating(avgRating)}</span>
                   <span className={styles.bannerRatingCount}>({totalCount})</span>
                 </span>
               )}
@@ -1361,21 +1708,23 @@ export function ProductReviewsPageView({
         <aside className={styles.reviewsSidebarCol}>
           <div className={styles.summaryLeftCard}>
             <div className={styles.summaryTopStack}>
-              <div>
-                <p className={styles.kickerAccent}>Verified buyers</p>
+              <div className={styles.pdpSummaryHeaderRow}>
                 <h2 className={styles.sectionHeading}>Customer reviews</h2>
+                <span className={styles.verifiedBadgePill}>
+                  <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified
+                </span>
               </div>
 
               <div className={styles.scoreAndBarsGrid}>
-                <div className={styles.scoreBigBox}>
+                <div className={styles.scoreHeroBox}>
                   <span className={styles.avgNumber}>
-                    {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
+                    {totalCount > 0 ? formatRating(avgRating) : "0.0"}
                   </span>
                   <div className={styles.starsAndCountCol}>
                     <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
                     <p className={styles.verifiedCountText}>
                       {totalCount > 0
-                        ? `${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
+                        ? `Based on ${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
                         : "No verified reviews yet"}
                     </p>
                   </div>
@@ -1412,38 +1761,37 @@ export function ProductReviewsPageView({
               </div>
             </div>
 
-            <div className={styles.rateBottomBlock}>
-              <div className={styles.rateWidgetBox}>
-                <p className={styles.rateKicker}>Rate your experience</p>
-                <p className={styles.rateSub}>
-                  {activeMyReview ? "Your rating — tap any star to edit your review" : "Rate this purchased piece"}
-                </p>
-                <div className={styles.ratePickerMargin}>
-                  <InteractiveStarPicker
-                    size="md"
-                    value={activeMyReview?.rating ?? draftRating}
-                    onSelect={(star) => void handleReviewTrigger(star)}
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant={activeMyReview ? "outline" : "default"}
-                onClick={() => void handleReviewTrigger()}
-                className={styles.fullPillBtn}
-              >
+            {showBuyerReviewActions && (
+              <div className={styles.rateBottomBlock}>
                 {activeMyReview ? (
-                  <>
-                    <PencilIcon className={styles.icon16} /> Edit your review
-                  </>
+                  <div className={styles.myReviewSubmittedBar}>
+                    <div className={styles.myReviewSummaryLeft}>
+                      <StarRow rating={activeMyReview.rating} size="sm" />
+                      <span className={styles.myReviewSummaryText}>
+                        You rated {formatRating(activeMyReview.rating)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openReviewModal(activeMyReview.rating)}
+                      className={styles.editMyReviewLink}
+                    >
+                      <PencilIcon className={styles.icon12} aria-hidden /> Edit review
+                    </button>
+                  </div>
                 ) : (
-                  <>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="default"
+                    onClick={() => openReviewModal()}
+                    className={styles.fullPillBtn}
+                  >
                     <MessageSquarePlusIcon className={styles.icon16} /> Write a customer review
-                  </>
+                  </Button>
                 )}
-              </Button>
-            </div>
+              </div>
+            )}
 
             <div className={styles.genuineFooterBanner}>
               <span className={styles.genuineTextRow}>
@@ -1456,21 +1804,15 @@ export function ProductReviewsPageView({
 
         {/* Right Column: Search + Sort Dropdown, Topic Filter Chips & Infinite-Scrolling Reviews Feed */}
         <div className={styles.reviewsFeedCol}>
-          {reviews.length === 0 ? (
+          {liveReviews.length === 0 ? (
             <div className={styles.emptyReviewsCard}>
               <StarRow rating={5} size="md" />
               <p className={styles.emptyTitle}>No reviews for {product.name} yet</p>
               <p className={styles.emptySub}>
                 {canReview
-                  ? "Select a star under “Rate your experience” to share what you loved about this handmade piece."
+                  ? "Click “Write a customer review” to share what you loved about this handmade piece."
                   : "Once customers receive their delivered order, their verified feedback will appear here."}
               </p>
-              <Link
-                href={productHref}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.pillBtn)}
-              >
-                <ArrowLeftIcon className={styles.icon14} aria-hidden /> Back to product
-              </Link>
             </div>
           ) : (
             <div className={styles.feedCardShell}>
@@ -1532,7 +1874,7 @@ export function ProductReviewsPageView({
                           aspectFilter === null && starFilter === null && styles.aspectChipCountActive
                         )}
                       >
-                        {reviews.length}
+                        {liveReviews.length}
                       </span>
                     </button>
 
@@ -1610,7 +1952,7 @@ export function ProductReviewsPageView({
                 <>
                   <ul className={styles.fullReviewsList}>
                     {visibleReviews.map((review) => {
-                      const isMine = Boolean(user && review.userId === user.id)
+                      const isMine = Boolean(activeMyReview && review.id === activeMyReview.id)
                       const canDelete = isMine || isAdmin
                       const aspectPills = extractAspectPills(review.title)
                       const hasCustomTitle = Boolean(
@@ -1637,7 +1979,7 @@ export function ProductReviewsPageView({
                                   </span>
                                 )}
                                 <span aria-hidden>·</span>
-                                <span>{formatDate(review.createdAt)}</span>
+                                <span>{formatReviewDateLabel(review)}</span>
                               </div>
                             </div>
 
@@ -1728,11 +2070,19 @@ export function ProductReviewsPageView({
         }}
         initialRating={draftRating || activeMyReview?.rating || 5}
         existingReview={activeMyReview}
-        onSaved={(savedRating) => {
-          invalidateProductReviewStateCache(product.id)
-          setDraftRating(savedRating)
-          setStateLoadedForUser(null)
-          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
+        onSaved={(savedReview) => {
+          setMyReview(savedReview)
+          setDraftRating(savedReview.rating)
+          setDeletedIds((prev) => {
+            if (!prev.has(savedReview.id)) return prev
+            const next = new Set(prev)
+            next.delete(savedReview.id)
+            return next
+          })
+          if (user) setStateLoadedForUser(`${user.id}:${product.id}`)
+          window.dispatchEvent(
+            new CustomEvent("kk-review-updated", { detail: { productId: product.id, review: savedReview } })
+          )
         }}
       />
 

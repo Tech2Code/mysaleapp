@@ -19,6 +19,7 @@ export type FieldKind =
   | "orderCode"
   | "orderLast4"
   | "paymentRef"
+  | "gatewayRef"
   | "trackingNumber"
   | "gstin"
   | "upiId"
@@ -95,6 +96,12 @@ export const FIELD_KINDS: Record<FieldKind, FieldKindSpec> = {
     sanitize: (v) => v.toUpperCase().replace(/[^A-Z0-9]/g, ""),
     maxLength: LIMITS.utr.max,
     autoCapitalize: "characters",
+    spellCheck: false,
+  },
+  gatewayRef: {
+    sanitize: (v) => v.replace(/[^A-Za-z0-9_-]/g, ""),
+    maxLength: LIMITS.gatewayRef.max,
+    autoCapitalize: "none",
     spellCheck: false,
   },
   trackingNumber: {

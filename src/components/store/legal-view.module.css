@@ -60,4 +60,3 @@
   .legalContainer .contentLayout { grid-template-columns: 1fr 360px; gap: 32px; }
   .contentLayout .sidebarCard { position: sticky; top: calc(var(--store-header-h) + 20px); }
 }
-

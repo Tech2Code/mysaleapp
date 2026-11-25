@@ -12,9 +12,11 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   const [index, setIndex] = useState(0)
   const [direction, setDirection] = useState(0)
   const touchStartX = useRef<number | null>(null)
+  const railRef = useRef<HTMLDivElement | null>(null)
   const thumbRefs = useRef<(HTMLButtonElement | null)[]>([])
   const list = images.length ? images : [null]
   const safeIndex = index < list.length ? index : 0
+  const prevIndexRef = useRef(safeIndex)
 
   const goTo = (nextIdx: number, dir?: number) => {
     if (list.length <= 1) return
@@ -28,16 +30,19 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
   const goNext = () => goTo(safeIndex + 1, 1)
 
   useEffect(() => {
+    if (prevIndexRef.current === safeIndex) return
+    prevIndexRef.current = safeIndex
+    const rail = railRef.current
     const btn = thumbRefs.current[safeIndex]
-    if (btn) {
-      btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
-    }
+    if (!rail || !btn) return
+    const targetLeft = btn.offsetLeft - Math.max(0, (rail.clientWidth - btn.clientWidth) / 2)
+    rail.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" })
   }, [safeIndex])
 
   return (
     <div className={styles.galleryLayout}>
       {list.length > 1 && (
-        <div className={styles.thumbRail} role="group" aria-label="Product photos">
+        <div ref={railRef} className={styles.thumbRail} role="group" aria-label="Product photos">
           {list.map((src, i) => (
             <button
               key={`${src ?? "empty"}-${i}`}

@@ -142,7 +142,10 @@ export function itemReturnWindow(
 export function returnableQuantities(items: OrderItem[], returns: OrderReturn[]): Map<string, number> {
   const left = new Map<string, number>()
   for (const i of items) left.set(i.productId, (left.get(i.productId) ?? 0) + i.quantity)
-  for (const r of returns) for (const i of r.items) left.set(i.productId, (left.get(i.productId) ?? 0) - i.quantity)
+  for (const r of returns) {
+    if (r.resolutionType === "exchange") continue
+    for (const i of r.items) left.set(i.productId, (left.get(i.productId) ?? 0) - i.quantity)
+  }
   return left
 }
 
@@ -348,6 +351,7 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
   if (hasReturns) {
     if (refund === "full") return stage("refunded")
     const latestReturn = latest(input.returns)
+    const hasUnrefundedReturn = input.returns.some((r) => !r.refunded && r.resolutionType !== "exchange")
     const latestIsExchange =
       latestReturn?.resolutionType === "exchange" ||
       (input.returns.length > 0 && input.returns.every((r) => r.resolutionType === "exchange")) ||
@@ -362,12 +366,15 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
         active: false,
       })
     }
+    if (hasUnrefundedReturn && refund === "partly") {
+      // Wait — check below: stage is partly_refunded with active: hasUnrefundedReturn
+    }
     if (refund === "partly") {
       const money =
         input.refundedAmount > 0 && input.paidAmount > 0
           ? `${formatPrice(input.refundedAmount)} of ${formatPrice(input.paidAmount)} refunded`
           : STAGE_COPY.partly_refunded.detail
-      return stage("partly_refunded", { detail: money })
+      return stage("partly_refunded", { detail: money, active: hasUnrefundedReturn })
     }
     return stage("received")
   }
@@ -566,13 +573,14 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
     })
     return entries
   }
+  const hasUnrefundedReturn = input.returns.some((r) => !r.refunded && r.resolutionType !== "exchange")
   entries.push({
     key: "refund",
     label: refund === "full" ? "Refunded" : refund === "partly" ? "Partly refunded" : "Refund",
     customerLabel: refund === "full" ? "Refunded" : refund === "partly" ? "Partially refunded" : "Refund to follow",
     at: null,
     note: null,
-    state: refund === "full" ? "done" : refund === "partly" ? "current" : "upcoming",
+    state: refund === "full" || (refund === "partly" && !hasUnrefundedReturn) ? "done" : refund === "partly" ? "current" : "upcoming",
   })
   return entries
 }

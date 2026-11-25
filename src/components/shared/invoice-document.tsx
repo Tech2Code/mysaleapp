@@ -14,12 +14,21 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
   // Always use live Store Settings for seller contact & address details so any update in Settings reflects
   // on all Bill of Supply / Tax Invoices, while locking GST rate/registration from the order-time snapshot.
   const snap = order.taxSnapshot
-  const effectiveShop = {
-    ...shop,
-    gstRegistered: snap ? snap.gstRegistered : shop.gstRegistered,
-    gstin: snap ? snap.gstin : shop.gstin,
-    gstRate: snap ? snap.gstRate : shop.gstRate,
-  }
+  const effectiveShop = snap
+    ? {
+        ...shop,
+        gstRegistered: snap.gstRegistered,
+        gstin: snap.gstin,
+        gstRate: snap.gstRate,
+        legalName: snap.legalName ?? shop.legalName,
+        businessAddress: snap.businessAddress ?? shop.businessAddress,
+        shopName: snap.shopName || shop.shopName,
+        city: snap.city ?? shop.city,
+        region: snap.region ?? shop.region,
+        phone: snap.phone ?? shop.phone,
+        email: snap.email ?? shop.email,
+      }
+    : shop
   const title = invoiceTitle(effectiveShop)
   const taxed = gstActive(effectiveShop)
   const tax = taxed ? gstIncluded(order.total, effectiveShop.gstRate) : null

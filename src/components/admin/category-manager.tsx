@@ -94,7 +94,7 @@ function CategoryDialog({
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent mobileFullScreen className={styles.dialogSmMax}>
         <form onSubmit={onSubmit} noValidate className={styles.dialogForm}>
-          <DialogHeader>
+          <DialogHeader showCloseButton={!pending}>
             <DialogTitle>{category ? "Edit category" : "New category"}</DialogTitle>
             <DialogDescription>Categories group products in the menu and get their own SEO page.</DialogDescription>
           </DialogHeader>

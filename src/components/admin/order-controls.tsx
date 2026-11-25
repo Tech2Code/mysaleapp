@@ -119,17 +119,9 @@ export function OrderStatusControl({
     (expectedDelivery ?? "").trim() !== (shipping?.expectedDelivery ?? "").trim()
   const hasStatusChanges = value !== status || (showShipping && shippingChanged)
 
-  const notifyShipping: ShippingDetails | null = carrier?.trim()
-    ? {
-        carrier: carrier.trim(),
-        trackingNumber: trackingNumber?.trim() || null,
-        trackingUrl: trackingUrl?.trim() || null,
-        expectedDelivery: expectedDelivery || null,
-      }
-    : null
-  const notifyUrl = whatsappLink(
+  const savedNotifyUrl = whatsappLink(
     `91${phone}`,
-    buildStatusUpdateMessage(shop, { orderCode, customerName, status: value, shipping: notifyShipping, returnStage: announcedStage })
+    buildStatusUpdateMessage(shop, { orderCode, customerName, status, shipping, returnStage: announcedStage })
   )
 
   const onSubmit = form.handleSubmit((values) => {
@@ -184,10 +176,22 @@ export function OrderStatusControl({
         return
       }
       form.reset(values)
+      const nextShipping: ShippingDetails | null = shippingPayload
+        ? {
+            carrier: shippingPayload.carrier,
+            trackingNumber: shippingPayload.trackingNumber ?? null,
+            trackingUrl: shippingPayload.trackingUrl ?? null,
+            expectedDelivery: shippingPayload.expectedDelivery ?? null,
+          }
+        : shipping
+      const updatedNotifyUrl = whatsappLink(
+        `91${phone}`,
+        buildStatusUpdateMessage(shop, { orderCode, customerName, status: values.status, shipping: nextShipping, returnStage: announcedStage })
+      )
       later(() => {
         setToConfirm(null)
         toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
-          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl, "_blank", "noopener") },
+          action: { label: "Notify on WhatsApp", onClick: () => window.open(updatedNotifyUrl, "_blank", "noopener") },
         })
       })
       router.refresh()
@@ -208,7 +212,9 @@ export function OrderStatusControl({
           )}
           {/* Courier details are not repeated here: the progress timeline shows them under "Shipped". */}
           <p className={styles.lockedSub}>
-            Delivered order details stay locked. You can still add a private note and manage the return from the status above.
+            {status === "cancelled"
+              ? "Cancelled order details stay locked. You can still add or update a private note below."
+              : "Delivered order details stay locked. You can still add a private note and manage the return from the status above."}
           </p>
         </div>
       ) : (
@@ -276,12 +282,12 @@ export function OrderStatusControl({
         </Button>
       )}
       <a
-        href={notifyUrl}
+        href={savedNotifyUrl}
         target="_blank"
         rel="noopener noreferrer"
         className={styles.whatsappSendBtn}
       >
-        <WhatsAppIcon className={styles.iconMd} /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[value].label}” update
+        <WhatsAppIcon className={styles.iconMd} /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[status].label}” update
       </a>
     </form>
     <ConfirmDialog
@@ -410,7 +416,7 @@ export function RevertOrderStatusDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className={styles.dialogSmMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>Revert order {orderCode} to {STATUS_META[to].label}?</DialogTitle>
           <DialogDescription>{descriptionText}</DialogDescription>
         </DialogHeader>
@@ -509,7 +515,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
         Cancel order
       </DialogTrigger>
       <DialogContent className={styles.dialogSmMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>Cancel order {orderCode}?</DialogTitle>
           <DialogDescription>
             The customer will see the reason on their order page.{" "}

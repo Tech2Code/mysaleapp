@@ -163,7 +163,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
         Create return request
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.dialogLgMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>Return or exchange request for {orderCode}</DialogTitle>
           <DialogDescription>For a customer who asked outside the app. The return window is ignored. You approve it next, with a pickup date.</DialogDescription>
         </DialogHeader>

@@ -190,7 +190,7 @@ export function PrivacyPolicyView({ shop }: { shop: StoreSettings }) {
                   Your 12-digit UPI / UTR reference number submitted at checkout. We never collect or store bank passwords, UPI PINs, or card numbers.
                 </Bullet>
                 <Bullet label="Essential browser storage">
-                  Your shopping cart (`kk-cart`), wishlist (`kk-wishlist`), theme preference, and authentication session cookies so the store works seamlessly across refreshes.
+                  Your shopping cart (<code>kk-cart</code>), wishlist (<code>kk-wishlist</code>), theme preference, and authentication session cookies so the store works seamlessly across refreshes.
                 </Bullet>
               </ul>
             </section>
@@ -226,7 +226,7 @@ export function PrivacyPolicyView({ shop }: { shop: StoreSettings }) {
                   Automatically cancelled after {expiryHours} hours if payment verification fails or remains unsubmitted, immediately releasing reserved stock.
                 </Bullet>
                 <Bullet label="Account &amp; saved addresses">
-                  Kept while your account is active. You can edit or delete saved addresses anytime, or deactivate your account from `/account/profile`.
+                  Kept while your account is active. You can edit or delete saved addresses anytime, or deactivate your account from <code>/account/profile</code>.
                 </Bullet>
                 <Bullet label="Security &amp; rate-limit logs">
                   Hashed IP rate-limit counters (salted with a secret key; raw IPs are never stored) expire automatically after their short security window.
@@ -470,7 +470,7 @@ export function RefundPolicyView({ shop }: { shop: StoreSettings }) {
               <h2 className={styles.clauseHeading}>3. Refund Calculation (Item Value vs. Shipping Charges)</h2>
               <ul className={styles.bulletList}>
                 <Bullet label="Returned orders after delivery">
-                  For delivered orders returned by the customer, the refund covers the **price paid for the returned item(s) only**. Original delivery fees and special handling charges are non-refundable and are clearly itemised in your Refund Summary card.
+                  For delivered orders returned by the customer, the refund covers the <strong>price paid for the returned item(s) only</strong>. Original delivery fees and special handling charges are non-refundable and are clearly itemised in your Refund Summary card.
                 </Bullet>
                 <Bullet label="Cancelled orders before dispatch">
                   If an order is cancelled while Pending or Confirmed (before shipping) and you have already paid via UPI, 100% of the amount paid (including delivery and handling charges) is refunded.

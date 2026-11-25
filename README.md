@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0060_review_aspects.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0062_payment_gateway_ready.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -138,7 +138,7 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
    - **Legal, Privacy & Compliance Pages:** Dynamic `/privacy` (Privacy Policy with Data Retention schedule & Subprocessors table), `/terms` (Terms of Service), and `/refund-policy` (Refund, Return & Shipping Policy) pages driven by `StoreSettings`, plus an essential-cookies & storage notice banner (`<CookieBanner />`), an in-place tabbed `<LegalQuickModal />` preview dialog, and explicit Terms & Privacy acceptance on account sign-up.
 7. **Customer & Guest Tracking.** Signed-in customers manage orders under **My orders** (`/account/orders`) and download printable GST/non-GST invoices. Guests track orders at `/track` using their order code + last 4 phone digits (sensitive details like full address, phone, and UTR prefix are masked for privacy).
 
-Set your UPI ID, delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
+Set your UPI ID, payment mode (Direct UPI vs. Payment Gateway — see `payment-gateway-setup.md`), delivery/handling charges, return window, auto-cancel hours, GST details, and branding in **Admin → Settings**; changes go live immediately.
 
 ### Saved addresses & account tabs
 
@@ -153,10 +153,11 @@ src/
     admin/            Admin login + (panel)/ dashboard, orders, products, categories, settings, account
     auth/callback/    Google login return URL
     api/cron/         Keep-alive job
+    api/webhooks/     Payment gateway webhook handler (`payment/route.ts`)
     sitemap.ts robots.ts manifest.ts opengraph-image.tsx icon.tsx …   SEO + PWA
   features/           Business logic per feature (no UI)
     products/         queries (cached), admin-queries, actions, schema, types
-    orders/           actions, queries, admin-*, pricing, returns, refund, transitions, deadline, whatsapp
+    orders/           actions, queries, admin-*, pricing, payment-gateway, gateway-client, returns, refund, transitions, deadline, whatsapp
     auth/ account/ addresses/ settings/ security/ wishlist/ location/
   components/
     ui/               Base UI primitives (Button, Checkbox, Dialog, Sheet, Select, DropdownMenu, Tabs, Table, Sonner…) + ui.module.css
@@ -168,7 +169,7 @@ src/
   lib/                supabase clients, seo helpers, formatting, validation
   store/              Client state (cart, wishlist, auth) with Zustand
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0060) + seed
+supabase/             SQL migrations (0001..0062) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -182,7 +183,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 810 tests) |
+| `npm test` | Run the Vitest unit test suite (30 test files, 829 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

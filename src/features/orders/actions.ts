@@ -12,12 +12,13 @@ import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { getStoreSettings } from "@/features/settings/queries"
 import { joinCityState } from "@/features/location/states"
 import { cancelReasonText } from "./reasons"
+import { getGatewayAdapter, getServiceRoleSupabase, isGatewayConfigured } from "./payment-gateway"
 import { mapRpcError } from "./rpc-errors"
-import { cancelOrderSchema, checkoutSchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema, validatePromoSchema } from "./schema"
+import { cancelOrderSchema, checkoutSchema, createGatewayOrderSchema, createGatewayRetrySchema, placeOrderSchema, requestReturnSchema, submitPaymentSchema, withdrawReturnSchema, trackOrderSchema, updateDeliverySchema, validatePromoSchema, verifyGatewayPaymentSchema } from "./schema"
 import { composeReturnDetails, effectiveReturnDays, returnWindow } from "./returns"
 import { buildOrderMessage, shopWhatsappLink } from "./whatsapp"
 import type { ValidatedPromo } from "./pricing"
-import { mapFees, normalizePricing, type OrderPricing, type TrackedOrder } from "./types"
+import { mapFees, normalizePricing, type GatewayClientSession, type OrderPricing, type TrackedOrder } from "./types"
 import { formatPrice } from "@/lib/format"
 
 /**
@@ -42,6 +43,7 @@ export type PlacedOrder = {
   phoneLast4: string
   whatsappUrl: string
   paymentReference?: string
+  paymentConfirmed?: boolean
   createdAt?: string
 }
 
@@ -120,7 +122,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
   }
   if (await limited("place-order")) return fail(RATE_LIMIT_MESSAGE)
 
-  const { items, paymentReference, promoCode, saveAddress } = parsed.data
+  const { items, paymentReference, promoCode, expectedTotal, saveAddress } = parsed.data
   const customer = storedCustomer(parsed.data.customer)
   const phone = normalizeIndianPhone(customer.phone)!
   const supabase = await getServerSupabase()
@@ -132,6 +134,7 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
       p_items: items,
       p_prefix: shop.orderCodePrefix,
       p_promo_code: promoCode ?? null,
+      p_expected_total: expectedTotal ?? null,
     })
     .single<CreateOrderRow>()
 
@@ -236,16 +239,24 @@ export async function trackOrder(input: unknown): Promise<ActionResult<TrackedOr
   if (soft) return fail(soft)
   if (!data) return fail("No order found with that code and phone number.")
 
-  const t = data as TrackedOrder
+  const t = data as TrackedOrder & { updated_at?: string; requires_sign_in?: boolean }
   const normalizedItems = t.items.map((i) => ({
     ...i,
     price: Number(i.price),
     ...(i.returnWindowDays == null ? {} : { returnWindowDays: Number(i.returnWindowDays) }),
   }))
+  const derivedOwner = Boolean(
+    t.delivery ||
+      t.paymentMethod ||
+      (t.paymentReference && !t.paymentReference.includes("*"))
+  )
   return {
     ok: true,
     data: {
       ...t,
+      isOwner: t.isOwner ?? derivedOwner,
+      requiresSignIn: t.requiresSignIn ?? t.requires_sign_in ?? false,
+      updatedAt: t.updatedAt ?? t.updated_at,
       shipping: t.shipping ?? null,
       cancellation: t.cancellation ?? null,
       returns: t.returns ?? [],
@@ -410,4 +421,266 @@ export async function withdrawReturnRequest(input: unknown): Promise<ActionResul
   revalidatePath("/admin", "layout")
   revalidatePath("/track")
   return { ok: true }
+}
+
+/**
+ * Payment Gateway Mode (when enabled in Admin -> Settings):
+ * 1) Creates the order with server-computed pricing and stock lock (`create_order`),
+ * 2) Creates a gateway order session via `PaymentGatewayAdapter` and stores `gateway_order_id`,
+ * 3) Rolls back cleanly via `cancel_order` if session creation fails so no orphan order remains.
+ */
+export async function createGatewayCheckoutSession(
+  input: unknown
+): Promise<ActionResult<PlacedOrder & { session: GatewayClientSession }>> {
+  const parsed = createGatewayOrderSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
+  }
+  if (!isSupabaseConfigured) {
+    return fail("The store is in demo mode — connect Supabase to accept orders (see README).")
+  }
+  if (await limited("place-order")) return fail(RATE_LIMIT_MESSAGE)
+
+  const shop = await getStoreSettings()
+  if (shop.paymentMode !== "gateway") {
+    return fail("Online payment gateway is not enabled on this store.")
+  }
+  const serviceSupabase = getServiceRoleSupabase()
+  if (!serviceSupabase || !isGatewayConfigured(shop.paymentGateway)) {
+    return fail("Online payment gateway is temporarily unavailable. Please try again later.")
+  }
+
+  const { items, promoCode, expectedTotal, saveAddress } = parsed.data
+  const customer = storedCustomer(parsed.data.customer)
+  const phone = normalizeIndianPhone(customer.phone)!
+  const supabase = await getServerSupabase()
+
+  const { data, error } = await supabase
+    .rpc("create_order", {
+      p_customer: { ...customer, phone },
+      p_items: items,
+      p_prefix: shop.orderCodePrefix,
+      p_promo_code: promoCode ?? null,
+      p_expected_total: expectedTotal ?? null,
+    })
+    .single<CreateOrderRow>()
+
+  if (error || !data) return fail(mapRpcError(error?.message ?? "", "Could not place your order. Please try again."))
+
+  let session: GatewayClientSession
+  try {
+    const adapter = getGatewayAdapter(shop.paymentGateway)
+    session = await adapter.createOrderSession({
+      orderCode: data.order_code,
+      amountInr: Number(data.total),
+      shopName: shop.shopName,
+      customerName: customer.name,
+      customerPhone: phone,
+    })
+    const { error: sessErr } = await serviceSupabase.rpc("record_gateway_session", {
+      p_code: data.order_code,
+      p_gateway: shop.paymentGateway,
+      p_gateway_order_id: session.gatewayOrderId,
+    })
+    if (sessErr) throw sessErr
+  } catch {
+    await supabase.rpc("cancel_order", {
+      p_code: data.order_code,
+      p_phone_last4: phone.slice(-4),
+      p_reason: "Payment gateway session could not be created",
+      p_phone: phone,
+    })
+    return fail(mapRpcError("GATEWAY_UNAVAILABLE", "Online payment gateway is temporarily unavailable. Please try again."))
+  }
+
+  updateTag(CACHE_TAGS.products)
+
+  const pricing: OrderPricing = {
+    subtotal: Number(data.subtotal),
+    shippingFee: Number(data.shipping_fee),
+    shippingFeeOriginal: Number(data.shipping_fee_original),
+    extraFees: mapFees(data.extra_fees),
+    promoCode: data.promo_code ?? null,
+    discountAmount: Number(data.discount_amount ?? 0),
+    total: Number(data.total),
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    if (saveAddress) {
+      await addAddressFromOrder(supabase, user.id, { ...customer, phone })
+    }
+    await supabase.from("profiles").update({ full_name: customer.name }).eq("id", user.id).is("full_name", null)
+    await supabase.from("profiles").update({ phone }).eq("id", user.id).is("phone", null)
+  }
+
+  const products = await getActiveProducts()
+  const mergedQty = new Map<string, number>()
+  for (const line of items) mergedQty.set(line.productId, (mergedQty.get(line.productId) ?? 0) + line.quantity)
+  const lines = Array.from(mergedQty.entries()).flatMap(([productId, quantity]) => {
+    const p = products.find((x) => x.id === productId)
+    return p ? [{ name: p.name, price: p.price, quantity }] : []
+  })
+  const message = buildOrderMessage(shop, {
+    orderCode: data.order_code,
+    customer: { ...customer, phone },
+    items: lines,
+    pricing,
+  })
+
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+
+  return {
+    ok: true,
+    data: {
+      orderCode: data.order_code,
+      total: pricing.total,
+      phoneLast4: phone.slice(-4),
+      whatsappUrl: shopWhatsappLink(shop, message),
+      createdAt: new Date().toISOString(),
+      session,
+    },
+  }
+}
+
+/** Creates a fresh gateway checkout session for an existing pending/failed order on `/track` or `/account/orders/[code]`. */
+export async function createGatewayRetrySession(input: unknown): Promise<ActionResult<{ session: GatewayClientSession }>> {
+  const parsed = createGatewayRetrySchema.safeParse(input)
+  if (!parsed.success) return fail("Invalid order details.")
+  if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
+  if (await limited("gateway-payment")) return fail(RATE_LIMIT_MESSAGE)
+
+  const shop = await getStoreSettings()
+  if (shop.paymentMode !== "gateway") {
+    return fail("Online payment gateway is not enabled on this store.")
+  }
+  const serviceSupabase = getServiceRoleSupabase()
+  if (!serviceSupabase || !isGatewayConfigured(shop.paymentGateway)) {
+    return fail("Online payment gateway is temporarily unavailable. Please try again.")
+  }
+
+  const supabase = await getServerSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data, error } = await serviceSupabase.rpc("get_order_for_gateway", {
+    p_code: parsed.data.code,
+    p_phone_last4: parsed.data.phoneLast4,
+    p_user_id: user?.id ?? null,
+  })
+  if (error) return fail(mapRpcError(error.message, "Could not start payment."))
+  const soft = softRpcError(data)
+  if (soft) return fail(soft)
+
+  const row = data as { ok?: boolean; orderCode?: string; total?: number | string; customerName?: string; phone?: string } | null
+  if (!row?.ok || !row.orderCode) return fail("Could not find that order.")
+
+  try {
+    const adapter = getGatewayAdapter(shop.paymentGateway)
+    const session = await adapter.createOrderSession({
+      orderCode: row.orderCode,
+      amountInr: Number(row.total ?? 0),
+      shopName: shop.shopName,
+      customerName: row.customerName ?? "Customer",
+      customerPhone: row.phone ?? "",
+    })
+    const { error: sessErr } = await serviceSupabase.rpc("record_gateway_session", {
+      p_code: row.orderCode,
+      p_gateway: shop.paymentGateway,
+      p_gateway_order_id: session.gatewayOrderId,
+    })
+    if (sessErr) throw sessErr
+    return { ok: true, data: { session } }
+  } catch {
+    return fail("Online payment gateway is temporarily unavailable. Please try again.")
+  }
+}
+
+/** Verifies the client payment callback signature + server payment state, then confirms the order atomically. */
+export async function verifyGatewayPayment(
+  input: unknown
+): Promise<ActionResult<{ confirmed: boolean; orderCode: string }>> {
+  const parsed = verifyGatewayPaymentSchema.safeParse(input)
+  if (!parsed.success) return fail("Invalid payment verification payload.")
+  if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
+  if (await limited("gateway-payment")) return fail(RATE_LIMIT_MESSAGE)
+
+  const shop = await getStoreSettings()
+  const serviceSupabase = getServiceRoleSupabase()
+  if (!serviceSupabase) {
+    return fail("Payment gateway verification is unavailable.")
+  }
+
+  const { data: orderRow } = await serviceSupabase
+    .from("orders")
+    .select("order_code, phone, status, payment_status, payment_reference, payment_gateway, gateway_order_id, total")
+    .eq("order_code", parsed.data.code)
+    .maybeSingle<{
+      order_code: string
+      phone: string
+      status: string
+      payment_status: string
+      payment_reference: string | null
+      payment_gateway: string | null
+      gateway_order_id: string | null
+      total: number | string
+    }>()
+
+  if (!orderRow || orderRow.phone.slice(-4) !== parsed.data.phoneLast4) {
+    return fail("Order not found.")
+  }
+
+  if (orderRow.payment_status === "paid" || orderRow.payment_status === "refunded") {
+    if (orderRow.payment_reference === parsed.data.paymentId) {
+      return { ok: true, data: { confirmed: orderRow.status !== "cancelled", orderCode: orderRow.order_code } }
+    }
+    return fail("This order is already marked as paid.")
+  }
+
+  const provider =
+    orderRow.payment_gateway === "razorpay" ||
+    orderRow.payment_gateway === "cashfree" ||
+    orderRow.payment_gateway === "phonepe" ||
+    orderRow.payment_gateway === "stripe"
+      ? orderRow.payment_gateway
+      : shop.paymentGateway
+
+  const expectedGatewayOrderId = orderRow.gateway_order_id
+  if (!expectedGatewayOrderId) {
+    return fail("No active gateway session found for this order.")
+  }
+
+  const adapter = getGatewayAdapter(provider)
+  const verified = await adapter.verifyClientPayment({
+    expectedGatewayOrderId,
+    expectedAmountInr: Number(orderRow.total),
+    gatewayOrderId: parsed.data.gatewayOrderId,
+    paymentId: parsed.data.paymentId,
+    signature: parsed.data.signature,
+  })
+  if (!verified.ok) {
+    return fail(verified.error)
+  }
+
+  const { data: rpcData, error: rpcError } = await serviceSupabase.rpc("confirm_gateway_payment", {
+    p_code: orderRow.order_code,
+    p_gateway: provider,
+    p_gateway_order_id: expectedGatewayOrderId,
+    p_payment_reference: verified.paymentReference,
+    p_amount: Number(orderRow.total),
+    p_method: verified.method,
+  })
+  if (rpcError) {
+    return fail(mapRpcError(rpcError.message, "Could not confirm your payment. Please contact us on WhatsApp."))
+  }
+
+  const out = (rpcData ?? {}) as { confirmed?: boolean; orderCode?: string }
+  revalidatePath("/account", "layout")
+  revalidatePath("/admin", "layout")
+  revalidatePath("/track")
+  return { ok: true, data: { confirmed: out.confirmed !== false, orderCode: out.orderCode ?? orderRow.order_code } }
 }

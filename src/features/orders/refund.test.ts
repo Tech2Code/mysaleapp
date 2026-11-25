@@ -108,4 +108,49 @@ describe("refund = items only", () => {
       })
     ).toBeNull()
   })
+
+  it("rounds .xx5 proportional refunds half-up, skips promo share on manual underpayment, and reconciles 3 equal items", () => {
+    const oddItems: OrderItem[] = [
+      { productId: "a", name: "Item A", slug: "a", price: 71, quantity: 1, image: null },
+      { productId: "b", name: "Item B", slug: "b", price: 329, quantity: 1, image: null },
+    ]
+    expect(netReturnRefund(oddItems, [{ productId: "a", quantity: 1 }], { discountAmount: 10 })).toBe(69.23)
+
+    const underpaid = refundBreakdown({
+      items: [{ productId: "a", name: "Candle", slug: "candle", price: 400, quantity: 1, image: null }],
+      returns: [],
+      returnRequests: [request("approved", [{ productId: "a", name: "Candle", quantity: 1 }])],
+      shippingFee: 0,
+      extraFees: [],
+      discountAmount: 0,
+      total: 400,
+      paymentAmount: 350,
+      refundedAmount: 0,
+    })
+    expect(underpaid).not.toBeNull()
+    expect(underpaid?.promoDiscountShare).toBe(0)
+    expect(underpaid?.refundable).toBe(350)
+
+    const threeItems: OrderItem[] = [
+      { productId: "a", name: "A", slug: "a", price: 100, quantity: 1, image: null },
+      { productId: "b", name: "B", slug: "b", price: 100, quantity: 1, image: null },
+      { productId: "c", name: "C", slug: "c", price: 100, quantity: 1, image: null },
+    ]
+    const r1 = netReturnRefund(threeItems, [{ productId: "a", quantity: 1 }], { discountAmount: 100, alreadyRefunded: 0 })
+    const r2 = netReturnRefund(threeItems, [{ productId: "b", quantity: 1 }], {
+      discountAmount: 100,
+      alreadyRefunded: r1,
+      priorReturnedLines: [{ productId: "a", quantity: 1 }],
+    })
+    const r3 = netReturnRefund(threeItems, [{ productId: "c", quantity: 1 }], {
+      discountAmount: 100,
+      alreadyRefunded: r1 + r2,
+      priorReturnedLines: [
+        { productId: "a", quantity: 1 },
+        { productId: "b", quantity: 1 },
+      ],
+    })
+    expect([r1, r2, r3]).toEqual([66.67, 66.67, 66.66])
+    expect(Number((r1 + r2 + r3).toFixed(2))).toBe(200)
+  })
 })

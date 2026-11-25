@@ -36,7 +36,7 @@ export function CancelOrder({
   status: OrderStatus
   paymentStatus: PaymentStatus
   whatsappUrl: string
-  onCancelled?: () => void
+  onCancelled?: () => void | Promise<unknown>
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -130,12 +130,15 @@ export function CancelOrder({
         toast.error(res.error)
         return
       }
+      if (onCancelled) {
+        await onCancelled()
+      } else {
+        router.refresh()
+      }
       later(() => {
         setOpen(false)
-        onCancelled?.()
         toast.success(res.data.refundDue ? "Order cancelled. Your refund is on its way." : "Order cancelled")
       })
-      router.refresh()
     })
   }
 

@@ -130,10 +130,17 @@ describe("order views (dashboard tile and list share one filter)", () => {
 
   it("getOrderFilterCounts scopes status and payment badge counts to the active period", async () => {
     const { calls } = setup()
-    await getOrderFilterCounts({ year: "2025", month: "all" })
+    const counts = await getOrderFilterCounts({ year: "2025", month: "all" })
+    expect(typeof counts.payment.pending).toBe("number")
     const orderCountCalls = calls.filter((c) => c.name === "orders" && !c.ops.some(([m]) => m === "in" && c.ops.some(([m2, a2]) => m2 === "in" && a2[0] === "id")))
     expect(orderCountCalls.length).toBeGreaterThan(0)
     expect(orderCountCalls.every((c) => c.ops.some(([m, a]) => m === "gte" && a[0] === "created_at"))).toBe(true)
+    const submittedCountCall = calls.find((c) => c.name === "orders" && has(c, "eq", "payment_status", "submitted"))!
+    expect(submittedCountCall).toBeTruthy()
+    expect(submittedCountCall.ops.some(([m, a]) => m === "neq" && a[0] === "status" && a[1] === "cancelled")).toBe(false)
+    const pendingCountCall = calls.find((c) => c.name === "orders" && has(c, "eq", "payment_status", "pending"))!
+    expect(pendingCountCall).toBeTruthy()
+    expect(has(pendingCountCall, "neq", "status", "cancelled")).toBe(true)
   })
 })
 

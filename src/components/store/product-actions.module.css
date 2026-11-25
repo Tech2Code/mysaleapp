@@ -81,56 +81,83 @@
 .submitReviewBtn { width: 100%; border-radius: 12px; font-size: 16px; font-weight: 600; }
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }
 .spinSvg { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
-.orderReviewWidget { margin-top: 10px; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 38%, transparent); padding: 12px; }
+.orderReviewWidget { margin-top: 10px; border-radius: 14px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 38%, transparent); padding: 10px 12px; }
+.orderReviewWidget .orderReviewedRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.orderReviewedRow .orderReviewedMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.orderReviewedMeta .orderReviewedLabel { font-size: 12px; font-weight: 600; color: var(--muted-foreground); }
+.orderReviewedRow .orderReviewedActions { display: flex; align-items: center; gap: 12px; }
 .orderReviewWidget .widgetHeaderRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .widgetHeaderRow .widgetKicker { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.6px; color: var(--primary); text-transform: uppercase; }
 .widgetHeaderRow .widgetTitle { margin: 0; font-size: 12px; font-weight: 500; color: color-mix(in oklab, var(--foreground) 86%, transparent); }
-.widgetHeaderRow .viewReviewsLink { font-size: 11px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
-.widgetHeaderRow .viewReviewsLink:hover { text-decoration: underline; }
+.viewReviewsLink { font-size: 11.5px; font-weight: 600; color: var(--muted-foreground); text-underline-offset: 4px; transition: color 150ms ease; }
+.viewReviewsLink:hover { color: var(--foreground); text-decoration: underline; }
 .orderReviewWidget .widgetPickerWrap { margin-top: 8px; }
 /* Section: Product Reviews Section (PDP Compact Summary + Dedicated Reviews Page) */
 .reviewsSection { margin: 32px auto 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; scroll-margin-top: 96px; }
 .reviewsSection .pdpRatingsCard { display: grid; gap: 24px; border-radius: 24px; border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
 .pdpRatingsCard .pdpSummaryCol { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; }
-.pdpSummaryCol .pdpSummaryHeader { display: flex; flex-direction: column; gap: 2px; }
-.pdpRatingsCard .pdpHighlightsCol { display: flex; min-width: 0; flex-direction: column; justify-content: space-between; gap: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
-.pdpHighlightsCol .pdpAspectsBlock { display: flex; flex-direction: column; gap: 14px; }
-.pdpAspectsBlock .pdpAspectsHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.pdpAspectsHeader .verifiedGuaranteePill { display: inline-flex; align-items: center; gap: 5px; border-radius: 9999px; background-color: rgba(16, 185, 129, 0.12); padding: 4px 10px; font-size: 11px; font-weight: 600; color: #047857; }
+.pdpSummaryCol .pdpSummaryTop { display: flex; flex-direction: column; gap: 14px; }
+.pdpSummaryTop .pdpSummaryHeaderRow, .summaryTopStack .pdpSummaryHeaderRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pdpSummaryCol .pdpSummaryFooter { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
+.pdpSummaryFooter .pdpReviewsFooterRow { display: flex; flex-direction: column; gap: 10px; }
+.pdpReviewsFooterRow .seeAllPageBtn { width: 100%; gap: 8px; border-radius: 9999px; font-weight: 600; }
+.pdpReviewsFooterRow .writeReviewOutlineBtn { width: 100%; gap: 8px; border-radius: 9999px; }
+.myReviewSubmittedBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--border) 85%, transparent); background-color: var(--store-section-tint, var(--muted)); padding: 8px 14px; }
+.myReviewSubmittedBar .myReviewSummaryLeft { display: flex; align-items: center; gap: 8px; }
+.myReviewSummaryLeft .myReviewSummaryText { font-size: 12.5px; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.editMyReviewLink { display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; padding: 0; font-size: 12.5px; font-weight: 600; color: var(--primary); cursor: pointer; text-underline-offset: 4px; }
+.editMyReviewLink:hover { text-decoration: underline; }
+.pdpRatingsCard .pdpHighlightsCol { display: flex; min-width: 0; flex-direction: column; justify-content: flex-start; gap: 18px; border-top: 1px solid var(--border); padding-top: 20px; }
+.pdpHighlightsCol .pdpAspectsBlock { display: flex; flex-direction: column; gap: 10px; }
+.pdpAspectsBlock .pdpAspectsHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pdpAspectsHeader .verifiedGuaranteePill { display: inline-flex; align-items: center; gap: 5px; border-radius: 9999px; background-color: rgba(16, 185, 129, 0.12); padding: 3px 10px; font-size: 11px; font-weight: 600; color: #047857; }
 :global(.dark) .pdpAspectsHeader .verifiedGuaranteePill { color: #6ee7b7; }
-.pdpAspectsBlock .pdpAspectsPillsGrid { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 10px; overflow-x: auto; padding: 2px 2px 6px 2px; margin: -2px -2px -6px -2px; scrollbar-width: none; }
+.pdpAspectsBlock .pdpAspectsPillsGrid { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; overflow-x: auto; padding: 2px 2px 6px 2px; margin: -2px -2px -6px -2px; scrollbar-width: none; }
 .pdpAspectsBlock .pdpAspectsPillsGrid::-webkit-scrollbar { display: none; }
-.pdpAspectsPillsGrid .pdpAspectCard { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; border-radius: 14px; background-color: var(--store-section-tint, var(--muted)); padding: 10px 14px; white-space: nowrap; }
-.pdpAspectCard .pdpAspectIcon { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 10px; background-color: rgba(16, 185, 129, 0.14); color: #047857; }
-:global(.dark) .pdpAspectCard .pdpAspectIcon { color: #6ee7b7; }
-.pdpAspectCard .pdpAspectText { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.pdpAspectText .pdpAspectName { margin: 0; font-size: 13px; font-weight: 600; color: var(--foreground); }
-.pdpAspectText .pdpAspectMeta { margin: 0; font-size: 11.5px; color: var(--muted-foreground); }
-.pdpHighlightsCol .pdpBuyerRateStrip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-radius: 16px; background-color: var(--store-section-tint, var(--muted)); padding: 12px 16px; }
-.pdpBuyerRateStrip .pdpBuyerRateText { display: flex; flex-direction: column; gap: 2px; }
-.pdpBuyerRateStrip .pdpBuyerPickerWrap { width: 100%; max-width: 280px; }
-.pdpHighlightsCol .pdpReviewsFooterRow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
-.pdpReviewsFooterRow .seeAllPageBtn { flex: 1 1 220px; gap: 8px; border-radius: 9999px; font-weight: 600; }
-.pdpReviewsFooterRow .writeReviewOutlineBtn { flex: 0 1 auto; gap: 8px; border-radius: 9999px; }
-.summaryLeftCard { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: 24px; border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
-.summaryLeftCard .summaryTopStack { display: flex; flex-direction: column; gap: 20px; }
-.kickerAccent { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; }
-.sectionHeading { margin: 4px 0 0 0; font-family: var(--font-heading); font-size: 24px; font-weight: 600; color: var(--foreground); }
-.scoreAndBarsGrid { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
-.scoreAndBarsGrid .scoreBigBox { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.scoreBigBox .avgNumber { font-family: var(--font-heading); font-size: 32px; line-height: 36px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--foreground); }
-.scoreBigBox .starsAndCountCol { display: flex; flex-direction: column; gap: 4px; }
-.starsAndCountCol .verifiedCountText { margin: 0; font-size: 11.5px; color: var(--muted-foreground); }
-.scoreAndBarsGrid .distributionList { display: flex; flex-direction: column; gap: 5px; border-left: 1px solid var(--border); padding-left: 16px; }
-.distributionList .distRowBtn, .distributionList .distRowStatic { display: flex; width: 100%; align-items: center; gap: 8px; border-radius: 6px; border: 0; background: transparent; padding: 2px 4px; font-size: 11.5px; transition: background-color 150ms ease; }
+.pdpAspectsPillsGrid .pdpAspectChip { display: inline-flex; height: 36px; flex: 0 0 auto; align-items: center; gap: 7px; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--border) 75%, transparent); background-color: var(--store-section-tint, var(--muted)); padding: 0 6px 0 12px; white-space: nowrap; }
+.pdpAspectChip .pdpAspectThumbSvg { width: 13px; height: 13px; flex-shrink: 0; color: #047857; }
+:global(.dark) .pdpAspectChip .pdpAspectThumbSvg { color: #6ee7b7; }
+.pdpAspectChip .pdpAspectName { font-size: 13px; font-weight: 600; color: var(--foreground); }
+.pdpAspectChip .pdpAspectStatBadge { border-radius: 9999px; background-color: rgba(16, 185, 129, 0.12); padding: 2px 8px; font-size: 11px; font-weight: 600; color: #047857; font-variant-numeric: tabular-nums; }
+:global(.dark) .pdpAspectChip .pdpAspectStatBadge { color: #6ee7b7; }
+.pdpHighlightsCol .topReviewsBlock { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+.topReviewsBlock .topReviewsHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.topReviewsHeader .topReviewsHeading, .pdpAspectsHeader .topReviewsHeading { margin: 0; font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--muted-foreground); text-transform: uppercase; }
+.topReviewsHeader .topReviewsAllLink { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.topReviewsHeader .topReviewsAllLink:hover { text-decoration: underline; }
+.topReviewsBlock .topReviewsCarousel { width: 100%; }
+.topReviewsCarousel .topReviewSlide { display: flex; width: 88%; flex-shrink: 0; scroll-snap-align: start; list-style: none; }
+.topReviewsCarousel .topReviewSlideSingle { width: 100%; }
+.topReviewSlide .topReviewCard { display: flex; width: 100%; flex-direction: column; justify-content: space-between; gap: 12px; border-radius: 18px; background-color: var(--store-section-tint, var(--muted)); padding: 16px; }
+.topReviewCard .topReviewTopRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.topReviewTopRow .topReviewStarsGroup { display: flex; align-items: center; gap: 8px; }
+.topReviewTopRow .topReviewDate { font-size: 11.5px; color: var(--muted-foreground); white-space: nowrap; }
+.topReviewCard .topReviewPillsRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.topReviewCard .topReviewQuote { margin: 0; flex: 1 1 auto; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 13.5px; line-height: 21px; color: color-mix(in oklab, var(--foreground) 92%, transparent); }
+.topReviewCard .topReviewAuthorRow { display: flex; align-items: center; gap: 10px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 10px; }
+.topReviewAuthorRow .reviewerAvatarCircle { display: grid; width: 30px; height: 30px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 14%, transparent); font-family: var(--font-heading); font-size: 13px; font-weight: 700; color: var(--primary); }
+.topReviewAuthorRow .reviewerAuthorMeta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px; font-size: 12px; }
+.reviewerAuthorMeta .verifiedMiniText { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #047857; }
+:global(.dark) .reviewerAuthorMeta .verifiedMiniText { color: #6ee7b7; }
+.summaryLeftCard { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; border-radius: 24px; border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
+.summaryLeftCard .summaryTopStack { display: flex; flex-direction: column; gap: 14px; }
+.sectionHeading { margin: 0; font-family: var(--font-heading); font-size: 22px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.scoreAndBarsGrid { display: flex; flex-direction: column; gap: 14px; }
+.scoreAndBarsGrid .scoreHeroBox { display: flex; align-items: center; gap: 14px; border-radius: 16px; background-color: var(--store-section-tint, var(--muted)); padding: 14px 16px; }
+.scoreHeroBox .avgNumber { font-family: var(--font-heading); font-size: 36px; line-height: 38px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.scoreHeroBox .starsAndCountCol { display: flex; flex-direction: column; gap: 3px; }
+.starsAndCountCol .verifiedCountText { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.scoreAndBarsGrid .distributionList { display: flex; flex-direction: column; gap: 4px; }
+.distributionList .distRowBtn, .distributionList .distRowStatic { display: flex; width: 100%; align-items: center; gap: 10px; border-radius: 8px; border: 0; background: transparent; padding: 3px 6px; font-size: 12px; transition: background-color 150ms ease, opacity 150ms ease; }
 .distributionList .distRowInteractive { cursor: pointer; }
 .distributionList .distRowInteractive:hover { background-color: color-mix(in oklab, var(--muted) 65%, transparent); }
-.distributionList .distRowDisabled { cursor: default; opacity: 0.6; }
+.distributionList .distRowDisabled, .distributionList .distRowMuted { cursor: default; }
+.distributionList .distRowMuted .distStarLabel, .distributionList .distRowMuted .distCountNum, .distributionList .distRowDisabled .distStarLabel, .distributionList .distRowDisabled .distCountNum { color: color-mix(in oklab, var(--muted-foreground) 72%, transparent); }
 .distributionList .distRowActive { background-color: color-mix(in oklab, var(--primary) 10%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent); }
-.distStarLabel { width: 32px; flex-shrink: 0; text-align: left; font-weight: 600; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
-.distBarTrack { height: 7px; flex: 1 1 0%; overflow: hidden; border-radius: 9999px; background-color: var(--muted); }
+.distStarLabel { width: 28px; flex-shrink: 0; text-align: left; font-weight: 600; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.distBarTrack { height: 8px; flex: 1 1 0%; overflow: hidden; border-radius: 9999px; background-color: color-mix(in oklab, var(--foreground) 9%, var(--muted)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--border) 85%, transparent); }
 .distBarTrack .distBarFill { height: 100%; border-radius: 9999px; background-color: #fbbf24; transition: width 300ms ease; }
-.distCountNum { width: 24px; flex-shrink: 0; text-align: right; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.distCountNum { width: 22px; flex-shrink: 0; text-align: right; font-weight: 500; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 .summaryLeftCard .rateBottomBlock { display: flex; flex-direction: column; gap: 12px; border: 0; padding-top: 4px; }
 .rateBottomBlock .rateWidgetBox { border-radius: 16px; border: 0; background-color: var(--store-section-tint, var(--muted)); padding: 14px; }
 .rateKicker { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.6px; color: var(--primary); text-transform: uppercase; }
@@ -241,7 +268,8 @@
   .dialogColFooter { flex-direction: column; }
   .reviewsSection { margin-top: 48px; padding: 0 24px; }
   .reviewsSection .pdpRatingsCard { padding: 28px; }
-  .pdpReviewsFooterRow .seeAllPageBtn { flex: 0 1 auto; padding-left: 28px; padding-right: 28px; }
+  .topReviewsCarousel .topReviewSlide { width: calc((100% - 16px) / 2); }
+  .topReviewsCarousel .topReviewSlideSingle { width: 100%; }
   .reviewsPageWrap .productBannerCard { padding: 20px 24px; }
   .bannerLeftGroup .bannerThumbLink { width: 76px; height: 76px; }
   .bannerMetaCol .bannerProductTitle { font-size: 24px; line-height: 30px; }
@@ -253,18 +281,9 @@
 }
 @media (min-width: 1024px) {
   .reviewsSection { padding: 0 32px; }
-  .reviewsSection .pdpRatingsCard { grid-template-columns: 380px 1fr; align-items: stretch; gap: 36px; padding: 32px; }
+  .reviewsSection .pdpRatingsCard { grid-template-columns: 360px 1fr; align-items: stretch; gap: 36px; padding: 32px; }
   .pdpRatingsCard .pdpHighlightsCol { border-top: 0; border-left: 1px solid var(--border); padding-top: 0; padding-left: 36px; }
   .summaryLeftCard { padding: 24px; }
-  .scoreAndBarsGrid { display: flex; flex-direction: column; align-items: stretch; gap: 16px; border-top: 0; padding-top: 0; }
-  .scoreAndBarsGrid .scoreBigBox { flex-direction: row; align-items: center; gap: 14px; }
-  .scoreBigBox .avgNumber { font-size: 38px; line-height: 42px; }
-  .starsAndCountCol .verifiedCountText { font-size: 12px; }
-  .scoreAndBarsGrid .distributionList { gap: 6px; border-top: 1px solid var(--border); border-left: 0; padding-top: 16px; padding-left: 0; }
-  .distributionList .distRowBtn, .distributionList .distRowStatic { gap: 10px; font-size: 12px; }
-  .distStarLabel { width: 40px; }
-  .distBarTrack { height: 8px; }
-  .distCountNum { width: 28px; }
   .reviewsPageWrap .reviewsPageGrid { grid-template-columns: 360px 1fr; gap: 32px; }
   .reviewsPageGrid .reviewsSidebarCol { position: sticky; top: calc(var(--store-header-h) + 20px); }
 }

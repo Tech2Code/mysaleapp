@@ -71,10 +71,14 @@ export async function getMyOrder(code: string, nextPath = `/account/orders/${cod
   const byId = new Map(products.map((p) => [p.id, p]))
   return {
     ...order,
-    items: order.items.map((item) => ({
-      ...item,
-      returnWindowDays:
-        item.returnWindowDays ?? byId.get(item.productId)?.returnWindowDays ?? shop.returnWindowDays,
-    })),
+    items: order.items.map((item) => {
+      const live = byId.get(item.productId)
+      return {
+        ...item,
+        returnWindowDays:
+          item.returnWindowDays ?? live?.returnWindowDays ?? shop.returnWindowDays,
+        reviewAspects: item.reviewAspects ?? live?.reviewAspects,
+      }
+    }),
   }
 }

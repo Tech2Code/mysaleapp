@@ -312,12 +312,21 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
 
   const handleSignOutNow = useCallback(() => {
     startTransition(async () => {
-      const res = await signOutAdmin()
-      applyClientSignOut()
-      await getBrowserSupabase()?.auth.signOut({ scope: "local" })
-      showSuccess("Signed out")
-      later(() => toast.success("Signed out"))
-      router.replace(res.ok ? res.data.redirectTo : "/admin/login")
+      try {
+        const res = await signOutAdmin()
+        if (!res.ok) {
+          toast.error(res.error ?? "Couldn't sign out. Please try again.")
+          return
+        }
+        applyClientSignOut()
+        await getBrowserSupabase()?.auth.signOut({ scope: "local" })
+        setAskSignOut(false)
+        showSuccess("Signed out")
+        later(() => toast.success("Signed out"))
+        router.replace(res.data.redirectTo)
+      } catch {
+        toast.error("Couldn't sign out. Please try again.")
+      }
     })
   }, [later, router, showSuccess])
 
@@ -385,17 +394,18 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
             <LogOutIcon /> {pending ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
-        <ConfirmDialog
-          open={askSignOut}
-          onOpenChange={setAskSignOut}
-          title="Sign out?"
-          description="You will need to sign in again with your email and password to use the admin panel."
-          confirmLabel="Sign out"
-          destructive
-          pending={pending}
-          onConfirm={handleSignOutNow}
-        />
       </DropdownMenu>
+
+      <ConfirmDialog
+        open={askSignOut}
+        onOpenChange={(o) => !pending && setAskSignOut(o)}
+        title="Sign out?"
+        description="You will need to sign in again with your email and password to use the admin panel."
+        confirmLabel="Sign out"
+        destructive
+        pending={pending}
+        onConfirm={handleSignOutNow}
+      />
 
       <AdminPinGateDialog
         key={gateMode}
@@ -562,7 +572,17 @@ function AdminPinGateDialog({
         aria-hidden
         className={styles.pinLockBackdrop}
       />
-      <Dialog open onOpenChange={() => {}}>
+      <Dialog
+        open
+        onOpenChange={() => {}}
+        onBackStep={() => {
+          if (forgotMode) {
+            setForgotMode(false)
+            return true
+          }
+          return true
+        }}
+      >
         <DialogContent showCloseButton={false} className={styles.pinDialogContent}>
         {gateMode === "setup-prompt" ? (
           <form onSubmit={submitFirstTimeSetup} noValidate className={styles.pinDialogForm}>

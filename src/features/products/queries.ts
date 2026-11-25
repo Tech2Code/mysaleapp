@@ -131,7 +131,6 @@ export async function getProductListItems(): Promise<ProductListItem[]> {
 type ProductReviewRow = {
   id: string
   product_id: string
-  user_id: string | null
   reviewer_name: string
   rating: number
   title: string | null
@@ -151,9 +150,9 @@ export async function getProductReviews(productId: string): Promise<ProductRevie
 
   const { data, error } = await supabase
     .from("product_reviews")
-    .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
+    .select("id, product_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
     .eq("product_id", productId)
-    .order("created_at", { ascending: false })
+    .order("updated_at", { ascending: false })
     .limit(200)
     .returns<ProductReviewRow[]>()
 
@@ -164,7 +163,7 @@ export async function getProductReviews(productId: string): Promise<ProductRevie
   return (data ?? []).map((r) => ({
     id: r.id,
     productId: r.product_id,
-    userId: r.user_id,
+    userId: null,
     reviewerName: r.reviewer_name,
     rating: Number(r.rating),
     title: r.title,

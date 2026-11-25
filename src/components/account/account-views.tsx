@@ -49,14 +49,6 @@ function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
         <div className={styles.orderTopRow}>
           <span className={styles.orderCodeMono}>{o.orderCode}</span>
           <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="customer" />
-          {isAwaitingPayment(o) && (
-            <span className={styles.utrBadge}>Update UTR</span>
-          )}
-          {o.status === "pending" && o.paymentStatus === "submitted" && (
-            <span className={styles.verifyingBadge}>
-              Verifying payment
-            </span>
-          )}
         </div>
         <p className={styles.orderItemsTrunc}>
           {o.items.map((i) => `${i.name} × ${i.quantity}`).join(", ")}
@@ -97,19 +89,20 @@ function MyOrdersEmpty({
             : "Try switching the status tab above or clearing your search query."
           : "Orders you place while signed in appear here. Guest orders can be tracked with their order code."}
       </p>
-      <div className={styles.emptyActionsRow}>
-        {showAllTimeButton && (
-          <Link href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), styles.pillBtnPx20)}>
-            View all-time orders
-          </Link>
-        )}
-        <Link href="/products" className={cn(buttonVariants(), styles.pillBtnPx20)}>
-          Start shopping
-        </Link>
-        <Link href="/track" className={cn(buttonVariants({ variant: "outline" }), styles.pillBtnPx20)}>
-          Track a guest order
-        </Link>
-      </div>
+      {(showAllTimeButton || !isFiltered) && (
+        <div className={styles.emptyActionsRow}>
+          {showAllTimeButton && (
+            <Link href="/account/orders?year=all" className={cn(buttonVariants({ variant: "secondary" }), styles.pillBtnPx20)}>
+              View all-time orders
+            </Link>
+          )}
+          {!isFiltered && (
+            <Link href="/products" className={cn(buttonVariants(), styles.pillBtnPx20)}>
+              Start shopping
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -278,7 +271,13 @@ export function MyOrderView({
                   history={order.history}
                   returns={order.returns}
                   requests={order.returnRequests}
-                  charges={{ shippingFee: order.shippingFee, extraFees: order.extraFees, discountAmount: order.discountAmount }}
+                  charges={{
+                    shippingFee: order.shippingFee,
+                    extraFees: order.extraFees,
+                    discountAmount: order.discountAmount,
+                    paidAmount: order.paymentAmount ?? order.total,
+                    refundedAmount: order.refundedAmount,
+                  }}
                   orderDelivery={{
                     name: order.customerName,
                     phone: order.phone,

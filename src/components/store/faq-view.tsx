@@ -4,7 +4,6 @@ import {
   ArrowRightIcon,
   ChevronDownIcon,
   HelpCircleIcon,
-  PackageCheckIcon,
   RotateCcwIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -59,8 +58,8 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
 
   const expiryText =
     shop.unpaidOrderExpiryHours > 0
-      ? `When you place an order, your handmade pieces are reserved for ${shop.unpaidOrderExpiryHours} ${shop.unpaidOrderExpiryHours === 1 ? "hour" : "hours"} while we await your UPI payment confirmation.`
-      : "Your items are reserved as soon as you place your order and confirmed once your UPI payment is verified."
+      ? `When you place an order, payment is verified against the UTR you submit at checkout. If a payment needs correction, you have ${shop.unpaidOrderExpiryHours} ${shop.unpaidOrderExpiryHours === 1 ? "hour" : "hours"} to submit an updated UTR before unpaid orders expire automatically.`
+      : "Your order is confirmed as soon as we verify the UPI reference number you submit at checkout."
 
   const returnSummary =
     shop.returnWindowDays > 0
@@ -68,8 +67,8 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
       : "Because each piece is handcrafted in small batches, returns are only accepted if an item arrives damaged or incorrect."
 
   const invoiceSummary = gstActive(shop)
-    ? `Yes — all product prices are inclusive of ${shop.gstRate}% GST, and you can download a GST Tax Invoice directly from your Order Details or Track Order page.`
-    : "Yes — every confirmed order includes a downloadable printable order invoice from your account's Order Details or Track Order page."
+    ? `Yes — all product prices are inclusive of ${shop.gstRate}% GST, and once signed in you can download a GST Tax Invoice directly from My Orders.`
+    : "Yes — every confirmed order includes a downloadable printable order invoice from My Orders when you sign in."
 
   const studioOrigin = [shop.city, shop.region].filter(Boolean).join(", ")
 
@@ -79,7 +78,7 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
       category: "orders",
       categoryLabel: "Orders & UPI",
       question: "How do I place an order and pay by UPI?",
-      answer: `Add your favourite pieces to the cart, enter your delivery address at checkout, and place your order. You can scan the instant UPI QR code or tap any UPI app (Google Pay, PhonePe, Paytm, BHIM) and share the confirmation on WhatsApp with ${shop.shopName}.`,
+      answer: `Add your favourite pieces to the cart, enter your delivery address at checkout, scan the UPI QR code or tap any UPI app (Google Pay, PhonePe, Paytm, BHIM), and enter your 12-digit UTR / UPI reference number to place your order with ${shop.shopName}.`,
       linkHref: "/products",
       linkLabel: "Browse the collection",
     },
@@ -87,8 +86,8 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
       id: "order-reservation-window",
       category: "orders",
       categoryLabel: "Orders & UPI",
-      question: "How long is my order held while I complete payment?",
-      answer: `${expiryText} Once paid, our studio verifies the payment and shares your live tracking update.`,
+      question: "How is my UPI payment verified?",
+      answer: `${expiryText} Once verified, our studio confirms your order and shares live courier tracking updates.`,
     },
     {
       id: "cod-availability",
@@ -104,8 +103,8 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
       categoryLabel: "Orders & UPI",
       question: "Do I get an invoice for my purchase?",
       answer: invoiceSummary,
-      linkHref: "/track",
-      linkLabel: "Track an order & download invoice",
+      linkHref: "/account/orders",
+      linkLabel: "Open My Orders",
     },
     {
       id: "shipping-charges",
@@ -357,14 +356,7 @@ export function FaqView({ shop }: { shop: StoreSettings }) {
               href="/contact"
               className={cn(buttonVariants({ variant: "outline" }), styles.faqSecondaryCta)}
             >
-              <span>Contact details</span>
-            </Link>
-            <Link
-              href="/track"
-              className={cn(buttonVariants({ variant: "ghost" }), styles.faqSecondaryCta)}
-            >
-              <PackageCheckIcon className={styles.faqActionIcon} aria-hidden />
-              <span>Track order</span>
+              <span>Contact us</span>
             </Link>
           </div>
         </div>

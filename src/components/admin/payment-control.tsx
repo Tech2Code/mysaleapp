@@ -15,6 +15,7 @@ import { updateOrderPayment } from "@/features/orders/admin-actions"
 import { splitCancelReason } from "@/features/orders/reasons"
 import { buildUpiUrl } from "@/features/orders/upi"
 import {
+  PAYMENT_GATEWAY_LABEL,
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
   PAYMENT_STATUS_LABEL,
@@ -312,6 +313,12 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         {due && <Fact label={due.label}>{formatPrice(due.amount)}</Fact>}
         <Fact label="Received">{order.paymentAmount == null ? "—" : formatPrice(order.paymentAmount)}</Fact>
         <Fact label="Method">{order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "—"}</Fact>
+        {order.paymentGateway && <Fact label="Gateway">{PAYMENT_GATEWAY_LABEL[order.paymentGateway]}</Fact>}
+        {order.gatewayOrderId && (
+          <Fact label="Gateway Order ID">
+            <CopyableReference value={order.gatewayOrderId} />
+          </Fact>
+        )}
         <Fact label="UTR / reference">
           {order.paymentReference ? <CopyableReference value={order.paymentReference} /> : "—"}
         </Fact>
@@ -423,7 +430,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
           <Dialog open={refundOpen} onOpenChange={handleDialogOpenChange}>
             <DialogContent className={styles.dialogSmMax}>
               <form onSubmit={onSave} noValidate className={styles.dialogForm}>
-                <DialogHeader>
+                <DialogHeader showCloseButton={!pending}>
                   <DialogTitle>{refundOnly ? "Refund this payment" : "Edit payment record"}</DialogTitle>
                   <DialogDescription>
                     {refundOnly
@@ -454,7 +461,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                     label={isRefunding ? "Refund UTR / reference" : "UTR / reference"}
                     required={isRefunding || statusNow === "submitted" || (statusNow === "paid" && (methodNow === "upi" || methodNow === "bank_transfer"))}
                     fieldSize="md"
-                    kind="paymentRef"
+                    kind={order.paymentGateway || isRefunding ? "gatewayRef" : "paymentRef"}
                     placeholder={isRefunding ? "e.g. 412345678901" : undefined}
                     disabled={lockPaidFields && !refundOnly}
                     className={styles.monoText}

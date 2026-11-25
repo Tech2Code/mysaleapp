@@ -180,6 +180,13 @@ export const v = {
       .toUpperCase()
       .regex(PATTERNS.utr, "Enter the UTR from your payment app (12 digits)"),
 
+  /** Gateway payment/refund ID or UTR, 8 to 64 letters, digits, _ or - */
+  gatewayRef: () =>
+    z
+      .string()
+      .trim()
+      .regex(PATTERNS.gatewayRef, "Enter a valid UTR or payment reference ID"),
+
   upiId: () => z.string().trim().max(LIMITS.upiId.max).regex(PATTERNS.upiId, "Enter a valid UPI ID, like name@bank"),
 
   /** Optional text: empty → null. */

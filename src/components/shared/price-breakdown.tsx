@@ -34,7 +34,7 @@ export function PriceBreakdown({
   const deliveryFree = shippingFee === 0
   const saved = deliveryFree ? shippingFeeOriginal : 0
   const promoSaved = discountAmount > 0 ? discountAmount : 0
-  const totalSaved = saved + promoSaved
+  const totalSaved = Math.round((saved + promoSaved + Number.EPSILON) * 100) / 100
 
   return (
     <div className={cn(styles.priceBreakdown, className)}>
@@ -97,18 +97,18 @@ export function PriceBreakdown({
           </dd>
         </div>
 
-        {totalSaved > 0 && (
-          <p className={styles.savingsBannerRow}>
-            <SparklesIcon className={styles.sparkleSvg} aria-hidden />
-            <span>You saved {formatPrice(totalSaved)} on this order</span>
-          </p>
-        )}
-
         <div className={styles.grandTotalRow}>
           <dt className={styles.grandTotalDt}>{totalLabel}</dt>
           <dd className={styles.grandTotalDd}>{formatPrice(total)}</dd>
         </div>
       </dl>
+
+      {totalSaved > 0 && (
+        <p className={styles.savingsBannerRow}>
+          <SparklesIcon className={styles.sparkleSvg} aria-hidden />
+          <span>You saved {formatPrice(totalSaved)} on this order</span>
+        </p>
+      )}
     </div>
   )
 }

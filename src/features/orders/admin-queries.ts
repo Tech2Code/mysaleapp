@@ -122,6 +122,7 @@ export type OrderFilterCounts = {
   payment: {
     submitted: number
     failed: number
+    pending: number
     paid: number
     "refund-due": number
     refunded: number
@@ -162,8 +163,9 @@ export async function getOrderFilterCounts(filters?: {
     Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
     Promise.all(ORDER_STATUSES.map(async (s) => (await head().eq("status", s)).count ?? 0)),
     Promise.all([
-      head().eq("payment_status", "submitted").neq("status", "cancelled").then((r) => r.count ?? 0),
+      head().eq("payment_status", "submitted").then((r) => r.count ?? 0),
       head().eq("payment_status", "failed").neq("status", "cancelled").then((r) => r.count ?? 0),
+      head().eq("payment_status", "pending").neq("status", "cancelled").then((r) => r.count ?? 0),
       head().eq("payment_status", "paid").then((r) => r.count ?? 0),
       head().eq("status", "cancelled").in("payment_status", ["paid", "submitted"]).then((r) => r.count ?? 0),
       head().eq("payment_status", "refunded").then((r) => r.count ?? 0),
@@ -176,9 +178,10 @@ export async function getOrderFilterCounts(filters?: {
     payment: {
       submitted: paymentCounts[0],
       failed: paymentCounts[1],
-      paid: paymentCounts[2],
-      "refund-due": paymentCounts[3],
-      refunded: paymentCounts[4],
+      pending: paymentCounts[2],
+      paid: paymentCounts[3],
+      "refund-due": paymentCounts[4],
+      refunded: paymentCounts[5],
     },
   }
 }
@@ -258,7 +261,7 @@ export async function getOrderById(idOrCode: string): Promise<OrderWithHistory |
 }
 
 /** One bar/point of the chart: a day, or a whole month for long ranges. */
-export type DayPoint = { date: string; label: string; revenue: number; orders: number }
+export type DayPoint = { date: string; label: string; revenue: number; orders: number; paidOrders?: number }
 
 export type TopProduct = { productId: string; name: string; image: string | null; quantity: number; revenue: number }
 
@@ -292,7 +295,7 @@ const monthLabel = (d: Date) => d.toLocaleDateString("en-IN", { month: "short", 
 
 type StatNumber = number | string
 type DashboardStats = {
-  buckets: { key: string; revenue: StatNumber; orders: StatNumber }[]
+  buckets: { key: string; revenue: StatNumber; orders: StatNumber; paidOrders?: StatNumber }[]
   current: { revenue: StatNumber; orders: StatNumber; paid: StatNumber }
   previous: { revenue: StatNumber; orders: StatNumber; paid: StatNumber }
   byStatus: Partial<Record<OrderStatus, StatNumber>>
@@ -345,7 +348,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
     const d = new Date(t)
     const key = bucketKey(d)
     if (index.has(key)) continue
-    const point: DayPoint = { date: key, label: range.bucket === "month" ? monthLabel(d) : dayLabel(d), revenue: 0, orders: 0 }
+    const point: DayPoint = { date: key, label: range.bucket === "month" ? monthLabel(d) : dayLabel(d), revenue: 0, orders: 0, paidOrders: 0 }
     days.push(point)
     index.set(key, point)
   }
@@ -354,6 +357,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
     if (point) {
       point.revenue = Number(b.revenue)
       point.orders = Number(b.orders)
+      point.paidOrders = Number(b.paidOrders ?? b.orders)
     }
   }
 

@@ -121,7 +121,7 @@ export function DecideDialog({
         {approve ? "Approve" : "Reject"}
       </DialogTrigger>
       <DialogContent className={styles.dialogSmMax}>
-        <DialogHeader>
+        <DialogHeader showCloseButton={!pending}>
           <DialogTitle>
             {approve
               ? request.resolutionType === "exchange"
@@ -310,9 +310,23 @@ export function AdminReturnRequests({
   requests: ReturnRequest[]
   returns: OrderReturn[]
   returnStage: ReturnStage | null
-  admin?: { items: OrderItem[]; paymentStatus: string; refundedAmount: number; discountAmount?: number }
+  admin?: {
+    items: OrderItem[]
+    paymentStatus: string
+    refundedAmount: number
+    discountAmount?: number
+    paidAmount?: number
+    refundUpiId?: string | null
+    paymentReference?: string | null
+    customerName?: string
+    orderCode?: string
+  }
 }) {
   if (requests.length === 0 && returns.length === 0) return null
+  const latestRefundUpi =
+    admin?.refundUpiId ??
+    (requests.map((req) => splitReturnDetails(req.details).refundUpiId).filter(Boolean).at(-1) || null)
+  const adminWithContext = admin ? { ...admin, refundUpiId: latestRefundUpi } : undefined
   return (
     <section id="returns" aria-label="Returns" className={styles.returnsSection}>
       <div className={styles.returnsHeader}>
@@ -322,7 +336,7 @@ export function AdminReturnRequests({
         <ReturnStageBadge stage={returnStage} audience="admin" alwaysShow />
       </div>
       {/* Newest stage first: goods received back (the later stage) above the requests. */}
-      <ReturnsList bare returns={returns.toReversed()} audience="admin" admin={admin} />
+      <ReturnsList bare returns={returns.toReversed()} audience="admin" refundedInFull={admin?.paymentStatus === "refunded"} admin={adminWithContext} />
       {requests.length > 0 && <h4 className={styles.requestsSubheading}>Return requests</h4>}
       <ul className={requests.length === 0 ? styles.requestsListHidden : styles.requestsList}>
         {requests.toReversed().map((r) => {

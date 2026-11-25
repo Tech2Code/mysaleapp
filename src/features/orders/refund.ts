@@ -9,7 +9,7 @@ import type { OrderFee, OrderItem, OrderReturn, ReturnRequest } from "./types"
 export type RefundLine = { productId: string; name: string; quantity: number; unitPrice: number; amount: number }
 export type NotRefunded = { label: string; amount: number }
 
-const round2 = (n: number) => Math.round(n * 100) / 100
+const round2 = (n: number) => Math.round((n + (n >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
 
 /** The price of a product on the order (the highest line price, like the database does). */
 const unitPriceOf = (items: OrderItem[], productId: string): number =>
@@ -64,7 +64,10 @@ export function netReturnRefund(
   if (rawPrev + rawValue >= itemsAll - 0.005) {
     return opts.alreadyRefunded !== undefined ? remainingCap : itemsNet
   }
-  const proportional = round2((rawValue * itemsNet) / itemsAll)
+  const rawPaise = Math.round((rawValue + Number.EPSILON) * 100)
+  const netPaise = Math.round((itemsNet + Number.EPSILON) * 100)
+  const allPaise = Math.round((itemsAll + Number.EPSILON) * 100)
+  const proportional = Number((BigInt(rawPaise) * BigInt(netPaise) + BigInt(Math.floor(allPaise / 2))) / BigInt(allPaise)) / 100
   return opts.alreadyRefunded !== undefined ? Math.min(proportional, remainingCap) : Math.min(proportional, itemsNet)
 }
 
@@ -120,7 +123,11 @@ export function refundBreakdown(o: {
     discountAmount: o.discountAmount ?? 0,
     paidAmount: paid,
   })
-  const promoDiscountShare = Math.max(0, round2(itemsTotal - refundable))
+  const netWithPromo =
+    (o.discountAmount ?? 0) > 0
+      ? netReturnRefund(o.items, lines, { discountAmount: o.discountAmount ?? 0 })
+      : itemsTotal
+  const promoDiscountShare = (o.discountAmount ?? 0) > 0 ? Math.max(0, round2(itemsTotal - netWithPromo)) : 0
   const notRefunded = notRefundedCharges(o)
   return {
     basis: openRefundReq ? "request" : "returned",

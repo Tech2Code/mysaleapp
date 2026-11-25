@@ -78,6 +78,7 @@ export const LIMITS = {
   // orders & payments
   orderCode: { max: 12 },
   utr: { min: 8, max: 35 },
+  gatewayRef: { min: 8, max: 64 },
   carrier: { min: 2, max: 60 },
   /** Courier consignment / AWB: India Post 13, Delhivery 11-14, DTDC 9-12, Blue Dart 11; 30 leaves room for aggregators. */
   trackingNumber: { min: 5, max: 30 },
@@ -118,6 +119,7 @@ export const PATTERNS = {
   orderPrefix: /^[A-Z]{1,5}$/,
   upiId: /^[A-Za-z0-9._-]{2,64}@[A-Za-z0-9]{2,32}$/,
   utr: /^[A-Z0-9]{8,35}$/,
+  gatewayRef: /^[A-Za-z0-9_-]{8,64}$/,
   /** Courier AWB after upper-casing: letters, digits, - / _ (starts with a letter or digit, no spaces). */
   trackingNumber: /^[A-Z0-9][A-Z0-9/_-]*$/,
   isoDate: /^\d{4}-\d{2}-\d{2}$/,

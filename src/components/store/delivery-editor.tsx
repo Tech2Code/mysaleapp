@@ -66,7 +66,7 @@ export function DeliveryEditor({
   /** Needed for guests (from the track page). Signed-in owners don't need it. */
   phoneLast4?: string
   /** Called after saving, with the (possibly new) last 4 digits of the phone. Defaults to refreshing the page. */
-  onChanged?: (newPhoneLast4: string) => void
+  onChanged?: (newPhoneLast4: string) => void | Promise<unknown>
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -90,11 +90,13 @@ export function DeliveryEditor({
     if (pending) return
     setOpen(nextOpen)
     if (!nextOpen) {
+      const split = splitCityState(delivery.city)
+      area.prime(delivery.pincode, split.city, split.state)
       form.reset({
         name: delivery.name,
         phone: delivery.phone,
         address: delivery.address,
-        ...splitCityState(delivery.city),
+        ...split,
         pincode: delivery.pincode,
         note: delivery.note ?? "",
       })
@@ -148,7 +150,7 @@ export function DeliveryEditor({
         setOpen(false)
         toast.success("Delivery details updated")
       })
-      if (onChanged) onChanged(res.data.phoneLast4)
+      if (onChanged) await onChanged(res.data.phoneLast4)
       else router.refresh()
     })
   })

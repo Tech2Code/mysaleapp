@@ -4,7 +4,7 @@ import { PlusIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
 import { memo } from "react"
 import type { ProductCardData } from "@/features/products/types"
-import { discountPercent, formatPrice } from "@/lib/format"
+import { discountPercent, formatPrice, formatRating } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useCart } from "@/store/cart"
 import styles from "./product-card.module.css"
@@ -20,7 +20,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
   const reviewCount = product.reviewCount ?? 0
   const ratingAvg = Number(product.ratingAvg ?? 0)
   const hasRating = reviewCount > 0 && ratingAvg > 0
-  const ratingLabel = `Rated ${ratingAvg.toFixed(1)} out of 5 from ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`
+  const ratingLabel = `Rated ${formatRating(ratingAvg)} out of 5 from ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`
 
   return (
     <article
@@ -58,7 +58,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             className={styles.ratingPill}
             aria-label={ratingLabel}
           >
-            <span>{ratingAvg.toFixed(1)}</span>
+            <span>{formatRating(ratingAvg)}</span>
             <StarIcon className={styles.pillStar} aria-hidden />
             <span className={styles.pillDivider} aria-hidden>|</span>
             <span className={styles.pillCount}>{reviewCount}</span>
@@ -108,24 +108,6 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
             {product.name}
           </Link>
         </h3>
-        {hasRating && (
-          <div
-
-            className={styles.ratingRow}
-            aria-label={ratingLabel}
-          >
-            <span className={styles.starsList} aria-hidden>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <StarIcon
-                  key={star}
-                  className={star <= Math.round(ratingAvg) ? styles.starFilled : styles.starEmpty}
-                />
-              ))}
-            </span>
-            <span className={styles.ratingScore}>{ratingAvg.toFixed(1)}</span>
-            <span className={styles.ratingTotal}>({reviewCount})</span>
-          </div>
-        )}
         <div className={styles.priceRow}>
           <span className={styles.currentPrice}>{formatPrice(product.price)}</span>
           {product.compareAtPrice && (

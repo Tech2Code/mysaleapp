@@ -28,6 +28,9 @@ export const cartLineSchema = z.object({
 /** The UPI reference (UTR) a customer enters after paying. Normally 12 digits. */
 export const paymentReferenceSchema = v.utr()
 
+/** Gateway payment/refund reference ID (e.g. pay_..., rfnd_...) or 12-digit UTR. */
+export const gatewayReferenceSchema = v.gatewayRef()
+
 export const placeOrderSchema = z.object({
   customer: checkoutSchema,
   items: z.array(cartLineSchema).min(1, "Your cart is empty").max(LIMITS.orderLines.max),
@@ -39,8 +42,20 @@ export const placeOrderSchema = z.object({
       (x) => (typeof x === "string" && x.trim() === "" ? undefined : x),
       z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/, "Invalid promo code").optional()
     ),
+  /** Client-rendered total used by the DB to catch mid-checkout product price / fee changes. */
+  expectedTotal: v.optionalMoney(LIMITS.paymentAmount.max).optional(),
   /** Signed-in customers: also save this delivery address to their address book. */
   saveAddress: z.boolean().optional(),
+})
+
+export const createGatewayOrderSchema = placeOrderSchema.omit({ paymentReference: true })
+
+export const verifyGatewayPaymentSchema = z.object({
+  code: v.orderCode(),
+  phoneLast4: v.orderLast4(),
+  gatewayOrderId: z.string().trim().min(4).max(80),
+  paymentId: gatewayReferenceSchema,
+  signature: z.string().trim().min(16).max(256),
 })
 
 export const validatePromoSchema = z.object({
@@ -165,6 +180,8 @@ export const submitPaymentSchema = z.object({
   phoneLast4: trackOrderSchema.shape.phoneLast4,
   reference: paymentReferenceSchema,
 })
+
+export const createGatewayRetrySchema = trackOrderSchema
 
 export const updateDeliverySchema = z.object({
   code: trackOrderSchema.shape.code,
