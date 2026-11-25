@@ -7,22 +7,69 @@ import styles from "./admin-core.module.css"
  * so the dashboard stays fast.
  */
 
-function scale(values: number[], height: number, pad: number) {
+function scale(values: number[], height: number, topPad: number, bottomPad: number) {
   const max = Math.max(...values, 1)
-  const min = Math.min(...values, 0)
+  const min = 0
   const range = max - min || 1
-  return (v: number) => height - pad - ((v - min) / range) * (height - pad * 2)
+  const usable = height - topPad - bottomPad
+  return (v: number) => height - bottomPad - ((Math.max(0, v) - min) / range) * usable
 }
 
-function points(values: number[], width: number, height: number, pad: number) {
-  const y = scale(values, height, pad)
+function points(values: number[], width: number, height: number, topPad: number, bottomPad: number) {
+  const y = scale(values, height, topPad, bottomPad)
   const step = values.length > 1 ? width / (values.length - 1) : width
-  return values.map((v, i) => [i * step, y(v)] as const)
+  return values.map((v, i) => ({ x: i * step, y: y(v) }))
 }
 
-/** Smooth-ish line through the points. */
-function linePath(pts: readonly (readonly [number, number])[]) {
-  return pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ")
+/** Monotone cubic Hermite spline so sparklines are smooth without overshooting below 0. */
+function monotoneSparkPath(pts: readonly { x: number; y: number }[], baselineY: number) {
+  const n = pts.length
+  if (n === 0) return ""
+  if (n === 1) return `M0,${pts[0].y.toFixed(1)} L${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+
+  const dx: number[] = []
+  const m: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    const dxi = pts[i + 1].x - pts[i].x
+    const dyi = pts[i + 1].y - pts[i].y
+    dx.push(dxi)
+    m.push(dxi !== 0 ? dyi / dxi : 0)
+  }
+
+  const t: number[] = new Array(n).fill(0)
+  t[0] = m[0]
+  t[n - 1] = m[n - 2]
+  for (let i = 1; i < n - 1; i++) {
+    t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2
+  }
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      t[i] = 0
+      t[i + 1] = 0
+    } else {
+      const a = t[i] / m[i]
+      const b = t[i + 1] / m[i]
+      const h = Math.hypot(a, b)
+      if (h > 3) {
+        const s = 3 / h
+        t[i] = s * a * m[i]
+        t[i + 1] = s * b * m[i]
+      }
+    }
+  }
+
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i]
+    const p1 = pts[i + 1]
+    const step = dx[i] / 3
+    const cp1x = p0.x + step
+    const cp1y = Math.min(baselineY, Math.max(1, p0.y + t[i] * step))
+    const cp2x = p1.x - step
+    const cp2y = Math.min(baselineY, Math.max(1, p1.y - t[i + 1] * step))
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`
+  }
+  return d
 }
 
 export function Sparkline({
@@ -38,8 +85,9 @@ export function Sparkline({
   const id = useId()
   const w = 120
   const h = 36
-  const pts = points(data.length ? data : [0, 0], w, h, 3)
-  const line = linePath(pts)
+  const series = data.length >= 2 ? data : data.length === 1 ? [data[0], data[0]] : [0, 0]
+  const pts = points(series, w, h, 4, 2)
+  const line = monotoneSparkPath(pts, h - 2)
   const area = `${line} L${w},${h} L0,${h} Z`
 
   return (

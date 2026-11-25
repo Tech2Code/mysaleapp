@@ -39,7 +39,7 @@ export default function ProductPage({ params }: PageProps<"/products/[slug]">) {
     <Suspense
       fallback={
         <Skeletonize>
-          <ProductDetailView product={placeholderProduct()} related={placeholderCards(4)} settings={DEFAULT_SETTINGS} />
+          <ProductDetailView product={placeholderProduct()} related={placeholderCards(8)} settings={DEFAULT_SETTINGS} />
         </Skeletonize>
       }
     >

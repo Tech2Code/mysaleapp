@@ -1,12 +1,12 @@
 "use client"
 
-import { HeartIcon, MenuIcon, SearchIcon, ShoppingBagIcon } from "lucide-react"
+import { ArrowRightIcon, ChevronDownIcon, HeartIcon, MenuIcon, SearchIcon, ShoppingBagIcon } from "lucide-react"
 import { AnimatePresence, useMotionValueEvent, useScroll } from "motion/react"
 import * as m from "motion/react-m"
 import Link from "next/link"
 import { ScrollLink } from "@/components/shared/scroll-link"
 import { usePathname } from "next/navigation"
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { Logo } from "@/components/shared/logo"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
@@ -19,8 +19,16 @@ import { AccountMenu } from "./account-menu"
 import styles from "./header.module.css"
 import { SearchDialog } from "./search-dialog"
 
-export type NavCategory = { name: string; slug: string }
+export type NavCategory = { name: string; slug: string; count?: number }
 type NavLinkItem = { href: string; label: string }
+
+const PRIMARY_NAV_LINKS: NavLinkItem[] = [
+  { href: "/products", label: "Shop all" },
+  { href: "/about", label: "Our story" },
+  { href: "/track", label: "Track order" },
+  { href: "/faq", label: "FAQs" },
+  { href: "/contact", label: "Contact us" },
+]
 
 const isActive = (pathname: string | null, href: string) =>
   pathname !== null && (pathname === href || pathname.startsWith(`${href}/`))
@@ -44,66 +52,217 @@ function CountBadge({ count }: { count: number }) {
   )
 }
 
-function DesktopNavItems({ links, pathname }: { links: NavLinkItem[]; pathname: string | null }) {
+function DesktopCollectionsDropdown({
+  categories,
+  pathname,
+}: {
+  categories: NavCategory[]
+  pathname: string | null
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  const isCollectionActive = pathname !== null && pathname.startsWith("/category/")
+
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    window.addEventListener("mousedown", onPointerDown)
+    window.addEventListener("keydown", onKeyDown)
+    return () => {
+      window.removeEventListener("mousedown", onPointerDown)
+      window.removeEventListener("keydown", onKeyDown)
+    }
+  }, [open])
+
+  if (categories.length === 0) return null
+
+  return (
+    <div
+      ref={wrapRef}
+      className={styles.collectionsMenuWrap}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(styles.desktopNavLink, isCollectionActive && styles.desktopNavLinkActive)}
+      >
+        <span>Collections</span>
+        <ChevronDownIcon className={cn(styles.collectionsChevron, open && styles.collectionsChevronOpen)} aria-hidden />
+        {isCollectionActive && (
+          <m.span
+            layoutId="nav-pill"
+            className={styles.activeNavBeam}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+          />
+        )}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <m.div
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            className={styles.collectionsDropdownBridge}
+          >
+            <div role="menu" aria-label="Product collections" className={styles.collectionsPopoverCard}>
+              <div className={styles.collectionsPopoverHeader}>
+                <p className={styles.collectionsEyebrow}>Handcrafted collections</p>
+              </div>
+              <ul className={styles.collectionsGridList}>
+                {categories.map((cat) => {
+                  const href = `/category/${cat.slug}`
+                  const active = isActive(pathname, href)
+                  return (
+                    <li key={cat.slug} role="none">
+                      <ScrollLink
+                        role="menuitem"
+                        href={href}
+                        onClick={() => setOpen(false)}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(styles.collectionMenuItem, active && styles.collectionMenuItemActive)}
+                      >
+                        <span>{cat.name}</span>
+                        {typeof cat.count === "number" && (
+                          <span className={styles.collectionCountBadge}>{cat.count}</span>
+                        )}
+                      </ScrollLink>
+                    </li>
+                  )
+                })}
+              </ul>
+              <ScrollLink
+                href="/products"
+                onClick={() => setOpen(false)}
+                className={styles.collectionsFooterLink}
+              >
+                <span>Explore all products</span>
+                <ArrowRightIcon className={styles.collectionsArrowIcon} aria-hidden />
+              </ScrollLink>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function DesktopNavItems({
+  links,
+  categories,
+  pathname,
+}: {
+  links: NavLinkItem[]
+  categories: NavCategory[]
+  pathname: string | null
+}) {
+  const [firstLink, ...restLinks] = links
+  const renderLink = (l: NavLinkItem) => {
+    const active = isActive(pathname, l.href)
+    return (
+      <ScrollLink
+        key={l.href}
+        href={l.href}
+        aria-current={active ? "page" : undefined}
+        className={cn(styles.desktopNavLink, active && styles.desktopNavLinkActive)}
+      >
+        {l.label}
+        {active && (
+          <m.span
+            layoutId="nav-pill"
+            className={styles.activeNavBeam}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+          />
+        )}
+      </ScrollLink>
+    )
+  }
+
   return (
     <>
-      {links.map((l) => {
-        const active = isActive(pathname, l.href)
-        return (
-          <ScrollLink
-            key={l.href}
-            href={l.href}
-            aria-current={active ? "page" : undefined}
-            className={cn(styles.desktopNavLink, active && styles.desktopNavLinkActive)}
-          >
-            {l.label}
-            {active && (
-              <m.span
-                layoutId="nav-pill"
-                className={styles.activeNavBeam}
-                transition={{ type: "spring", stiffness: 420, damping: 32 }}
-              />
-            )}
-          </ScrollLink>
-        )
-      })}
+      {firstLink && renderLink(firstLink)}
+      <DesktopCollectionsDropdown categories={categories} pathname={pathname} />
+      {restLinks.map(renderLink)}
     </>
   )
 }
 
 /** Reads the URL, so it lives inside <Suspense> (required by Cache Components). */
-function DesktopNavWithPath({ links }: { links: NavLinkItem[] }) {
-  return <DesktopNavItems links={links} pathname={usePathname()} />
+function DesktopNavWithPath({ links, categories }: { links: NavLinkItem[]; categories: NavCategory[] }) {
+  return <DesktopNavItems links={links} categories={categories} pathname={usePathname()} />
 }
 
 function MobileNavItems({
   links,
+  categories,
   pathname,
   onNavigate,
 }: {
   links: NavLinkItem[]
+  categories: NavCategory[]
   pathname: string | null
   onNavigate: () => void
 }) {
   return (
     <>
       {links.map((l, i) => (
-        <m.div key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
+        <m.div key={l.href} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }}>
           <ScrollLink
             href={l.href}
             onClick={onNavigate}
             aria-current={isActive(pathname, l.href) ? "page" : undefined}
             className={cn(styles.mobileNavLink, isActive(pathname, l.href) && styles.mobileNavLinkActive)}
           >
-            {l.label}
+            <span>{l.label}</span>
           </ScrollLink>
         </m.div>
       ))}
+      {categories.length > 0 && (
+        <>
+          <p className={styles.mobileNavSectionLabel}>Collections</p>
+          {categories.map((c, i) => {
+            const href = `/category/${c.slug}`
+            const active = isActive(pathname, href)
+            return (
+              <m.div
+                key={href}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.04 * (links.length + i) }}
+              >
+                <ScrollLink
+                  href={href}
+                  onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(styles.mobileNavLink, active && styles.mobileNavLinkActive)}
+                >
+                  <span>{c.name}</span>
+                  {typeof c.count === "number" && (
+                    <span className={styles.mobileCountPill}>{c.count}</span>
+                  )}
+                </ScrollLink>
+              </m.div>
+            )
+          })}
+        </>
+      )}
     </>
   )
 }
 
-function MobileNavWithPath(props: { links: NavLinkItem[]; onNavigate: () => void }) {
+function MobileNavWithPath(props: { links: NavLinkItem[]; categories: NavCategory[]; onNavigate: () => void }) {
   return <MobileNavItems {...props} pathname={usePathname()} />
 }
 
@@ -160,12 +319,6 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const { scrollY } = useScroll()
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12))
 
-  const links: NavLinkItem[] = [
-    { href: "/products", label: "Shop all" },
-    ...categories.slice(0, 4).map((c) => ({ href: `/category/${c.slug}`, label: c.name })),
-    { href: "/track", label: "Track order" },
-  ]
-  const mobileLinks = [...links, { href: "/about", label: "About us" }]
   const closeMobile = () => setMobileOpen(false)
 
   return (
@@ -187,8 +340,17 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               <Logo />
             </SheetHeader>
             <nav className={styles.mobileNavList} aria-label="Mobile">
-              <Suspense fallback={<MobileNavItems links={mobileLinks} pathname={null} onNavigate={closeMobile} />}>
-                <MobileNavWithPath links={mobileLinks} onNavigate={closeMobile} />
+              <Suspense
+                fallback={
+                  <MobileNavItems
+                    links={PRIMARY_NAV_LINKS}
+                    categories={categories}
+                    pathname={null}
+                    onNavigate={closeMobile}
+                  />
+                }
+              >
+                <MobileNavWithPath links={PRIMARY_NAV_LINKS} categories={categories} onNavigate={closeMobile} />
               </Suspense>
             </nav>
           </SheetContent>
@@ -197,8 +359,8 @@ export function Header({ categories }: { categories: NavCategory[] }) {
         <Logo className={styles.brandLogo} />
 
         <nav className={styles.desktopNav} aria-label="Main">
-          <Suspense fallback={<DesktopNavItems links={links} pathname={null} />}>
-            <DesktopNavWithPath links={links} />
+          <Suspense fallback={<DesktopNavItems links={PRIMARY_NAV_LINKS} categories={categories} pathname={null} />}>
+            <DesktopNavWithPath links={PRIMARY_NAV_LINKS} categories={categories} />
           </Suspense>
         </nav>
 

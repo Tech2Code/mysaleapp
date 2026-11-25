@@ -101,7 +101,7 @@ export function SearchField({
     }
   }, [])
 
-  const toggleVoiceSearch = useCallback(() => {
+  const toggleVoiceSearch = useCallback(async () => {
     if (isListening) {
       recognitionRef.current?.stop()
       setIsListening(false)
@@ -112,6 +112,42 @@ export function SearchField({
       toast.error("Voice search is not supported in this browser.")
       return
     }
+
+    // Explicitly check and request microphone permission first so browsers show the permission prompt reliably
+    if (typeof navigator !== "undefined") {
+      try {
+        if (navigator.permissions?.query) {
+          const permStatus = await navigator.permissions
+            .query({ name: "microphone" as PermissionName })
+            .catch(() => null)
+          if (permStatus?.state === "denied") {
+            toast.error(
+              "Microphone permission is blocked. Tap the lock/tune icon in your browser address bar and allow Microphone access."
+            )
+            return
+          }
+        }
+        if (navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          for (const track of stream.getTracks()) {
+            track.stop()
+          }
+        }
+      } catch (err) {
+        const errName = (err as { name?: string } | null)?.name ?? ""
+        if (errName === "NotAllowedError" || errName === "PermissionDeniedError" || errName === "SecurityError") {
+          toast.error(
+            "Microphone access is needed for voice search. Please allow Microphone permission in your browser settings."
+          )
+          return
+        }
+        if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
+          toast.error("No microphone found on this device.")
+          return
+        }
+      }
+    }
+
     try {
       recognitionRef.current?.abort()
       const recognition = new SpeechRecognitionCtor()
@@ -146,7 +182,9 @@ export function SearchField({
       recognition.onerror = (event) => {
         setIsListening(false)
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          toast.error("Microphone access denied. Please allow microphone permission in browser settings.")
+          toast.error(
+            "Microphone access denied. Please allow Microphone permission from the browser address bar settings."
+          )
         } else if (event.error === "audio-capture") {
           toast.error("No microphone found on this device.")
         } else if (event.error === "no-speech") {

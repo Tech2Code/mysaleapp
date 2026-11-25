@@ -14,7 +14,7 @@ import styles from "./store-layout.module.css"
 
 export default async function StoreLayout({ children }: LayoutProps<"/">) {
   const [categories, settings] = await Promise.all([getCategoriesWithCounts(), getStoreSettings()])
-  const nav = categories.map(({ name, slug }) => ({ name, slug }))
+  const nav = categories.map(({ name, slug, count }) => ({ name, slug, count }))
 
   return (
     <>

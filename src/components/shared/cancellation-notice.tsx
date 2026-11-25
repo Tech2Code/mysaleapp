@@ -1,4 +1,6 @@
-import { BanIcon, CircleCheckIcon, Clock3Icon } from "lucide-react"
+import { BanIcon, CircleCheckIcon, Clock3Icon, WalletIcon } from "lucide-react"
+import { CopyableReference } from "@/components/shared/copyable-reference"
+import { splitCancelReason } from "@/features/orders/reasons"
 import type { Cancellation, PaymentStatus } from "@/features/orders/types"
 import { formatDateTime } from "@/lib/format"
 import styles from "./shared.module.css"
@@ -18,6 +20,7 @@ export function CancellationNotice({
 }) {
   const paidOrSent = paymentStatus === "paid" || paymentStatus === "submitted"
   const refunded = paymentStatus === "refunded"
+  const { reason: cleanReason, refundUpiId } = splitCancelReason(cancellation.reason)
 
   const who =
     cancellation.by === "customer"
@@ -44,10 +47,17 @@ export function CancellationNotice({
         <BanIcon className={styles.icon16} aria-hidden /> {who}
         {cancellation.at && <span className={styles.cancelTimeSpan}>· {formatDateTime(cancellation.at)}</span>}
       </p>
-      {cancellation.reason && (
+      {cleanReason && (
         <p className={styles.cancelReasonLine}>
           <span className={styles.mutedLabel}>Reason: </span>
-          {cancellation.reason}
+          {cleanReason}
+        </p>
+      )}
+      {refundUpiId && (
+        <p className={styles.cancelReasonLine}>
+          <WalletIcon className={styles.icon14} aria-hidden />{" "}
+          <span className={styles.mutedLabel}>Refund UPI ID: </span>
+          {audience === "admin" ? <CopyableReference value={refundUpiId} /> : <span className={styles.refMonoText}>{refundUpiId}</span>}
         </p>
       )}
       {refunded ? (

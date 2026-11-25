@@ -7,7 +7,7 @@ import { getMyProfile } from "@/features/account/actions"
 import { syncWishlist } from "@/features/wishlist/actions"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cleanMetaName, safeAvatarUrl } from "@/lib/supabase/config"
-import { useAuth, type SessionUser } from "@/store/auth"
+import { readCachedAuthSnapshot, useAuth, type SessionUser } from "@/store/auth"
 import { useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
 import type { User } from "@supabase/supabase-js"
@@ -243,6 +243,13 @@ export function AuthListener() {
   const setUser = useAuth((s) => s.setUser)
 
   useEffect(() => {
+    if (!useAuth.getState().ready) {
+      const cached = readCachedAuthSnapshot()
+      if (cached.known) {
+        setUser(cached.user)
+      }
+    }
+
     const supabase = getBrowserSupabase()
     if (!supabase) {
       setUser(null)
@@ -263,6 +270,7 @@ export function AuthListener() {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "kk-cart") void useCart.persist.rehydrate()
       if (e.key === "kk-wishlist") void useWishlist.persist.rehydrate()
+      if (e.key === "kk-auth") void syncAuthSession()
     }
     const onFocus = () => {
       void syncAuthSession()

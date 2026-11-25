@@ -109,6 +109,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
                       phone={order.phone}
                       status={order.status}
                       paymentStatus={order.paymentStatus}
+                      paymentReference={order.paymentReference}
                       refundedAmount={order.refundedAmount}
                       discountAmount={order.discountAmount}
                       items={order.items}

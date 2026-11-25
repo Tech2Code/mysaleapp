@@ -11,6 +11,7 @@ import {
   MapPinIcon,
   PackageIcon,
   SendIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   TruckIcon,
   UserCheckIcon,
@@ -22,7 +23,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, us
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
-import { TextField } from "@/components/form"
+import { CheckboxField, TextField } from "@/components/form"
 import { applyClientSignIn } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { LegalQuickModal, type LegalDocTab } from "@/components/shared/cookie-banner"
@@ -464,24 +465,33 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
 
       {/* Left Column: Dynamic Welcome & Perks Panel (Desktop only) */}
       <div
-
         className={styles.welcomeColumn}
       >
         <div>
           <div className={styles.logoRow}>
-            <LogoMark className={styles.logoBadge} />
+            <div className={styles.brandIdentityRow}>
+              <LogoMark className={styles.logoBadge} />
+              <div className={styles.brandNameMeta}>
+                <p className={styles.brandShopTitle}>{shopName}</p>
+                <p className={styles.brandSubTag}>Handcrafted Store</p>
+              </div>
+            </div>
             <span className={styles.modePill}>
-              {mode === "signup" ? "New customer" : mode === "forgot" || mode === "reset-password" ? "Account recovery" : "Welcome back"}
+              {mode === "signup" ? "New customer" : mode === "forgot" || mode === "reset-password" ? "Account recovery" : "Member access"}
             </span>
           </div>
 
           <h1 className={styles.welcomeTitle}>
-            {mode === "signup" ? `Join ${shopName}` : `Welcome to ${shopName}`}
+            {mode === "signup"
+              ? `Create your ${shopName} account`
+              : mode === "forgot" || mode === "reset-password"
+                ? "Recover your account access"
+                : `Welcome back to ${shopName}`}
           </h1>
           <p className={styles.welcomeLead}>
             {mode === "signup"
-              ? "Create your account with your basic details once so every future order is faster and easier."
-              : "Sign in with your email and password or one-tap Google login to manage your orders and saved items."}
+              ? "Save your delivery details once so every future handmade order is faster, simpler, and tracked in one place."
+              : "Sign in with one-tap Google or your email to track live orders, manage addresses, and sync your saved favourites."}
           </p>
 
           <ul className={styles.perksList}>
@@ -499,27 +509,62 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           </ul>
         </div>
 
-        <p className={styles.guestNoteDesktop}>
-          Signing in is optional — you can also{" "}
-          <Link href="/products" className={styles.guestLink}>
-            browse &amp; order as a guest
-          </Link>
-          .
-        </p>
+        <div className={styles.welcomeFooterBlock}>
+          <div className={styles.trustStripRow}>
+            <span className={styles.trustBadgeItem}>
+              <ShieldCheckIcon className={styles.trustSvg} aria-hidden /> Secure &amp; encrypted
+            </span>
+            <span className={styles.trustBadgeItem}>
+              <SparklesIcon className={styles.trustSvg} aria-hidden /> Instant wishlist sync
+            </span>
+          </div>
+          <p className={styles.guestNoteDesktop}>
+            Signing in is optional — you can also{" "}
+            <Link href="/products" className={styles.guestLink}>
+              browse &amp; order as a guest
+            </Link>
+            .
+          </p>
+        </div>
       </div>
 
       {/* Right Column: Toggle + Form + Google OAuth */}
       <div className={styles.formColumn}>
         <div className={styles.formStack}>
+          <div className={styles.mobileAuthHeader}>
+            <div className={styles.mobileHeaderTop}>
+              <LogoMark className={styles.mobileLogoBadge} />
+              <span className={styles.modePill}>
+                {mode === "signup" ? "New customer" : mode === "forgot" || mode === "reset-password" ? "Account recovery" : "Welcome back"}
+              </span>
+            </div>
+            <h2 className={styles.formPanelTitle}>
+              {mode === "signup"
+                ? "Create your account"
+                : mode === "forgot"
+                  ? "Reset your password"
+                  : mode === "reset-password"
+                    ? "Choose a new password"
+                    : "Sign in to your account"}
+            </h2>
+            <p className={styles.formPanelSub}>
+              {mode === "signup"
+                ? "Fill in your details below or continue with Google in one tap."
+                : mode === "forgot"
+                  ? "We'll send a one-time recovery link to your registered email."
+                  : mode === "reset-password"
+                    ? "Enter a strong new password to secure your account."
+                    : `Access your ${shopName} orders, saved addresses, and wishlist.`}
+            </p>
+          </div>
+
           {mode !== "reset-password" && (
             <div
-
               role="group"
               aria-label="Account access"
               className={styles.modeSwitcher}
             >
               <button
-
                 type="button"
                 aria-pressed={mode === "signin"}
                 onClick={() => switchMode("signin")}
@@ -531,7 +576,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 Sign in
               </button>
               <button
-
                 type="button"
                 aria-pressed={mode === "signup"}
                 onClick={() => switchMode("signup")}
@@ -543,6 +587,30 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                 Create account
               </button>
             </div>
+          )}
+
+          {(mode === "signin" || mode === "signup") && (
+            <>
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={signInWithGoogle}
+                disabled={loadingGoogle || pending}
+                className={styles.googleOauthBtn}
+              >
+                {loadingGoogle ? <Loader2Icon className={styles.googleSpinnerSvg} /> : <GoogleIcon />}
+                {loadingGoogle ? "Opening Google…" : "Continue with Google"}
+              </Button>
+
+              <div className={styles.dividerRow}>
+                <div className={styles.dividerLine} />
+                <span className={styles.dividerLabel}>
+                  {mode === "signup" ? "or sign up with email" : "or sign in with email"}
+                </span>
+                <div className={styles.dividerLine} />
+              </div>
+            </>
           )}
 
           {problem && (
@@ -737,18 +805,15 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               <p className={styles.passwordRuleNote}>
                 Use at least {LIMITS.newPassword.min} characters with a letter and a number.
               </p>
-              <div className={styles.termsConsentWrap}>
-                <label className={styles.termsCheckboxLabel}>
-                  <input
-
-                    type="checkbox"
-                    className={styles.termsCheckboxInput}
-                    {...signUpForm.register("acceptTerms")}
-                  />
-                  <span>
+              <CheckboxField
+                containerClassName={styles.termsConsentWrap}
+                labelClassName={styles.termsCheckboxLabel}
+                error={signUpForm.formState.errors.acceptTerms?.message}
+                {...signUpForm.register("acceptTerms")}
+                label={
+                  <>
                     I agree to the{" "}
                     <button
-
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
@@ -761,7 +826,6 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                     </button>{" "}
                     and{" "}
                     <button
-
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
@@ -773,14 +837,9 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
                       Privacy Policy
                     </button>
                     .
-                  </span>
-                </label>
-                {signUpForm.formState.errors.acceptTerms?.message && (
-                  <p role="alert" className={styles.termsErrorMsg}>
-                    {signUpForm.formState.errors.acceptTerms.message}
-                  </p>
-                )}
-              </div>
+                  </>
+                }
+              />
               <Button
 
                 type="submit"
@@ -795,53 +854,31 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           )}
 
           {mode !== "reset-password" && (
-            <>
-              <div className={styles.dividerRow}>
-                <div className={styles.dividerLine} />
-                <span className={styles.dividerLabel}>or continue with</span>
-                <div className={styles.dividerLine} />
-              </div>
-
-              <Button
-
+            <p className={styles.oauthLegalNote}>
+              By continuing, you agree to our{" "}
+              <button
                 type="button"
-                size="lg"
-                variant="outline"
-                onClick={signInWithGoogle}
-                disabled={loadingGoogle || pending}
-                className={styles.googleOauthBtn}
+                onClick={() => {
+                  setLegalModalTab("terms")
+                  setLegalModalOpen(true)
+                }}
+                className={styles.termsPolicyLink}
               >
-                {loadingGoogle ? <Loader2Icon className={styles.googleSpinnerSvg} /> : <GoogleIcon />}
-                {loadingGoogle ? "Opening Google…" : "Continue with Google"}
-              </Button>
-              <p className={styles.oauthLegalNote}>
-                By continuing, you agree to our{" "}
-                <button
-
-                  type="button"
-                  onClick={() => {
-                    setLegalModalTab("terms")
-                    setLegalModalOpen(true)
-                  }}
-                  className={styles.termsPolicyLink}
-                >
-                  Terms
-                </button>{" "}
-                &amp;{" "}
-                <button
-
-                  type="button"
-                  onClick={() => {
-                    setLegalModalTab("privacy")
-                    setLegalModalOpen(true)
-                  }}
-                  className={styles.termsPolicyLink}
-                >
-                  Privacy Policy
-                </button>
-                .
-              </p>
-            </>
+                Terms
+              </button>{" "}
+              &amp;{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setLegalModalTab("privacy")
+                  setLegalModalOpen(true)
+                }}
+                className={styles.termsPolicyLink}
+              >
+                Privacy Policy
+              </button>
+              .
+            </p>
           )}
 
           <LegalQuickModal

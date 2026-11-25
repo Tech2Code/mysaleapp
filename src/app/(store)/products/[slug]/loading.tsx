@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 export default function Loading() {
   return (
     <Skeletonize>
-      <ProductDetailView product={placeholderProduct()} related={placeholderCards(4)} settings={DEFAULT_SETTINGS} />
+      <ProductDetailView product={placeholderProduct()} related={placeholderCards(8)} settings={DEFAULT_SETTINGS} />
     </Skeletonize>
   )
 }

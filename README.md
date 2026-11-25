@@ -159,8 +159,8 @@ src/
     orders/           actions, queries, admin-*, pricing, returns, refund, transitions, deadline, whatsapp
     auth/ account/ addresses/ settings/ security/ wishlist/ location/
   components/
-    ui/               Base UI primitives (Button, Dialog, Sheet, Select, DropdownMenu, Tabs, Table, Sonner…) + ui.module.css
-    form/             Shared form inputs (TextField, TextAreaField, SelectField, FormSelectField, SearchField, SwitchField, DateField) + form.module.css
+    ui/               Base UI primitives (Button, Checkbox, Dialog, Sheet, Select, DropdownMenu, Tabs, Table, Sonner…) + ui.module.css
+    form/             Shared form inputs (TextField, TextAreaField, SelectField, FormSelectField, SearchField, SwitchField, CheckboxField, DateField) + form.module.css
     store/            Storefront views & components (Header, Hero, ProductBrowser with 12-per-page Pagination, Cart, Checkout, OrderPlaced, Reviews…) + *.module.css
     admin/            Admin panel views (Dashboard, Orders, Products, Categories, Settings, Account, Launch) + admin-*.module.css
     account/          Customer account views (MyOrders, ProfileForm, AddressBook, AccountNav) + account.module.css
@@ -182,7 +182,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (29 test files, 808 tests) |
+| `npm test` | Run the Vitest unit test suite (29 test files, 810 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

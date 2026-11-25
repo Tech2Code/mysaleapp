@@ -114,6 +114,8 @@ export const cancelOrderSchema = z.object({
   reason: v.reason(),
   /** Extra words; required when the reason is "Other". */
   detail: v.note(LIMITS.cancelDetail.max).optional(),
+  /** Optional customer UPI ID (VPA) for receiving the refund faster. */
+  refundUpiId: z.preprocess(blankToUndefined, v.upiId().optional()),
 }).refine((v) => !otherNeedsDetail(v.reason, v.detail), { path: ["detail"], error: OTHER_DETAIL_MESSAGE })
 
 export const requestReturnSchema = z
@@ -133,6 +135,8 @@ export const requestReturnSchema = z
     resolutionType: z.enum(["refund", "exchange"]).default("refund"),
     exchangePreference: v.note(200).optional(),
     pickupAddress: v.note(240).optional(),
+    /** Optional customer UPI ID (VPA) for receiving the return refund faster. */
+    refundUpiId: z.preprocess(blankToUndefined, v.upiId().optional()),
   })
   .refine((v) => !otherNeedsDetail(v.reason, v.details), {
     path: ["details"],

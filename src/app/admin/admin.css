@@ -130,7 +130,7 @@
 
 @keyframes adminLineDraw {
   from {
-    stroke-dashoffset: 1200;
+    stroke-dashoffset: 1;
   }
   to {
     stroke-dashoffset: 0;
@@ -147,7 +147,7 @@
 }
 
 [data-slot="admin-layout"] .adminLineDraw {
-  stroke-dasharray: 1200;
+  stroke-dasharray: 1;
   animation: adminLineDraw 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

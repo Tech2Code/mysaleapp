@@ -1,11 +1,12 @@
 "use client"
 
-import { BanIcon, CheckIcon, Loader2Icon } from "lucide-react"
+import { BanIcon, CheckIcon, Loader2Icon, WalletIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { normalizeIndianPhone } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrder } from "@/features/orders/actions"
@@ -15,7 +16,7 @@ import { OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail } from "@/features
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
-import { LIMITS } from "@/lib/validation"
+import { LIMITS, PATTERNS } from "@/lib/validation"
 import styles from "./order-status.module.css"
 
 /**
@@ -41,9 +42,12 @@ export function CancelOrder({
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
+  const [refundMode, setRefundMode] = useState<"original" | "upi">("original")
+  const [refundUpiId, setRefundUpiId] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [phone, setPhone] = useState("")
+  const formFieldsRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -65,6 +69,16 @@ export function CancelOrder({
 
   const paid = paymentStatus === "paid" || paymentStatus === "submitted"
   const needsDetail = !reason || otherNeedsDetail(reason, detail)
+  const cleanRefundUpi = refundUpiId.trim()
+  const refundUpiError =
+    paid && refundMode === "upi"
+      ? !cleanRefundUpi
+        ? "Enter your UPI ID for the refund (e.g. name@bank)"
+        : !PATTERNS.upiId.test(cleanRefundUpi)
+          ? "Enter a valid UPI ID, like name@okaxis"
+          : undefined
+      : undefined
+  const refundUpiInvalid = Boolean(refundUpiError)
   // A guest (the track page passes their last 4 digits) must type the FULL number to cancel; a signed-in owner
   // (no phoneLast4) is recognised by their account.
   const isGuest = phoneLast4 !== undefined
@@ -80,7 +94,24 @@ export function CancelOrder({
   const submit = () => {
     setSubmitted(true)
     setServerFieldErrors({})
-    if (!reason || needsDetail || phoneMissing) return
+    if (!reason || needsDetail || refundUpiInvalid || phoneMissing) {
+      const msg = !reason
+        ? "Please select why you are cancelling."
+        : needsDetail
+          ? OTHER_DETAIL_MESSAGE
+          : refundUpiInvalid
+            ? (refundUpiError ?? "Please enter a valid UPI ID for your refund.")
+            : (phoneError ?? "Please enter your 10-digit mobile number.")
+      toast.error(msg)
+      setTimeout(() => {
+        const invalidEl = formFieldsRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")
+        if (invalidEl) {
+          invalidEl.scrollIntoView({ behavior: "smooth", block: "center" })
+          invalidEl.focus({ preventScroll: true })
+        }
+      }, 50)
+      return
+    }
     startTransition(async () => {
       const res = await cancelOrder({
         code: orderCode,
@@ -88,6 +119,7 @@ export function CancelOrder({
         phone: isGuest ? phoneDigits ?? undefined : undefined,
         reason,
         detail: detail.trim() || undefined,
+        refundUpiId: paid && refundMode === "upi" ? cleanRefundUpi : undefined,
       })
       if (!res.ok) {
         const nextFieldErrors: Record<string, string> = {}
@@ -113,6 +145,8 @@ export function CancelOrder({
     if (!nextOpen) {
       setReason("")
       setDetail("")
+      setRefundMode("original")
+      setRefundUpiId("")
       setPhone("")
       setSubmitted(false)
       setServerFieldErrors({})
@@ -138,7 +172,7 @@ export function CancelOrder({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className={styles.cancelFormFields}>
+          <div ref={formFieldsRef} className={styles.cancelFormFields}>
             <SelectField
               label="Why are you cancelling? *"
               placeholder="Select a reason"
@@ -168,6 +202,69 @@ export function CancelOrder({
                   : undefined)
               }
             />
+            {paid && (
+              <div className={styles.refundModeBox}>
+                <p className={styles.refundModeTitle}>
+                  <WalletIcon className={styles.refundWalletSvg} aria-hidden /> Where should we send your refund?
+                </p>
+                <div className={styles.refundModeOptions} role="radiogroup" aria-label="Refund destination">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={refundMode === "original"}
+                    onClick={() => setRefundMode("original")}
+                    className={cn(
+                      styles.refundModeOptionBtn,
+                      refundMode === "original" && styles.refundModeOptionActive
+                    )}
+                  >
+                    <span className={styles.refundRadioDot} aria-hidden>
+                      {refundMode === "original" && <CheckIcon className={styles.refundRadioCheck} />}
+                    </span>
+                    <span className={styles.refundOptionTextCol}>
+                      <span className={styles.refundOptionHeading}>Original UPI account (via payment UTR)</span>
+                      <span className={styles.refundOptionSub}>We trace your 12-digit UTR and refund the sender account</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={refundMode === "upi"}
+                    onClick={() => setRefundMode("upi")}
+                    className={cn(
+                      styles.refundModeOptionBtn,
+                      refundMode === "upi" && styles.refundModeOptionActive
+                    )}
+                  >
+                    <span className={styles.refundRadioDot} aria-hidden>
+                      {refundMode === "upi" && <CheckIcon className={styles.refundRadioCheck} />}
+                    </span>
+                    <span className={styles.refundOptionTextCol}>
+                      <span className={styles.refundOptionHeading}>Enter my UPI ID for faster refund</span>
+                      <span className={styles.refundOptionSub}>Share your UPI ID (e.g. name@okaxis) for direct transfer</span>
+                    </span>
+                  </button>
+                </div>
+                {refundMode === "upi" && (
+                  <TextField
+                    label="Your UPI ID for refund *"
+                    kind="upiId"
+                    fieldSize="md"
+                    placeholder="e.g. yourname@okicici"
+                    hint="Double-check your UPI ID so your refund reaches you without delay."
+                    value={refundUpiId}
+                    onChange={(e) => {
+                      setRefundUpiId(e.target.value)
+                      if (serverFieldErrors.refundUpiId) setServerFieldErrors((p) => ({ ...p, refundUpiId: "" }))
+                    }}
+                    error={
+                      serverFieldErrors.refundUpiId ||
+                      ((submitted || cleanRefundUpi.length > 0) ? refundUpiError : undefined)
+                    }
+                  />
+                )}
+              </div>
+            )}
             {isGuest && (
               <TextField
                 label="Your full mobile number"

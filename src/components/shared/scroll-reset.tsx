@@ -203,7 +203,7 @@ export function ScrollReset() {
     }
 
     const onPop = (e: PopStateEvent) => {
-      if (e.state?.__searchDialog) return
+      if (e.state?.__searchDialog || e.state?.__overlayId) return
       const browserKey = window.location.pathname + window.location.search
       // If React already committed the target route synchronously inside Next.js's popstate handler,
       // do not overwrite the newly restored route's saved scroll position or leave viaHistory=true

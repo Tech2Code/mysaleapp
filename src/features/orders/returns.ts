@@ -34,39 +34,56 @@ export const REPLACEMENT_REASONS = [
 /** A request that still needs attention (counts against "one open request per order"). */
 export const isOpenRequest = (r: Pick<ReturnRequest, "status">) => r.status === "requested" || r.status === "approved"
 
-const PICKUP_TAG_RE = /(?:\r?\n|^)\[Pickup:\s*([^\]]+)\]\s*$/i
+const PICKUP_TAG_RE = /(?:\r?\n|^)\[Pickup:\s*([^\]]+)\]/i
+const REFUND_UPI_TAG_RE = /(?:\r?\n|^)\[Refund UPI:\s*([^\]]+)\]/i
 
-/** Packs the customer's optional return note and an alternate pickup address into the 300-char `details` field. */
+/** Packs the customer's optional return note, alternate pickup address, and optional refund UPI ID into the 300-char `details` field. */
 export function composeReturnDetails(
   details: string | null | undefined,
-  pickupAddress: string | null | undefined
+  pickupAddress: string | null | undefined,
+  refundUpiId?: string | null
 ): string | undefined {
-  const cleanDetails = (details ?? "").replace(PICKUP_TAG_RE, "").trim()
+  const cleanDetails = (details ?? "")
+    .replace(PICKUP_TAG_RE, "")
+    .replace(REFUND_UPI_TAG_RE, "")
+    .trim()
   const cleanPickup = (pickupAddress ?? "").replace(/[\[\]\r\n]+/g, " ").replace(/\s+/g, " ").trim()
-  if (!cleanPickup) {
+  const cleanUpi = (refundUpiId ?? "").replace(/[\[\]\r\n\s]+/g, "").trim()
+
+  const tags: string[] = []
+  if (cleanUpi) tags.push(`[Refund UPI: ${cleanUpi.slice(0, 64)}]`)
+  if (cleanPickup) {
+    const maxPickup = Math.max(40, 220 - (cleanUpi ? cleanUpi.length + 16 : 0))
+    tags.push(`[Pickup: ${cleanPickup.slice(0, maxPickup)}]`)
+  }
+
+  if (tags.length === 0) {
     return cleanDetails ? cleanDetails.slice(0, 300) : undefined
   }
-  const tag = `[Pickup: ${cleanPickup.slice(0, 220)}]`
-  if (!cleanDetails) return tag
-  const maxDetailLen = Math.max(0, 300 - tag.length - 1)
+  const tagBlock = tags.join("\n")
+  if (!cleanDetails) return tagBlock.slice(0, 300)
+  const maxDetailLen = Math.max(0, 300 - tagBlock.length - 1)
   const truncatedDetail = cleanDetails.slice(0, maxDetailLen).trim()
-  return truncatedDetail ? `${truncatedDetail}\n${tag}` : tag
+  return truncatedDetail ? `${truncatedDetail}\n${tagBlock}` : tagBlock.slice(0, 300)
 }
 
-/** Splits a stored `return_requests.details` string into the customer's reason note and any alternate pickup address. */
+/** Splits a stored `return_requests.details` string into the customer's reason note, any alternate pickup address, and any refund UPI ID. */
 export function splitReturnDetails(raw: string | null | undefined): {
   details: string | null
   pickupAddress: string | null
+  refundUpiId?: string | null
 } {
   if (!raw) return { details: null, pickupAddress: null }
-  const match = raw.match(PICKUP_TAG_RE)
-  if (!match) {
-    const clean = raw.trim()
-    return { details: clean || null, pickupAddress: null }
-  }
-  const pickupAddress = match[1]?.trim() || null
-  const details = raw.replace(PICKUP_TAG_RE, "").trim() || null
-  return { details, pickupAddress }
+  const pickupMatch = raw.match(PICKUP_TAG_RE)
+  const upiMatch = raw.match(REFUND_UPI_TAG_RE)
+  const pickupAddress = pickupMatch?.[1]?.trim() || null
+  const refundUpiId = upiMatch?.[1]?.trim() || null
+  const details =
+    raw
+      .replace(PICKUP_TAG_RE, "")
+      .replace(REFUND_UPI_TAG_RE, "")
+      .trim() || null
+  return refundUpiId ? { details, pickupAddress, refundUpiId } : { details, pickupAddress }
 }
 
 /** When the order was delivered: the latest "delivered" entry in its history, provided no later entry moved it back. */

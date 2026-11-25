@@ -1,5 +1,6 @@
-/* Section: Storefront Product Grid */
+/* Section: Storefront Product Grid & Carousel Slide */
 .productGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 32px; }
+.productCarouselSlide { width: 45%; flex-shrink: 0; scroll-snap-align: start; list-style: none; }
 /* Section: Product Card Container (Borderless Tonal Elevation + Spring Hover Lift) */
 .productCard { position: relative; display: flex; height: 100%; flex-direction: column; border-radius: 18px; border: 0; background-color: var(--card); padding: 8px; box-shadow: var(--store-elevation-sm); transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 .productCard:hover { transform: translateY(-4px); box-shadow: var(--store-elevation-md); }
@@ -60,6 +61,7 @@
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
   .productGrid { column-gap: 24px; }
+  .productCarouselSlide { width: 31%; }
   .productCard { border-color: transparent; background-color: transparent; padding: 0; box-shadow: none; }
   .productCard:hover { box-shadow: none; }
   .productCard .mediaFrame { border-radius: 16px; }
@@ -83,11 +85,15 @@
 }
 @media (min-width: 768px) {
   .productGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .productCarouselSlide { width: calc((100% - 32px) / 3); }
 }
 @media (min-width: 768px) and (pointer: fine) {
   .mediaFrame .quickAddBtn { transform: translateY(8px); opacity: 0; }
   .productCard:hover .quickAddBtn { transform: translateY(0); opacity: 1; }
   .mediaFrame .quickAddBtn:focus-visible { transform: translateY(0); opacity: 1; }
+}
+@media (min-width: 1024px) {
+  .productCarouselSlide { width: calc((100% - 48px) / 4); }
 }
 @media (min-width: 1280px) {
   .productGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }

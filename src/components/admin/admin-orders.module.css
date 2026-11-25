@@ -229,6 +229,13 @@
 .paymentRoot .factsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 12px; }
 .paymentRoot .owedRefundBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid #fed7aa; background-color: rgba(255, 247, 237, 0.7); padding: 16px; font-size: 14px; line-height: 20px; }
 :global(.dark) .paymentRoot .owedRefundBox { border-color: rgba(124, 45, 18, 0.5); background-color: rgba(67, 20, 7, 0.2); }
+.refundHelperCard { display: flex; flex-direction: column; gap: 8px; border-radius: 10px; border: 1px solid var(--border); background-color: var(--card); padding: 12px; font-size: 12.5px; line-height: 18px; color: var(--foreground); }
+.refundHelperCard .refundHelperTitle { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--foreground); }
+.refundHelperCard .refundUpiHighlight { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 8px; background-color: color-mix(in oklab, var(--primary) 8%, transparent); padding: 8px 10px; }
+.refundUpiHighlight .payRefundUpiBtn { display: inline-flex; height: 30px; align-items: center; gap: 6px; border-radius: 9999px; background-color: var(--primary); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary-foreground); transition: opacity 150ms ease; }
+.refundUpiHighlight .payRefundUpiBtn:hover { opacity: 0.9; }
+.refundHelperCard .refundHelperStep { margin: 0; color: var(--muted-foreground); }
+.returnRefundActionStack { display: flex; flex-direction: column; gap: 10px; }
 .paymentRoot .verifyNoteBox { border-radius: 12px; border: 1px solid #bae6fd; background-color: rgba(240, 249, 255, 0.7); padding: 12px; font-size: 14px; line-height: 20px; }
 :global(.dark) .paymentRoot .verifyNoteBox { border-color: rgba(12, 74, 110, 0.5); background-color: rgba(8, 47, 73, 0.2); }
 .paymentRoot .verifyActionRow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
@@ -313,9 +320,9 @@
   .browserCard { padding: 14px; }
   .topFilterRow .mobileFilterToggle { display: none; }
   .topFilterRow .periodSelectGroup { margin-left: auto; display: flex; width: auto; align-items: center; }
-  .selectWidth36 { width: 144px; }
-  .selectWidth44 { width: 176px; }
-  .selectSpan2Width52 { grid-column: auto; width: 208px; }
+  .periodSelectGroup .selectWidth36 { width: 144px; flex: 0 0 144px; }
+  .periodSelectGroup .selectWidth44, .bottomFilterRow .selectWidth44 { width: 176px; flex: 0 0 176px; }
+  .bottomFilterRow .selectSpan2Width52 { grid-column: auto; width: 208px; flex: 0 0 208px; }
   .browserCard .bottomFilterRow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .browserCard .bottomFilterRowOpen { display: flex; }
   .bottomFilterRow .resetFilterBtn { grid-column: auto; margin-left: auto; width: auto; }

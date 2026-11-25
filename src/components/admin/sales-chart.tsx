@@ -34,30 +34,74 @@ function compact(n: number, money: boolean): string {
   return `${p}${Math.round(n)}`
 }
 
-/** Smooth cubic bezier SVG path through data points (Catmull-Rom -> Bezier). */
+/**
+ * Monotone cubic Hermite spline (Fritsch–Carlson) SVG path through data points.
+ * Preserves monotonicity between consecutive points so flat zero stretches stay
+ * strictly flat on the baseline and steep peaks never overshoot or dip below zero.
+ */
 function smoothPath(pts: readonly { x: number; y: number }[], baselineY: number): { line: string; area: string } {
-  if (pts.length === 0) return { line: "", area: "" }
-  if (pts.length === 1) {
+  const n = pts.length
+  if (n === 0) return { line: "", area: "" }
+  if (n === 1) {
     const p = pts[0]
     return {
       line: `M${p.x.toFixed(2)},${p.y.toFixed(2)}`,
       area: `M${p.x.toFixed(2)},${baselineY} L${p.x.toFixed(2)},${p.y.toFixed(2)} L${p.x.toFixed(2)},${baselineY} Z`,
     }
   }
-  let d = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)]
-    const p1 = pts[i]
-    const p2 = pts[i + 1]
-    const p3 = pts[Math.min(pts.length - 1, i + 2)]
-    const cp1x = p1.x + (p2.x - p0.x) / 6
-    const cp1y = Math.min(baselineY, Math.max(2, p1.y + (p2.y - p0.y) / 6))
-    const cp2x = p2.x - (p3.x - p1.x) / 6
-    const cp2y = Math.min(baselineY, Math.max(2, p2.y - (p3.y - p1.y) / 6))
-    d += ` C${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`
+
+  const dx: number[] = []
+  const dy: number[] = []
+  const m: number[] = []
+  for (let i = 0; i < n - 1; i++) {
+    const dxi = pts[i + 1].x - pts[i].x
+    const dyi = pts[i + 1].y - pts[i].y
+    dx.push(dxi)
+    dy.push(dyi)
+    m.push(dxi !== 0 ? dyi / dxi : 0)
   }
+
+  const tangents: number[] = new Array(n).fill(0)
+  tangents[0] = m[0]
+  tangents[n - 1] = m[n - 2]
+  for (let i = 1; i < n - 1; i++) {
+    if (m[i - 1] * m[i] <= 0) {
+      tangents[i] = 0
+    } else {
+      tangents[i] = (m[i - 1] + m[i]) / 2
+    }
+  }
+
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) {
+      tangents[i] = 0
+      tangents[i + 1] = 0
+    } else {
+      const a = tangents[i] / m[i]
+      const b = tangents[i + 1] / m[i]
+      const h = Math.hypot(a, b)
+      if (h > 3) {
+        const scale = 3 / h
+        tangents[i] = scale * a * m[i]
+        tangents[i + 1] = scale * b * m[i]
+      }
+    }
+  }
+
+  let d = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = pts[i]
+    const p1 = pts[i + 1]
+    const step = dx[i] / 3
+    const cp1x = p0.x + step
+    const cp1y = Math.min(baselineY, Math.max(0, p0.y + tangents[i] * step))
+    const cp2x = p1.x - step
+    const cp2y = Math.min(baselineY, Math.max(0, p1.y - tangents[i + 1] * step))
+    d += ` C${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${p1.x.toFixed(2)},${p1.y.toFixed(2)}`
+  }
+
   const first = pts[0]
-  const last = pts[pts.length - 1]
+  const last = pts[n - 1]
   return {
     line: d,
     area: `${d} L${last.x.toFixed(2)},${baselineY} L${first.x.toFixed(2)},${baselineY} Z`,
@@ -87,13 +131,16 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
   const shown = active ?? null
 
   const svgW = 640
-  const svgH = 220
-  const padY = 10
-  const plotH = svgH - padY * 2
+  const svgH = 224
   const coords = points.map((p, i) => {
-    const x = points.length > 1 ? (i / (points.length - 1)) * svgW : svgW / 2
-    const y = padY + plotH - (p[metric] / top) * plotH
-    return { x, y }
+    const xPct = points.length > 1 ? (i / (points.length - 1)) * 100 : 50
+    const yPct = 100 - (p[metric] / top) * 100
+    return {
+      x: (xPct / 100) * svgW,
+      y: (yPct / 100) * svgH,
+      xPct,
+      yPct,
+    }
   })
   const { line, area } = smoothPath(coords, svgH)
   const activePoint = shown !== null ? points[shown] : null
@@ -230,6 +277,7 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                     <path d={area} fill={`url(#${gradId})`} />
                     <path
                       d={line}
+                      pathLength={1}
                       fill="none"
                       stroke="var(--primary)"
                       strokeWidth="2.25"
@@ -252,26 +300,26 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                     )}
                   </svg>
 
-                  {/* Interactive hit columns + active dot */}
+                  {activeCoord && (
+                    <span
+                      className={styles.activeDot}
+                      style={{ left: `${activeCoord.xPct}%`, top: `${activeCoord.yPct}%` }}
+                      aria-hidden
+                    />
+                  )}
+
+                  {/* Interactive hit columns centered around each data point */}
                   <div className={styles.hitColumnsRow}>
                     {points.map((p, i) => {
-                      const isActive = shown === i
-                      const dotTopPct = ((padY + plotH - (p[metric] / top) * plotH) / svgH) * 100
+                      const weight = points.length > 1 && (i === 0 || i === points.length - 1) ? 0.5 : 1
                       return (
                         <div
                           key={`${p.label}-${i}`}
                           className={styles.hitCol}
+                          style={{ flexGrow: weight }}
                           onMouseEnter={() => setActive(i)}
                           onTouchStart={() => setActive(i)}
-                        >
-                          {isActive && (
-                            <span
-                              className={styles.activeDot}
-                              style={{ top: `${dotTopPct}%` }}
-                              aria-hidden
-                            />
-                          )}
-                        </div>
+                        />
                       )
                     })}
                   </div>

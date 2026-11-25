@@ -1,19 +1,37 @@
 "use client"
 
-import { ArrowLeftIcon, ArrowLeftRightIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, PencilIcon, PlusIcon, SendIcon, Undo2Icon, WalletIcon, XIcon } from "lucide-react"
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  ArrowLeftRightIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  Loader2Icon,
+  MapPinIcon,
+  MinusIcon,
+  PackageOpenIcon,
+  PencilIcon,
+  PlusIcon,
+  RefreshCwIcon,
+  SendIcon,
+  Undo2Icon,
+  WalletIcon,
+  XIcon,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
-import { SelectField, TextAreaField, TextField } from "@/components/form"
+import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/form"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { listMyAddresses, saveAddress } from "@/features/addresses/actions"
 import { ADDRESS_LABELS, type Address } from "@/features/addresses/types"
 import { joinCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { EXCHANGE_REASONS, isOpenRequest, itemReturnWindow, REPLACEMENT_REASONS, RETURN_REASONS, requestStatusMeta, returnableQuantities, splitReturnDetails } from "@/features/orders/returns"
+import { isOpenRequest, itemReturnWindow, requestStatusMeta, returnableQuantities, splitReturnDetails } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType, StatusHistoryEntry } from "@/features/orders/types"
@@ -24,9 +42,60 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { useRevealOnChange } from "@/hooks/use-reveal-on-change"
 import { LIMITS, PATTERNS } from "@/lib/validation"
+import { ProductImage } from "./product-image"
 import styles from "./request-return.module.css"
 
 type Window = { open: boolean; until: string | null; days: number }
+type WizardStep = 1 | 2 | 3
+
+const WIZARD_STEPS: { step: WizardStep; label: string }[] = [
+  { step: 1, label: "Items & Reason" },
+  { step: 2, label: "Resolution" },
+  { step: 3, label: "Pickup & Confirm" },
+]
+
+const COMBINED_REASONS: { label: string; sub: string; defaultChoice: "refund" | "replacement" | "exchange" }[] = [
+  {
+    label: "Damaged or broken",
+    sub: "Item arrived cracked, chipped, or damaged in transit",
+    defaultChoice: "replacement",
+  },
+  {
+    label: "Wrong item received",
+    sub: "Delivered piece is different from what was ordered",
+    defaultChoice: "replacement",
+  },
+  {
+    label: "Not as described",
+    sub: "Size, colour, or details differ from the product page",
+    defaultChoice: "refund",
+  },
+  {
+    label: "Need a different size or dimensions",
+    sub: "Want to swap for another size or variant",
+    defaultChoice: "exchange",
+  },
+  {
+    label: "Prefer a different colour or finish",
+    sub: "Want to exchange for another colour or design",
+    defaultChoice: "exchange",
+  },
+  {
+    label: "Quality isn't what I expected",
+    sub: "Material or finish did not meet expectations",
+    defaultChoice: "refund",
+  },
+  {
+    label: "Changed my mind",
+    sub: "No longer need this item",
+    defaultChoice: "refund",
+  },
+  {
+    label: OTHER_REASON,
+    sub: "Another reason not listed above",
+    defaultChoice: "refund",
+  },
+]
 
 /**
  * "Request a return" for a delivered order. Shown only while the return window is open and something
@@ -63,12 +132,16 @@ export function RequestReturn({
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<WizardStep>(1)
   const [qty, setQty] = useState<Record<string, string>>({})
   const [resolutionType, setResolutionType] = useState<ReturnResolutionType>("refund")
   const [exchangeKind, setExchangeKind] = useState<"" | "exchange" | "replacement">("")
+  const [ userPickedResolution, setUserPickedResolution ] = useState(false)
   const [exchangePreference, setExchangePreference] = useState("")
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
+  const [refundMode, setRefundMode] = useState<"original" | "upi">("original")
+  const [refundUpiId, setRefundUpiId] = useState("")
   const [phone, setPhone] = useState("")
   const [pickupMode, setPickupMode] = useState<"order" | "saved" | "new">("order")
   const [dialogView, setDialogView] = useState<"main" | "pickup-list" | "pickup-new">("main")
@@ -84,11 +157,17 @@ export function RequestReturn({
   const [saveNewPickupAddress, setSaveNewPickupAddress] = useState(false)
   const [newAddressLabel, setNewAddressLabel] = useState<(typeof ADDRESS_LABELS)[number]>("Home")
   const [submitted, setSubmitted] = useState(false)
+  const [errorShakeKey, setErrorShakeKey] = useState(0)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
-  const itemsListRef = useRef<HTMLUListElement>(null)
+  const itemsSectionRef = useRef<HTMLDivElement>(null)
+  const reasonBoxRef = useRef<HTMLDivElement>(null)
+  const detailsBoxRef = useRef<HTMLDivElement>(null)
   const exchangeBoxRef = useRef<HTMLDivElement>(null)
-  const nextFieldsRef = useRef<HTMLDivElement>(null)
+  const exchangePrefBoxRef = useRef<HTMLDivElement>(null)
+  const refundUpiBoxRef = useRef<HTMLDivElement>(null)
   const pickupBoxRef = useRef<HTMLDivElement>(null)
+  const guestPhoneBoxRef = useRef<HTMLDivElement>(null)
+  const newPickupFormRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -188,16 +267,22 @@ export function RequestReturn({
     .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
     .filter((i) => i.quantity > 0)
   const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
-  const rawEstimateTotal = estimate.reduce((n, l) => n + l.amount, 0)
-  const estimateTotal =
-    resolutionType === "exchange"
-      ? rawEstimateTotal
-      : netReturnRefund(items, payload, { discountAmount: charges?.discountAmount ?? 0 })
+  const refundEstimateTotal = netReturnRefund(items, payload, { discountAmount: charges?.discountAmount ?? 0 })
   const kept = charges ? notRefundedCharges(charges) : []
   const needsDetail = !reason || otherNeedsDetail(reason, details)
   const needsExchangeKind = resolutionType === "exchange" && !exchangeKind
   const cleanExchangePref = exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim()
   const needsExchangePref = resolutionType === "exchange" && cleanExchangePref.length < 2
+  const cleanRefundUpi = refundUpiId.trim()
+  const refundUpiError =
+    resolutionType === "refund" && refundMode === "upi"
+      ? !cleanRefundUpi
+        ? "Enter your UPI ID for the refund (e.g. name@bank)"
+        : !PATTERNS.upiId.test(cleanRefundUpi)
+          ? "Enter a valid UPI ID, like name@okaxis"
+          : undefined
+      : undefined
+  const refundUpiInvalid = Boolean(refundUpiError)
   const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
 
   // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to request a return;
@@ -264,48 +349,122 @@ export function RequestReturn({
     return undefined
   })()
 
-  const reasonOptions =
-    resolutionType === "exchange"
-      ? exchangeKind === "replacement"
-        ? REPLACEMENT_REASONS
-        : EXCHANGE_REASONS
-      : RETURN_REASONS
-
   const submitButtonLabel =
     resolutionType === "refund"
-      ? "Send return request"
+      ? "Submit return request"
       : exchangeKind === "replacement"
-        ? "Send replacement request"
-        : exchangeKind === "exchange"
-          ? "Send exchange request"
-          : "Proceed with exchange / replacement"
+        ? "Submit replacement request"
+        : "Submit exchange request"
 
-  const showLowerFields = resolutionType === "refund" || Boolean(exchangeKind)
+  const scrollAndFocus = (el: HTMLElement | null, focusInput = false) => {
+    if (!el) return
+    el.scrollIntoView({ behavior: "smooth", block: "start" })
+    if (focusInput) {
+      setTimeout(() => {
+        const input = el.querySelector<HTMLElement>("input, textarea, button[role='combobox']")
+        input?.focus({ preventScroll: true })
+      }, 180)
+    }
+  }
+
+  const goStep2 = () => {
+    setSubmitted(true)
+    setServerFieldErrors({})
+    if (payload.length === 0 || tooMany) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(itemsSectionRef.current)
+      toast.error(
+        payload.length === 0
+          ? "Please select at least 1 item to return or exchange."
+          : "Selected quantity exceeds the returnable quantity."
+      )
+      return
+    }
+    if (!reason) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(reasonBoxRef.current)
+      toast.error("Please select why you are returning or exchanging.")
+      return
+    }
+    if (needsDetail) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(detailsBoxRef.current ?? reasonBoxRef.current, true)
+      toast.error(OTHER_DETAIL_MESSAGE)
+      return
+    }
+    // Pre-select the natural resolution for the chosen reason unless the customer already picked one
+    if (!userPickedResolution) {
+      const matched = COMBINED_REASONS.find((r) => r.label === reason)
+      if (matched?.defaultChoice === "replacement") {
+        setResolutionType("exchange")
+        setExchangeKind("replacement")
+        if (!exchangePreference.trim()) {
+          setExchangePreference("Send a fresh undamaged piece of the same item")
+        }
+      } else if (matched?.defaultChoice === "exchange") {
+        setResolutionType("exchange")
+        setExchangeKind("exchange")
+      } else {
+        setResolutionType("refund")
+        setExchangeKind("")
+      }
+    }
+    setSubmitted(false)
+    setStep(2)
+  }
+
+  const goStep3 = () => {
+    setSubmitted(true)
+    setServerFieldErrors({})
+    if (needsExchangeKind) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(exchangeBoxRef.current)
+      toast.error("Please choose Refund, Replacement, or Exchange.")
+      return
+    }
+    if (refundUpiInvalid) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(refundUpiBoxRef.current ?? exchangeBoxRef.current, true)
+      toast.error(refundUpiError ?? "Please enter a valid UPI ID for your refund.")
+      return
+    }
+    if (needsExchangePref) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(exchangePrefBoxRef.current ?? exchangeBoxRef.current, true)
+      toast.error(
+        exchangeKind === "replacement"
+          ? "Please enter a short note for your replacement item."
+          : "Please enter the size, colour, or piece you want in exchange."
+      )
+      return
+    }
+    setSubmitted(false)
+    setStep(3)
+  }
 
   const submit = () => {
     setSubmitted(true)
     setServerFieldErrors({})
-    if (payload.length === 0) {
-      itemsListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-      if (lines.length > 1) {
-        toast.error("Please enter a quantity of at least 1 for the item(s) you want to return or exchange.")
-      }
+    if (payload.length === 0 || tooMany || !reason || needsDetail) {
+      setErrorShakeKey((k) => k + 1)
+      setStep(1)
       return
     }
-    if (tooMany) {
-      itemsListRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-      return
-    }
-    if (needsExchangeKind) {
-      exchangeBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-      return
-    }
-    if (needsExchangePref || !reason || needsDetail || phoneMissing) {
-      nextFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    if (needsExchangeKind || needsExchangePref || refundUpiInvalid) {
+      setErrorShakeKey((k) => k + 1)
+      setStep(2)
       return
     }
     if (hasNewPickupError || savedPickupMissing) {
-      pickupBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(pickupBoxRef.current)
+      toast.error("Please choose or complete a valid pickup address.")
+      return
+    }
+    if (phoneMissing) {
+      setErrorShakeKey((k) => k + 1)
+      scrollAndFocus(guestPhoneBoxRef.current ?? pickupBoxRef.current, true)
+      toast.error(phoneError ?? "Please enter your 10-digit mobile number to confirm.")
       return
     }
     startTransition(async () => {
@@ -331,6 +490,7 @@ export function RequestReturn({
           resolutionType,
           exchangePreference: formattedPref,
           pickupAddress: resolvedPickupSummary,
+          refundUpiId: resolutionType === "refund" && refundMode === "upi" ? cleanRefundUpi : undefined,
         })
         if (!res.ok) {
           const nextFieldErrors: Record<string, string> = {}
@@ -338,6 +498,11 @@ export function RequestReturn({
             if (msgs?.[0]) nextFieldErrors[k] = msgs[0]
           }
           setServerFieldErrors(nextFieldErrors)
+          if (nextFieldErrors.reason || nextFieldErrors.details || nextFieldErrors.items) {
+            setStep(1)
+          } else if (nextFieldErrors.exchangePreference || nextFieldErrors.refundUpiId) {
+            setStep(2)
+          }
           toast.error(res.error)
           return
         }
@@ -377,12 +542,16 @@ export function RequestReturn({
   }
 
   const resetFormState = () => {
+    setStep(1)
     setQty({})
     setResolutionType("refund")
     setExchangeKind("")
+    setUserPickedResolution(false)
     setExchangePreference("")
     setReason("")
     setDetails("")
+    setRefundMode("original")
+    setRefundUpiId("")
     setPhone("")
     setPickupMode("order")
     setDialogView("main")
@@ -412,7 +581,32 @@ export function RequestReturn({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      onBackStep={() => {
+        if (dialogView === "pickup-new") {
+          setPickupSubmitted(false)
+          setDialogView("pickup-list")
+          return true
+        }
+        if (dialogView === "pickup-list") {
+          setDialogView("main")
+          return true
+        }
+        if (step === 3) {
+          setSubmitted(false)
+          setStep(2)
+          return true
+        }
+        if (step === 2) {
+          setSubmitted(false)
+          setStep(1)
+          return true
+        }
+        return false
+      }}
+    >
       <DialogTrigger
 
         className={styles.returnTriggerBtn}
@@ -430,7 +624,7 @@ export function RequestReturn({
             <DialogHeader>
               <DialogTitle>Choose pickup address</DialogTitle>
               <DialogDescription>
-                Select where our courier should pick up the item(s) for {orderCode}, or add a new pickup address.
+                Select where our courier should pick up the item(s), or add a new pickup address.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -599,11 +793,11 @@ export function RequestReturn({
             <DialogHeader>
               <DialogTitle>Add new pickup address</DialogTitle>
               <DialogDescription>
-                Enter the address where our courier should collect the item(s) for {orderCode}.
+                Enter the address where our courier should collect the item(s).
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
-              <div className={styles.newPickupForm}>
+              <div ref={newPickupFormRef} className={styles.newPickupForm}>
                 <div className={styles.twoColFields}>
                   <TextField
                     label="Contact name *"
@@ -662,16 +856,11 @@ export function RequestReturn({
                 />
                 {!isGuest && savedAddresses.length < 10 && (
                   <div className={styles.saveAddrBox}>
-                    <label className={styles.saveAddrCheckLabel}>
-                      <input
-
-                        type="checkbox"
-                        checked={saveNewPickupAddress}
-                        onChange={(e) => setSaveNewPickupAddress(e.target.checked)}
-                        className={styles.checkboxInput}
-                      />
-                      Save this address to my address book
-                    </label>
+                    <CheckboxField
+                      checked={saveNewPickupAddress}
+                      onCheckedChange={setSaveNewPickupAddress}
+                      label="Save this address to my address book"
+                    />
                     {saveNewPickupAddress && (
                       <div className={styles.labelPillsRow}>
                         {ADDRESS_LABELS.map((lbl) => (
@@ -712,7 +901,27 @@ export function RequestReturn({
                 type="button"
                 onClick={() => {
                   setPickupSubmitted(true)
-                  if (hasRawNewPickupError) return
+                  if (hasRawNewPickupError) {
+                    const firstErrMsg =
+                      rawNewPickupErrors.name ||
+                      rawNewPickupErrors.phone ||
+                      rawNewPickupErrors.pincode ||
+                      rawNewPickupErrors.city ||
+                      rawNewPickupErrors.state ||
+                      rawNewPickupErrors.address ||
+                      "Please complete the required pickup address fields."
+                    toast.error(firstErrMsg)
+                    setTimeout(() => {
+                      const invalidEl = newPickupFormRef.current?.querySelector<HTMLElement>(
+                        "[aria-invalid='true']"
+                      )
+                      if (invalidEl) {
+                        invalidEl.scrollIntoView({ behavior: "smooth", block: "center" })
+                        invalidEl.focus({ preventScroll: true })
+                      }
+                    }, 50)
+                    return
+                  }
                   setPickupMode("new")
                   setPickupSubmitted(false)
                   setDialogView("main")
@@ -726,399 +935,690 @@ export function RequestReturn({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Return or exchange items from {orderCode}</DialogTitle>
+              <DialogTitle>
+                {step === 1
+                  ? "Select items & reason"
+                  : step === 2
+                    ? "Choose your resolution"
+                    : "Confirm pickup & review"}
+              </DialogTitle>
               <DialogDescription>
-                Choose what you want to send back and whether you want a refund or an exchange/replacement.
-                {win.until ? ` You can request a return or exchange until ${formatDate(win.until)}.` : ""}
+                {step === 1
+                  ? "Pick the item(s) you want to return or exchange and tell us what happened."
+                  : step === 2
+                    ? "Select whether you want a refund, a replacement, or an exchange."
+                    : "Check your pickup address and summary before submitting."}
               </DialogDescription>
             </DialogHeader>
+            <div className={styles.wizardStepperStrip}>
+              <nav aria-label="Return request progress" className={styles.wizardStepsBar}>
+                {WIZARD_STEPS.map((ws) => {
+                  const isCurrent = step === ws.step
+                  const isDone = step > ws.step
+                  return (
+                    <button
+                      key={ws.step}
+                      type="button"
+                      disabled={!isDone}
+                      aria-current={isCurrent ? "step" : undefined}
+                      onClick={() => {
+                        if (isDone) {
+                          setSubmitted(false)
+                          setStep(ws.step)
+                        }
+                      }}
+                      className={cn(
+                        styles.wizardStepPill,
+                        isCurrent && styles.wizardStepPillCurrent,
+                        isDone && styles.wizardStepPillDone
+                      )}
+                    >
+                      <span className={styles.wizardStepBadge} aria-hidden>
+                        {isDone ? <CheckIcon className={styles.stepCheckSvg} /> : ws.step}
+                      </span>
+                      <span className={styles.wizardStepLabel}>{ws.label}</span>
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
 
             <DialogBody>
-              <ul ref={itemsListRef} className={styles.returnItemsList}>
-            {allLines.map((i) => {
-              const max = left.get(i.productId) ?? 0
-              const itemWin = windowByProduct.get(i.productId)
-              const eligible = (itemWin?.open ?? win.open) && (itemWin?.days ?? win.days) > 0
-              return (
-                <li
-
-                  key={i.productId}
-                  className={cn(
-                    styles.returnItemRow,
-                    !eligible && styles.returnItemIneligible
-                  )}
-                >
-                  <div className={styles.itemInfoCol}>
-                    <p className={styles.itemName}>{i.name}</p>
-                    <p className={styles.itemWindowText}>
-                      {itemWin && itemWin.days <= 0
-                        ? "Non-returnable item"
-                        : itemWin && !itemWin.open
-                          ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
-                          : itemWin
-                            ? `${itemWin.days}-day return & exchange window${itemWin.until ? ` · until ${formatDate(itemWin.until)}` : ""}`
-                            : `${win.days}-day return & exchange window`}
-                    </p>
-                  </div>
-                  {eligible ? (
-                    <TextField
-                      label={`Qty (max ${max})`}
-                      kind="digits"
-                      fieldSize="md"
-                      inputMode="numeric"
-                      maxLength={String(LIMITS.returnQuantity.max).length}
-                      placeholder="0"
-                      value={qtyOf(i.productId)}
-                      onChange={(e) => setQty((q) => ({ ...q, [i.productId]: e.target.value }))}
-                      error={
-                        Number(qtyOf(i.productId)) > max
-                          ? `At most ${max}`
-                          : submitted && payload.length === 0 && i.productId === lines[0]?.productId
-                            ? "Enter at least 1"
-                            : undefined
-                      }
-                    />
-                  ) : (
-                    <span className={styles.ineligibleBadge}>
-                      {(itemWin?.days ?? 0) <= 0 ? "Non-returnable" : "Window ended"}
-                    </span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-
-          <div className={styles.resolutionSection}>
-            <p className={styles.resolutionHeading}>
-              What would you prefer? *
-            </p>
-            <div className={styles.resolutionGrid}>
-              <button
-
-                type="button"
-                aria-pressed={resolutionType === "refund"}
-                onClick={() => {
-                  setResolutionType("refund")
-                  if (reason && !(RETURN_REASONS as readonly string[]).includes(reason)) setReason("")
-                }}
-                className={cn(
-                  styles.resolutionCardBtn,
-                  resolutionType === "refund" && styles.resolutionCardActive
-                )}
-              >
-                <WalletIcon className={styles.resIcon} aria-hidden />
-                <span className={styles.resTextCol}>
-                  <span className={styles.resTitle}>
-                    Refund
-                  </span>
-                  <span className={styles.resHint}>
-                    Get the item price refunded after pickup
-                  </span>
-                </span>
-              </button>
-              <button
-
-                type="button"
-                aria-pressed={resolutionType === "exchange"}
-                onClick={() => {
-                  setResolutionType("exchange")
-                  const targetReasons = exchangeKind === "replacement" ? REPLACEMENT_REASONS : EXCHANGE_REASONS
-                  if (reason && !(targetReasons as readonly string[]).includes(reason)) setReason("")
-                  requestAnimationFrame(() => {
-                    exchangeBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-                  })
-                }}
-                className={cn(
-                  styles.resolutionCardBtn,
-                  resolutionType === "exchange" && styles.resolutionCardActive
-                )}
-              >
-                <ArrowLeftRightIcon className={styles.resIcon} aria-hidden />
-                <span className={styles.resTextCol}>
-                  <span className={styles.resTitle}>
-                    Exchange / Replacement
-                  </span>
-                  <span className={styles.resHint}>
-                    Swap for another size, colour, or piece
-                  </span>
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {resolutionType === "exchange" && (
-            <div ref={exchangeBoxRef} className={styles.exchangeBox}>
-              <SelectField
-                label="Would you like an exchange or a replacement? *"
-                placeholder="Choose Exchange or Replacement"
-                fieldSize="md"
-                value={exchangeKind}
-                onValueChange={(val) => {
-                  const nextKind = val as "" | "exchange" | "replacement"
-                  setExchangeKind(nextKind)
-                  const nextReasons = nextKind === "replacement" ? REPLACEMENT_REASONS : EXCHANGE_REASONS
-                  if (reason && !(nextReasons as readonly string[]).includes(reason)) setReason("")
-                  if (nextKind) {
-                    requestAnimationFrame(() => {
-                      nextFieldsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
-                    })
-                  }
-                }}
-                options={[
-                  { value: "exchange", label: "Exchange — swap for another size, colour, or piece" },
-                  { value: "replacement", label: "Replacement — get a fresh piece of the same item" },
-                ]}
-                error={submitted && needsExchangeKind ? "Please select Exchange or Replacement" : undefined}
-              />
-
-              {exchangeKind === "exchange" && (
-                <TextField
-                  label="Which size, colour, or piece would you like in exchange?"
-                  required
-                  fieldSize="md"
-                  maxLength={180}
-                  placeholder="e.g. Size M instead of S, or Terracotta colour"
-                  value={exchangePreference}
-                  onChange={(e) => {
-                    setExchangePreference(e.target.value)
-                    if (serverFieldErrors.exchangePreference) {
-                      setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
-                    }
-                  }}
-                  hint="Specify the preferred size, colour, variant, or piece you want in exchange."
-                  error={
-                    serverFieldErrors.exchangePreference ||
-                    ((submitted || exchangePreference.length > 0) && needsExchangePref
-                      ? "Please enter what you would like in exchange (at least 2 characters)"
-                      : undefined)
-                  }
-                />
-              )}
-
-              {exchangeKind === "replacement" && (
-                <TextField
-                  label="What should we check for your replacement piece?"
-                  required
-                  fieldSize="md"
-                  maxLength={180}
-                  placeholder="e.g. Send a fresh undamaged piece of the same item"
-                  value={exchangePreference}
-                  onChange={(e) => {
-                    setExchangePreference(e.target.value)
-                    if (serverFieldErrors.exchangePreference) {
-                      setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
-                    }
-                  }}
-                  hint="We will dispatch a brand-new replacement of the exact same item after pickup."
-                  error={
-                    serverFieldErrors.exchangePreference ||
-                    ((submitted || exchangePreference.length > 0) && needsExchangePref
-                      ? "Please enter a short note for your replacement item (at least 2 characters)"
-                      : undefined)
-                  }
-                />
-              )}
-            </div>
-          )}
-
-          {showLowerFields && (
-            <div ref={nextFieldsRef} className={styles.lowerFieldsStack}>
-              {estimate.length > 0 && (
-                <div className={styles.estimateBox}>
-                  <p className={styles.estimateRow}>
-                    <span>
-                      {resolutionType === "exchange"
-                        ? exchangeKind === "replacement"
-                          ? "Replacement item value"
-                          : "Exchange item value"
-                        : "You will get back"}
-                    </span>
-                    <span>{formatPrice(estimateTotal)}</span>
-                  </p>
-                  <p className={styles.estimateNote}>
-                    {resolutionType === "exchange"
-                      ? exchangeKind === "replacement"
-                        ? "Once your returned item(s) are picked up and checked, we will dispatch a fresh replacement piece at no extra cost."
-                        : "Once your returned item(s) are picked up and checked, we will dispatch your requested exchange item at no extra item cost."
-                      : `Price of the items you return.${kept.length > 0 ? ` Delivery and other charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are not refunded.` : " Delivery and other charges are not refunded."}`}
-                  </p>
-                </div>
-              )}
-              <SelectField
-                label={
-                  resolutionType === "exchange"
-                    ? exchangeKind === "replacement"
-                      ? "Why do you need a replacement? *"
-                      : "Why are you exchanging it? *"
-                    : "Why are you returning it? *"
-                }
-                placeholder="Select a reason"
-                fieldSize="md"
-                value={reason}
-                onValueChange={(val) => {
-                  setReason(val)
-                  if (serverFieldErrors.reason) {
-                    setServerFieldErrors((prev) => ({ ...prev, reason: "" }))
-                  }
-                }}
-                options={reasonOptions.map((r) => ({ value: r, label: r }))}
-                error={
-                  serverFieldErrors.reason ||
-                  (submitted && !reason
-                    ? resolutionType === "exchange"
-                      ? exchangeKind === "replacement"
-                        ? "Please select why you need a replacement"
-                        : "Please select why you are exchanging this item"
-                      : "Please select why you are returning this item"
-                    : undefined)
-                }
-              />
-              <TextAreaField
-                label={reason === OTHER_REASON ? "Please tell us the reason" : "Additional details (optional)"}
-                required={reason === OTHER_REASON}
-                rows={2}
-                maxLength={pickupMode === "order" ? LIMITS.returnDetail.max : 140}
-                value={details}
-                onChange={(e) => {
-                  setDetails(e.target.value)
-                  if (serverFieldErrors.details) {
-                    setServerFieldErrors((prev) => ({ ...prev, details: "" }))
-                  }
-                }}
-                hint={reason === OTHER_REASON ? "Tell us the reason (at least 5 characters)." : "Add any extra details that help us handle your request faster."}
-                error={
-                  serverFieldErrors.details ||
-                  ((submitted || details.trim().length > 0) && reason === OTHER_REASON && details.trim().length < OTHER_DETAIL_MIN
-                    ? OTHER_DETAIL_MESSAGE
-                    : undefined)
-                }
-              />
-
-              {/* Pickup address summary card (switches the modal screen to choose or add an address) */}
-              <div ref={pickupBoxRef} className={styles.pickupSummarySection}>
-                <div className={styles.pickupSummaryTop}>
-                  <p className={styles.pickupSummaryHeading}>
-                    <MapPinIcon className={styles.pinSvg} aria-hidden /> Pickup address
-                  </p>
-                  <div className={styles.pickupActionBtns}>
-                    {pickupMode === "new" && (
-                      <button
-
-                        type="button"
-                        onClick={() => {
-                          setPickupSubmitted(false)
-                          setDialogView("pickup-new")
-                        }}
-                        className={styles.editPickupBtn}
-                      >
-                        <PencilIcon className={styles.pencilSvg} aria-hidden /> Edit
-                      </button>
+              {step === 1 ? (
+                <div className={styles.wizardStepStack}>
+                  <div ref={itemsSectionRef} className={styles.stepSectionBlock}>
+                    <div className={styles.stepSectionHeader}>
+                      <p className={styles.stepSectionTitle}>1. Select item(s) &amp; quantity *</p>
+                      {win.until && (
+                        <span className={styles.stepSectionMeta}>Open until {formatDate(win.until)}</span>
+                      )}
+                    </div>
+                    {submitted && payload.length === 0 && (
+                      <div key={`items-err-${errorShakeKey}`} role="alert" className={styles.stepErrorBanner}>
+                        <AlertCircleIcon className={styles.stepErrorIcon} aria-hidden />
+                        <span>Please select at least 1 item to continue.</span>
+                      </div>
                     )}
-                    <button
-
-                      type="button"
-                      onClick={() => {
-                        setPickupSubmitted(false)
-                        setDialogView("pickup-list")
-                      }}
-                      className={styles.changePickupBtn}
+                    <ul
+                      className={cn(
+                        styles.returnItemsList,
+                        submitted && payload.length === 0 && styles.returnItemsListError
+                      )}
                     >
-                      Change / add address
-                    </button>
+                      {allLines.map((i) => {
+                        const max = left.get(i.productId) ?? 0
+                        const itemWin = windowByProduct.get(i.productId)
+                        const eligible = (itemWin?.open ?? win.open) && (itemWin?.days ?? win.days) > 0
+                        const currentQty = Math.min(max, Math.max(0, Number(qtyOf(i.productId)) || 0))
+                        const isChecked = eligible && currentQty > 0
+                        const setItemQty = (nextNum: number) => {
+                          const clamped = Math.min(max, Math.max(0, nextNum))
+                          setQty((q) => ({ ...q, [i.productId]: clamped > 0 ? String(clamped) : "0" }))
+                        }
+                        return (
+                          <li
+                            key={i.productId}
+                            className={cn(
+                              styles.returnItemCard,
+                              isChecked && styles.returnItemCardSelected,
+                              !eligible && styles.returnItemIneligible
+                            )}
+                          >
+                            <div
+                              onClick={() => {
+                                if (!eligible) return
+                                setItemQty(isChecked ? 0 : 1)
+                              }}
+                              className={cn(styles.itemClickRow, eligible && styles.itemClickRowInteractive)}
+                            >
+                              {eligible && (
+                                <Checkbox
+                                  checked={isChecked}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onCheckedChange={(checked) => setItemQty(checked ? Math.max(1, currentQty || 1) : 0)}
+                                  aria-label={`Select ${i.name}`}
+                                />
+                              )}
+                              <div className={styles.itemThumbWrap}>
+                                <ProductImage src={i.image ?? null} alt={i.name} sizes="48px" />
+                              </div>
+                              <div className={styles.itemInfoCol}>
+                                <p className={styles.itemName}>{i.name}</p>
+                                <p className={styles.itemPriceMeta}>
+                                  {formatPrice(i.price)} each · Ordered: {i.quantity}
+                                </p>
+                                <p className={styles.itemWindowText}>
+                                  {itemWin && itemWin.days <= 0
+                                    ? "Non-returnable item"
+                                    : itemWin && !itemWin.open
+                                      ? `${itemWin.days}-day return window ended${itemWin.until ? ` (${formatDate(itemWin.until)})` : ""}`
+                                      : itemWin
+                                        ? `${itemWin.days}-day return & exchange window`
+                                        : `${win.days}-day return & exchange window`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {eligible ? (
+                              <div className={styles.itemControlsBottom}>
+                                <span className={styles.itemQtyLabel}>
+                                  {isChecked ? `Returning ${currentQty} of ${max}` : `Max returnable: ${max}`}
+                                </span>
+                                <div className={styles.compactStepper} role="group" aria-label={`Quantity for ${i.name}`}>
+                                  <button
+                                    type="button"
+                                    disabled={currentQty <= 0}
+                                    onClick={() => setItemQty(currentQty - 1)}
+                                    aria-label={`Decrease quantity for ${i.name}`}
+                                    className={styles.stepperCircleBtn}
+                                  >
+                                    <MinusIcon className={styles.stepperSvg} />
+                                  </button>
+                                  <span className={styles.stepperValueText} aria-live="polite">
+                                    {currentQty}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    disabled={currentQty >= max}
+                                    onClick={() => setItemQty(currentQty + 1)}
+                                    aria-label={`Increase quantity for ${i.name}`}
+                                    className={styles.stepperCircleBtn}
+                                  >
+                                    <PlusIcon className={styles.stepperSvg} />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className={styles.ineligibleBadge}>
+                                {(itemWin?.days ?? 0) <= 0 ? "Non-returnable" : "Window ended"}
+                              </span>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+
+                  <div ref={reasonBoxRef} className={styles.stepSectionBlock}>
+                    <p className={styles.stepSectionTitle}>2. Why are you returning or exchanging? *</p>
+                    {(serverFieldErrors.reason || (submitted && !reason)) && (
+                      <div key={`reason-err-${errorShakeKey}`} role="alert" className={styles.stepErrorBanner}>
+                        <AlertCircleIcon className={styles.stepErrorIcon} aria-hidden />
+                        <span>{serverFieldErrors.reason || "Please choose a reason below to continue."}</span>
+                      </div>
+                    )}
+                    <div
+                      role="radiogroup"
+                      aria-label="Reason for return or exchange"
+                      className={cn(
+                        styles.reasonCardsGrid,
+                        (serverFieldErrors.reason || (submitted && !reason)) && styles.reasonCardsGridError
+                      )}
+                    >
+                      {COMBINED_REASONS.map((r) => {
+                        const selected = reason === r.label
+                        return (
+                          <button
+                            key={r.label}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => {
+                              setReason(r.label)
+                              if (serverFieldErrors.reason) {
+                                setServerFieldErrors((prev) => ({ ...prev, reason: "" }))
+                              }
+                            }}
+                            className={cn(styles.reasonRadioCard, selected && styles.reasonRadioCardSelected)}
+                          >
+                            <span className={styles.radioCircle} aria-hidden>
+                              {selected && <CheckIcon className={styles.checkTinySvg} />}
+                            </span>
+                            <span className={styles.reasonCardTextCol}>
+                              <span className={styles.reasonCardLabel}>{r.label}</span>
+                              <span className={styles.reasonCardSub}>{r.sub}</span>
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {reason && (
+                      <div ref={detailsBoxRef}>
+                        <TextAreaField
+                          label={reason === OTHER_REASON ? "Please tell us the reason *" : "Additional details (optional)"}
+                          required={reason === OTHER_REASON}
+                          rows={2}
+                          maxLength={pickupMode === "order" ? LIMITS.returnDetail.max : 140}
+                          placeholder={
+                            reason === OTHER_REASON
+                              ? "Describe what went wrong (at least 5 characters)…"
+                              : "Any extra details that help us process your request faster…"
+                          }
+                          value={details}
+                          onChange={(e) => {
+                            setDetails(e.target.value)
+                            if (serverFieldErrors.details) {
+                              setServerFieldErrors((prev) => ({ ...prev, details: "" }))
+                            }
+                          }}
+                          error={
+                            serverFieldErrors.details ||
+                            ((submitted || details.trim().length > 0) && reason === OTHER_REASON && details.trim().length < OTHER_DETAIL_MIN
+                              ? OTHER_DETAIL_MESSAGE
+                              : undefined)
+                          }
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
+              ) : step === 2 ? (
+                <div ref={exchangeBoxRef} className={styles.wizardStepStack}>
+                  <div className={styles.stepSectionBlock}>
+                    <p className={styles.stepSectionTitle}>How would you like us to resolve this? *</p>
+                    {submitted && needsExchangeKind && (
+                      <div key={`res-err-${errorShakeKey}`} role="alert" className={styles.stepErrorBanner}>
+                        <AlertCircleIcon className={styles.stepErrorIcon} aria-hidden />
+                        <span>Please choose Refund, Replacement, or Exchange below.</span>
+                      </div>
+                    )}
+                    <div role="radiogroup" aria-label="Preferred resolution" className={styles.resolutionThreeGrid}>
+                      {/* Card 1: Refund */}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={resolutionType === "refund"}
+                        onClick={() => {
+                          setUserPickedResolution(true)
+                          setResolutionType("refund")
+                          setExchangeKind("")
+                        }}
+                        className={cn(
+                          styles.resolutionCardBtn,
+                          resolutionType === "refund" && styles.resolutionCardActive
+                        )}
+                      >
+                        <span className={styles.resIconBadge}>
+                          <WalletIcon className={styles.resIcon} aria-hidden />
+                        </span>
+                        <span className={styles.resTextCol}>
+                          <span className={styles.resHeaderLine}>
+                            <span className={styles.resTitle}>Refund</span>
+                            {estimate.length > 0 && (
+                              <span className={styles.resAmountPill}>{formatPrice(refundEstimateTotal)}</span>
+                            )}
+                          </span>
+                          <span className={styles.resHint}>
+                            Get the returned item price refunded to your UPI / bank account after pickup
+                          </span>
+                        </span>
+                      </button>
 
-                <div className={styles.pickupSummaryInnerCard}>
-                  {pickupMode === "saved" && chosenSavedAddress ? (
+                      {/* Card 2: Replacement (Same Item) */}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={resolutionType === "exchange" && exchangeKind === "replacement"}
+                        onClick={() => {
+                          setUserPickedResolution(true)
+                          setResolutionType("exchange")
+                          setExchangeKind("replacement")
+                          if (!exchangePreference.trim()) {
+                            setExchangePreference("Send a fresh undamaged piece of the same item")
+                          }
+                        }}
+                        className={cn(
+                          styles.resolutionCardBtn,
+                          resolutionType === "exchange" && exchangeKind === "replacement" && styles.resolutionCardActive
+                        )}
+                      >
+                        <span className={styles.resIconBadge}>
+                          <RefreshCwIcon className={styles.resIcon} aria-hidden />
+                        </span>
+                        <span className={styles.resTextCol}>
+                          <span className={styles.resHeaderLine}>
+                            <span className={styles.resTitle}>Replacement (Same Item)</span>
+                            <span className={styles.resTagBadge}>Free dispatch</span>
+                          </span>
+                          <span className={styles.resHint}>
+                            Receive a brand-new, undamaged piece of the exact same item at no extra cost
+                          </span>
+                        </span>
+                      </button>
+
+                      {/* Card 3: Exchange (Size / Colour / Variant) */}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={resolutionType === "exchange" && exchangeKind === "exchange"}
+                        onClick={() => {
+                          setUserPickedResolution(true)
+                          setResolutionType("exchange")
+                          setExchangeKind("exchange")
+                          if (exchangePreference === "Send a fresh undamaged piece of the same item") {
+                            setExchangePreference("")
+                          }
+                        }}
+                        className={cn(
+                          styles.resolutionCardBtn,
+                          resolutionType === "exchange" && exchangeKind === "exchange" && styles.resolutionCardActive
+                        )}
+                      >
+                        <span className={styles.resIconBadge}>
+                          <ArrowLeftRightIcon className={styles.resIcon} aria-hidden />
+                        </span>
+                        <span className={styles.resTextCol}>
+                          <span className={styles.resHeaderLine}>
+                            <span className={styles.resTitle}>Exchange (Another Variant / Colour)</span>
+                          </span>
+                          <span className={styles.resHint}>
+                            Swap for a different size, colour, finish, or piece of equal value
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {resolutionType === "refund" && (
                     <>
-                      <div className={styles.badgeFlexRow}>
-                        <span className={styles.labelBadgeSecondary}>
-                          {chosenSavedAddress.label}
-                        </span>
-                        <span className={styles.altPickupBadge}>
-                          Alternate pickup address
-                        </span>
+                      {estimate.length > 0 && (
+                        <div className={styles.estimateBox}>
+                          <p className={styles.estimateRow}>
+                            <span>Estimated refund amount</span>
+                            <span>{formatPrice(refundEstimateTotal)}</span>
+                          </p>
+                          <p className={styles.estimateNote}>
+                            Price of the items you return.
+                            {kept.length > 0
+                              ? ` Delivery and handling charges (${formatPrice(kept.reduce((n, c) => n + c.amount, 0))}) are non-refundable.`
+                              : " Delivery and handling charges are non-refundable."}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className={styles.refundDestSection}>
+                        <p className={styles.refundDestHeading}>
+                          <WalletIcon className={styles.pinSvg} aria-hidden /> Where should we send your refund?
+                        </p>
+                        <div className={styles.refundDestOptions} role="radiogroup" aria-label="Refund destination">
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={refundMode === "original"}
+                            onClick={() => setRefundMode("original")}
+                            className={cn(
+                              styles.pickupRadioCard,
+                              refundMode === "original" && styles.pickupRadioCardSelected
+                            )}
+                          >
+                            <span className={styles.radioCircle} aria-hidden>
+                              {refundMode === "original" && <CheckIcon className={styles.checkTinySvg} />}
+                            </span>
+                            <span className={styles.radioContentCol}>
+                              <span className={styles.radioHeaderRow}>
+                                Original UPI account (matched via payment UTR)
+                              </span>
+                              <span className={styles.radioSubText}>
+                                We trace your 12-digit UTR and send the refund back to the same UPI/bank account after pickup
+                              </span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={refundMode === "upi"}
+                            onClick={() => setRefundMode("upi")}
+                            className={cn(
+                              styles.pickupRadioCard,
+                              refundMode === "upi" && styles.pickupRadioCardSelected
+                            )}
+                          >
+                            <span className={styles.radioCircle} aria-hidden>
+                              {refundMode === "upi" && <CheckIcon className={styles.checkTinySvg} />}
+                            </span>
+                            <span className={styles.radioContentCol}>
+                              <span className={styles.radioHeaderRow}>
+                                Provide my UPI ID for faster refund
+                              </span>
+                              <span className={styles.radioSubText}>
+                                Share your UPI ID (e.g. name@okaxis) so our team can transfer your refund directly
+                              </span>
+                            </span>
+                          </button>
+                        </div>
+                        {refundMode === "upi" && (
+                          <div ref={refundUpiBoxRef}>
+                            <TextField
+                              label="Your UPI ID for refund *"
+                              kind="upiId"
+                              fieldSize="md"
+                              placeholder="e.g. yourname@okicici"
+                              hint="Double-check your UPI ID so your refund reaches you without delay."
+                              value={refundUpiId}
+                              onChange={(e) => {
+                                setRefundUpiId(e.target.value)
+                                if (serverFieldErrors.refundUpiId) {
+                                  setServerFieldErrors((prev) => ({ ...prev, refundUpiId: "" }))
+                                }
+                              }}
+                              error={
+                                serverFieldErrors.refundUpiId ||
+                                ((submitted || cleanRefundUpi.length > 0) ? refundUpiError : undefined)
+                              }
+                            />
+                          </div>
+                        )}
                       </div>
-                      <p className={styles.summaryPersonLine}>
-                        {chosenSavedAddress.fullName} · +91 {chosenSavedAddress.phone}
-                      </p>
-                      <p className={styles.summaryAddressLine}>
-                        {chosenSavedAddress.address}, {chosenSavedAddress.city} - {chosenSavedAddress.pincode}
-                      </p>
                     </>
-                  ) : pickupMode === "new" && !hasRawNewPickupError && pickupPhoneDigits && pickupState ? (
-                    <>
-                      <div className={styles.badgeFlexRow}>
-                        <span className={styles.labelBadgeSecondary}>
-                          {saveNewPickupAddress ? newAddressLabel : "New address"}
-                        </span>
-                        <span className={styles.altPickupBadge}>
-                          Alternate pickup address
-                        </span>
+                  )}
+
+                  {resolutionType === "exchange" && exchangeKind === "replacement" && (
+                    <div ref={exchangePrefBoxRef} className={styles.exchangeBox}>
+                      <TextField
+                        label="What should we check for your replacement piece? *"
+                        required
+                        fieldSize="md"
+                        maxLength={180}
+                        placeholder="e.g. Send a fresh undamaged piece of the same item"
+                        value={exchangePreference}
+                        onChange={(e) => {
+                          setExchangePreference(e.target.value)
+                          if (serverFieldErrors.exchangePreference) {
+                            setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
+                          }
+                        }}
+                        hint="Once your returned item is picked up and checked, we will dispatch a brand-new replacement at no extra cost."
+                        error={
+                          serverFieldErrors.exchangePreference ||
+                          ((submitted || exchangePreference.length > 0) && needsExchangePref
+                            ? "Please enter a short note for your replacement item (at least 2 characters)"
+                            : undefined)
+                        }
+                      />
+                    </div>
+                  )}
+
+                  {resolutionType === "exchange" && exchangeKind === "exchange" && (
+                    <div ref={exchangePrefBoxRef} className={styles.exchangeBox}>
+                      <TextField
+                        label="Which size, colour, or piece would you like in exchange? *"
+                        required
+                        fieldSize="md"
+                        maxLength={180}
+                        placeholder="e.g. Size M instead of S, or Terracotta colour"
+                        value={exchangePreference}
+                        onChange={(e) => {
+                          setExchangePreference(e.target.value)
+                          if (serverFieldErrors.exchangePreference) {
+                            setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
+                          }
+                        }}
+                        hint="Specify the preferred size, colour, variant, or piece you want in exchange."
+                        error={
+                          serverFieldErrors.exchangePreference ||
+                          ((submitted || exchangePreference.length > 0) && needsExchangePref
+                            ? "Please enter what you would like in exchange (at least 2 characters)"
+                            : undefined)
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div ref={pickupBoxRef} className={styles.wizardStepStack}>
+                  {/* Pickup address summary card (switches the modal screen to choose or add an address) */}
+                  <div className={styles.pickupSummarySection}>
+                    <div className={styles.pickupSummaryTop}>
+                      <p className={styles.pickupSummaryHeading}>
+                        <MapPinIcon className={styles.pinSvg} aria-hidden /> Pickup address
+                      </p>
+                      <div className={styles.pickupActionBtns}>
+                        {pickupMode === "new" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPickupSubmitted(false)
+                              setDialogView("pickup-new")
+                            }}
+                            className={styles.editPickupBtn}
+                          >
+                            <PencilIcon className={styles.pencilSvg} aria-hidden /> Edit
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPickupSubmitted(false)
+                            setDialogView("pickup-list")
+                          }}
+                          className={styles.changePickupBtn}
+                        >
+                          Change / add address
+                        </button>
                       </div>
-                      <p className={styles.summaryPersonLine}>
-                        {pickupName.trim()} · +91 {pickupPhoneDigits}
-                      </p>
-                      <p className={styles.summaryAddressLine}>
-                        {pickupAddressLine.trim()}, {joinCityState(pickupCity.trim(), pickupState)} - {pickupPincode.trim()}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <span className={styles.labelBadgePrimary}>
-                        Order delivery address
-                      </span>
-                      {orderDelivery ? (
+                    </div>
+
+                    <div className={styles.pickupSummaryInnerCard}>
+                      {pickupMode === "saved" && chosenSavedAddress ? (
                         <>
+                          <div className={styles.badgeFlexRow}>
+                            <span className={styles.labelBadgeSecondary}>
+                              {chosenSavedAddress.label}
+                            </span>
+                            <span className={styles.altPickupBadge}>
+                              Alternate pickup address
+                            </span>
+                          </div>
                           <p className={styles.summaryPersonLine}>
-                            {orderDelivery.name} · +91 {orderDelivery.phone}
+                            {chosenSavedAddress.fullName} · +91 {chosenSavedAddress.phone}
                           </p>
                           <p className={styles.summaryAddressLine}>
-                            {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                            {chosenSavedAddress.address}, {chosenSavedAddress.city} - {chosenSavedAddress.pincode}
+                          </p>
+                        </>
+                      ) : pickupMode === "new" && !hasRawNewPickupError && pickupPhoneDigits && pickupState ? (
+                        <>
+                          <div className={styles.badgeFlexRow}>
+                            <span className={styles.labelBadgeSecondary}>
+                              {saveNewPickupAddress ? newAddressLabel : "New address"}
+                            </span>
+                            <span className={styles.altPickupBadge}>
+                              Alternate pickup address
+                            </span>
+                          </div>
+                          <p className={styles.summaryPersonLine}>
+                            {pickupName.trim()} · +91 {pickupPhoneDigits}
+                          </p>
+                          <p className={styles.summaryAddressLine}>
+                            {pickupAddressLine.trim()}, {joinCityState(pickupCity.trim(), pickupState)} - {pickupPincode.trim()}
                           </p>
                         </>
                       ) : (
-                        <p className={styles.summaryFallbackLine}>
-                          Pickup will be scheduled at the original delivery address on this order. Currently at a different location? Tap <strong className={styles.strongText}>Change / add address</strong> above.
-                        </p>
+                        <>
+                          <span className={styles.labelBadgePrimary}>
+                            Order delivery address
+                          </span>
+                          {orderDelivery ? (
+                            <>
+                              <p className={styles.summaryPersonLine}>
+                                {orderDelivery.name} · +91 {orderDelivery.phone}
+                              </p>
+                              <p className={styles.summaryAddressLine}>
+                                {orderDelivery.address}, {orderDelivery.city} - {orderDelivery.pincode}
+                              </p>
+                            </>
+                          ) : (
+                            <p className={styles.summaryFallbackLine}>
+                              Pickup will be scheduled at the original delivery address on this order. Currently at a different location? Tap <strong className={styles.strongText}>Change / add address</strong> above.
+                            </p>
+                          )}
+                        </>
                       )}
-                    </>
+                    </div>
+                  </div>
+
+                  {/* Final Review Summary Card */}
+                  <div className={styles.reviewSummaryCard}>
+                    <div className={styles.reviewSummaryHeader}>
+                      <p className={styles.reviewSummaryTitle}>Request summary</p>
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className={styles.editStepLinkBtn}
+                      >
+                        Edit items / reason
+                      </button>
+                    </div>
+                    <dl className={styles.reviewSummaryDl}>
+                      <div className={styles.reviewSummaryRow}>
+                        <dt className={styles.reviewSummaryTerm}>Items</dt>
+                        <dd className={styles.reviewSummaryVal}>
+                          {payload
+                            .map((p) => {
+                              const itemName = items.find((o) => o.productId === p.productId)?.name ?? "Item"
+                              return `${p.quantity} × ${itemName}`
+                            })
+                            .join(", ")}
+                        </dd>
+                      </div>
+                      <div className={styles.reviewSummaryRow}>
+                        <dt className={styles.reviewSummaryTerm}>Reason</dt>
+                        <dd className={styles.reviewSummaryVal}>
+                          {reason}
+                          {details.trim() ? ` — ${details.trim()}` : ""}
+                        </dd>
+                      </div>
+                      <div className={styles.reviewSummaryRow}>
+                        <dt className={styles.reviewSummaryTerm}>Resolution</dt>
+                        <dd className={styles.reviewSummaryVal}>
+                          {resolutionType === "refund"
+                            ? `Refund (${formatPrice(refundEstimateTotal)}) · ${refundMode === "upi" && cleanRefundUpi ? `UPI: ${cleanRefundUpi}` : "Original UPI via UTR"}`
+                            : exchangeKind === "replacement"
+                              ? `Replacement · ${cleanExchangePref}`
+                              : `Exchange · ${cleanExchangePref}`}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  {isGuest && (
+                    <div ref={guestPhoneBoxRef}>
+                      <TextField
+                        label="Your full mobile number"
+                        kind="phone"
+                        leading="+91"
+                        fieldSize="md"
+                        hint="Confirm the whole number you ordered with to submit this request."
+                        required
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value)
+                          if (serverFieldErrors.phone) {
+                            setServerFieldErrors((prev) => ({ ...prev, phone: "" }))
+                          }
+                        }}
+                        error={
+                          serverFieldErrors.phone ||
+                          (isGuest && (submitted || phone.trim().length > 0) && phoneMissing
+                            ? (phoneError ?? "Enter your 10-digit mobile number")
+                            : undefined)
+                        }
+                      />
+                    </div>
                   )}
                 </div>
-              </div>
-              {isGuest && (
-                <TextField
-                  label="Your full mobile number"
-                  kind="phone"
-                  leading="+91"
-                  fieldSize="md"
-                  hint="Confirm the whole number you ordered with to submit this request."
-                  required
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value)
-                    if (serverFieldErrors.phone) {
-                      setServerFieldErrors((prev) => ({ ...prev, phone: "" }))
-                    }
-                  }}
-                  error={
-                    serverFieldErrors.phone ||
-                    (isGuest && (submitted || phone.trim().length > 0) && phoneMissing
-                      ? (phoneError ?? "Enter your 10-digit mobile number")
-                      : undefined)
-                  }
-                />
               )}
-            </div>
-          )}
             </DialogBody>
-            <DialogFooter>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtn}>
-                <XIcon className={styles.btnIcon} /> Close
-              </Button>
-              <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtn}>
-                {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <SendIcon className={styles.btnIcon} />} {submitButtonLabel}
-              </Button>
+            <DialogFooter className={styles.footerBetween}>
+              {step === 1 ? (
+                <>
+                  <Button type="button" variant="outline" disabled={pending} onClick={() => handleOpenChange(false)} className={styles.pillBtn}>
+                    <XIcon className={styles.btnIcon} /> Cancel
+                  </Button>
+                  <Button type="button" onClick={goStep2} disabled={pending} className={styles.pillBtn}>
+                    Continue <ArrowRightIcon className={styles.btnIcon} />
+                  </Button>
+                </>
+              ) : step === 2 ? (
+                <>
+                  <Button type="button" variant="outline" disabled={pending} onClick={() => { setSubmitted(false); setStep(1) }} className={styles.pillBtn}>
+                    <ArrowLeftIcon className={styles.btnIcon} /> Back
+                  </Button>
+                  <Button type="button" onClick={goStep3} disabled={pending} className={styles.pillBtn}>
+                    Continue to pickup <ArrowRightIcon className={styles.btnIcon} />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button type="button" variant="outline" disabled={pending} onClick={() => { setSubmitted(false); setStep(2) }} className={styles.pillBtn}>
+                    <ArrowLeftIcon className={styles.btnIcon} /> Back
+                  </Button>
+                  <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtn}>
+                    {pending ? <Loader2Icon className={styles.btnIconSpin} /> : <SendIcon className={styles.btnIcon} />} {submitButtonLabel}
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </>
         )}
@@ -1213,7 +1713,7 @@ export function ReturnRequestsPanel({
           const isExchange = r.resolutionType === "exchange"
           const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
           const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
-          const { details: cleanDetails, pickupAddress } = splitReturnDetails(r.details)
+          const { details: cleanDetails, pickupAddress, refundUpiId } = splitReturnDetails(r.details)
           return (
             <li key={r.id} className={styles.requestCard}>
               <div className={styles.requestTopRow}>
@@ -1264,6 +1764,15 @@ export function ReturnRequestsPanel({
                   <span>
                     <span className={styles.pickupLabelStrong}>Pickup address: </span>
                     {pickupAddress}
+                  </span>
+                </p>
+              )}
+              {refundUpiId && !isGuest && (
+                <p className={styles.pickupLineBox}>
+                  <WalletIcon className={styles.pickupPinSvg} aria-hidden />
+                  <span>
+                    <span className={styles.pickupLabelStrong}>Refund UPI ID: </span>
+                    {refundUpiId}
                   </span>
                 </p>
               )}

@@ -89,7 +89,7 @@ export async function getProductsByCategory(slug: string): Promise<Product[]> {
     .sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0) || Number(b.isFeatured) - Number(a.isFeatured))
 }
 
-export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {
+export async function getRelatedProducts(product: Product, limit = 8): Promise<Product[]> {
   const products = await getActiveProducts()
   const inStock = products.filter((p) => p.id !== product.id && p.stock > 0)
   const sameCategory = inStock.filter((p) => p.categoryId === product.categoryId)
@@ -154,7 +154,7 @@ export async function getProductReviews(productId: string): Promise<ProductRevie
     .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
     .eq("product_id", productId)
     .order("created_at", { ascending: false })
-    .limit(50)
+    .limit(200)
     .returns<ProductReviewRow[]>()
 
   if (error) {

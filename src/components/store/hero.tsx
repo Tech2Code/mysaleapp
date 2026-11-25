@@ -7,7 +7,6 @@ import { useStoreSettings } from "./store-settings-provider"
 import type { Product } from "@/features/products/types"
 import { formatPrice } from "@/lib/format"
 import { ProductImage } from "./product-image"
-import { WhatsAppIcon } from "./brand-icons"
 import styles from "./hero.module.css"
 
 const ease = [0.22, 1, 0.36, 1] as const
@@ -99,10 +98,6 @@ export function Hero({
               <span>Shop the collection</span>
               <ArrowRightIcon className={styles.ctaArrow} />
             </Link>
-            <span className={styles.whatsappNote}>
-              <WhatsAppIcon className={styles.whatsappIcon} />
-              <span>Easy ordering on WhatsApp</span>
-            </span>
           </m.div>
         </div>
 

@@ -1,15 +1,16 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CheckCircle2Icon, Loader2Icon, MessageSquarePlusIcon, PackageXIcon, PencilIcon, ShoppingBagIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircle2Icon, Loader2Icon, MessageSquarePlusIcon, PackageXIcon, PencilIcon, RotateCcwIcon, ShoppingBagIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { TextAreaField } from "@/components/form"
+import { SearchField, SelectField, TextAreaField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { Breadcrumbs } from "@/components/store/page-header"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import {
@@ -24,8 +25,9 @@ import {
 import { deleteProductReview, getMyProductReviewState, submitProductReview } from "@/features/products/actions"
 import { productReviewSchema, type ProductReviewInput, type ProductReviewValues } from "@/features/products/schema"
 import type { Product, ProductReview } from "@/features/products/types"
-import { formatDate, formatPrice } from "@/lib/format"
+import { discountPercent, formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { LIMITS } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
 import { MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
 import { ProductImage } from "./product-image"
@@ -184,6 +186,55 @@ function resolveReviewAspects(product?: {
 
 const LOVED_PREFIX = "Loved: "
 const DISLIKED_PREFIX = "Disliked: "
+
+type ReviewEligibilityState = {
+  canReview: boolean
+  isAdmin: boolean
+  myReview: ProductReview | null
+}
+
+const reviewStateCache = new Map<string, ReviewEligibilityState>()
+const reviewStateInFlight = new Map<string, Promise<ReviewEligibilityState>>()
+
+function getCachedReviewState(userId: string | undefined, productId: string): ReviewEligibilityState | null {
+  if (!userId || productId.startsWith("ph-")) return null
+  return reviewStateCache.get(`${userId}:${productId}`) ?? null
+}
+
+function fetchProductReviewStateCached(userId: string, productId: string): Promise<ReviewEligibilityState> {
+  const key = `${userId}:${productId}`
+  const cached = reviewStateCache.get(key)
+  if (cached) return Promise.resolve(cached)
+  const existing = reviewStateInFlight.get(key)
+  if (existing) return existing
+  const req = getMyProductReviewState(productId)
+    .then((res) => {
+      reviewStateCache.set(key, res)
+      reviewStateInFlight.delete(key)
+      return res
+    })
+    .catch((err) => {
+      reviewStateInFlight.delete(key)
+      throw err
+    })
+  reviewStateInFlight.set(key, req)
+  return req
+}
+
+function invalidateProductReviewStateCache(productId?: string) {
+  if (!productId) {
+    reviewStateCache.clear()
+    reviewStateInFlight.clear()
+    return
+  }
+  const suffix = `:${productId}`
+  for (const key of reviewStateCache.keys()) {
+    if (key.endsWith(suffix)) reviewStateCache.delete(key)
+  }
+  for (const key of reviewStateInFlight.keys()) {
+    if (key.endsWith(suffix)) reviewStateInFlight.delete(key)
+  }
+}
 
 function parseLovedAspects(title: string | null | undefined, aspects: readonly string[]): Record<string, "up" | "down"> {
   if (!title) return {}
@@ -564,10 +615,13 @@ export function OrderItemReviewWidget({
 }) {
   const router = useRouter()
   const { user, ready: authReady } = useAuth()
-  const [myReview, setMyReview] = useState<ProductReview | null>(null)
-  const [loadedKey, setLoadedKey] = useState<string | null>(null)
+  const cachedInitial = getCachedReviewState(user?.id, item.productId)
+  const [myReview, setMyReview] = useState<ProductReview | null>(() => cachedInitial?.myReview ?? null)
+  const [loadedKey, setLoadedKey] = useState<string | null>(() =>
+    user && cachedInitial ? `${user.id}:${item.productId}` : null
+  )
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [draftRating, setDraftRating] = useState(0)
+  const [draftRating, setDraftRating] = useState(() => cachedInitial?.myReview?.rating ?? 0)
 
   useEffect(() => {
     if (!authReady) return
@@ -583,7 +637,7 @@ export function OrderItemReviewWidget({
     const key = `${user.id}:${item.productId}`
     if (loadedKey === key) return
     let cancelled = false
-    getMyProductReviewState(item.productId)
+    fetchProductReviewStateCached(user.id, item.productId)
       .then((res) => {
         if (cancelled) return
         setMyReview(res.myReview)
@@ -601,7 +655,10 @@ export function OrderItemReviewWidget({
   useEffect(() => {
     const onReviewSync = (e: Event) => {
       const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
-      if (!pid || pid === item.productId) setLoadedKey(null)
+      if (!pid || pid === item.productId) {
+        invalidateProductReviewStateCache(item.productId)
+        setLoadedKey(null)
+      }
     }
     window.addEventListener("kk-review-updated", onReviewSync)
     return () => window.removeEventListener("kk-review-updated", onReviewSync)
@@ -629,8 +686,7 @@ export function OrderItemReviewWidget({
         </div>
         {myReview && (
           <Link
-
-            href={`/products/${item.slug}#customer-reviews`}
+            href={`/products/${item.slug}/reviews`}
             className={styles.viewReviewsLink}
           >
             View reviews →
@@ -653,6 +709,7 @@ export function OrderItemReviewWidget({
         initialRating={draftRating || myReview?.rating || 5}
         existingReview={myReview}
         onSaved={(savedRating) => {
+          invalidateProductReviewStateCache(item.productId)
           setDraftRating(savedRating)
           setLoadedKey(null)
           window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: item.productId } }))
@@ -662,6 +719,65 @@ export function OrderItemReviewWidget({
   )
 }
 
+type AspectSummaryStat = {
+  aspect: string
+  likedCount: number
+  dislikedCount: number
+  totalVotes: number
+  positivePct: number
+}
+
+function computeAspectStats(reviews: readonly ProductReview[], configuredAspects: readonly string[]): AspectSummaryStat[] {
+  const counts = new Map<string, { liked: number; disliked: number }>()
+  for (const a of configuredAspects) {
+    counts.set(a, { liked: 0, disliked: 0 })
+  }
+  for (const r of reviews) {
+    const pills = extractAspectPills(r.title)
+    for (const liked of pills.liked) {
+      const prev = counts.get(liked) ?? { liked: 0, disliked: 0 }
+      counts.set(liked, { liked: prev.liked + 1, disliked: prev.disliked })
+    }
+    for (const disliked of pills.disliked) {
+      const prev = counts.get(disliked) ?? { liked: 0, disliked: 0 }
+      counts.set(disliked, { liked: prev.liked, disliked: prev.disliked + 1 })
+    }
+  }
+  const list: AspectSummaryStat[] = []
+  for (const [aspect, { liked, disliked }] of counts.entries()) {
+    const totalVotes = liked + disliked
+    const positivePct = totalVotes > 0 ? Math.round((liked / totalVotes) * 100) : 100
+    list.push({ aspect, likedCount: liked, dislikedCount: disliked, totalVotes, positivePct })
+  }
+  return list.sort((a, b) => b.likedCount - a.likedCount || b.totalVotes - a.totalVotes)
+}
+
+function computeReviewSummary(
+  product: Pick<Product, "ratingAvg" | "reviewCount">,
+  reviews: readonly ProductReview[]
+) {
+  const totalCount = Math.max(reviews.length, product.reviewCount ?? 0)
+  const avgRating =
+    product.reviewCount && product.reviewCount > reviews.length && product.ratingAvg
+      ? Number(product.ratingAvg)
+      : reviews.length > 0
+        ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
+        : Number(product.ratingAvg ?? 0)
+
+  const distribution = [5, 4, 3, 2, 1].map((stars) => {
+    const count = reviews.filter((r) => r.rating === stars).length
+    const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0
+    return { stars, count, pct }
+  })
+
+  return { totalCount, avgRating, distribution }
+}
+
+/**
+ * Product Detail Page (PDP) compact Customer Ratings & Aspect Summary Card.
+ * Shows only the read-only rating breakdown, what buyers loved, a "Write/Edit review" trigger for verified
+ * buyers, and a prominent "See all customer reviews" CTA leading to `/products/[slug]/reviews`.
+ */
 export function ProductReviewsSection({
   product,
   initialReviews = [],
@@ -675,16 +791,16 @@ export function ProductReviewsSection({
 }) {
   const router = useRouter()
   const { user, ready: authReady } = useAuth()
+  const cachedInitial = getCachedReviewState(user?.id, product.id)
+  const seededMyReview = user ? (initialReviews.find((r) => r.userId === user.id) ?? null) : null
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [draftRating, setDraftRating] = useState(0)
-  const [deleteTarget, setDeleteTarget] = useState<ProductReview | null>(null)
-  const [canReview, setCanReview] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [myReview, setMyReview] = useState<ProductReview | null>(null)
-  const [stateLoadedForUser, setStateLoadedForUser] = useState<string | null>(null)
-  const [pending, startTransition] = useTransition()
-  useBlockWhile(pending)
-  const later = useToastAfter(pending)
+  const [draftRating, setDraftRating] = useState(() => cachedInitial?.myReview?.rating ?? seededMyReview?.rating ?? 0)
+  const [canReview, setCanReview] = useState(() => cachedInitial?.canReview ?? false)
+  const [myReview, setMyReview] = useState<ProductReview | null>(() => cachedInitial?.myReview ?? null)
+  const [stateLoadedForUser, setStateLoadedForUser] = useState<string | null>(() =>
+    user && cachedInitial ? `${user.id}:${product.id}` : null
+  )
+  const activeMyReview = myReview ?? seededMyReview
   const reviewStateReady = authReady && (!user || stateLoadedForUser === `${user.id}:${product.id}`)
 
   useEffect(() => {
@@ -708,29 +824,309 @@ export function ProductReviewsSection({
     }
   }, [product.id])
 
-  const [allReviewsOpen, setAllReviewsOpen] = useState(false)
-  const [reviewSort, setReviewSort] = useState<"recent" | "highest" | "lowest">("recent")
-  const [starFilter, setStarFilter] = useState<number | null>(null)
-  const reviewsListRef = useRef<HTMLUListElement>(null)
-  const totalCount = Math.max(initialReviews.length, product.reviewCount ?? 0)
-
-  useEffect(() => {
-    const el = reviewsListRef.current
-    if (!el) return
-    el.scrollTo({ left: 0, top: 0, behavior: "instant" })
-  }, [reviewSort, starFilter])
-
   useEffect(() => {
     const onReviewSync = (e: Event) => {
       const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
-      if (!pid || pid === product.id) setStateLoadedForUser(null)
+      if (!pid || pid === product.id) {
+        invalidateProductReviewStateCache(product.id)
+        setStateLoadedForUser(null)
+      }
     }
     window.addEventListener("kk-review-updated", onReviewSync)
     return () => window.removeEventListener("kk-review-updated", onReviewSync)
   }, [product.id])
 
   useEffect(() => {
-    if (!authReady) return
+    if (!authReady || product.id.startsWith("ph-")) return
+    if (!user) {
+      queueMicrotask(() => {
+        setCanReview(false)
+        setMyReview(null)
+        setDraftRating(0)
+        setStateLoadedForUser(null)
+        setDialogOpen(false)
+      })
+      return
+    }
+    const key = `${user.id}:${product.id}`
+    if (stateLoadedForUser === key) return
+    let cancelled = false
+    fetchProductReviewStateCached(user.id, product.id)
+      .then((res) => {
+        if (cancelled) return
+        setCanReview(res.canReview)
+        setMyReview(res.myReview)
+        setDraftRating(res.myReview?.rating ?? 0)
+        setStateLoadedForUser(key)
+      })
+      .catch(() => {
+        // non-fatal
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [authReady, user, product.id, stateLoadedForUser])
+
+  const openReviewModal = (star?: number, resolvedMyReview?: ProductReview | null) => {
+    const targetReview = resolvedMyReview !== undefined ? resolvedMyReview : activeMyReview
+    const chosen = star ?? targetReview?.rating ?? (draftRating || 5)
+    setDraftRating(chosen)
+    setDialogOpen(true)
+  }
+
+  const handleReviewTrigger = async (star?: number) => {
+    if (product.id.startsWith("ph-")) return
+    if (!user) {
+      toast.info("Please sign in to rate and review this product.")
+      router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`)
+      return
+    }
+    if (canReview || activeMyReview) {
+      openReviewModal(star)
+      return
+    }
+    if (!reviewStateReady) {
+      try {
+        const res = await fetchProductReviewStateCached(user.id, product.id)
+        setCanReview(res.canReview)
+        setMyReview(res.myReview)
+        setDraftRating(res.myReview?.rating ?? 0)
+        setStateLoadedForUser(`${user.id}:${product.id}`)
+        if (res.canReview || res.myReview) {
+          openReviewModal(star, res.myReview)
+          return
+        }
+      } catch {
+        // fall through to message
+      }
+    }
+    toast.info("Only customers who have received a delivered order for this item can submit a verified review.")
+  }
+
+  const { totalCount, avgRating, distribution } = computeReviewSummary(product, initialReviews)
+  if (totalCount === 0 && !canReview && !activeMyReview) return null
+
+  const configuredAspects = resolveReviewAspects(product)
+  const aspectStats = computeAspectStats(initialReviews, configuredAspects)
+  const highlightedAspects = aspectStats.filter((a) => a.likedCount > 0)
+  const displayAspects = highlightedAspects.length > 0 ? highlightedAspects : aspectStats.slice(0, 5)
+
+  return (
+    <section
+      id="customer-reviews"
+      className={cn("container-page", styles.reviewsSection)}
+      aria-labelledby="reviews-heading"
+    >
+      <div className={styles.pdpRatingsCard}>
+        {/* Left Column: Overall Rating + Read-only 5★–1★ Distribution Bars */}
+        <div className={styles.pdpSummaryCol}>
+          <div className={styles.pdpSummaryHeader}>
+            <p className={styles.kickerAccent}>Verified buyers</p>
+            <h2 id="reviews-heading" className={styles.sectionHeading}>
+              Customer ratings
+            </h2>
+          </div>
+
+          <div className={styles.scoreAndBarsGrid}>
+            <div className={styles.scoreBigBox}>
+              <span className={styles.avgNumber}>
+                {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
+              </span>
+              <div className={styles.starsAndCountCol}>
+                <StarRow rating={totalCount > 0 ? avgRating : 0} size="md" />
+                <p className={styles.verifiedCountText}>
+                  {totalCount > 0
+                    ? `Based on ${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
+                    : "No verified reviews yet — be the first!"}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.distributionList} aria-label="Rating breakdown">
+              {distribution.map((row) => (
+                <div key={row.stars} className={styles.distRowStatic}>
+                  <span className={styles.distStarLabel}>{row.stars}★</span>
+                  <div className={styles.distBarTrack}>
+                    <div className={styles.distBarFill} style={{ width: `${row.pct}%` }} />
+                  </div>
+                  <span className={styles.distCountNum}>{row.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Aspect Highlights + Rate Widget + "See all X reviews" CTA */}
+        <div className={styles.pdpHighlightsCol}>
+          <div className={styles.pdpAspectsBlock}>
+            <div className={styles.pdpAspectsHeader}>
+              <div>
+                <h3 className={styles.feedbackTitle}>What customers loved</h3>
+                <p className={styles.feedbackSub}>
+                  Highlights from verified delivered orders of {product.name}
+                </p>
+              </div>
+              <span className={styles.verifiedGuaranteePill}>
+                <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> 100% Verified
+              </span>
+            </div>
+
+            <div className={styles.pdpAspectsPillsGrid}>
+              {displayAspects.map((stat) => (
+                <div key={stat.aspect} className={styles.pdpAspectCard}>
+                  <span className={styles.pdpAspectIcon}>
+                    <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden />
+                  </span>
+                  <div className={styles.pdpAspectText}>
+                    <p className={styles.pdpAspectName}>{stat.aspect}</p>
+                    <p className={styles.pdpAspectMeta}>
+                      {stat.likedCount > 0
+                        ? `${stat.positivePct}% positive (${stat.likedCount})`
+                        : "Verified quality"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.pdpBuyerRateStrip}>
+            <div className={styles.pdpBuyerRateText}>
+              <p className={styles.rateKicker}>Rate your experience</p>
+              <p className={styles.rateSub}>
+                {activeMyReview ? "Tap a star to update your review" : "Share your feedback on this piece"}
+              </p>
+            </div>
+            <div className={styles.pdpBuyerPickerWrap}>
+              <InteractiveStarPicker
+                size="sm"
+                value={activeMyReview?.rating ?? draftRating}
+                onSelect={(star) => void handleReviewTrigger(star)}
+              />
+            </div>
+          </div>
+
+          <div className={styles.pdpReviewsFooterRow}>
+            {totalCount > 0 && (
+              <Link
+                href={`/products/${encodeURIComponent(product.slug)}/reviews`}
+                className={cn(buttonVariants({ size: "lg" }), styles.seeAllPageBtn)}
+              >
+                <span>See all {totalCount} {totalCount === 1 ? "review" : "reviews"}</span>
+                <ArrowRightIcon className={styles.icon16} aria-hidden />
+              </Link>
+            )}
+
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              onClick={() => void handleReviewTrigger()}
+              className={styles.writeReviewOutlineBtn}
+            >
+              {activeMyReview ? (
+                <>
+                  <PencilIcon className={styles.icon16} /> Edit your review
+                </>
+              ) : (
+                <>
+                  <MessageSquarePlusIcon className={styles.icon16} /> Write a review
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <ShareExperienceDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={{
+          id: product.id,
+          name: product.name,
+          image: product.images?.[0] ?? null,
+          aspects: configuredAspects,
+        }}
+        initialRating={draftRating || activeMyReview?.rating || 5}
+        existingReview={activeMyReview}
+        onSaved={(savedRating) => {
+          invalidateProductReviewStateCache(product.id)
+          setDraftRating(savedRating)
+          setStateLoadedForUser(null)
+          window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
+        }}
+      />
+    </section>
+  )
+}
+
+const REVIEWS_PER_PAGE = 8
+
+const REVIEW_SORT_OPTIONS = [
+  { value: "recent", label: "Newest first" },
+  { value: "highest", label: "Highest rated" },
+  { value: "lowest", label: "Lowest rated" },
+] as const
+
+type ReviewSortKey = (typeof REVIEW_SORT_OPTIONS)[number]["value"]
+
+/**
+ * Dedicated full-page Customer Reviews view (`/products/[slug]/reviews`).
+ * Features a top navigation bar with Breadcrumbs + "Back to product" pill, a clean Product Context
+ * header card with quick Add to Cart, a sticky left sidebar with rating breakdown + interactive star
+ * filters, and a right feed with keyword search, Sort SelectField, aspect tag chips, and automatic
+ * IntersectionObserver infinite scroll as the user reaches the end of the list.
+ */
+export function ProductReviewsPageView({
+  product,
+  reviews,
+}: {
+  product: Product
+  reviews: ProductReview[]
+}) {
+  const router = useRouter()
+  const { user, ready: authReady } = useAuth()
+  const add = useCart((s) => s.add)
+  const inCart = useCart((s) => s.items.find((i) => i.productId === product.id)?.quantity ?? 0)
+
+  const cachedInitial = getCachedReviewState(user?.id, product.id)
+  const seededMyReview = user ? (reviews.find((r) => r.userId === user.id) ?? null) : null
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [draftRating, setDraftRating] = useState(() => cachedInitial?.myReview?.rating ?? seededMyReview?.rating ?? 0)
+  const [deleteTarget, setDeleteTarget] = useState<ProductReview | null>(null)
+  const [canReview, setCanReview] = useState(() => cachedInitial?.canReview ?? false)
+  const [isAdmin, setIsAdmin] = useState(() => cachedInitial?.isAdmin ?? false)
+  const [myReview, setMyReview] = useState<ProductReview | null>(() => cachedInitial?.myReview ?? null)
+  const [stateLoadedForUser, setStateLoadedForUser] = useState<string | null>(() =>
+    user && cachedInitial ? `${user.id}:${product.id}` : null
+  )
+  const [pending, startTransition] = useTransition()
+  useBlockWhile(pending)
+  const later = useToastAfter(pending)
+  const activeMyReview = myReview ?? seededMyReview
+  const reviewStateReady = authReady && (!user || stateLoadedForUser === `${user.id}:${product.id}`)
+
+  const [reviewSort, setReviewSort] = useState<ReviewSortKey>("recent")
+  const [starFilter, setStarFilter] = useState<number | null>(null)
+  const [aspectFilter, setAspectFilter] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [visibleCount, setVisibleCount] = useState(REVIEWS_PER_PAGE)
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const onReviewSync = (e: Event) => {
+      const pid = (e as CustomEvent<{ productId?: string }>).detail?.productId
+      if (!pid || pid === product.id) {
+        invalidateProductReviewStateCache(product.id)
+        setStateLoadedForUser(null)
+      }
+    }
+    window.addEventListener("kk-review-updated", onReviewSync)
+    return () => window.removeEventListener("kk-review-updated", onReviewSync)
+  }, [product.id])
+
+  useEffect(() => {
+    if (!authReady || product.id.startsWith("ph-")) return
     if (!user) {
       queueMicrotask(() => {
         setCanReview(false)
@@ -746,7 +1142,7 @@ export function ProductReviewsSection({
     const key = `${user.id}:${product.id}`
     if (stateLoadedForUser === key) return
     let cancelled = false
-    getMyProductReviewState(product.id)
+    fetchProductReviewStateCached(user.id, product.id)
       .then((res) => {
         if (cancelled) return
         setCanReview(res.canReview)
@@ -763,23 +1159,41 @@ export function ProductReviewsSection({
     }
   }, [authReady, user, product.id, stateLoadedForUser])
 
-  const openReviewModal = (star?: number) => {
-    const chosen = star ?? myReview?.rating ?? (draftRating || 5)
+  const openReviewModal = (star?: number, resolvedMyReview?: ProductReview | null) => {
+    const targetReview = resolvedMyReview !== undefined ? resolvedMyReview : activeMyReview
+    const chosen = star ?? targetReview?.rating ?? (draftRating || 5)
     setDraftRating(chosen)
     setDialogOpen(true)
   }
 
-  const handleStarClick = (star: number) => {
-    if (!authReady || !reviewStateReady) return
+  const handleReviewTrigger = async (star?: number) => {
+    if (product.id.startsWith("ph-")) return
     if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`)
+      toast.info("Please sign in to rate and review this product.")
+      router.push(`/login?next=${encodeURIComponent(`/products/${product.slug}/reviews`)}`)
       return
     }
-    if (!canReview && !myReview) {
-      toast.info("Only customers who have received a delivered order for this item can submit a verified review.")
+    if (canReview || activeMyReview) {
+      openReviewModal(star)
       return
     }
-    openReviewModal(star)
+    if (!reviewStateReady) {
+      try {
+        const res = await fetchProductReviewStateCached(user.id, product.id)
+        setCanReview(res.canReview)
+        setIsAdmin(res.isAdmin)
+        setMyReview(res.myReview)
+        setDraftRating(res.myReview?.rating ?? 0)
+        setStateLoadedForUser(`${user.id}:${product.id}`)
+        if (res.canReview || res.myReview) {
+          openReviewModal(star, res.myReview)
+          return
+        }
+      } catch {
+        // fall through to message
+      }
+    }
+    toast.info("Only customers who have received a delivered order for this item can submit a verified review.")
   }
 
   const handleConfirmDelete = () => {
@@ -792,6 +1206,7 @@ export function ProductReviewsSection({
         return
       }
       later(() => {
+        invalidateProductReviewStateCache(product.id)
         if (user && target.userId === user.id) {
           setMyReview(null)
           setDraftRating(0)
@@ -805,23 +1220,46 @@ export function ProductReviewsSection({
     })
   }
 
-  if (totalCount === 0) return null
+  const quickAddToCart = () => {
+    const max = Math.min(product.stock, MAX_QTY_PER_ITEM)
+    if (product.stock <= 0) return
+    const unit = max === 1 ? "item" : "items"
+    if (inCart >= max) {
+      toast.info(`You already have all ${max} available ${unit} in your cart.`)
+      return
+    }
+    add(
+      {
+        productId: product.id,
+        slug: product.slug,
+        name: product.name,
+        price: product.price,
+        image: product.images[0] ?? null,
+        maxQuantity: product.stock,
+      },
+      1
+    )
+  }
 
-  const avgRating =
-    product.reviewCount && product.reviewCount > initialReviews.length && product.ratingAvg
-      ? Number(product.ratingAvg)
-      : initialReviews.length > 0
-        ? Math.round((initialReviews.reduce((s, r) => s + r.rating, 0) / initialReviews.length) * 10) / 10
-        : Number(product.ratingAvg ?? 0)
+  const { totalCount, avgRating, distribution } = computeReviewSummary(product, reviews)
+  const configuredAspects = resolveReviewAspects(product)
+  const aspectStats = computeAspectStats(reviews, configuredAspects).filter((s) => s.totalVotes > 0)
+  const off = discountPercent(product.price, product.compareAtPrice)
 
-  const distribution = [5, 4, 3, 2, 1].map((stars) => {
-    const count = initialReviews.filter((r) => r.rating === stars).length
-    const pct = initialReviews.length > 0 ? Math.round((count / initialReviews.length) * 100) : 0
-    return { stars, count, pct }
-  })
-
-  const displayedReviews = initialReviews
-    .filter((r) => starFilter === null || r.rating === starFilter)
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredReviews = reviews
+    .filter((r) => {
+      if (starFilter !== null && r.rating !== starFilter) return false
+      if (aspectFilter !== null) {
+        const pills = extractAspectPills(r.title)
+        if (!pills.liked.includes(aspectFilter) && !pills.disliked.includes(aspectFilter)) return false
+      }
+      if (normalizedQuery.length >= 2) {
+        const haystack = `${r.reviewerName} ${r.title ?? ""} ${r.comment}`.toLowerCase()
+        if (!haystack.includes(normalizedQuery)) return false
+      }
+      return true
+    })
     .slice()
     .sort((a, b) => {
       if (reviewSort === "highest" && b.rating !== a.rating) return b.rating - a.rating
@@ -829,114 +1267,173 @@ export function ProductReviewsSection({
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
 
-  return (
-    <section
+  const hasMore = filteredReviews.length > visibleCount
+  const visibleReviews = filteredReviews.slice(0, visibleCount)
+  const hasActiveFilters = starFilter !== null || aspectFilter !== null || normalizedQuery.length >= 2
 
-      id="customer-reviews"
-      className={cn("container-page", styles.reviewsSection)}
-      aria-labelledby="reviews-heading"
-    >
-      <div className={styles.reviewsOuterGrid}>
-        {/* Left summary + Rate your experience column (equal height with right column) */}
-        <div className={styles.summaryLeftCard}>
-          <div className={styles.summaryTopStack}>
-            <div>
-              <p className={styles.kickerAccent}>
-                Verified buyers
-              </p>
-              <h2 id="reviews-heading" className={styles.sectionHeading}>
-                Customer reviews
-              </h2>
+  // Automatic infinite scroll when the user approaches the bottom of the currently rendered reviews
+  useEffect(() => {
+    if (!hasMore) return
+    const node = loadMoreSentinelRef.current
+    if (!node || typeof IntersectionObserver === "undefined") return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(filteredReviews.length, prev + REVIEWS_PER_PAGE))
+        }
+      },
+      { rootMargin: "280px 0px" }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [hasMore, visibleCount, filteredReviews.length])
+
+  const clearAllFilters = () => {
+    setStarFilter(null)
+    setAspectFilter(null)
+    setSearchQuery("")
+    setVisibleCount(REVIEWS_PER_PAGE)
+  }
+
+  const productHref = `/products/${encodeURIComponent(product.slug)}`
+  const crumbs = [
+    { name: "Home", href: "/" },
+    ...(product.category ? [{ name: product.category.name, href: `/category/${product.category.slug}` }] : []),
+    { name: product.name, href: productHref },
+    { name: "Reviews" },
+  ]
+
+  return (
+    <div className={cn("container-page", styles.reviewsPageWrap)}>
+      {/* Top Navigation Bar: Breadcrumbs on Left + Back to Product Pill on Right */}
+      <div className={styles.reviewsTopNavRow}>
+        <Breadcrumbs items={crumbs} />
+        <Link href={productHref} className={styles.backToProductPill}>
+          <ArrowLeftIcon className={styles.icon14} aria-hidden /> Back to product
+        </Link>
+      </div>
+
+      {/* Product Context Header Strip + Single Primary CTA */}
+      <div className={styles.productBannerCard}>
+        <div className={styles.bannerLeftGroup}>
+          <Link href={productHref} className={styles.bannerThumbLink}>
+            <ProductImage src={product.images[0] ?? null} alt={product.name} sizes="72px" />
+          </Link>
+          <div className={styles.bannerMetaCol}>
+            {product.category && (
+              <p className={styles.bannerCategoryEyebrow}>{product.category.name}</p>
+            )}
+            <h1 className={styles.bannerProductTitle}>
+              <Link href={productHref}>{product.name}</Link>
+            </h1>
+            <div className={styles.bannerPriceRow}>
+              <span className={styles.bannerPrice}>{formatPrice(product.price)}</span>
+              {product.compareAtPrice && (
+                <span className={styles.bannerComparePrice}>{formatPrice(product.compareAtPrice)}</span>
+              )}
+              {off && <span className={styles.bannerSavePill}>Save {off}%</span>}
+              {totalCount > 0 && (
+                <span className={styles.bannerRatingPill}>
+                  <StarIcon className={styles.bannerStarIcon} aria-hidden />
+                  <span>{avgRating.toFixed(1)}</span>
+                  <span className={styles.bannerRatingCount}>({totalCount})</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.bannerActionsGroup}>
+          {product.stock > 0 ? (
+            <Button type="button" size="lg" onClick={quickAddToCart} className={styles.bannerCartBtn}>
+              <ShoppingBagIcon className={styles.icon16} aria-hidden /> Add to cart
+            </Button>
+          ) : (
+            <Button type="button" size="lg" variant="outline" disabled className={styles.pillBtn}>
+              Sold out
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className={styles.reviewsPageGrid}>
+        {/* Left Sticky Sidebar: Rating Breakdown + Interactive Star Filter + Rate Widget */}
+        <aside className={styles.reviewsSidebarCol}>
+          <div className={styles.summaryLeftCard}>
+            <div className={styles.summaryTopStack}>
+              <div>
+                <p className={styles.kickerAccent}>Verified buyers</p>
+                <h2 className={styles.sectionHeading}>Customer reviews</h2>
+              </div>
+
+              <div className={styles.scoreAndBarsGrid}>
+                <div className={styles.scoreBigBox}>
+                  <span className={styles.avgNumber}>
+                    {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
+                  </span>
+                  <div className={styles.starsAndCountCol}>
+                    <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
+                    <p className={styles.verifiedCountText}>
+                      {totalCount > 0
+                        ? `${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
+                        : "No verified reviews yet"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.distributionList} role="group" aria-label="Filter reviews by star rating">
+                  {distribution.map((row) => {
+                    const active = starFilter === row.stars
+                    return (
+                      <button
+                        key={row.stars}
+                        type="button"
+                        disabled={row.count === 0}
+                        aria-pressed={active}
+                        onClick={() => {
+                          setStarFilter((prev) => (prev === row.stars ? null : row.stars))
+                          setVisibleCount(REVIEWS_PER_PAGE)
+                        }}
+                        className={cn(
+                          styles.distRowBtn,
+                          row.count > 0 ? styles.distRowInteractive : styles.distRowDisabled,
+                          active && styles.distRowActive
+                        )}
+                      >
+                        <span className={styles.distStarLabel}>{row.stars}★</span>
+                        <div className={styles.distBarTrack}>
+                          <div className={styles.distBarFill} style={{ width: `${row.pct}%` }} />
+                        </div>
+                        <span className={styles.distCountNum}>{row.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className={styles.scoreAndBarsGrid}>
-              <div className={styles.scoreBigBox}>
-                <span className={styles.avgNumber}>
-                  {totalCount > 0 ? avgRating.toFixed(1) : "0.0"}
-                </span>
-                <div className={styles.starsAndCountCol}>
-                  <StarRow rating={totalCount > 0 ? avgRating : 0} size="sm" />
-                  <p className={styles.verifiedCountText}>
-                    {totalCount > 0
-                      ? `${totalCount} verified ${totalCount === 1 ? "review" : "reviews"}`
-                      : "No verified reviews yet — be the first!"}
-                  </p>
+            <div className={styles.rateBottomBlock}>
+              <div className={styles.rateWidgetBox}>
+                <p className={styles.rateKicker}>Rate your experience</p>
+                <p className={styles.rateSub}>
+                  {activeMyReview ? "Your rating — tap any star to edit your review" : "Rate this purchased piece"}
+                </p>
+                <div className={styles.ratePickerMargin}>
+                  <InteractiveStarPicker
+                    size="md"
+                    value={activeMyReview?.rating ?? draftRating}
+                    onSelect={(star) => void handleReviewTrigger(star)}
+                  />
                 </div>
               </div>
 
-              <div className={styles.distributionList}>
-                {distribution.map((row) => {
-                  const active = starFilter === row.stars
-                  return (
-                    <button
-
-                      key={row.stars}
-                      type="button"
-                      disabled={row.count === 0}
-                      aria-pressed={active}
-                      onClick={() => setStarFilter((prev) => (prev === row.stars ? null : row.stars))}
-                      className={cn(
-                        styles.distRowBtn,
-                        row.count > 0 ? styles.distRowInteractive : styles.distRowDisabled,
-                        active && styles.distRowActive
-                      )}
-                    >
-                      <span className={styles.distStarLabel}>
-                        {row.stars}★
-                      </span>
-                      <div className={styles.distBarTrack}>
-                        <div
-
-                          className={styles.distBarFill}
-                          style={{ width: `${row.pct}%` }}
-                        />
-                      </div>
-                      <span className={styles.distCountNum}>
-                        {row.count}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Rate your experience -> Rate a product -> 5 interactive stars */}
-          <div className={styles.rateBottomBlock}>
-            <div className={styles.rateWidgetBox}>
-              <p className={styles.rateKicker}>
-                Rate your experience
-              </p>
-              <p className={styles.rateSub}>
-                {myReview ? "Your rating — tap any star to edit your review" : "Rate a product"}
-              </p>
-              <div className={styles.ratePickerMargin}>
-                <InteractiveStarPicker
-                  size="md"
-                  disabled={!reviewStateReady}
-                  value={myReview?.rating ?? draftRating}
-                  onSelect={handleStarClick}
-                />
-              </div>
-            </div>
-
-            {!reviewStateReady ? null : !user ? (
-              <Link
-
-                href={`/login?next=${encodeURIComponent(`/products/${product.slug}#customer-reviews`)}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.fullPillBtn)}
-              >
-                Sign in to write a review
-              </Link>
-            ) : canReview || myReview ? (
               <Button
-
                 type="button"
-                variant={myReview ? "outline" : "default"}
-                onClick={() => openReviewModal()}
+                variant={activeMyReview ? "outline" : "default"}
+                onClick={() => void handleReviewTrigger()}
                 className={styles.fullPillBtn}
               >
-                {myReview ? (
+                {activeMyReview ? (
                   <>
                     <PencilIcon className={styles.icon16} /> Edit your review
                   </>
@@ -946,65 +1443,127 @@ export function ProductReviewsSection({
                   </>
                 )}
               </Button>
-            ) : null}
-          </div>
-        </div>
+            </div>
 
-        {/* Right reviews list column (equal height card with left column) */}
-        <div className={styles.reviewsRightCard}>
-          {initialReviews.length === 0 ? (
+            <div className={styles.genuineFooterBanner}>
+              <span className={styles.genuineTextRow}>
+                <CheckCircle2Icon className={styles.emeraldCheckSvg} aria-hidden />
+                <span>Only customers with delivered orders can post a review.</span>
+              </span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Column: Search + Sort Dropdown, Topic Filter Chips & Infinite-Scrolling Reviews Feed */}
+        <div className={styles.reviewsFeedCol}>
+          {reviews.length === 0 ? (
             <div className={styles.emptyReviewsCard}>
               <StarRow rating={5} size="md" />
-              <p className={styles.emptyTitle}>
-                Be the first to review {product.name}
-              </p>
+              <p className={styles.emptyTitle}>No reviews for {product.name} yet</p>
               <p className={styles.emptySub}>
-                Select a star under &ldquo;Rate your experience&rdquo; to share what you loved about this handmade piece.
+                {canReview
+                  ? "Select a star under “Rate your experience” to share what you loved about this handmade piece."
+                  : "Once customers receive their delivered order, their verified feedback will appear here."}
               </p>
+              <Link
+                href={productHref}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.pillBtn)}
+              >
+                <ArrowLeftIcon className={styles.icon14} aria-hidden /> Back to product
+              </Link>
             </div>
           ) : (
-            <>
-              <div className={styles.reviewsContentFlex}>
-                <div className={styles.desktopListHeader}>
-                  <div>
-                    <h3 className={styles.feedbackTitle}>
-                      Verified customer feedback
-                    </h3>
-                    <p className={styles.feedbackSub}>
-                      Real experiences shared by customers after delivery
-                    </p>
-                  </div>
-                  <span className={styles.totalCountBadge}>
-                    {totalCount} {totalCount === 1 ? "review" : "reviews"}
-                  </span>
+            <div className={styles.feedCardShell}>
+              {/* Controls Toolbar: Row 1 = SearchField + Sort SelectField; Row 2 = Aspect/Star Filter Chips */}
+              <div className={styles.feedToolbar}>
+                <div className={styles.feedSearchRow}>
+                  <SearchField
+                    label="Search customer reviews"
+                    pill
+                    maxLength={LIMITS.search.max}
+                    containerClassName={styles.feedSearchBox}
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value)
+                      setVisibleCount(REVIEWS_PER_PAGE)
+                    }}
+                    onClear={() => {
+                      setSearchQuery("")
+                      setVisibleCount(REVIEWS_PER_PAGE)
+                    }}
+                    placeholder="Search reviews by keyword (e.g. finish, packaging, gift)…"
+                  />
+
+                  <SelectField
+                    label="Sort reviews"
+                    hideLabel
+                    pill
+                    prefix="Sort:"
+                    containerClassName={styles.feedSortSelect}
+                    value={reviewSort}
+                    onValueChange={(next) => {
+                      setReviewSort((next as ReviewSortKey) || "recent")
+                      setVisibleCount(REVIEWS_PER_PAGE)
+                    }}
+                    options={REVIEW_SORT_OPTIONS}
+                  />
                 </div>
 
-                {initialReviews.length > 1 && (
-                  <div className={cn("no-scrollbar", styles.sortPillsRow)}>
-                    {(
-                      [
-                        { id: "recent", label: "Newest" },
-                        { id: "highest", label: "Highest" },
-                        { id: "lowest", label: "Lowest" },
-                      ] as const
-                    ).map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        aria-pressed={reviewSort === opt.id}
-                        onClick={() => setReviewSort(opt.id)}
+                {/* Aspect Filter Chips + Active Star Filter Chip */}
+                {(aspectStats.length > 0 || starFilter !== null) && (
+                  <div className={styles.aspectFilterRow} role="group" aria-label="Filter by product aspect">
+                    <button
+                      type="button"
+                      aria-pressed={aspectFilter === null && starFilter === null}
+                      onClick={() => {
+                        setAspectFilter(null)
+                        setStarFilter(null)
+                        setVisibleCount(REVIEWS_PER_PAGE)
+                      }}
+                      className={cn(
+                        styles.aspectFilterChip,
+                        aspectFilter === null && starFilter === null && styles.aspectFilterChipActive
+                      )}
+                    >
+                      <span>All reviews</span>
+                      <span
                         className={cn(
-                          styles.sortChipBtn,
-                          reviewSort === opt.id && styles.sortChipBtnActive
+                          styles.aspectChipCount,
+                          aspectFilter === null && starFilter === null && styles.aspectChipCountActive
                         )}
                       >
-                        {opt.label}
-                      </button>
-                    ))}
+                        {reviews.length}
+                      </span>
+                    </button>
+
+                    {aspectStats.map((stat) => {
+                      const active = aspectFilter === stat.aspect
+                      return (
+                        <button
+                          key={stat.aspect}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => {
+                            setAspectFilter((prev) => (prev === stat.aspect ? null : stat.aspect))
+                            setVisibleCount(REVIEWS_PER_PAGE)
+                          }}
+                          className={cn(styles.aspectFilterChip, active && styles.aspectFilterChipActive)}
+                        >
+                          <span>{stat.aspect}</span>
+                          <span className={cn(styles.aspectChipCount, active && styles.aspectChipCountActive)}>
+                            {stat.totalVotes}
+                          </span>
+                        </button>
+                      )
+                    })}
+
                     {starFilter !== null && (
                       <button
                         type="button"
-                        onClick={() => setStarFilter(null)}
+                        onClick={() => {
+                          setStarFilter(null)
+                          setVisibleCount(REVIEWS_PER_PAGE)
+                        }}
                         className={styles.clearStarFilterBtn}
                       >
                         {starFilter}★ only ✕
@@ -1012,238 +1571,150 @@ export function ProductReviewsSection({
                     )}
                   </div>
                 )}
+              </div>
 
-                {displayedReviews.length === 0 ? (
-                  <div className={styles.noStarFilterBox}>
-                    <p className={styles.noFilterMsg}>No {starFilter}★ reviews yet.</p>
-                    <Button type="button" variant="outline" size="sm" className={styles.pillBtn} onClick={() => setStarFilter(null)}>
-                      Show all reviews
-                    </Button>
-                  </div>
-                ) : (
-                <ul
-                  ref={reviewsListRef}
+              <div className={styles.showingCountBar}>
+                <p className={styles.showingCountText}>
+                  Showing <strong className={styles.strongFg}>{visibleReviews.length}</strong> of{" "}
+                  <strong className={styles.strongFg}>{filteredReviews.length}</strong>{" "}
+                  verified {filteredReviews.length === 1 ? "review" : "reviews"}
+                </p>
 
-                  data-slot="reviews-list"
-                  className={cn("no-scrollbar", styles.reviewsCarouselUl)}
-                >
-                  {displayedReviews.map((review) => {
-                    const isMine = Boolean(user && review.userId === user.id)
-                    const canDelete = isMine || isAdmin
-                    const aspectPills = extractAspectPills(review.title)
-                    const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
-                    return (
-                      <li
-
-                        key={review.id}
-                        className={styles.reviewCardItem}
-                      >
-                        <div className={styles.reviewCardTopRow}>
-                          <div className={styles.reviewMetaCol}>
-                            <div className={styles.reviewRatingTitleRow}>
-                              <StarRow rating={review.rating} />
-                              <span className={styles.ratingWordBadge}>
-                                {RATING_LABELS[review.rating] ?? "Great"}
-                              </span>
-                              {hasCustomTitle && (
-                                <span className={styles.customReviewTitle}>
-                                  {review.title}
-                                </span>
-                              )}
-                            </div>
-                            <div className={styles.reviewerBylineRow}>
-                              <span className={styles.reviewerName}>
-                                {review.reviewerName}
-                              </span>
-                              {review.isVerifiedPurchase && (
-                                <span className={styles.verifiedBadgePill}>
-                                  <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified purchase
-                                </span>
-                              )}
-                              <span aria-hidden>·</span>
-                              <span>{formatDate(review.createdAt)}</span>
-                            </div>
-                          </div>
-
-                          {(isMine || canDelete) && (
-                            <div className={styles.reviewOwnerBtns}>
-                              {isMine && (
-                                <button
-
-                                  type="button"
-                                  aria-label="Edit your review"
-                                  onClick={() => openReviewModal(review.rating)}
-                                  className={styles.ownerIconBtn}
-                                >
-                                  <PencilIcon className={styles.icon14} />
-                                </button>
-                              )}
-                              {canDelete && (
-                                <button
-
-                                  type="button"
-                                  aria-label="Delete review"
-                                  onClick={() => setDeleteTarget(review)}
-                                  className={cn(styles.ownerIconBtn, styles.ownerDeleteBtn)}
-                                >
-                                  <Trash2Icon className={styles.icon14} />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
-                          <div className={styles.aspectPillsWrap}>
-                            {aspectPills.liked.map((pill) => (
-                              <span
-
-                                key={`up-${pill}`}
-                                className={styles.likedAspectPill}
-                              >
-                                <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
-                              </span>
-                            ))}
-                            {aspectPills.disliked.map((pill) => (
-                              <span
-
-                                key={`down-${pill}`}
-                                className={styles.dislikedAspectPill}
-                              >
-                                <ThumbsDownIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <p className={styles.reviewCommentText}>
-                          {review.comment}
-                        </p>
-                      </li>
-                    )
-                  })}
-                </ul>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className={styles.resetReviewsFilterBtn}
+                  >
+                    <RotateCcwIcon className={styles.icon12} aria-hidden /> Clear filters
+                  </button>
                 )}
-                {initialReviews.length > 1 && (
+              </div>
+
+              {filteredReviews.length === 0 ? (
+                <div className={styles.noStarFilterBox}>
+                  <p className={styles.noFilterMsg}>
+                    No reviews match your current filter or search criteria.
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setAllReviewsOpen(true)}
-                    className={styles.seeAllMobileBtn}
+                    className={styles.pillBtn}
+                    onClick={clearAllFilters}
                   >
-                    See all {initialReviews.length} reviews
+                    Clear all filters
                   </Button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <>
+                  <ul className={styles.fullReviewsList}>
+                    {visibleReviews.map((review) => {
+                      const isMine = Boolean(user && review.userId === user.id)
+                      const canDelete = isMine || isAdmin
+                      const aspectPills = extractAspectPills(review.title)
+                      const hasCustomTitle = Boolean(
+                        review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0
+                      )
+                      return (
+                        <li key={review.id} className={styles.reviewCardItem}>
+                          <div className={styles.reviewCardTopRow}>
+                            <div className={styles.reviewMetaCol}>
+                              <div className={styles.reviewRatingTitleRow}>
+                                <StarRow rating={review.rating} />
+                                <span className={styles.ratingWordBadge}>
+                                  {RATING_LABELS[review.rating] ?? "Great"}
+                                </span>
+                                {hasCustomTitle && (
+                                  <span className={styles.customReviewTitle}>{review.title}</span>
+                                )}
+                              </div>
+                              <div className={styles.reviewerBylineRow}>
+                                <span className={styles.reviewerName}>{review.reviewerName}</span>
+                                {review.isVerifiedPurchase && (
+                                  <span className={styles.verifiedBadgePill}>
+                                    <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified purchase
+                                  </span>
+                                )}
+                                <span aria-hidden>·</span>
+                                <span>{formatDate(review.createdAt)}</span>
+                              </div>
+                            </div>
 
-              <div className={styles.genuineFooterBanner}>
-                <span className={styles.genuineTextRow}>
-                  <CheckCircle2Icon className={styles.emeraldCheckSvg} aria-hidden />
-                  <span>100% genuine reviews from verified delivered orders</span>
-                </span>
-                {(canReview || myReview) && (
-                  <button
+                            {(isMine || canDelete) && (
+                              <div className={styles.reviewOwnerBtns}>
+                                {isMine && (
+                                  <button
+                                    type="button"
+                                    aria-label="Edit your review"
+                                    onClick={() => openReviewModal(review.rating)}
+                                    className={styles.ownerIconBtn}
+                                  >
+                                    <PencilIcon className={styles.icon14} />
+                                  </button>
+                                )}
+                                {canDelete && (
+                                  <button
+                                    type="button"
+                                    aria-label="Delete review"
+                                    onClick={() => setDeleteTarget(review)}
+                                    className={cn(styles.ownerIconBtn, styles.ownerDeleteBtn)}
+                                  >
+                                    <Trash2Icon className={styles.icon14} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
 
-                    type="button"
-                    onClick={() => openReviewModal()}
-                    className={styles.addUpdateLinkBtn}
-                  >
-                    {myReview ? "Update your review →" : "Add your review →"}
-                  </button>
-                )}
-              </div>
-            </>
+                          {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
+                            <div className={styles.aspectPillsWrap}>
+                              {aspectPills.liked.map((pill) => (
+                                <span key={`up-${pill}`} className={styles.likedAspectPill}>
+                                  <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
+                                </span>
+                              ))}
+                              {aspectPills.disliked.map((pill) => (
+                                <span key={`down-${pill}`} className={styles.dislikedAspectPill}>
+                                  <ThumbsDownIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          <p className={styles.fullCommentText}>{review.comment}</p>
+                        </li>
+                      )
+                    })}
+                  </ul>
+
+                  {hasMore ? (
+                    <div ref={loadMoreSentinelRef} className={styles.infiniteScrollSentinel}>
+                      <span className={styles.infiniteScrollStatus}>
+                        <Loader2Icon className={styles.spinSvg} aria-hidden />
+                        <span>Loading more reviews ({filteredReviews.length - visibleCount} remaining)…</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setVisibleCount((prev) => Math.min(filteredReviews.length, prev + REVIEWS_PER_PAGE))}
+                        className={styles.loadMoreFallbackBtn}
+                      >
+                        Load now
+                      </button>
+                    </div>
+                  ) : (
+                    filteredReviews.length > REVIEWS_PER_PAGE && (
+                      <p className={styles.endOfFeedNote}>
+                        You&apos;ve reached the end of all {filteredReviews.length} verified reviews.
+                      </p>
+                    )
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
-
-      {/* All Reviews Mobile Sheet / Dialog */}
-      <Dialog open={allReviewsOpen} onOpenChange={setAllReviewsOpen}>
-        <DialogContent mobileFullScreen className={styles.dialogModalLg}>
-          <DialogHeader>
-            <DialogTitle>Customer reviews ({totalCount})</DialogTitle>
-            <DialogDescription>
-              Verified buyer feedback for {product.name}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody className={styles.allReviewsModalBody}>
-            {initialReviews.length > 1 && (
-              <div className={cn("no-scrollbar", styles.stickyModalSortBar, styles.sortPillsRow)}>
-                {(
-                  [
-                    { id: "recent", label: "Newest" },
-                    { id: "highest", label: "Highest" },
-                    { id: "lowest", label: "Lowest" },
-                  ] as const
-                ).map((opt) => (
-                  <button
-                    key={`all-sort-${opt.id}`}
-                    type="button"
-                    aria-pressed={reviewSort === opt.id}
-                    onClick={() => setReviewSort(opt.id)}
-                    className={cn(
-                      styles.sortChipBtn,
-                      reviewSort === opt.id && styles.sortChipBtnActive
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-                {starFilter !== null && (
-                  <button
-                    type="button"
-                    onClick={() => setStarFilter(null)}
-                    className={styles.clearStarFilterBtn}
-                  >
-                    {starFilter}★ only ✕
-                  </button>
-                )}
-              </div>
-            )}
-            {displayedReviews.map((review) => {
-              const aspectPills = extractAspectPills(review.title)
-              const hasCustomTitle = Boolean(review.title && aspectPills.liked.length === 0 && aspectPills.disliked.length === 0)
-              return (
-                <div key={`all-${review.id}`} className={styles.allReviewsItemCard}>
-                  <div className={styles.reviewRatingTitleRow}>
-                    <StarRow rating={review.rating} />
-                    <span className={styles.ratingWordBadge}>
-                      {RATING_LABELS[review.rating] ?? "Great"}
-                    </span>
-                    {hasCustomTitle && <span className={styles.customReviewTitle}>{review.title}</span>}
-                  </div>
-                  <div className={cn(styles.reviewerBylineRow, styles.bylineMargin)}>
-                    <span className={styles.reviewerName}>{review.reviewerName}</span>
-                    {review.isVerifiedPurchase && (
-                      <span className={styles.verifiedBadgePill}>
-                        <CheckCircle2Icon className={styles.checkTinySvg} aria-hidden /> Verified purchase
-                      </span>
-                    )}
-                    <span aria-hidden>·</span>
-                    <span>{formatDate(review.createdAt)}</span>
-                  </div>
-                  {(aspectPills.liked.length > 0 || aspectPills.disliked.length > 0) && (
-                    <div className={styles.aspectPillsWrap}>
-                      {aspectPills.liked.map((pill) => (
-                        <span key={`all-up-${pill}`} className={styles.likedAspectPill}>
-                          <ThumbsUpIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
-                        </span>
-                      ))}
-                      {aspectPills.disliked.map((pill) => (
-                        <span key={`all-down-${pill}`} className={styles.dislikedAspectPill}>
-                          <ThumbsDownIcon className={styles.tinyThumbSvg} aria-hidden /> {pill}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className={styles.fullCommentText}>{review.comment}</p>
-                </div>
-              )
-            })}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
 
       {/* Share your experience Dialog */}
       <ShareExperienceDialog
@@ -1252,12 +1723,13 @@ export function ProductReviewsSection({
         product={{
           id: product.id,
           name: product.name,
-          image: product.images?.[0] ?? null,
-          aspects: resolveReviewAspects(product),
+          image: product.images[0] ?? null,
+          aspects: configuredAspects,
         }}
-        initialRating={draftRating || myReview?.rating || 5}
-        existingReview={myReview}
+        initialRating={draftRating || activeMyReview?.rating || 5}
+        existingReview={activeMyReview}
         onSaved={(savedRating) => {
+          invalidateProductReviewStateCache(product.id)
           setDraftRating(savedRating)
           setStateLoadedForUser(null)
           window.dispatchEvent(new CustomEvent("kk-review-updated", { detail: { productId: product.id } }))
@@ -1280,6 +1752,6 @@ export function ProductReviewsSection({
         pending={pending}
         onConfirm={handleConfirmDelete}
       />
-    </section>
+    </div>
   )
 }

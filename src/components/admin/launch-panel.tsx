@@ -7,6 +7,7 @@ import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { resetStoreData } from "@/features/settings/launch-actions"
 import { RESET_CONFIRM_WORD, RESET_SCOPE_INFO, RESET_SCOPES, type LaunchCounts, type ResetScope } from "@/features/settings/launch"
 import type { ChecklistItem } from "@/features/settings/launch-queries"
@@ -118,8 +119,8 @@ export function LaunchPanel({ counts, checklist }: { counts: LaunchCounts; check
               key={s}
               className={cn(styles.scopeLabel, scopes.includes(s) && styles.scopeLabelSelected)}
             >
-              <input
-                type="checkbox"
+              <Checkbox
+                tone="destructive"
                 checked={scopes.includes(s)}
                 onChange={() => toggle(s)}
                 className={styles.scopeCheckbox}

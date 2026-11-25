@@ -1,5 +1,5 @@
 import type { LiveCartLine } from "@/components/store/live-cart"
-import type { Category, Product, ProductCardData, ProductListItem } from "./types"
+import type { Category, Product, ProductCardData, ProductListItem, ProductReview } from "./types"
 
 /**
  * Placeholder data for loading states (rendered inside `<Skeletonize>`; see components/shared/skeletonize.tsx).
@@ -87,3 +87,20 @@ export const placeholderCartLines = (n = 2): LiveCartLine[] =>
   }))
 
 export const placeholderCategoriesWithProductCount = (n = 5): (Category & { productCount: number })[] => placeholderCategories(n).map((c, i) => ({ ...c, productCount: 3 + i }))
+
+export function placeholderReview(i = 0): ProductReview {
+  return {
+    id: `ph-review-${i}`,
+    productId: "ph-product-0",
+    userId: null,
+    reviewerName: "Verified Buyer",
+    rating: 5 - (i % 2),
+    title: "Loved: Craftsmanship, Packaging",
+    comment: "Beautiful handmade finish and carefully packed for safe delivery. Looks wonderful in our living room.",
+    isVerifiedPurchase: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  }
+}
+
+export const placeholderReviews = (n = 4): ProductReview[] => Array.from({ length: n }, (_, i) => placeholderReview(i))

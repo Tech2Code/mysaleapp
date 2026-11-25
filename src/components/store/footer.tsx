@@ -29,6 +29,7 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
       title: "Help",
       links: [
         { href: "/track", label: "Track your order" },
+        { href: "/faq", label: "FAQs" },
         { href: "/account/orders", label: "My orders" },
         { href: "/wishlist", label: "Wishlist" },
         { href: "/contact", label: "Contact us" },
@@ -100,7 +101,7 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
           <p className={styles.copyrightText}>
             © {shop.shopName}.{shop.city ? ` Handmade in ${shop.city}, India.` : ""}
           </p>
-          <p className={styles.trustText}>Orders confirmed on WhatsApp · Secure &amp; simple</p>
+          <p className={styles.trustText}>Secure UPI checkout · Tracked doorstep delivery</p>
           <BackToTop className={styles.backToTopBtn} />
         </div>
       </div>

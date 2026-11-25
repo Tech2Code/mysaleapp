@@ -1,10 +1,11 @@
 "use client"
 
-import { ArrowLeftRightIcon, BanIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, XIcon } from "lucide-react"
+import { ArrowLeftRightIcon, BanIcon, CheckIcon, Loader2Icon, MapPinIcon, PackageOpenIcon, WalletIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { DateField, TextAreaField } from "@/components/form"
+import { CopyableReference } from "@/components/shared/copyable-reference"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -329,7 +330,7 @@ export function AdminReturnRequests({
           const isExchange = r.resolutionType === "exchange"
           const isReplacement = isExchange && /^replacement\s*:/i.test(r.exchangePreference ?? "")
           const cleanPref = (r.exchangePreference ?? "").replace(/^(Replacement|Exchange)\s*:\s*/i, "")
-          const { details: cleanDetails, pickupAddress } = splitReturnDetails(r.details)
+          const { details: cleanDetails, pickupAddress, refundUpiId } = splitReturnDetails(r.details)
           return (
             <li key={r.id} className={styles.requestCard}>
               <div className={styles.requestTopRow}>
@@ -381,6 +382,15 @@ export function AdminReturnRequests({
                   <span>
                     <span className={styles.boldSpan}>Alternate pickup address: </span>
                     {pickupAddress}
+                  </span>
+                </p>
+              )}
+              {refundUpiId && (
+                <p className={styles.pickupAddrBanner}>
+                  <WalletIcon className={styles.pickupPinIcon} aria-hidden />
+                  <span>
+                    <span className={styles.boldSpan}>Customer refund UPI ID: </span>
+                    <CopyableReference value={refundUpiId} />
                   </span>
                 </p>
               )}

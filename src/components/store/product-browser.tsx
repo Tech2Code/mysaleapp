@@ -235,6 +235,25 @@ export function ProductBrowser({
             }}
             options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
           />
+          <div className={styles.mobileSortRow} role="group" aria-label="Sort products">
+            {(Object.entries(SORTS) as [SortKey, string][]).map(([key, label]) => {
+              const active = sort === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setSort(key)
+                    setPage(1)
+                  }}
+                  className={cn(styles.sortPillBtn, active && styles.sortPillBtnActive)}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className={styles.chipsRow} role="group" aria-label="Filter by category">

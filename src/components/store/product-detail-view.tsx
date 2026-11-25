@@ -5,7 +5,7 @@ import { ReadMore } from "@/components/shared/read-more"
 import { Breadcrumbs } from "@/components/store/page-header"
 import { ProductActions, ProductReviewsSection } from "@/components/store/product-actions"
 import { ProductGallery } from "@/components/store/product-gallery"
-import { ProductGrid } from "@/components/store/product-grid"
+import { ProductCarousel } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
 import { describeProductSurcharges } from "@/features/orders/pricing"
 import type { Product, ProductCardData, ProductReview } from "@/features/products/types"
@@ -210,7 +210,7 @@ export function ProductDetailView({
       {related.length > 0 && (
         <section className={styles.relatedSection} aria-labelledby="related-title">
           <SectionHeading id="related-title" eyebrow="You may also like" title="More you may like" href="/products" />
-          <ProductGrid products={related} priorityCount={0} />
+          <ProductCarousel products={related} label="More you may like" priorityCount={0} />
         </section>
       )}
 

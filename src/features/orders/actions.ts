@@ -338,7 +338,7 @@ export async function cancelOrder(input: unknown): Promise<ActionResult<{ refund
   const { data, error } = await supabase.rpc("cancel_order", {
     p_code: parsed.data.code,
     p_phone_last4: parsed.data.phoneLast4 ?? null,
-    p_reason: cancelReasonText(parsed.data.reason, parsed.data.detail),
+    p_reason: cancelReasonText(parsed.data.reason, parsed.data.detail, parsed.data.refundUpiId),
     // guests must give the full number (migration 0022); signed-in owners are recognised by their account
     p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
   })
@@ -367,7 +367,12 @@ export async function requestReturn(input: unknown): Promise<ActionResult> {
     p_phone_last4: parsed.data.phoneLast4 ?? null,
     p_items: parsed.data.items,
     p_reason: parsed.data.reason,
-    p_details: composeReturnDetails(parsed.data.details, parsed.data.pickupAddress) ?? null,
+    p_details:
+      composeReturnDetails(
+        parsed.data.details,
+        parsed.data.pickupAddress,
+        parsed.data.resolutionType === "refund" ? parsed.data.refundUpiId : null
+      ) ?? null,
     // guests must give the full number (migration 0050); signed-in owners are recognised by their account
     p_phone: parsed.data.phone ? normalizeIndianPhone(parsed.data.phone) : null,
     p_resolution_type: parsed.data.resolutionType,

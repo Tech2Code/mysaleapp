@@ -10,7 +10,7 @@ import { DecideDialog, PickedUpButton, UndoStepButton } from "@/components/admin
 import { SelectField, type SelectOption } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { netReturnRefund } from "@/features/orders/refund"
-import { isOpenRequest, returnableQuantities, type ReturnStage } from "@/features/orders/returns"
+import { isOpenRequest, returnableQuantities, splitReturnDetails, type ReturnStage } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
 import styles from "./admin-orders.module.css"
 
@@ -34,6 +34,7 @@ export function ReturnStatusControl({
   phone,
   status,
   paymentStatus,
+  paymentReference,
   refundedAmount,
   discountAmount = 0,
   items,
@@ -47,6 +48,7 @@ export function ReturnStatusControl({
   phone: string
   status: OrderStatus
   paymentStatus: PaymentStatus
+  paymentReference?: string | null
   refundedAmount: number
   discountAmount?: number
   items: OrderItem[]
@@ -156,11 +158,26 @@ export function ReturnStatusControl({
       )}
       {picked === "refund" && (
         <ul className={styles.unrefundedList}>
-          {unrefunded.map((r) => (
-            <li key={r.id}>
-              <RefundReturnButton returnId={r.id} value={returnValue(r, items, returns, discountAmount, refundedAmount)} expectedRefunded={refundedAmount} />
-            </li>
-          ))}
+          {unrefunded.map((r) => {
+            const latestRefundUpi =
+              requests
+                .map((req) => splitReturnDetails(req.details).refundUpiId)
+                .filter(Boolean)
+                .at(-1) ?? null
+            return (
+              <li key={r.id}>
+                <RefundReturnButton
+                  returnId={r.id}
+                  value={returnValue(r, items, returns, discountAmount, refundedAmount)}
+                  expectedRefunded={refundedAmount}
+                  refundUpiId={latestRefundUpi}
+                  paymentReference={paymentReference}
+                  customerName={customerName}
+                  orderCode={orderCode}
+                />
+              </li>
+            )
+          })}
         </ul>
       )}
       <p className={styles.stepHintText}>Pick the next step; its button asks for details and confirms before saving.</p>

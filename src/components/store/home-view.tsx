@@ -5,7 +5,7 @@ import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { CategoryGrid } from "@/components/store/category-grid"
 import { Hero } from "@/components/store/hero"
 import { HowItWorks } from "@/components/store/how-it-works"
-import { ProductGrid } from "@/components/store/product-grid"
+import { ProductCarousel } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import type { Category, ProductCardData } from "@/features/products/types"
@@ -26,9 +26,8 @@ export function HomeView({
 }) {
   const inStockAll = all.filter((p) => p.stock > 0)
   const inStockFeatured = featured.filter((p) => p.stock > 0)
-  const newArrivals = inStockAll.slice(0, 4)
-  // Keep the grid's last row full on 4-column desktops (4 or 8 cards).
-  const bestsellers = inStockFeatured.length >= 8 ? inStockFeatured.slice(0, 8) : inStockFeatured.slice(0, 4)
+  const newArrivals = inStockAll.slice(0, 8)
+  const bestsellers = inStockFeatured.slice(0, 8)
 
   return (
     <>
@@ -45,7 +44,7 @@ export function HomeView({
         {bestsellers.length > 0 && (
           <section className={styles.pageSection} aria-labelledby="featured-title">
             <SectionHeading id="featured-title" eyebrow="Loved by customers" title="Bestsellers" href="/products" />
-            <ProductGrid products={bestsellers} priorityCount={0} />
+            <ProductCarousel products={bestsellers} label="Bestsellers" priorityCount={0} />
           </section>
         )}
 
@@ -54,7 +53,7 @@ export function HomeView({
         {newArrivals.length > 0 && (
           <section className={styles.pageSection} aria-labelledby="new-title">
             <SectionHeading id="new-title" eyebrow="Fresh from the studio" title="New arrivals" href="/products?sort=new" />
-            <ProductGrid products={newArrivals} priorityCount={0} />
+            <ProductCarousel products={newArrivals} label="New arrivals" priorityCount={0} />
           </section>
         )}
 

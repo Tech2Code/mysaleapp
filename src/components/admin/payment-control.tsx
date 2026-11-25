@@ -1,6 +1,6 @@
 "use client"
 
-import { BanIcon, CheckIcon, Loader2Icon, PencilIcon, RotateCcwIcon, XIcon } from "lucide-react"
+import { BanIcon, CheckIcon, Loader2Icon, PencilIcon, RotateCcwIcon, SmartphoneIcon, WalletIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
@@ -12,12 +12,15 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { updateOrderPayment } from "@/features/orders/admin-actions"
+import { splitCancelReason } from "@/features/orders/reasons"
+import { buildUpiUrl } from "@/features/orders/upi"
 import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_METHODS,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
   canVerifyPayment,
+  type Cancellation,
   type OrderPayment,
   type OrderStatus,
   type PaymentStatus,
@@ -39,6 +42,7 @@ type PaymentOrder = OrderPayment & {
   phone: string
   total: number
   status: OrderStatus
+  cancellation?: Cancellation | null
 }
 
 type PaymentValues = {
@@ -286,6 +290,16 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const owedBack = remainingToRefund > 0.005
   const showManual = order.paymentStatus !== "refunded" && !refundOnly
   const lockPaidFields = isPaymentMoneyLocked(order) && order.paymentStatus === "paid" && statusNow === "paid"
+  const { refundUpiId: cancelRefundUpiId } = splitCancelReason(order.cancellation?.reason)
+  const refundUpiDeepLink =
+    cancelRefundUpiId && remainingToRefund > 0
+      ? buildUpiUrl({
+          upiId: cancelRefundUpiId,
+          payeeName: order.customerName,
+          amount: remainingToRefund,
+          orderCode: `${order.orderCode} Refund`,
+        })
+      : null
 
   return (
     <div className={styles.paymentRoot}>
@@ -311,6 +325,33 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             <span className={styles.boldSpan}>This order was cancelled after the customer paid.</span> Send{" "}
             {formatPrice(remainingToRefund)} back to them, then record the refund details.
           </p>
+          <div className={styles.refundHelperCard}>
+            <p className={styles.refundHelperTitle}>
+              <WalletIcon className={styles.iconSm} aria-hidden /> How to send {formatPrice(remainingToRefund)} to the original source:
+            </p>
+            {cancelRefundUpiId ? (
+              <div className={styles.refundUpiHighlight}>
+                <div>
+                  <span className={styles.mutedSpan}>Customer&apos;s Refund UPI ID: </span>
+                  <CopyableReference value={cancelRefundUpiId} />
+                </div>
+                {refundUpiDeepLink && (
+                  <a href={refundUpiDeepLink} className={styles.payRefundUpiBtn}>
+                    <SmartphoneIcon className={styles.iconSm} aria-hidden /> Pay {formatPrice(remainingToRefund)} via UPI App
+                  </a>
+                )}
+              </div>
+            ) : null}
+            <p className={styles.refundHelperStep}>
+              {order.paymentReference ? (
+                <>
+                  <strong>Original UTR lookup:</strong> Search UTR <CopyableReference value={order.paymentReference} /> in your Bank / Merchant UPI app, open the incoming transaction, and tap <strong>Refund / Pay to sender</strong>.
+                </>
+              ) : (
+                "Check the incoming payment in your UPI/bank statement and send the refund back to the sender account."
+              )}
+            </p>
+          </div>
           <Button
 
             type="button"

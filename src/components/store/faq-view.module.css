@@ -1,0 +1,62 @@
+/* Section: FAQ Page Layout & Search Toolbar */
+.faqPageContainer { margin: 0 auto; width: 100%; max-width: 1024px; padding: 32px 16px 64px 16px; display: flex; flex-direction: column; gap: 24px; }
+.faqPageContainer .faqToolbarCard { display: flex; flex-direction: column; gap: 16px; border-radius: 24px; background-color: var(--card); padding: 18px; box-shadow: var(--store-elevation-sm); }
+.faqToolbarCard .faqSearchField { width: 100%; }
+.faqToolbarCard .faqCategoryTabs { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 2px; margin: -2px; scrollbar-width: none; }
+.faqToolbarCard .faqCategoryTabs::-webkit-scrollbar { display: none; }
+.faqCategoryTabs .faqTabBtn { display: inline-flex; height: 36px; flex-shrink: 0; align-items: center; gap: 8px; border-radius: 9999px; border: 0; background-color: var(--store-section-tint, var(--muted)); padding: 0 14px; font-size: 13px; font-weight: 500; color: var(--foreground); cursor: pointer; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.faqCategoryTabs .faqTabBtn:hover { background-color: var(--secondary); transform: translateY(-1px); }
+.faqCategoryTabs .faqTabBtnActive { background-color: var(--primary); font-weight: 600; color: var(--primary-foreground); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 42%, transparent); }
+.faqCategoryTabs .faqTabBtnActive:hover { background-color: var(--store-accent-hover, var(--primary)); color: var(--primary-foreground); }
+.faqTabBtn .faqTabIcon { width: 14px; height: 14px; flex-shrink: 0; }
+.faqTabBtn .faqTabCount { border-radius: 9999px; background-color: var(--card); padding: 1px 7px; font-size: 11px; font-weight: 700; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.faqTabBtn .faqTabCountActive { background-color: color-mix(in oklab, var(--primary-foreground) 22%, transparent); color: var(--primary-foreground); }
+/* Section: Accordion List & Cards */
+.faqPageContainer .faqListSection { display: flex; flex-direction: column; gap: 12px; }
+.faqListSection .faqAccordionCard { border-radius: 20px; background-color: var(--card); box-shadow: var(--store-elevation-sm); overflow: hidden; transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.faqListSection .faqAccordionCard:hover { box-shadow: var(--store-elevation-md); }
+.faqListSection .faqAccordionCardOpen { box-shadow: var(--store-elevation-md); }
+.faqAccordionCard .faqTriggerBtn { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 16px; border: 0; background: transparent; padding: 18px 20px; text-align: left; cursor: pointer; }
+.faqTriggerBtn .faqTriggerLeft { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 6px; }
+.faqTriggerLeft .faqCategoryPill { display: inline-flex; width: fit-content; align-items: center; gap: 5px; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); padding: 2px 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: var(--primary); }
+.faqTriggerLeft .faqQuestionTitle { margin: 0; font-family: var(--font-heading); font-size: 17px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.faqTriggerBtn .faqChevronCircle { margin-top: 2px; display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: var(--store-section-tint, var(--muted)); color: var(--muted-foreground); transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, color 180ms ease; }
+.faqTriggerBtn:hover .faqChevronCircle { background-color: color-mix(in oklab, var(--primary) 14%, transparent); color: var(--primary); }
+.faqTriggerBtn .faqChevronCircleOpen { transform: rotate(180deg); background-color: var(--primary); color: var(--primary-foreground); }
+.faqTriggerBtn:hover .faqChevronCircleOpen { background-color: var(--primary); color: var(--primary-foreground); }
+.faqChevronCircle .faqChevronSvg { width: 16px; height: 16px; }
+.faqAccordionCard .faqAnswerPanel { border-top: 1px solid var(--border); padding: 16px 20px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+.faqAnswerPanel .faqAnswerText { margin: 0; font-size: 14.5px; line-height: 23px; color: color-mix(in oklab, var(--foreground) 86%, transparent); }
+.faqAnswerPanel .faqAnswerLink { display: inline-flex; width: fit-content; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
+.faqAnswerPanel .faqAnswerLink:hover { text-decoration: underline; }
+.faqAnswerLink .faqInlineIcon { width: 14px; height: 14px; }
+/* Section: Empty Search State */
+.faqPageContainer .faqEmptyCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 24px; border: 1px dashed var(--border); background-color: var(--card); padding: 48px 20px; text-align: center; box-shadow: var(--store-elevation-sm); }
+.faqEmptyCard .faqEmptyTitle { margin: 0; font-family: var(--font-heading); font-size: 19px; font-weight: 600; color: var(--foreground); }
+.faqEmptyCard .faqEmptySub { margin: 0; max-width: 420px; font-size: 13.5px; line-height: 20px; color: var(--muted-foreground); }
+.faqEmptyCard .faqResetBtn { border-radius: 9999px; gap: 6px; }
+/* Section: Bottom Support Banner */
+.faqPageContainer .faqSupportBanner { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: 24px; background-color: var(--card); padding: 24px; box-shadow: var(--store-elevation-sm); }
+.faqSupportBanner .faqSupportCopy { display: flex; flex-direction: column; gap: 6px; }
+.faqSupportCopy .faqSupportEyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; }
+.faqSupportCopy .faqSupportHeading { margin: 0; font-family: var(--font-heading); font-size: 22px; line-height: 28px; font-weight: 600; color: var(--foreground); }
+.faqSupportCopy .faqSupportSub { margin: 0; max-width: 520px; font-size: 14px; line-height: 21px; color: var(--muted-foreground); }
+.faqSupportBanner .faqSupportActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.faqSupportActions .faqWhatsappCta { display: inline-flex; height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 20px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 8px 20px -6px color-mix(in oklab, var(--whatsapp) 32%, transparent); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease; }
+.faqSupportActions .faqWhatsappCta:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 90%, black); transform: translateY(-1px); }
+.faqWhatsappCta .faqActionIcon { width: 16px; height: 16px; flex-shrink: 0; }
+.faqSupportActions .faqSecondaryCta { height: 44px; border-radius: 9999px; padding: 0 18px; gap: 6px; font-weight: 600; }
+.faqSecondaryCta .faqActionIcon { width: 15px; height: 15px; flex-shrink: 0; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .faqPageContainer { padding: 40px 24px 80px 24px; gap: 28px; }
+  .faqPageContainer .faqToolbarCard { padding: 22px; }
+  .faqToolbarCard .faqCategoryTabs { flex-wrap: wrap; }
+  .faqAccordionCard .faqTriggerBtn { padding: 20px 24px; }
+  .faqTriggerLeft .faqQuestionTitle { font-size: 18px; line-height: 26px; }
+  .faqAccordionCard .faqAnswerPanel { padding: 16px 24px 22px 24px; }
+  .faqPageContainer .faqSupportBanner { flex-direction: row; align-items: center; padding: 28px 32px; }
+}
+@media (min-width: 1024px) {
+  .faqPageContainer { padding: 48px 32px 96px 32px; }
+}

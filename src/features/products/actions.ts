@@ -280,18 +280,20 @@ export async function getMyProductReviewState(
   }
   const supabase = await getServerSupabase()
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { canReview: false, isAdmin: false, myReview: null }
+    data: { session },
+  } = await supabase.auth.getSession()
+  const sessionUserId = session?.user?.id
+  if (!sessionUserId) return { canReview: false, isAdmin: false, myReview: null }
 
-  const [canRes, isAdminRes, myRowRes] = await Promise.all([
+  const [userRes, canRes, isAdminRes, myRowRes] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.rpc("can_review_product", { p_product_id: productId }),
     supabase.rpc("is_admin"),
     supabase
       .from("product_reviews")
       .select("id, product_id, user_id, reviewer_name, rating, title, comment, is_verified_purchase, created_at, updated_at")
       .eq("product_id", productId)
-      .eq("user_id", user.id)
+      .eq("user_id", sessionUserId)
       .maybeSingle<{
         id: string
         product_id: string
@@ -305,6 +307,11 @@ export async function getMyProductReviewState(
         updated_at: string
       }>(),
   ])
+
+  const user = userRes.data.user
+  if (!user || user.id !== sessionUserId) {
+    return { canReview: false, isAdmin: false, myReview: null }
+  }
 
   const r = myRowRes.data
   return {

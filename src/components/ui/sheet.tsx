@@ -5,11 +5,29 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
+import { useOverlayHistory } from "@/components/ui/dialog"
 import { XIcon } from "lucide-react"
 import styles from "./ui.module.css"
 
-function Sheet({ ...props }: SheetPrimitive.Root.Props) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({ open: openProp, defaultOpen, onOpenChange, ...props }: SheetPrimitive.Root.Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? Boolean(openProp) : uncontrolledOpen
+
+  const handleOpenChange = React.useCallback<NonNullable<SheetPrimitive.Root.Props["onOpenChange"]>>(
+    (nextOpen, eventDetails) => {
+      if (!isControlled) setUncontrolledOpen(nextOpen)
+      onOpenChange?.(nextOpen, eventDetails)
+    },
+    [isControlled, onOpenChange]
+  )
+
+  useOverlayHistory(open, () => {
+    if (!isControlled) setUncontrolledOpen(false)
+    ;(onOpenChange as ((next: boolean) => void) | undefined)?.(false)
+  })
+
+  return <SheetPrimitive.Root data-slot="sheet" open={open} onOpenChange={handleOpenChange} {...props} />
 }
 
 function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {

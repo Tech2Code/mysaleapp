@@ -28,6 +28,7 @@ All form inputs come from `@/components/form` (`src/components/form/`):
 | Dropdown | `SelectField` (native `<select>`, pass `options`) |
 | Search box | `SearchField` |
 | On/off toggle | `SwitchField` |
+| Checkbox | `CheckboxField` (`src/components/form/checkbox-field.tsx`, built on `Checkbox` in `src/components/ui/checkbox.tsx`) |
 
 Rules:
 - **Never** put a raw `<input>`, `<textarea>`, `<select>` or `ui/input` / `ui/textarea` in a page or feature component. Label, hint, error text and ARIA wiring live in the shared components.
@@ -236,7 +237,7 @@ Default is the current **financial year** (April–March, India), compared with 
 
 ## Tests & Pre-Push Documentation Sync
 
-- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 808 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
+- `npm run test` (Vitest, node env, `TZ=America/Los_Angeles` so IST-independence is real, 29 test files / 810 tests). Tests sit next to the code (`*.test.ts`) and cover the pure modules: pricing, transitions, returns, deadline, dashboard-range, reasons, `paymentDisplay`, location states, scroll-reset, validation. Always run `npx --no-install tsc --noEmit --incremental false` (never rely on cached `tsconfig.tsbuildinfo`), `npm run lint`, and `npm run test` before delivering any task or pushing, and audit all callers/usages in the file when removing or changing an import.
 - **Mandatory Pre-Push Doc Update:** Before every `git push`, always review and update the existing documentation files (`README.md`, `CLAUDE.md`, `google-indexing.md`, `supabase-production-db-setup.md`, `scripts/db-integration/README.md`) so architecture, conventions, migration numbers, and test counts stay 100% in sync with the codebase.
 - A rule that exists in both TS and SQL (pricing, return window, cancel statuses, the awaiting-payment predicate) must be changed in both; the SQL is the source of truth.
 

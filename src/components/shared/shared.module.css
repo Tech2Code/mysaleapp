@@ -37,15 +37,21 @@
 .readMoreToggleBtn { margin-top: 8px; border: 0; background: transparent; padding: 0; font-size: 14px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .readMoreToggleBtn:hover { text-decoration: underline; }
 /* Section: Horizontal Carousel */
-.carouselRegion { position: relative; }
-.carouselRegion .carouselTrack { margin: 0 -16px; padding: 8px 16px; list-style: none; display: flex; scroll-snap-type: x mandatory; scroll-padding-left: 16px; scroll-padding-right: 16px; gap: 12px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; }
+.carouselRegion { position: relative; display: flex; flex-direction: column; gap: 10px; }
+.carouselRegion .carouselViewport { position: relative; }
+.carouselRegion .carouselTrack { margin: 0 -16px; padding: 8px 16px 12px 16px; list-style: none; display: flex; scroll-snap-type: x mandatory; scroll-padding-left: 16px; scroll-padding-right: 16px; gap: 12px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .carouselRegion .carouselTrack::-webkit-scrollbar { display: none; }
-.carouselRegion .carouselArrowBtn { position: absolute; top: 50%; display: none; width: 40px; height: 40px; transform: translateY(-50%); place-items: center; border-radius: 9999px; border: 1px solid var(--input); background-color: var(--card); color: var(--foreground); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.12); transition: opacity 150ms ease, background-color 150ms ease; }
-.carouselRegion .carouselArrowBtn:hover { background-color: var(--secondary); }
-.carouselRegion .carouselArrowBtn:disabled { pointer-events: none; opacity: 0; }
-.carouselRegion .carouselArrowPrev { left: -12px; }
-.carouselRegion .carouselArrowNext { right: -12px; }
+.carouselRegion .carouselArrowBtn { position: absolute; top: 42%; z-index: 10; display: none; width: 42px; height: 42px; transform: translateY(-50%); place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 92%, transparent); color: var(--foreground); box-shadow: 0 12px 24px -6px rgba(11, 35, 60, 0.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.carouselRegion .carouselArrowBtn:hover:not(:disabled) { background-color: var(--primary); border-color: var(--primary); color: var(--primary-foreground); transform: translateY(-50%) scale(1.06); box-shadow: 0 14px 28px -6px color-mix(in oklab, var(--primary) 42%, transparent); }
+.carouselRegion .carouselArrowBtn:active:not(:disabled) { transform: translateY(-50%) scale(0.95); }
+.carouselRegion .carouselArrowBtn:disabled { pointer-events: none; opacity: 0; transform: translateY(-50%) scale(0.9); }
+.carouselRegion .carouselArrowPrev { left: -14px; }
+.carouselRegion .carouselArrowNext { right: -14px; }
 .carouselArrowBtn .arrowIcon20 { width: 20px; height: 20px; }
+.carouselRegion .carouselDotsRow { display: flex; align-items: center; justify-content: center; gap: 6px; padding-top: 2px; }
+.carouselDotsRow .carouselDotBtn { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 9999px; background-color: color-mix(in oklab, var(--foreground) 18%, transparent); transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease; }
+.carouselDotsRow .carouselDotBtn:hover { background-color: color-mix(in oklab, var(--foreground) 38%, transparent); }
+.carouselDotsRow .carouselDotBtnActive { width: 20px; background-color: var(--primary); }
 /* Section: Price Breakdown */
 .priceBreakdown { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
 .priceBreakdown .linesDl { margin: 0; display: flex; flex-direction: column; gap: 8px; }
