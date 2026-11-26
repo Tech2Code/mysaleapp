@@ -7,40 +7,52 @@
 @keyframes uiSheetInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes uiSheetInBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes uiSheetInTop { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-:where(.btnBase) { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid transparent; background-clip: padding-box; font-size: 14px; font-weight: 500; white-space: nowrap; outline: none; user-select: none; transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms cubic-bezier(0.22, 1, 0.36, 1), border-color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.btnBase:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 45%, transparent); }
-.btnBase:active:not(:disabled):not([aria-haspopup]) { transform: scale(0.97); }
+:where(.btnBase) { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--radiusControl, 10px); border: 1px solid transparent; background-clip: padding-box; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; outline: none; user-select: none; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.btnBase:focus-visible { border-color: var(--ring); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 32%, transparent)); }
+.btnBase:active:not(:disabled):not([aria-haspopup]) { transform: scale(0.98); }
 .btnBase:disabled, .btnBase[data-disabled] { pointer-events: none; opacity: 0.5; }
 :where(.btnBase) svg { pointer-events: none; flex-shrink: 0; width: 16px; height: 16px; }
-:where(.btnVariantDefault) { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px -4px color-mix(in oklab, var(--primary) 38%, transparent); }
-:where(.btnVariantDefault):hover:not(:disabled) { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 86%, black)); transform: translateY(-1px); box-shadow: 0 8px 20px -4px color-mix(in oklab, var(--primary) 48%, transparent); }
-:where(.btnVariantOutline) { border-color: var(--border); background-color: var(--card); color: var(--foreground); box-shadow: var(--store-elevation-sm); }
-:where(.btnVariantOutline):hover:not(:disabled), :where(.btnVariantOutline)[aria-expanded="true"] { background-color: var(--card); border-color: var(--input); color: var(--foreground); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
-:global(.dark) :where(.btnVariantOutline) { border-color: var(--input); background-color: color-mix(in oklab, var(--secondary) 72%, transparent); }
-:global(.dark) :where(.btnVariantOutline):hover:not(:disabled) { background-color: var(--secondary); }
-:where(.btnVariantSecondary) { background-color: var(--secondary); color: var(--secondary-foreground); }
-:where(.btnVariantSecondary):hover:not(:disabled) { background-color: color-mix(in oklab, var(--secondary) 90%, var(--foreground) 10%); transform: translateY(-1px); }
-:where(.btnVariantGhost) { background-color: transparent; color: var(--foreground); }
-:where(.btnVariantGhost):hover:not(:disabled), :where(.btnVariantGhost)[aria-expanded="true"] { background-color: var(--muted); color: var(--foreground); }
-:where(.btnVariantDestructive) { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive); }
-:where(.btnVariantDestructive):hover:not(:disabled) { background-color: color-mix(in oklab, var(--destructive) 22%, transparent); transform: translateY(-1px); }
-:global(.dark) :where(.btnVariantDestructive) { background-color: color-mix(in oklab, var(--destructive) 20%, transparent); }
-:global(.dark) :where(.btnVariantDestructive):hover:not(:disabled) { background-color: color-mix(in oklab, var(--destructive) 30%, transparent); }
-:where(.btnVariantLink) { background-color: transparent; color: var(--primary); text-underline-offset: 4px; }
-:where(.btnVariantLink):hover { text-decoration: underline; }
-:where(.btnSizeDefault) { height: 40px; gap: 8px; padding-left: 16px; padding-right: 16px; }
-:where(.btnSizeXs) { height: 28px; gap: 4px; border-radius: 8px; padding-left: 10px; padding-right: 10px; font-size: 12px; }
-:where(.btnSizeXs) svg { width: 12px; height: 12px; }
-:where(.btnSizeSm) { height: 36px; gap: 6px; border-radius: 10px; padding-left: 12px; padding-right: 12px; font-size: 14px; }
-:where(.btnSizeSm) svg { width: 14px; height: 14px; }
-:where(.btnSizeLg) { height: 44px; gap: 8px; padding-left: 20px; padding-right: 20px; }
-:where(.btnSizeIcon) { width: 40px; height: 40px; padding: 0; }
-:where(.btnSizeIconXs) { width: 28px; height: 28px; border-radius: 8px; padding: 0; }
+:where(.btnPrimary) { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px -4px color-mix(in oklab, var(--primary) 38%, transparent); }
+:where(.btnPrimary):hover:not(:disabled) { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); box-shadow: 0 8px 20px -4px color-mix(in oklab, var(--primary) 48%, transparent); }
+:where(.btnOutline) { border-color: var(--input); background-color: var(--card); color: var(--foreground); box-shadow: var(--store-elevation-sm); }
+:where(.btnOutline):hover:not(:disabled), :where(.btnOutline)[aria-expanded="true"] { background-color: var(--card); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); color: var(--foreground); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+:global(.dark) :where(.btnOutline) { border-color: var(--input); background-color: color-mix(in oklab, var(--secondary) 72%, transparent); }
+:global(.dark) :where(.btnOutline):hover:not(:disabled) { background-color: var(--secondary); border-color: color-mix(in oklab, var(--foreground) 26%, transparent); }
+:where(.btnSecondary) { background-color: var(--secondary); color: var(--secondary-foreground); border-color: color-mix(in oklab, var(--border) 90%, transparent); }
+:where(.btnSecondary):hover:not(:disabled) { background-color: color-mix(in oklab, var(--secondary) 88%, var(--foreground) 12%); transform: translateY(-1px); }
+:where(.btnGhost) { background-color: transparent; color: var(--foreground); font-weight: 500; }
+:where(.btnGhost):hover:not(:disabled), :where(.btnGhost)[aria-expanded="true"] { background-color: var(--muted); color: var(--foreground); }
+:where(.btnSoft) { background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); border-color: color-mix(in oklab, var(--primary) 22%, transparent); }
+:where(.btnSoft):hover:not(:disabled) { background-color: color-mix(in oklab, var(--primary) 18%, transparent); border-color: color-mix(in oklab, var(--primary) 36%, transparent); transform: translateY(-1px); }
+:where(.btnDestructive) { background-color: var(--destructive-solid); color: var(--on-solid); box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--destructive) 36%, transparent); }
+:where(.btnDestructive):hover:not(:disabled) { background-color: color-mix(in oklab, var(--destructive-solid) 86%, black); transform: translateY(-1px); box-shadow: 0 8px 18px -4px color-mix(in oklab, var(--destructive) 46%, transparent); }
+:where(.btnDestructiveOutline) { border-color: color-mix(in oklab, var(--destructive) 42%, transparent); background-color: transparent; color: var(--destructive); }
+:where(.btnDestructiveOutline):hover:not(:disabled) { border-color: color-mix(in oklab, var(--destructive) 65%, transparent); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); transform: translateY(-1px); }
+:where(.btnSuccess) { background-color: var(--success-solid); color: var(--on-solid); box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--success) 34%, transparent); }
+:where(.btnSuccess):hover:not(:disabled) { background-color: color-mix(in oklab, var(--success-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 8px 18px -4px color-mix(in oklab, var(--success) 44%, transparent); }
+:where(.btnWhatsapp) { background-color: var(--whatsapp-solid); color: var(--on-solid); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--whatsapp) 34%, transparent); }
+:where(.btnWhatsapp):hover:not(:disabled) { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 10px 22px -4px color-mix(in oklab, var(--whatsapp) 44%, transparent); }
+:where(.btnLink) { height: auto; padding: 0; border-radius: 4px; background-color: transparent; color: var(--primary); font-weight: 600; text-underline-offset: 4px; }
+:where(.btnLink):hover:not(:disabled) { text-decoration: underline; }
+:where(.btnSizeDefault) { height: var(--btnDefaultH, 40px); gap: 8px; padding-left: var(--btnDefaultPx, 16px); padding-right: var(--btnDefaultPx, 16px); }
+:where(.btnSizeXs) { height: var(--controlHXs, 28px); gap: 4px; border-radius: var(--radiusControlSm, 6px); padding-left: 10px; padding-right: 10px; font-size: 12px; line-height: 16px; }
+:where(.btnSizeXs) svg { width: 14px; height: 14px; }
+:where(.btnSizeSm) { height: var(--controlHSm, 36px); gap: 6px; border-radius: var(--radiusControlSm, 8px); padding-left: 14px; padding-right: 14px; font-size: 13px; line-height: 18px; }
+:where(.btnSizeSm) svg { width: 15px; height: 15px; }
+:where(.btnSizeMd) { height: var(--controlHMd, 40px); gap: 8px; border-radius: var(--radiusControl, 10px); padding-left: 16px; padding-right: 16px; font-size: 14px; line-height: 20px; }
+:where(.btnSizeLg) { height: var(--controlHLg, 44px); gap: 8px; border-radius: var(--radiusControl, 12px); padding-left: 20px; padding-right: 20px; font-size: 14px; line-height: 20px; }
+:where(.btnSizeXl) { height: var(--controlHXl, 48px); gap: 10px; border-radius: var(--radiusControl, 12px); padding-left: 24px; padding-right: 24px; font-size: 15px; line-height: 22px; }
+:where(.btnSizeXl) svg { width: 18px; height: 18px; }
+:where(.btnSizeIcon) { width: var(--controlHMd, 40px); height: var(--controlHMd, 40px); padding: 0; border-radius: var(--radiusControl, 10px); }
+:where(.btnSizeIconXs) { width: var(--controlHXs, 28px); height: var(--controlHXs, 28px); border-radius: var(--radiusControlSm, 6px); padding: 0; }
 :where(.btnSizeIconXs) svg { width: 14px; height: 14px; }
-:where(.btnSizeIconSm) { width: 36px; height: 36px; border-radius: 10px; padding: 0; }
-:where(.btnSizeIconLg) { width: 44px; height: 44px; padding: 0; }
+:where(.btnSizeIconSm) { width: var(--controlHSm, 36px); height: var(--controlHSm, 36px); border-radius: var(--radiusControlSm, 8px); padding: 0; }
+:where(.btnSizeIconLg) { width: var(--controlHLg, 44px); height: var(--controlHLg, 44px); border-radius: var(--radiusControl, 12px); padding: 0; }
+.btnFull { width: 100%; }
+.btnPill { border-radius: var(--radiusPill, 9999px); }
+.btnCircle { border-radius: var(--radiusPill, 9999px); }
 /* Section: Badge Variants */
-:where(.badgeBase) { display: inline-flex; height: 20px; width: fit-content; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; overflow: hidden; border-radius: 9999px; border: 1px solid transparent; padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.badgeBase) { display: inline-flex; height: 22px; width: fit-content; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; overflow: hidden; border-radius: var(--radiusPill, 9999px); border: 1px solid transparent; padding: 0 9px; font-size: 11px; line-height: 16px; font-weight: 600; white-space: nowrap; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.badgeBase) svg { pointer-events: none; width: 12px; height: 12px; }
 :where(.badgeDefault) { background-color: var(--primary); color: var(--primary-foreground); }
 :where(.badgeSecondary) { background-color: var(--secondary); color: var(--secondary-foreground); }
@@ -49,16 +61,16 @@
 :where(.badgeGhost) { background-color: transparent; color: var(--foreground); }
 :where(.badgeLink) { color: var(--primary); text-underline-offset: 4px; }
 /* Section: Input, Textarea, Label, Separator & Switch (Crisp White Control Surface) */
-:where(.inputField) { height: 32px; width: 100%; min-width: 0; border-radius: 10px; border: 1px solid var(--input); background-color: var(--card); padding: 4px 10px; font-size: 16px; color: var(--foreground); text-overflow: ellipsis; box-shadow: 0 1px 2px rgba(11, 53, 80, 0.03); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-:where(.inputField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 18%, transparent); }
+:where(.inputField) { height: var(--btnDefaultH, 40px); width: 100%; min-width: 0; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 6px 12px; font-size: 16px; color: var(--foreground); text-overflow: ellipsis; box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.inputField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
 .inputField::placeholder { text-overflow: ellipsis; font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
-.inputField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent); }
+.inputField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .inputField:disabled { pointer-events: none; cursor: not-allowed; background-color: var(--muted); opacity: 0.5; }
 .inputField[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
-:where(.textareaField) { display: flex; field-sizing: content; min-height: 64px; width: 100%; min-width: 0; border-radius: 10px; border: 1px solid var(--input); background-color: var(--card); padding: 8px 10px; font-size: 16px; color: var(--foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.03); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-:where(.textareaField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 18%, transparent); }
+:where(.textareaField) { display: flex; field-sizing: content; min-height: 76px; width: 100%; min-width: 0; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 10px 12px; font-size: 16px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.textareaField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
 .textareaField::placeholder { font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
-.textareaField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent); }
+.textareaField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .textareaField:disabled { cursor: not-allowed; background-color: var(--muted); opacity: 0.5; }
 .textareaField[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
 :where(.labelBase) { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 14px; font-weight: 500; user-select: none; color: var(--foreground); }
@@ -83,13 +95,13 @@
 .checkboxRoot { position: relative; display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; align-items: center; justify-content: center; vertical-align: middle; user-select: none; }
 .checkboxRoot .checkboxInput { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
 .checkboxRoot .checkboxInput:disabled { cursor: not-allowed; }
-.checkboxRoot .checkboxBox { pointer-events: none; display: inline-grid; width: 18px; height: 18px; place-items: center; border-radius: 5px; border: 1.5px solid color-mix(in oklab, var(--muted-foreground) 45%, var(--border)); background-color: var(--card); color: var(--primary-foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.04); transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 150ms cubic-bezier(0.22, 1, 0.36, 1); }
+.checkboxRoot .checkboxBox { pointer-events: none; display: inline-grid; width: 18px; height: 18px; place-items: center; border-radius: 5px; border: 1.5px solid color-mix(in oklab, var(--muted-foreground) 45%, var(--border)); background-color: var(--card); color: var(--primary-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: background-color 160ms cubic-bezier(0.22, 1, 0.36, 1), border-color 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 150ms cubic-bezier(0.22, 1, 0.36, 1); }
 .checkboxRoot:hover .checkboxInput:not(:disabled) + .checkboxBox { border-color: color-mix(in oklab, var(--primary) 65%, transparent); }
 .checkboxRoot[data-tone="destructive"]:hover .checkboxInput:not(:disabled) + .checkboxBox { border-color: color-mix(in oklab, var(--destructive) 65%, transparent); }
 .checkboxRoot .checkboxInput:active:not(:disabled) + .checkboxBox { transform: scale(0.92); }
 .checkboxRoot .checkboxInput:focus-visible + .checkboxBox { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 32%, transparent); }
 .checkboxRoot .checkboxInput:checked + .checkboxBox { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 3px 8px -2px color-mix(in oklab, var(--primary) 42%, transparent); }
-.checkboxRoot[data-tone="destructive"] .checkboxInput:checked + .checkboxBox { border-color: var(--destructive); background-color: var(--destructive); color: #ffffff; box-shadow: 0 3px 8px -2px color-mix(in oklab, var(--destructive) 42%, transparent); }
+.checkboxRoot[data-tone="destructive"] .checkboxInput:checked + .checkboxBox { border-color: var(--destructive); background-color: var(--destructive); color: var(--on-solid); box-shadow: 0 3px 8px -2px color-mix(in oklab, var(--destructive) 42%, transparent); }
 .checkboxRoot .checkboxInput[aria-invalid="true"]:not(:checked) + .checkboxBox { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
 .checkboxRoot .checkboxInput:disabled + .checkboxBox { opacity: 0.5; background-color: var(--muted); }
 .checkboxBox .checkboxCheckSvg { width: 12px; height: 12px; stroke-width: 3; opacity: 0; transform: scale(0.5); transition: opacity 140ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
@@ -103,32 +115,32 @@
 .avatarRoot .avatarBadge { position: absolute; right: 0; bottom: 0; z-index: 10; display: inline-flex; width: 10px; height: 10px; align-items: center; justify-content: center; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 0 0 2px var(--background); user-select: none; }
 .avatarGroup { display: flex; }
 .avatarGroupCount { position: relative; display: flex; width: 32px; height: 32px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; background-color: var(--muted); font-size: 14px; color: var(--muted-foreground); box-shadow: 0 0 0 2px var(--background); }
-:where(.cardRoot) { display: flex; flex-direction: column; gap: 16px; overflow: hidden; border-radius: 14px; background-color: var(--card); padding: 16px 0; font-size: 14px; color: var(--card-foreground); box-shadow: var(--store-elevation-sm, 0 0 0 1px var(--border)); transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.cardRoot) { display: flex; flex-direction: column; gap: 16px; overflow: hidden; border-radius: var(--radiusCard, 16px); background-color: var(--card); padding: 16px 0; font-size: 14px; color: var(--card-foreground); box-shadow: var(--store-elevation-sm, 0 0 0 1px var(--border)); transition: box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.cardRoot)[data-size="sm"] { gap: 12px; padding: 12px 0; }
-.cardRoot .cardHeader { display: grid; align-items: start; gap: 4px; border-radius: 14px 14px 0 0; padding: 0 16px; }
+.cardRoot .cardHeader { display: grid; align-items: start; gap: 4px; border-radius: var(--radiusCard, 16px) var(--radiusCard, 16px) 0 0; padding: 0 16px; }
 .cardRoot .cardTitle { font-family: var(--font-heading); font-size: 16px; line-height: 22px; font-weight: 500; }
 .cardRoot .cardDescription { font-size: 14px; color: var(--muted-foreground); }
 .cardRoot .cardAction { grid-column-start: 2; grid-row: 1 / span 2; align-self: start; justify-self: end; }
 .cardRoot .cardContent { padding: 0 16px; }
-.cardRoot .cardFooter { display: flex; align-items: center; border-radius: 0 0 14px 14px; border-top: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 45%, transparent); padding: 16px; }
+.cardRoot .cardFooter { display: flex; align-items: center; border-radius: 0 0 var(--radiusCard, 16px) var(--radiusCard, 16px); border-top: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 45%, transparent); padding: 16px; }
 /* Section: Dialog (Centered via Independent CSS translate + Spring Zoom & Fade Animations) */
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-:where(.dialogOverlay) { position: fixed; inset: 0; isolation: isolate; z-index: 50; background-color: rgba(11, 25, 40, 0.38); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: uiOverlayFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.dialogOverlay) { position: fixed; inset: 0; isolation: isolate; z-index: 50; background-color: var(--backdrop-scrim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: uiOverlayFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .dialogOverlay[data-starting-style], .dialogOverlay[data-ending-style] { opacity: 0; }
 :where(.dialogOverlayFullScreenMobile) { background-color: var(--background); }
 :where(.dialogPopup) { position: fixed; z-index: 50; display: flex; flex-direction: column; width: 100%; background-color: var(--popover); font-size: 14px; color: var(--popover-foreground); outline: none; overflow: hidden; transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms cubic-bezier(0.22, 1, 0.36, 1); }
-:where(.dialogPopupStandard) { top: 50%; left: 50%; translate: -50% -50%; width: calc(100% - 32px); max-width: calc(100% - 32px); max-height: min(90dvh, 850px); border-radius: 20px; box-shadow: 0 28px 60px -12px rgba(11, 35, 60, 0.26), 0 0 0 1px var(--border); animation: uiDialogZoomIn 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.dialogPopupStandard) { top: 50%; left: 50%; translate: -50% -50%; width: calc(100% - 32px); max-width: calc(100% - 32px); max-height: min(90dvh, 850px); border-radius: var(--radiusModal, 20px); box-shadow: 0 28px 60px -12px var(--shadow-color-strong), 0 0 0 1px var(--border); animation: uiDialogZoomIn 240ms cubic-bezier(0.22, 1, 0.36, 1); }
 .dialogPopupStandard[data-starting-style], .dialogPopupStandard[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(8px); }
 :where(.dialogPopupMobileFull) { inset: 0; translate: none; height: 100dvh; max-height: 100dvh; max-width: none; border-radius: 0; border: 0; box-shadow: none; animation: uiDialogSlideUp 240ms cubic-bezier(0.22, 1, 0.36, 1); }
 .dialogPopupMobileFull[data-starting-style], .dialogPopupMobileFull[data-ending-style] { opacity: 0; transform: translateY(20px); }
 .dialogPopup .cornerCloseBtn { position: absolute; top: 8px; right: 8px; }
-:where(.dialogHeader) { display: flex; flex-shrink: 0; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border); background-color: var(--card); padding: 14px 16px; box-shadow: 0 1px 2px rgba(11, 53, 80, 0.04); }
+:where(.dialogHeader) { display: flex; flex-shrink: 0; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border); background-color: var(--card); padding: 14px 16px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
 :where(.dialogHeaderMobileFull) { background-color: var(--card); padding: 14px 16px; }
 .dialogHeader .dialogHeaderTopRow { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; }
-.dialogHeaderTopRow .mobileBackBtn { display: inline-grid; width: 34px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.04); }
+.dialogHeaderTopRow .mobileBackBtn { display: inline-grid; width: 40px; height: 40px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .dialogHeaderTopRow .mobileBackBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 18%, var(--border)); }
 .dialogHeaderTopRow .headerTitleCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
-.dialogHeaderTopRow .headerCloseBtn { display: inline-grid; width: 34px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); color: var(--muted-foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.04); }
+.dialogHeaderTopRow .headerCloseBtn { display: inline-grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--muted-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .dialogHeaderTopRow .headerCloseBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 18%, var(--border)); color: var(--foreground); }
 .dialogHeaderTopRow .headerCloseHiddenMobile { display: none; }
 .icon16 { width: 16px; height: 16px; }
@@ -137,14 +149,14 @@
 :where(.dialogBody) { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 16px 20px; }
 :where(.dialogBodyMobileFull) { padding: 16px; }
 :where(.dialogFooter) { margin-top: auto; display: flex; flex-shrink: 0; flex-direction: column-reverse; gap: 10px; border-top: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 32%, transparent); padding: 14px 20px; }
+:where(.dialogFooter) > button, :where(.dialogFooter) > a { width: 100%; }
 :where(.dialogFooterMobileFull) { background-color: var(--card); padding: 14px 16px max(14px, env(safe-area-inset-bottom)) 16px; }
-.dialogFooter .pillOutlineBtn { border-radius: 9999px; }
 :where(.dialogTitle) { margin: 0; font-family: var(--font-heading); font-size: 16px; line-height: 22px; font-weight: 600; color: var(--foreground); }
 :where(.dialogDescription) { margin: 0; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
 /* Section: Sheet (Spring Slide Animations) */
-:where(.sheetOverlay) { position: fixed; inset: 0; z-index: 50; background-color: rgba(11, 25, 40, 0.38); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: uiOverlayFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.sheetOverlay) { position: fixed; inset: 0; z-index: 50; background-color: var(--backdrop-scrim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: uiOverlayFadeIn 200ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .sheetOverlay[data-starting-style], .sheetOverlay[data-ending-style] { opacity: 0; }
-:where(.sheetPopup) { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 16px; background-color: var(--popover); background-clip: padding-box; font-size: 14px; color: var(--popover-foreground); box-shadow: 0 24px 48px -12px rgba(11, 35, 60, 0.24); transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.sheetPopup) { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 16px; background-color: var(--popover); background-clip: padding-box; font-size: 14px; color: var(--popover-foreground); box-shadow: 0 24px 48px -12px var(--shadow-color-strong); transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.sheetPopup[data-side="right"]) { top: 0; bottom: 0; right: 0; height: 100%; width: 75%; border-left: 1px solid var(--border); animation: uiSheetInRight 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 .sheetPopup[data-side="right"][data-starting-style], .sheetPopup[data-side="right"][data-ending-style] { transform: translateX(100%); }
 :where(.sheetPopup[data-side="left"]) { top: 0; bottom: 0; left: 0; height: 100%; width: 75%; border-right: 1px solid var(--border); animation: uiSheetInLeft 260ms cubic-bezier(0.22, 1, 0.36, 1); }
@@ -160,9 +172,9 @@
 :where(.sheetDescription) { margin: 0; font-size: 14px; color: var(--muted-foreground); }
 /* Section: DropdownMenu & Select Primitive */
 .menuPositioner { isolation: isolate; z-index: 50; outline: none; }
-:where(.menuPopup) { z-index: 50; max-height: var(--available-height, 360px); width: var(--anchor-width, auto); min-width: 128px; transform-origin: var(--transform-origin, top); overflow-x: hidden; overflow-y: auto; border-radius: 14px; border: 0; background-color: color-mix(in oklab, var(--popover) 96%, transparent); padding: 6px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 20px 25px -5px rgba(0, 0, 0, 0.14)); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); outline: none; animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.menuPopup) { z-index: 50; max-height: var(--available-height, 360px); width: var(--anchor-width, auto); min-width: 128px; transform-origin: var(--transform-origin, top); overflow-x: hidden; overflow-y: auto; border-radius: 14px; border: 0; background-color: color-mix(in oklab, var(--popover) 96%, transparent); padding: 6px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 20px 25px -5px var(--shadow-color)); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); outline: none; animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .menuPopup[data-starting-style], .menuPopup[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(-4px); }
-:where(.menuSubPopup) { width: auto; min-width: 96px; border-radius: 12px; background-color: var(--popover); padding: 4px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 10px 15px -3px rgba(0, 0, 0, 0.12)); animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.menuSubPopup) { width: auto; min-width: 96px; border-radius: 12px; background-color: var(--popover); padding: 4px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 10px 15px -3px var(--shadow-color)); animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .menuLabel { padding: 4px 6px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .menuLabel[data-inset="true"] { padding-left: 28px; }
 .menuItem { position: relative; display: flex; cursor: default; align-items: center; gap: 6px; border-radius: 8px; padding: 6px 8px; font-size: 14px; outline: none; user-select: none; color: var(--foreground); transition: background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms cubic-bezier(0.22, 1, 0.36, 1); }
@@ -179,11 +191,13 @@
 .menuShortcut { margin-left: auto; font-size: 12px; letter-spacing: 1px; color: var(--muted-foreground); }
 .selectGroupPad { padding: 4px; }
 .selectValueFlex { display: flex; min-width: 0; flex: 1 1 0%; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-:where(.selectTriggerBase) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; gap: 6px; overflow: hidden; border-radius: 10px; border: 1px solid var(--input); background-color: var(--card); padding: 8px 8px 8px 10px; font-size: 14px; white-space: nowrap; outline: none; user-select: none; height: 32px; }
-:where(.selectTriggerBase)[data-size="sm"] { height: 28px; }
+:where(.selectTriggerBase) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; gap: 6px; overflow: hidden; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; font-size: 14px; white-space: nowrap; outline: none; user-select: none; height: var(--btnDefaultH, 40px); transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.selectTriggerBase):hover:not(:disabled) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
+:where(.selectTriggerBase):focus-visible { border-color: var(--ring); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
+:where(.selectTriggerBase)[data-size="sm"] { height: var(--controlHSm, 36px); border-radius: var(--radiusControlSm, 8px); }
 .selectTriggerBase .chevronMuted { pointer-events: none; width: 16px; height: 16px; color: var(--muted-foreground); }
 .selectPos70 { isolation: isolate; z-index: 70; max-width: calc(100dvw - 32px); }
-:where(.selectPopup70) { position: relative; isolation: isolate; z-index: 70; max-height: var(--available-height, 320px); width: var(--anchor-width, auto); min-width: 144px; max-width: calc(100dvw - 32px); overflow-x: hidden; overflow-y: auto; border-radius: 12px; background-color: var(--popover); color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 4px 12px rgba(0, 0, 0, 0.12)); animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.selectPopup70) { position: relative; isolation: isolate; z-index: 70; max-height: var(--available-height, 320px); width: var(--anchor-width, auto); min-width: 144px; max-width: calc(100dvw - 32px); overflow-x: hidden; overflow-y: auto; border-radius: 12px; background-color: var(--popover); color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 4px 12px var(--shadow-color)); animation: uiPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .selectPopup70[data-starting-style], .selectPopup70[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(-4px); }
 .selectItemTextFlex { display: flex; min-width: 0; flex: 1 1 0%; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selectScrollBtn { z-index: 10; display: flex; width: 100%; cursor: default; align-items: center; justify-content: center; background-color: var(--popover); padding: 4px 0; }
@@ -206,33 +220,33 @@
 :where(.tabsListLine) { gap: 4px; border-radius: 0; background-color: transparent; }
 :where(.tabsTrigger) { position: relative; display: inline-flex; height: calc(100% - 1px); flex: 1 1 0%; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; border: 1px solid transparent; background: transparent; padding: 2px 6px; font-size: 14px; font-weight: 500; white-space: nowrap; color: color-mix(in oklab, var(--foreground) 65%, transparent); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
 :where(.tabsTrigger):hover { color: var(--foreground); }
-:where(.tabsTrigger)[data-active] { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+:where(.tabsTrigger)[data-active] { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .tabsContent { flex: 1 1 0%; font-size: 14px; outline: none; }
 /* Section: Sonner Toast Icons & Classes */
 @keyframes toastTickSpring { 0% { transform: scale(0.3) rotate(-10deg); opacity: 0; } 60% { transform: scale(1.14) rotate(2deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
 @keyframes toastCheckDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
-.toastSuccessBadge { display: inline-grid; width: 22px; height: 22px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-image: linear-gradient(135deg, #34d399 0%, #10b981 55%, #059669 100%); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.38), 0 4px 10px -2px rgba(16, 185, 129, 0.5); animation: toastTickSpring 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.toastSuccessBadge { display: inline-grid; width: 22px; height: 22px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-image: var(--tone-success-grad); box-shadow: inset 0 1px 1px color-mix(in oklab, var(--on-solid) 38%, transparent), 0 4px 10px -2px color-mix(in oklab, var(--tone-success-solid) 50%, transparent); animation: toastTickSpring 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .toastSuccessBadge .toastSuccessSvg { width: 14px; height: 14px; }
-.toastSuccessSvg .toastSuccessCheck { stroke: #ffffff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: toastCheckDraw 340ms cubic-bezier(0.22, 1, 0.36, 1) 90ms forwards; }
-.toastIconInfo { width: 20px; height: 20px; flex-shrink: 0; color: #38bdf8; }
-.toastIconWarning { width: 20px; height: 20px; flex-shrink: 0; color: #fbbf24; }
-.toastIconError { width: 20px; height: 20px; flex-shrink: 0; color: #fb7185; }
+.toastSuccessSvg .toastSuccessCheck { stroke: var(--on-solid); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: toastCheckDraw 340ms cubic-bezier(0.22, 1, 0.36, 1) 90ms forwards; }
+.toastIconInfo { width: 20px; height: 20px; flex-shrink: 0; color: var(--tone-info-icon); }
+.toastIconWarning { width: 20px; height: 20px; flex-shrink: 0; color: var(--tone-warning-icon); }
+.toastIconError { width: 20px; height: 20px; flex-shrink: 0; color: var(--destructive); }
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }
 .toastIconLoading { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary); animation: spinKeyframes 1s linear infinite; }
-.toastBox { border-radius: 16px !important; border: 1px solid rgba(255, 255, 255, 0.16) !important; padding: 14px 16px !important; box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.4), 0 8px 18px -6px rgba(0, 0, 0, 0.25) !important; -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important; gap: 12px !important; }
-.sonnerToaster { --normal-bg: oklch(0.21 0.02 45 / 96%); --normal-text: oklch(0.98 0.005 80); --normal-border: oklch(1 0 0 / 16%); --success-bg: oklch(0.23 0.045 155 / 96%); --success-text: oklch(0.98 0.01 155); --success-border: oklch(0.68 0.17 155 / 50%); --error-bg: oklch(0.24 0.075 25 / 96%); --error-text: oklch(0.98 0.01 25); --error-border: oklch(0.66 0.2 25 / 55%); --warning-bg: oklch(0.25 0.06 75 / 96%); --warning-text: oklch(0.98 0.01 80); --warning-border: oklch(0.76 0.16 75 / 50%); --info-bg: oklch(0.23 0.04 240 / 96%); --info-text: oklch(0.98 0.01 240); --info-border: oklch(0.7 0.14 240 / 50%); --border-radius: 16px; }
+.toastBox { border-radius: 16px !important; border: 1px solid color-mix(in oklab, var(--on-solid) 16%, transparent) !important; padding: 14px 16px !important; box-shadow: 0 20px 45px -10px var(--shadow-color-strong), 0 8px 18px -6px var(--shadow-color) !important; -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important; gap: 12px !important; }
+.sonnerToaster { --normal-bg: var(--toast-normal-bg); --normal-text: var(--toast-normal-text); --normal-border: var(--toast-normal-border); --success-bg: var(--toast-success-bg); --success-text: var(--toast-success-text); --success-border: var(--toast-success-border); --error-bg: var(--toast-error-bg); --error-text: var(--toast-error-text); --error-border: var(--toast-error-border); --warning-bg: var(--toast-warning-bg); --warning-text: var(--toast-warning-text); --warning-border: var(--toast-warning-border); --info-bg: var(--toast-info-bg); --info-text: var(--toast-info-text); --info-border: var(--toast-info-border); --border-radius: 16px; }
 .toastTitle { font-size: 14px !important; font-weight: 600 !important; line-height: 19px !important; }
 .toastDescription { font-size: 12px !important; opacity: 0.85 !important; }
-.toastCloseBtn { background-color: #262626 !important; color: #ffffff !important; border-color: rgba(255, 255, 255, 0.20) !important; }
-.toastCloseBtn:hover { background-color: #404040 !important; }
+.toastCloseBtn { background-color: var(--tone-slate-bg) !important; color: var(--tone-slate-fg) !important; border-color: var(--border) !important; }
+.toastCloseBtn:hover { background-color: var(--muted) !important; }
 /* Section: Responsive Breakpoints */
 @media (max-width: 639.98px) {
   .toastCloseBtn { left: auto !important; right: 0 !important; --toast-close-button-start: unset !important; --toast-close-button-end: 0 !important; --toast-close-button-transform: translate(35%, -35%) !important; }
 }
 @media (min-width: 640px) {
-  :where(.dialogOverlayFullScreenMobile) { background-color: rgba(11, 25, 40, 0.38); }
+  :where(.dialogOverlayFullScreenMobile) { background-color: var(--backdrop-scrim); }
   :where(.dialogPopupStandard) { max-width: 384px; }
-  :where(.dialogPopupMobileFull) { inset: auto; top: 50%; left: 50%; translate: -50% -50%; width: calc(100% - 32px); height: auto; max-height: min(90dvh, 850px); max-width: 384px; border-radius: 20px; box-shadow: 0 28px 60px -12px rgba(11, 35, 60, 0.26), 0 0 0 1px var(--border); animation: uiDialogZoomIn 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+  :where(.dialogPopupMobileFull) { inset: auto; top: 50%; left: 50%; translate: -50% -50%; width: calc(100% - 32px); height: auto; max-height: min(90dvh, 850px); max-width: 384px; border-radius: var(--radiusModal, 20px); box-shadow: 0 28px 60px -12px var(--shadow-color-strong), 0 0 0 1px var(--border); animation: uiDialogZoomIn 240ms cubic-bezier(0.22, 1, 0.36, 1); }
   .dialogPopupMobileFull[data-starting-style], .dialogPopupMobileFull[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(8px); }
   :where(.dialogHeader) { padding: 16px 20px; }
   :where(.dialogHeaderMobileFull) { background-color: var(--card); padding: 16px 20px; }
@@ -240,6 +254,7 @@
   .dialogHeaderTopRow .headerCloseHiddenMobile { display: inline-grid; }
   :where(.dialogBodyMobileFull) { padding: 16px 20px; }
   :where(.dialogFooter) { flex-direction: row; align-items: center; justify-content: flex-end; }
+  :where(.dialogFooter) > button, :where(.dialogFooter) > a { width: auto; }
   :where(.dialogFooterMobileFull) { background-color: color-mix(in oklab, var(--muted) 32%, transparent); padding: 14px 20px; }
   :where(.dialogTitle) { font-size: 18px; line-height: 24px; }
   :where(.dialogDescription) { font-size: 13.5px; line-height: 19px; }

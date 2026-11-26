@@ -123,7 +123,7 @@ export function buildStatusUpdateMessage(
           `Courier: ${s.carrier}`,
           ...(s.trackingNumber ? [`Tracking no.: ${s.trackingNumber}`] : []),
           ...(s.trackingUrl ? [`Track shipment: ${s.trackingUrl}`] : []),
-          ...(s.expectedDelivery ? [`Expected delivery: ${formatDate(`${s.expectedDelivery}T00:00:00`)}`] : []),
+          ...(s.expectedDelivery ? [`Estimated delivery: by ${formatDate(`${s.expectedDelivery}T00:00:00`)}`] : []),
         ]
       : []
 
@@ -163,25 +163,42 @@ export function buildReturnDecisionMessage(
     pickupDate?: string | null
     resolutionType?: "refund" | "exchange"
     exchangePreference?: string | null
+    exchangeMode?: "standard" | "doorstep"
   }
 ): string {
   const isExchange = input.resolutionType === "exchange"
-  const kind = isExchange ? "exchange" : "return"
+  const isReplacement = isExchange && /^replacement\s*:/i.test(input.exchangePreference ?? "")
+  const isDoorstep = isExchange && input.exchangeMode === "doorstep"
+  const kind = isReplacement ? "replacement" : isExchange ? "exchange" : "return"
   return [
     `Hi ${input.customerName}! 👋`,
     `Update on your ${kind} request for order *${input.orderCode}* from ${shop.shopName}:`,
     "",
-    input.approved ? "✅ *Approved.*" : `❌ *We couldn't approve this ${kind}.*`,
+    input.approved ? (isDoorstep ? "✅ *Doorstep exchange approved.*" : "✅ *Approved.*") : `❌ *We couldn't approve this ${kind}.*`,
     ...(isExchange && input.exchangePreference
-      ? [`Exchange preference: ${input.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`]
+      ? [
+          `${isReplacement ? "Replacement" : "Exchange preference"}: ${input.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`,
+        ]
       : []),
-    ...(input.approved && input.pickupDate ? [`Pickup date: ${formatDate(input.pickupDate)}. Please keep the items packed and ready.`] : []),
+    ...(input.approved && input.pickupDate
+      ? [
+          isDoorstep
+            ? `Expected doorstep exchange by ${formatDate(input.pickupDate)}. Please keep the old item(s) packed and ready for handover.`
+            : `Expected pickup by ${formatDate(input.pickupDate)}. Please keep the old item(s) packed and ready.`,
+        ]
+      : []),
     ...(input.note ? [input.approved ? `Note: ${input.note}` : `Reason: ${input.note}`] : []),
     ...(input.approved
       ? [
-          isExchange
-            ? "Once the items reach us and are checked, we'll arrange your exchange replacement."
-            : "Once the items reach us and are checked, we'll refund the price of the returned items. Delivery and other charges are not refunded.",
+          isDoorstep
+            ? isReplacement
+              ? "Our delivery partner will bring your fresh replacement (same size & colour) and collect the old item in the same visit — no extra cost."
+              : "Our delivery partner will bring your requested size/variant and collect the old item in the same visit."
+            : isReplacement
+              ? "Once our courier picks up the old item and we inspect it, we'll dispatch a fresh piece of the exact same item (same size & colour) at no extra cost."
+              : isExchange
+                ? "Once our courier picks up the old item and we inspect it, we'll dispatch your requested size/variant."
+                : "Once the items reach us and are checked, we'll refund the price of the returned items. Delivery and other charges are not refunded.",
         ]
       : []),
     "",

@@ -7,7 +7,7 @@
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .fieldShell .controlBox { position: relative; width: 100%; min-width: 0; max-width: 100%; }
 .fieldShell .controlBoxSpaced { margin-top: 8px; }
-.controlBox .errorAlert { position: absolute; left: 0; right: 0; top: 100%; margin: 2px 0 0 0; font-size: 9px; line-height: 13px; font-weight: 500; letter-spacing: -0.2px; color: var(--destructive); }
+.controlBox .errorAlert { position: absolute; left: 0; right: 0; top: 100%; margin: 2px 0 0 0; font-size: 11px; line-height: 15px; font-weight: 500; letter-spacing: -0.1px; color: var(--destructive); }
 .fieldShell .hintText { margin: 4px 0 0 0; font-size: 11px; line-height: 16px; color: var(--muted-foreground); }
 .fieldShell .hintInvisible { visibility: hidden; }
 /* Section: TextField & Leading Affix */
@@ -55,74 +55,59 @@
 .checkboxFieldTextCol .checkboxFieldDesc { font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
 .checkboxFieldWrap .checkboxFieldError { margin: 0; padding-left: 28px; font-size: 11px; line-height: 15px; font-weight: 500; color: var(--destructive); }
 /* Section: SelectField (Crisp White Control Surface + Spring Popover) */
-:where(.selectTrigger) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; gap: 8px; overflow: hidden; border-radius: 10px; border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; text-align: left; font-size: 14px; color: var(--foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.03); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.selectTrigger:hover:not(:disabled) { border-color: color-mix(in oklab, var(--ring) 55%, transparent); }
-.selectTrigger:focus-visible, .selectTrigger[data-popup-open] { border-color: var(--ring); background-color: var(--card); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent); }
+:where(.selectTrigger) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; gap: 8px; overflow: hidden; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; text-align: left; font-size: 14px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.selectTrigger:hover:not(:disabled) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
+.selectTrigger:focus-visible, .selectTrigger[data-popup-open] { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .selectTrigger[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
 .selectTrigger:disabled { cursor: not-allowed; opacity: 0.5; }
-.selectTriggerRevert { border-color: rgba(251, 191, 36, 0.90); background-color: rgba(255, 251, 235, 0.72); color: #451a03; }
-:global(.dark) .selectTriggerRevert { border-color: rgba(180, 83, 9, 0.80); background-color: rgba(69, 26, 3, 0.30); color: #fef3c7; }
-.selectTriggerNext { border-color: rgba(52, 211, 153, 0.90); background-color: rgba(236, 253, 245, 0.65); color: #022c22; }
-:global(.dark) .selectTriggerNext { border-color: rgba(4, 120, 87, 0.80); background-color: rgba(2, 44, 34, 0.28); color: #d1fae5; }
+.selectTriggerRevert { border-color: var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); color: var(--tone-warning-fg-strong); }
+.selectTriggerNext { border-color: var(--tone-success-border); background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
 .selectTriggerActiveFilter { border-color: color-mix(in oklab, var(--primary) 60%, transparent); background-color: color-mix(in oklab, var(--primary) 6%, transparent); font-weight: 500; color: var(--foreground); }
-.selectTriggerPill { border: 0; border-radius: 9999px; background-color: var(--card); padding-left: 20px; padding-right: 20px; font-weight: 500; box-shadow: var(--store-elevation-sm, 0 1px 3px rgba(0, 0, 0, 0.06)); }
-.selectTriggerPill:hover:not(:disabled) { border-color: transparent; box-shadow: var(--store-elevation-md, 0 4px 12px rgba(0, 0, 0, 0.08)); }
-.selectTriggerPill:focus-visible, .selectTriggerPill[data-popup-open] { border-color: transparent; box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md, 0 4px 12px rgba(0, 0, 0, 0.08)); }
+.selectTriggerPill { border: 0; border-radius: 9999px; background-color: var(--card); padding-left: 20px; padding-right: 20px; font-weight: 500; box-shadow: var(--store-elevation-sm, 0 1px 3px var(--shadow-color-soft)); }
+.selectTriggerPill:hover:not(:disabled) { border-color: transparent; box-shadow: var(--store-elevation-md, 0 4px 12px var(--shadow-color)); }
+.selectTriggerPill:focus-visible, .selectTriggerPill[data-popup-open] { border-color: transparent; box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md, 0 4px 12px var(--shadow-color)); }
 .selectTrigger .triggerContent { display: flex; min-width: 0; flex: 1 1 0%; align-items: center; gap: 6px; text-align: left; }
 .selectTrigger .triggerContentPlaceholder { color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
-.triggerContent .revertIcon { width: 14px; height: 14px; flex-shrink: 0; color: #d97706; }
-:global(.dark) .triggerContent .revertIcon { color: #fbbf24; }
-.triggerContent .nextIcon { width: 14px; height: 14px; flex-shrink: 0; color: #059669; }
-:global(.dark) .triggerContent .nextIcon { color: #34d399; }
+.triggerContent .revertIcon { width: 14px; height: 14px; flex-shrink: 0; color: var(--tone-warning-icon); }
+.triggerContent .nextIcon { width: 14px; height: 14px; flex-shrink: 0; color: var(--tone-success-icon); }
 .triggerContent .prefixLabel { flex-shrink: 0; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .triggerContent .valueTrunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .triggerContent .valueTruncMedium { font-weight: 500; }
-.triggerContent .revertBadge { margin-left: auto; flex-shrink: 0; border-radius: 9999px; background-color: rgba(253, 230, 138, 0.85); padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #78350f; }
-:global(.dark) .triggerContent .revertBadge { background-color: rgba(120, 53, 15, 0.60); color: #fde68a; }
-.triggerContent .nextBadge { margin-left: auto; flex-shrink: 0; border-radius: 9999px; background-color: rgba(167, 243, 208, 0.85); padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #064e3b; }
-:global(.dark) .triggerContent .nextBadge { background-color: rgba(6, 78, 59, 0.60); color: #a7f3d0; }
+.triggerContent .revertBadge { margin-left: auto; flex-shrink: 0; border-radius: 9999px; background-color: var(--tone-warning-pill-bg); padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tone-warning-pill-fg); }
+.triggerContent .nextBadge { margin-left: auto; flex-shrink: 0; border-radius: 9999px; background-color: var(--tone-success-pill-bg); padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tone-success-pill-fg); }
 .triggerContent .countBadge { margin-left: auto; display: inline-flex; height: 20px; min-width: 20px; flex-shrink: 0; align-items: center; justify-content: center; gap: 4px; border-radius: 9999px; padding: 0 6px; font-size: 11px; line-height: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.countBadgeAttention { background-color: rgba(245, 158, 11, 0.20); color: #451a03; box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.40); }
-:global(.dark) .countBadgeAttention { background-color: rgba(245, 158, 11, 0.25); color: #fde68a; }
+.countBadgeAttention { background-color: color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); color: var(--tone-warning-fg-strong); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone-warning-solid) 40%, transparent); }
 .countBadgeDefault { background-color: color-mix(in oklab, var(--foreground) 10%, transparent); color: var(--foreground); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--border) 70%, transparent); }
-.attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: #f59e0b; }
+.attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: var(--tone-warning-solid); }
 .selectTrigger .chevronTriggerIcon { flex-shrink: 0; color: var(--muted-foreground); transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1); }
 .selectTrigger[data-popup-open] .chevronTriggerIcon { transform: rotate(180deg); }
 .selectPositioner { z-index: 70; max-width: calc(100dvw - 32px); outline: none; }
-.selectPositioner .selectPopup { max-height: var(--available-height, 320px); min-width: var(--anchor-width, 160px); max-width: calc(100dvw - 32px); transform-origin: var(--transform-origin, top); overflow-x: hidden; overflow-y: auto; border-radius: 14px; border: 0; background-color: var(--popover); padding: 6px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 20px 25px -5px rgba(0, 0, 0, 0.14)); outline: none; animation: formPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.selectPositioner .selectPopup { max-height: var(--available-height, 320px); min-width: var(--anchor-width, 160px); max-width: calc(100dvw - 32px); transform-origin: var(--transform-origin, top); overflow-x: hidden; overflow-y: auto; border-radius: 14px; border: 0; background-color: var(--popover); padding: 6px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 20px 25px -5px var(--shadow-color)); outline: none; animation: formPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .selectPositioner .selectPopup[data-starting-style], .selectPositioner .selectPopup[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(-4px); }
 .selectPopup .selectList { display: flex; flex-direction: column; gap: 4px; outline: none; }
 .selectList .selectItem { position: relative; display: flex; min-width: 0; max-width: 100%; cursor: pointer; align-items: center; gap: 8px; border-radius: 8px; padding: 8px 36px 8px 12px; font-size: 14px; outline: none; user-select: none; transition: background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms cubic-bezier(0.22, 1, 0.36, 1); }
 .selectList .selectItemDefault[data-highlighted] { background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--foreground); }
 .selectList .selectItemDefault[data-selected] { font-weight: 600; color: var(--primary); }
-.selectList .selectItemRevert { border: 1px solid rgba(252, 211, 77, 0.60); background-color: rgba(255, 251, 235, 0.60); color: #451a03; }
-.selectList .selectItemRevert[data-highlighted] { background-color: rgba(254, 243, 199, 0.90); }
+.selectList .selectItemRevert { border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); color: var(--tone-warning-fg-strong); }
+.selectList .selectItemRevert[data-highlighted] { background-color: var(--tone-warning-bg); }
 .selectList .selectItemRevert[data-selected] { font-weight: 600; }
-:global(.dark) .selectList .selectItemRevert { border-color: rgba(146, 64, 14, 0.50); background-color: rgba(69, 26, 3, 0.25); color: #fde68a; }
-:global(.dark) .selectList .selectItemRevert[data-highlighted] { background-color: rgba(120, 53, 15, 0.45); }
-.selectList .selectItemNext { border: 1px solid rgba(110, 231, 183, 0.60); background-color: rgba(236, 253, 245, 0.60); font-weight: 500; color: #022c22; }
-.selectList .selectItemNext[data-highlighted] { background-color: rgba(209, 250, 229, 0.90); }
+.selectList .selectItemNext { border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg); font-weight: 500; color: var(--tone-success-fg); }
+.selectList .selectItemNext[data-highlighted] { background-color: var(--tone-success-pill-bg); }
 .selectList .selectItemNext[data-selected] { font-weight: 600; }
-:global(.dark) .selectList .selectItemNext { border-color: rgba(6, 95, 70, 0.50); background-color: rgba(2, 44, 34, 0.25); color: #a7f3d0; }
-:global(.dark) .selectList .selectItemNext[data-highlighted] { background-color: rgba(6, 78, 59, 0.45); }
 .selectList .selectItemNone { color: var(--muted-foreground); }
 .selectItem .itemTextTrunc { min-width: 0; flex: 1 1 0%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .selectItem .currentPillBadge { flex-shrink: 0; border-radius: 9999px; background-color: var(--muted); padding: 2px 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted-foreground); }
-.selectItem .nextPillBadge { flex-shrink: 0; border-radius: 9999px; background-color: rgba(167, 243, 208, 0.85); padding: 2px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #064e3b; }
-:global(.dark) .selectItem .nextPillBadge { background-color: rgba(6, 78, 59, 0.60); color: #a7f3d0; }
-.selectItem .revertPillBadge { flex-shrink: 0; border-radius: 9999px; background-color: rgba(253, 230, 138, 0.85); padding: 2px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #78350f; }
-:global(.dark) .selectItem .revertPillBadge { background-color: rgba(120, 53, 15, 0.60); color: #fde68a; }
+.selectItem .nextPillBadge { flex-shrink: 0; border-radius: 9999px; background-color: var(--tone-success-pill-bg); padding: 2px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tone-success-pill-fg); }
+.selectItem .revertPillBadge { flex-shrink: 0; border-radius: 9999px; background-color: var(--tone-warning-pill-bg); padding: 2px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tone-warning-pill-fg); }
 .selectItem .itemCountBadge { display: inline-flex; height: 20px; min-width: 20px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; padding: 0 6px; font-size: 11px; line-height: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .selectItem .itemIndicator { position: absolute; right: 12px; display: grid; place-items: center; }
 .selectItem .indicatorPrimary { color: var(--primary); }
-.selectItem .indicatorRevert { color: #b45309; }
-:global(.dark) .selectItem .indicatorRevert { color: #fcd34d; }
-.selectItem .indicatorNext { color: #047857; }
-:global(.dark) .selectItem .indicatorNext { color: #6ee7b7; }
+.selectItem .indicatorRevert { color: var(--tone-warning-icon); }
+.selectItem .indicatorNext { color: var(--tone-success-fg-strong); }
 /* Section: DateField & Calendar Popover */
-:where(.dateTrigger) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; border-radius: 12px; border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; text-align: left; font-size: 14px; color: var(--foreground); box-shadow: 0 1px 2px rgba(11, 53, 80, 0.03); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.dateTrigger:hover { border-color: color-mix(in oklab, var(--foreground) 20%, transparent); }
-.dateTrigger:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 25%, transparent); }
+:where(.dateTrigger) { display: flex; width: 100%; min-width: 0; max-width: 100%; align-items: center; justify-content: space-between; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; text-align: left; font-size: 14px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.dateTrigger:hover:not(:disabled) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
+.dateTrigger:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .dateTriggerClearable { padding-right: 56px; }
 .dateTriggerError { border-color: var(--destructive); }
 .dateTriggerError:focus-visible { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
@@ -133,12 +118,12 @@
 .relativeWrap .clearDateBtn { position: absolute; top: 50%; right: 32px; transform: translateY(-50%); border-radius: 9999px; border: 0; background: transparent; padding: 2px; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
 .relativeWrap .clearDateBtn:hover { background-color: var(--muted); color: var(--foreground); }
 .datePositioner { isolation: isolate; z-index: 50; outline: none; }
-.datePositioner .datePopup { z-index: 50; width: 288px; max-width: calc(100vw - 24px); border-radius: 16px; border: 0; background-color: var(--popover); padding: 12px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 25px 50px -12px rgba(0, 0, 0, 0.25)); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); outline: none; animation: formPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.datePositioner .datePopup { z-index: 50; width: 288px; max-width: calc(100vw - 24px); border-radius: 16px; border: 0; background-color: var(--popover); padding: 12px; color: var(--popover-foreground); box-shadow: var(--store-elevation-md, 0 25px 50px -12px var(--shadow-color-strong)); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); outline: none; animation: formPopoverPopIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .datePositioner .datePopup[data-starting-style], .datePositioner .datePopup[data-ending-style] { opacity: 0; transform: scale(0.95) translateY(-4px); }
 /* Section: Field Heights, Pill Modifiers & Icon-Clearance Paddings (Ordered so Icon Paddings Always Win) */
-:where(.fieldHeightMd) { height: 40px; }
-:where(.fieldHeightLg) { height: 44px; }
-:where(.fieldPill) { height: 48px; border-radius: 9999px; padding-left: 20px; padding-right: 20px; }
+:where(.fieldHeightMd) { height: var(--controlHMd, 40px); }
+:where(.fieldHeightLg) { height: var(--controlHLg, 44px); }
+:where(.fieldPill) { height: var(--controlHXl, 48px); border-radius: var(--radiusPill, 9999px); padding-left: 20px; padding-right: 20px; }
 .inputPlNarrow { padding-left: 36px; }
 .inputPlWide { padding-left: 48px; }
 .inputPasswordPr { padding-right: 40px; }
@@ -146,9 +131,9 @@
 .searchInputDefault { padding-left: 38px; padding-right: 12px; }
 .searchInputClearable { padding-left: 38px; padding-right: 38px; }
 .searchInputDualAction { padding-left: 38px; padding-right: 66px; }
-.searchInputPill { border: 0; border-radius: 9999px; background-color: var(--card); padding-left: 46px; padding-right: 20px; box-shadow: var(--store-elevation-sm, 0 1px 3px rgba(0, 0, 0, 0.06)); transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms cubic-bezier(0.22, 1, 0.36, 1); }
-.searchInputPill:hover:not(:disabled):not(:focus-visible) { border-color: transparent; box-shadow: var(--store-elevation-md, 0 4px 12px rgba(0, 0, 0, 0.08)); }
-.searchInputPill:focus-visible { border-color: transparent; background-color: var(--card); box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md, 0 4px 12px rgba(0, 0, 0, 0.08)); }
+.searchInputPill { border: 0; border-radius: 9999px; background-color: var(--card); padding-left: 46px; padding-right: 20px; box-shadow: var(--store-elevation-sm, 0 1px 3px var(--shadow-color-soft)); transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.searchInputPill:hover:not(:disabled):not(:focus-visible) { border-color: transparent; box-shadow: var(--store-elevation-md, 0 4px 12px var(--shadow-color)); }
+.searchInputPill:focus-visible { border-color: transparent; background-color: var(--card); box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md, 0 4px 12px var(--shadow-color)); }
 .searchInputPillSingleAction { padding-right: 44px; }
 .searchInputPillDualAction { padding-right: 72px; }
 .datePopup .calHeaderRow { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding-bottom: 8px; }
@@ -172,5 +157,5 @@
 .calFooterRow .clearActionBtn:hover { color: var(--destructive); }
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
-  .controlBox .errorAlert { font-size: 10px; line-height: 14px; }
+  .controlBox .errorAlert { font-size: 12px; line-height: 16px; }
 }

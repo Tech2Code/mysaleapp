@@ -1,6 +1,6 @@
 /* Section: WhatsApp Floating Action Button */
 @keyframes fabPingKeyframes { 0% { transform: scale(1); opacity: 0.25; } 75%, 100% { transform: scale(1.45); opacity: 0; } }
-.fabLink { position: fixed; right: 16px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; width: 48px; height: 48px; place-items: center; border-radius: 9999px; background-color: var(--whatsapp-solid); color: #ffffff; box-shadow: 0 20px 25px -5px color-mix(in oklab, var(--whatsapp) 30%, transparent), 0 8px 10px -6px color-mix(in oklab, var(--whatsapp) 30%, transparent); }
+.fabLink { position: fixed; right: 16px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; width: 48px; height: 48px; place-items: center; border-radius: 9999px; background-color: var(--whatsapp-solid); color: var(--on-solid); box-shadow: 0 20px 25px -5px color-mix(in oklab, var(--whatsapp) 30%, transparent), 0 8px 10px -6px color-mix(in oklab, var(--whatsapp) 30%, transparent); }
 .fabLink .fabPulse { position: absolute; inset: 0; border-radius: 9999px; background-color: var(--whatsapp); animation: fabPingKeyframes 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
 .fabLink .fabIcon { position: relative; width: 24px; height: 24px; }
 @media (max-width: 639.98px) {

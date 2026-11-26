@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowRightIcon, ClockIcon, LayoutGridIcon, ListIcon, PackageIcon } from "lucide-react"
+import { ArrowRightIcon, ClockIcon, LayoutGridIcon, ListIcon, PackageIcon, ShieldCheckIcon, UserIcon } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { OrderStatusBadge } from "@/components/shared/order-status-badge"
@@ -13,6 +13,48 @@ import styles from "./admin-orders.module.css"
 
 const SEEN_ORDERS_KEY = "admin_seen_orders"
 const MAX_SEEN_ORDERS = 500
+
+type ActorTag = { label: string; kind: "admin" | "customer" | "system" }
+
+/** Compact actor indicator for admin list rows: who cancelled, rejected, or opened a return/exchange. */
+function getStatusActorTag(o: Order): ActorTag | null {
+  if (o.status === "cancelled") {
+    if (o.cancellation?.by === "admin") return { label: "Cancelled by admin", kind: "admin" }
+    if (o.cancellation?.by === "customer") return { label: "Cancelled by customer", kind: "customer" }
+    if (o.cancellation?.by === "system") return { label: "Auto-cancelled", kind: "system" }
+    return null
+  }
+  if (o.status === "delivered" && o.returnStage) {
+    if (o.returnStage.key === "rejected") return { label: "Rejected by admin", kind: "admin" }
+    if (o.returnStage.key === "withdrawn") return { label: "Return cancelled by customer", kind: "customer" }
+    if (o.returnStage.directReturn) return { label: "Return recorded by admin", kind: "admin" }
+    return o.returnStage.requestedBy === "admin"
+      ? { label: "Requested by admin", kind: "admin" }
+      : { label: "Requested by customer", kind: "customer" }
+  }
+  return null
+}
+
+function ActorMetaLine({ tag }: { tag: ActorTag | null }) {
+  if (!tag) return null
+  const Icon = tag.kind === "admin" ? ShieldCheckIcon : tag.kind === "system" ? ClockIcon : UserIcon
+  return (
+    <div className={styles.actorMetaLine}>
+      <Icon
+        aria-hidden
+        className={cn(
+          styles.actorMetaIcon,
+          tag.kind === "admin"
+            ? styles.actorMetaIconAdmin
+            : tag.kind === "system"
+              ? styles.actorMetaIconSystem
+              : styles.actorMetaIconCustomer
+        )}
+      />
+      <span>{tag.label}</span>
+    </div>
+  )
+}
 
 function readSeenOrders(): Set<string> {
   try {
@@ -195,6 +237,7 @@ export function OrdersTable({
                       <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
                       <PaymentBadge status={o.paymentStatus} orderStatus={o.status} refundedAmount={o.refundedAmount} paidAmount={o.paymentAmount ?? o.total} />
                     </div>
+                    <ActorMetaLine tag={getStatusActorTag(o)} />
                     <div className={styles.updatedLine}>
                       <ClockIcon className={styles.iconXs} />
                       <span>Status updated:</span>
@@ -310,6 +353,7 @@ export function OrdersTable({
                     <TableCell>
                       <div className={styles.cellStatusWrap}>
                         <OrderStatusBadge status={o.status} returnStage={o.returnStage} paymentStatus={o.paymentStatus} audience="admin" />
+                        <ActorMetaLine tag={getStatusActorTag(o)} />
                         <span className={styles.cellUpdatedSub}>Updated {formatDateTime(o.updatedAt)}</span>
                       </div>
                     </TableCell>

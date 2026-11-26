@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ORDER_STATUSES, PAYMENT_STATUSES, canVerifyPayment, isAwaitingPayment, mapFees, mapOrder, normalizePricing, type OrderRow } from "./types"
+import { ORDER_STATUSES, PAYMENT_STATUSES, canVerifyPayment, isAwaitingPayment, mapFees, mapOrder, mapOrderWithHistory, normalizePricing, type OrderRow } from "./types"
 
 const row: OrderRow = {
   id: "id",
@@ -119,6 +119,51 @@ describe("mapOrder", () => {
       phone: "+91 98765 43210",
       whatsappNumber: "919876543210",
       email: "hi@example.com",
+    })
+  })
+
+  it("maps returnRequests exchangeMode, requestedBy, and exchangeShipping on detail rows", () => {
+    const detailed = mapOrderWithHistory({
+      ...row,
+      status: "delivered",
+      return_requests: [
+        {
+          id: "req-1",
+          items: [{ productId: "p", name: "Lamp", quantity: 1 }],
+          reason: "Damaged",
+          details: null,
+          status: "approved",
+          requested_by: "admin",
+          admin_note: "Doorstep swap",
+          created_at: "2026-01-02T10:00:00Z",
+          decided_at: "2026-01-02T11:00:00Z",
+          pickup_date: "2026-01-04",
+          picked_up_at: null,
+          resolution_type: "exchange",
+          exchange_preference: "Replacement: Same item, same size & colour",
+          exchange_mode: "doorstep",
+          exchange_status: null,
+          exchange_shipped_at: null,
+          exchange_delivered_at: null,
+          exchange_tracking: "Delhivery · DLV123",
+          exchange_shipping: {
+            carrier: "Delhivery",
+            trackingNumber: "DLV123",
+            trackingUrl: "https://delhivery.com/track/DLV123",
+            expectedDelivery: "2026-01-04",
+          },
+        },
+      ],
+    })
+    expect(detailed.returnRequests[0]).toMatchObject({
+      requestedBy: "admin",
+      exchangeMode: "doorstep",
+      exchangeShipping: { carrier: "Delhivery", trackingNumber: "DLV123" },
+    })
+    expect(detailed.returnStage).toMatchObject({
+      key: "approved",
+      label: "Doorstep replacement",
+      requestedBy: "admin",
     })
   })
 })

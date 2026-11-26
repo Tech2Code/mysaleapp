@@ -1,3 +1,6 @@
+@import "../styles/theme-store.css";
+@import "../styles/theme-admin.css";
+
 @keyframes blob {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
   33% { transform: translate3d(30px, -40px, 0) scale(1.08); }
@@ -12,9 +15,8 @@
   50% { transform: translate3d(0, -10px, 0); }
 }
 
-/* Warm artisanal palette: cream, terracotta, blush, deep cocoa (Used by Admin Panel) */
+/* Shared Structural & Layout Tokens (Theme colors live in src/styles/theme-store.css and src/styles/theme-admin.css) */
 :root {
-  /* Heights of the fixed bars. Sticky elements and anchor jumps read these, so they never hide under a bar. */
   --store-header-h: 64px;
   --admin-topbar-h: 56px;
   --app-header-h: var(--store-header-h);
@@ -23,184 +25,28 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-heading: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 
-  --background: oklch(0.985 0.008 75);
-  --foreground: oklch(0.24 0.03 45);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.03 45);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.03 45);
-  --primary: oklch(0.58 0.14 40);
-  --primary-foreground: oklch(0.99 0.005 75);
-  --secondary: oklch(0.95 0.025 60);
-  --secondary-foreground: oklch(0.3 0.04 45);
-  --muted: oklch(0.955 0.012 70);
-  --muted-foreground: oklch(0.48 0.03 50);
-  --accent: oklch(0.93 0.04 20);
-  --accent-foreground: oklch(0.32 0.06 30);
-  --destructive: oklch(0.58 0.22 27);
-  --success: oklch(0.58 0.13 155);
-  --whatsapp: oklch(0.66 0.17 150);
-  --success-solid: oklch(0.5 0.13 155);
-  --whatsapp-solid: oklch(0.5 0.13 152);
-  --destructive-solid: oklch(0.53 0.2 25);
-  --border: rgba(15, 23, 42, 0.09);
-  --input: rgba(15, 23, 42, 0.14);
-  --ring: oklch(0.58 0.14 40);
-  --radius: 13.6px;
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-  --sidebar: oklch(0.965 0.012 70);
-  --sidebar-foreground: oklch(0.24 0.03 45);
-  --sidebar-primary: oklch(0.58 0.14 40);
-  --sidebar-primary-foreground: oklch(0.99 0.005 75);
-  --sidebar-accent: oklch(0.935 0.025 60);
-  --sidebar-accent-foreground: oklch(0.3 0.04 45);
-  --sidebar-border: rgba(15, 23, 42, 0.06);
-  --sidebar-ring: oklch(0.58 0.14 40);
-
-  --hero-a: oklch(0.93 0.05 50);
-  --hero-b: oklch(0.92 0.05 15);
-  --hero-c: oklch(0.95 0.04 90);
-}
-
-.dark {
-  color-scheme: dark; /* native date pickers, scrollbars and autofill follow the theme */
-  --background: oklch(0.18 0.015 45);
-  --foreground: oklch(0.95 0.01 75);
-  --card: oklch(0.22 0.018 45);
-  --card-foreground: oklch(0.95 0.01 75);
-  --popover: oklch(0.22 0.018 45);
-  --popover-foreground: oklch(0.95 0.01 75);
-  --primary: oklch(0.72 0.13 45);
-  --primary-foreground: oklch(0.18 0.02 45);
-  --secondary: oklch(0.27 0.02 45);
-  --secondary-foreground: oklch(0.95 0.01 75);
-  --muted: oklch(0.26 0.015 45);
-  --muted-foreground: oklch(0.72 0.02 60);
-  --accent: oklch(0.3 0.04 25);
-  --accent-foreground: oklch(0.95 0.01 75);
-  --destructive: oklch(0.7 0.19 22);
-  --success: oklch(0.72 0.14 155);
-  --whatsapp: oklch(0.72 0.17 150);
-  --success-solid: oklch(0.5 0.13 155);
-  --whatsapp-solid: oklch(0.5 0.13 152);
-  --destructive-solid: oklch(0.53 0.2 25);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.13 45);
-  --sidebar: oklch(0.16 0.015 45);
-  --sidebar-foreground: oklch(0.95 0.01 75);
-  --sidebar-primary: oklch(0.72 0.13 45);
-  --sidebar-primary-foreground: oklch(0.18 0.02 45);
-  --sidebar-accent: oklch(0.24 0.02 45);
-  --sidebar-accent-foreground: oklch(0.95 0.01 75);
-  --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.72 0.13 45);
-
-  --hero-a: oklch(0.3 0.06 45);
-  --hero-b: oklch(0.28 0.06 15);
-  --hero-c: oklch(0.26 0.04 80);
-}
-
-:root:has([data-slot="admin-layout"]) {
-  --app-header-h: var(--admin-topbar-h);
-}
-
-/* Storefront Palette — Approach 2: Pure Crisp White Canvas + Borderless Tonal & Diffused-Shadow Depth
- * - Main Page Canvas (`--background`): Pure Crisp White (#FFFFFF) so product imagery and typography pop
- * - Section Tint (`--store-section-tint: #F5F8FC`): Soft tonal contrast for PageHeader banners, Filter bars & Footer
- * - Cards & Controls (`--card: #FFFFFF`): Borderless diffused ambient elevation shadow (`--store-elevation-sm`)
- * - Support (`--foreground: #0B3550` Ocean Navy) & Primary Accent (`--primary: #FF6B5A` Vibrant Coral)
- */
-:root:not(:has([data-slot="admin-layout"])) {
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --store-calm-bg: #FFFFFF;
-  --store-calm-card: #FFFFFF;
-  --store-section-tint: #F5F8FC;
-  --store-sky-surface: #EEF6FC;
-  --store-support: #0B4A6F;
-  --store-support-fg: #F4F9FD;
-  --store-support-surface: #F1F5F9;
-  --store-support-muted: #4E6172;
-  --store-accent: #FF6B5A;
-  --store-accent-hover: #F25543;
-  --store-accent-fg: #FFFFFF;
-  --store-glass-bg: color-mix(in oklab, var(--background) 74%, transparent);
-  --store-glass-border: rgba(11, 53, 80, 0.05);
-  --store-elevation-sm: 0 4px 20px -4px rgba(11, 53, 80, 0.065), 0 2px 6px -1px rgba(11, 53, 80, 0.035), 0 0 0 1px rgba(11, 53, 80, 0.04);
-  --store-elevation-md: 0 14px 34px -8px rgba(11, 53, 80, 0.10), 0 4px 10px -2px rgba(11, 53, 80, 0.045), 0 0 0 1px rgba(11, 53, 80, 0.05);
-
-  --background: #FFFFFF;
-  --foreground: #0B3550;
-  --card: #FFFFFF;
-  --card-foreground: #0B3550;
-  --popover: #FFFFFF;
-  --popover-foreground: #0B3550;
-  --primary: #FF6B5A;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F1F5F9;
-  --secondary-foreground: #0B3550;
-  --muted: #F4F6F9;
-  --muted-foreground: #4E6172;
-  --accent: #FFE8E5;
-  --accent-foreground: #0B4A6F;
-  --border: rgba(11, 53, 80, 0.055);
-  --input: rgba(11, 53, 80, 0.09);
-  --ring: #FF6B5A;
-
-  --hero-a: rgba(255, 107, 90, 0.11);
-  --hero-b: rgba(14, 116, 144, 0.08);
-  --hero-c: rgba(56, 189, 248, 0.12);
-  --text-gradient-mid: #0284C7;
-}
-
-.dark:not(:has([data-slot="admin-layout"])) {
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --store-calm-bg: #0B0F17;
-  --store-calm-card: #131924;
-  --store-section-tint: #0F1520;
-  --store-sky-surface: #0E1929;
-  --store-support: #162B40;
-  --store-support-fg: #F0F7FC;
-  --store-support-surface: #1A2230;
-  --store-support-muted: #94A3B8;
-  --store-accent: #FF6B5A;
-  --store-accent-hover: #FF8273;
-  --store-accent-fg: #FFFFFF;
-  --store-glass-bg: color-mix(in oklab, var(--background) 74%, transparent);
-  --store-glass-border: rgba(255, 255, 255, 0.06);
-  --store-elevation-sm: 0 8px 24px -6px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --store-elevation-md: 0 16px 36px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.09);
-
-  --background: #0B0F17;
-  --foreground: #F0F6FC;
-  --card: #131924;
-  --card-foreground: #F0F6FC;
-  --popover: #131924;
-  --popover-foreground: #F0F6FC;
-  --primary: #FF6B5A;
-  --primary-foreground: #FFFFFF;
-  --secondary: #1B2332;
-  --secondary-foreground: #F0F6FC;
-  --muted: #171E2B;
-  --muted-foreground: #94A3B8;
-  --accent: #2D1D24;
-  --accent-foreground: #FF8273;
-  --border: rgba(255, 255, 255, 0.07);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #FF6B5A;
-
-  --hero-a: rgba(255, 107, 90, 0.15);
-  --hero-b: rgba(56, 189, 248, 0.12);
-  --hero-c: rgba(255, 107, 90, 0.08);
-  --text-gradient-mid: #38BDF8;
+  --focusRing: 0 0 0 3px color-mix(in oklab, var(--ring) 32%, transparent);
+  --radiusControl: 8px;
+  --radiusControlSm: 6px;
+  --radiusCard: 12px;
+  --radiusPanel: 10px;
+  --radiusModal: 16px;
+  --radiusPill: 9999px;
+  --controlHXs: 28px;
+  --controlHSm: 36px;
+  --controlHMd: 40px;
+  --controlHLg: 44px;
+  --controlHXl: 48px;
+  --btnDefaultH: 40px;
+  --btnDefaultPx: 16px;
+  --radius: var(--radiusCard);
+  --radius-sm: var(--radiusControlSm);
+  --radius-md: var(--radiusControl);
+  --radius-lg: var(--radiusCard);
+  --radius-xl: var(--radiusModal);
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
 }
 
 @layer base {
@@ -401,7 +247,7 @@
     var(--background);
 }
 .text-gradient {
-  background-image: linear-gradient(110deg, var(--primary), var(--text-gradient-mid, oklch(0.6 0.16 15)), var(--primary));
+  background-image: linear-gradient(110deg, var(--primary), var(--text-gradient-mid), var(--primary));
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -422,7 +268,7 @@
   }
 }
 .shimmer {
-  background-image: linear-gradient(90deg, transparent, oklch(1 0 0 / 35%), transparent);
+  background-image: linear-gradient(90deg, transparent, color-mix(in oklab, var(--on-solid) 35%, transparent), transparent);
   background-size: 200% 100%;
   animation: shimmer 2.4s linear infinite;
 }
@@ -573,7 +419,7 @@
 [data-skeleton] ::placeholder { color: transparent !important; }
 /* 2. Atomic things become one block; whatever is inside keeps its size but is not painted. */
 [data-skeleton] :is(
-  button, input, textarea, select, img, video, canvas, iframe, svg,
+  button:not([data-skeleton-card]), input, textarea, select, img, video, canvas, iframe, svg,
   [role="img"], [role="button"], [role="switch"], [role="combobox"], [role="progressbar"],
   [data-slot="badge"], [data-skeleton-block],
   :is(span, a, label, small, strong, em, b, i, time, code, p, h1, h2, h3, h4, h5, h6, dt, dd, legend, figcaption):not(
@@ -613,7 +459,7 @@
   clip-path: inset(max(0px, calc(50% - 0.5lh)) 20px max(0px, calc(50% - 0.5lh)) 8px round 6px);
 }
 [data-skeleton] :is(
-  button, input, textarea, select, svg,
+  button:not([data-skeleton-card]), input, textarea, select, svg,
   [role="img"], [role="button"], [role="switch"], [role="combobox"], [role="progressbar"],
   [data-slot="badge"], [data-skeleton-block],
   :is(span, a, label, small, strong, em, b, i, time, code, p, h1, h2, h3, h4, h5, h6, dt, dd, legend, figcaption):not(

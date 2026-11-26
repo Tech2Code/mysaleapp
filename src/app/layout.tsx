@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google"
+import { BRAND_PALETTE } from "@/components/shared/brand-glyph"
 import { Providers } from "@/components/shared/providers"
 import { StoreSettingsProvider } from "@/components/store/store-settings-provider"
 import { siteConfig } from "@/config/site"
@@ -54,7 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#EEF6FC" },
+    { media: "(prefers-color-scheme: light)", color: BRAND_PALETTE.themeColor },
     { media: "(prefers-color-scheme: dark)", color: "#0B0F17" },
   ],
   width: "device-width",
@@ -66,7 +67,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} ${styles.rootHtml}`}>
-      <body className={styles.rootBody}>
+      <body suppressHydrationWarning className={styles.rootBody}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var p=location.pathname;if(/^\\/products\\/[^/]+$/.test(p)||p==="/checkout")document.body.setAttribute("data-product-detail","true");else document.body.removeAttribute("data-product-detail")}catch(e){}`,
+          }}
+        />
         <StoreSettingsProvider value={settings}>
           <Providers>{children}</Providers>
         </StoreSettingsProvider>

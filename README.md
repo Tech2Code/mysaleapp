@@ -6,7 +6,7 @@ A fast, installable (PWA) online store where customers pay via **UPI** (with zer
 |---|---|
 | Framework | Next.js 16 (App Router, Cache Components) + TypeScript |
 | UI & Styling | Plain CSS Modules (`*.module.css`, 35 modules), Base UI (`@base-ui/react`), Motion animations |
-| Design System | Borderless Tonal Layering & Specular Elevation (Sky, Ocean & Vibrant Coral) + Admin SaaS Slate & Terracotta |
+| Design System | Dual CSS Variable Themes (`src/styles/theme-store.css` for Storefront Sky/Ocean/Coral & `src/styles/theme-admin.css` for Admin Slate/Terracotta, independent Light & Dark) |
 | Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage, `pg_cron`) |
 | Hosting | Vercel (free Hobby plan) |
 
@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0062_payment_gateway_ready.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0067_decide_doorstep_courier.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -127,9 +127,10 @@ Payment comes **first**: cash on delivery is not supported. It uses direct UPI w
    - **Admin cancel:** Admins can cancel while `pending`, `confirmed`, or `packed`.
    - **Auto-cancel (`pg_cron`):** Unpaid orders (`pending` / `failed`) older than `unpaid_order_expiry_hours` are automatically cancelled every 15 minutes by `expire_unpaid_orders()`.
    - **Automatic stock restore:** Cancelling an order automatically restores reserved stock via the `orders_restock_on_cancel` trigger. If the customer had already paid (or submitted a UTR before cancellation), the order appears under **Refund due** so the admin can verify/refund it.
-5. **Returns, Exchanges & Refunds (Myntra-style 4-step flow).**
+5. **Returns, Exchanges & Refunds (Standard & Doorstep Exchange flows).**
    - Within `return_window_days` of delivery, customers can request a **Refund** or an **Exchange / Replacement** (specifying preferred size, colour, or replacement piece, and optionally choosing a saved or newly entered alternate pickup address) for specific items and quantities.
-   - **Step 1 (Requested) → Step 2 (Approved + Pickup date) → Step 2b (Pickup successful) → Step 3 (Goods received & restocked) → Step 4 (Refunded / Replaced).**
+   - **Refund / Standard Exchange:** **Requested → Approved (Expected pickup by date) → Pickup successful → Goods received & restocked → Refunded / Replacement shipped (with courier & estimated delivery) → Replacement delivered.**
+   - **Doorstep Exchange (1-visit swap):** Admins can approve an exchange as a single-visit doorstep swap (optionally adding courier/tracking details right inside the Approve dialog or later via the shipping card) so pickup and replacement happen together.
    - Returns refund **item value only** (delivery and handling charges are non-refundable and clearly itemised). Admins can also initiate a return/exchange on a customer's behalf or undo a return step if clicked by mistake.
 6. **Promo Codes, Verified Product Reviews & Account Controls.**
    - **Promo Codes:** Admins create, enable/disable, or delete percentage or flat discount codes (with min order amount, max discount cap, usage limits, and expiry dates) in **Admin → Settings**; customers apply them at checkout and discounts appear on order summaries and GST invoices.
@@ -168,8 +169,9 @@ src/
     shared/           Shared components (Pagination, Skeletonize, BusyOverlay, ConfirmDialog, InvoiceDocument, ScrollReset…) + shared.module.css & pagination.module.css
   lib/                supabase clients, seo helpers, formatting, validation
   store/              Client state (cart, wishlist, auth) with Zustand
+  styles/             Independent Light & Dark CSS variable theme files (`theme-store.css`, `theme-admin.css`)
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0062) + seed
+supabase/             SQL migrations (0001..0067) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -183,7 +185,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (30 test files, 829 tests) |
+| `npm test` | Run the Vitest unit test suite (30 test files, 834 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

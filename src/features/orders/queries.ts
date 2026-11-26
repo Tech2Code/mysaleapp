@@ -6,7 +6,17 @@ import { getServerSupabase } from "@/lib/supabase/server"
 import { resolveOrderPeriod } from "./dashboard-range"
 import { mapOrder, mapOrderWithHistory, type Order, type OrderRow, type OrderWithHistory } from "./types"
 
-const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const WITH_HISTORY_BASE = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const WITH_HISTORY = "*, history:order_status_history(status, changed_at), returns:order_returns(id, items, reason, refunded, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference, exchange_mode, exchange_status, exchange_shipped_at, exchange_delivered_at, exchange_tracking, exchange_shipping)"
+const LIST_SELECT_BASE = "*, returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const LIST_SELECT = "*, returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference, exchange_mode, exchange_status, exchange_shipped_at, exchange_delivered_at, exchange_tracking)"
+
+const isMissingExchangeCol = (err: { message?: string } | null | undefined) =>
+  Boolean(
+    err?.message &&
+      (err.message.includes("exchange_status") || err.message.includes("exchange_mode") || err.message.includes("exchange_shipping")) &&
+      err.message.includes("does not exist")
+  )
 
 export type CustomerOrderStatusCounts = {
   active: number
@@ -18,21 +28,27 @@ export type CustomerOrderStatusCounts = {
 export async function getMyOrders(filters?: { year?: string; month?: string; status?: string; today?: string }): Promise<Order[]> {
   const user = await requireUser("/account/orders")
   const supabase = await getServerSupabase()
-  let query = supabase
-    .from("orders")
-    .select("*, returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(100)
+  const buildQuery = (selectStr: string) => {
+    let query = supabase
+      .from("orders")
+      .select(selectStr)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100)
 
-  const period = resolveOrderPeriod({ year: filters?.year, month: filters?.month }, filters?.today)
-  if (period.startIso && period.endIso) {
-    query = query.gte("created_at", period.startIso).lt("created_at", period.endIso)
+    const period = resolveOrderPeriod({ year: filters?.year, month: filters?.month }, filters?.today)
+    if (period.startIso && period.endIso) {
+      query = query.gte("created_at", period.startIso).lt("created_at", period.endIso)
+    }
+    return query.returns<OrderRow[]>()
   }
 
-  const { data, error } = await query.returns<OrderRow[]>()
+  let { data, error } = await buildQuery(LIST_SELECT)
+  if (isMissingExchangeCol(error)) {
+    ({ data, error } = await buildQuery(LIST_SELECT_BASE))
+  }
   if (error) throw new Error(error.message)
-  return data.map(mapOrder)
+  return (data ?? []).map(mapOrder)
 }
 
 export async function getMyOrderStatusCounts(): Promise<CustomerOrderStatusCounts> {
@@ -55,16 +71,23 @@ export async function getMyOrderStatusCounts(): Promise<CustomerOrderStatusCount
 export async function getMyOrder(code: string, nextPath = `/account/orders/${code}`): Promise<OrderWithHistory | null> {
   const user = await requireUser(nextPath)
   const supabase = await getServerSupabase()
-  const [{ data, error }, products, shop] = await Promise.all([
+  const fetchOrder = (selectStr: string) =>
     supabase
       .from("orders")
-      .select(WITH_HISTORY)
+      .select(selectStr)
       .eq("user_id", user.id)
       .eq("order_code", code.toUpperCase())
-      .maybeSingle<OrderRow>(),
+      .maybeSingle<OrderRow>()
+
+  const [initialRes, products, shop] = await Promise.all([
+    fetchOrder(WITH_HISTORY),
     getActiveProducts(),
     getStoreSettings(),
   ])
+  let { data, error } = initialRes
+  if (isMissingExchangeCol(error)) {
+    ({ data, error } = await fetchOrder(WITH_HISTORY_BASE))
+  }
   if (error) throw new Error(error.message)
   if (!data) return null
   const order = mapOrderWithHistory(data)

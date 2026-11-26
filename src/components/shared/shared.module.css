@@ -1,5 +1,5 @@
 /* Section: Accordion & Accordion Item */
-.accordionBox { border-radius: 24px; border: 0; background-color: var(--card); padding: 0 20px; box-shadow: var(--store-elevation-sm); }
+.accordionBox { border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 0 20px; box-shadow: var(--store-elevation-sm); }
 .accordionBox .accordionDetails { border-bottom: 1px solid var(--border); }
 .accordionBox .accordionDetails:last-child { border-bottom: 0; }
 .accordionDetails .accordionSummary { display: flex; cursor: pointer; list-style: none; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; font-size: 14px; font-weight: 600; color: var(--foreground); transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
@@ -10,9 +10,9 @@
 .accordionDetails[open] .chevronIcon { transform: rotate(180deg); }
 .accordionDetails .accordionBody { padding-bottom: 20px; font-size: 14px; line-height: 22px; color: var(--muted-foreground); }
 /* Section: Brand Logo & LogoMark */
-.logoMarkBox { position: relative; display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; border-radius: 12px; background-image: linear-gradient(135deg, #d96b38 0%, var(--primary) 50%, #8e2936 100%); font-family: var(--font-heading); font-size: 18px; font-weight: 600; color: #fffaf4; box-shadow: 0 4px 10px -2px color-mix(in oklab, var(--primary) 34%, transparent), inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
-.logoMarkBox .logoSheen { pointer-events: none; position: absolute; left: 0; right: 0; top: 0; height: 50%; background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 100%); }
-.logoMarkBox .glyphRelative { position: relative; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12)); }
+.logoMarkBox { position: relative; display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; border-radius: 12px; background-image: linear-gradient(135deg, var(--logo-grad-start) 0%, var(--primary) 50%, var(--logo-grad-end) 100%); font-family: var(--font-heading); font-size: 18px; font-weight: 600; color: var(--logo-fg); box-shadow: 0 4px 10px -2px color-mix(in oklab, var(--primary) 34%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--on-solid) 25%, transparent); }
+.logoMarkBox .logoSheen { pointer-events: none; position: absolute; left: 0; right: 0; top: 0; height: 50%; background-image: linear-gradient(180deg, color-mix(in oklab, var(--on-solid) 16%, transparent) 0%, transparent 100%); }
+.logoMarkBox .glyphRelative { position: relative; filter: drop-shadow(0 1px 1px var(--shadow-color)); }
 .logoLink { display: flex; min-width: 0; align-items: center; gap: 10px; }
 .logoLink .logoMarkHover { flex-shrink: 0; transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
 .logoLink:hover .logoMarkHover { transform: rotate(-6deg) scale(1.05); }
@@ -22,15 +22,17 @@
 .icon16 { width: 16px; height: 16px; }
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }
 .icon16Spin { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
-.copyBtn { display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); font-size: 12px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.copyBtn:hover { background-color: var(--card); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
-.copyBtnIcon { width: 32px; }
-.copyBtnPill { padding: 0 12px; }
+.copyBtn { display: inline-flex; height: var(--controlHXs); align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); box-shadow: var(--store-elevation-sm); font-size: 12px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.copyBtn:hover { background-color: var(--card); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.copyBtn:active { transform: scale(0.98); }
+.copyBtnIcon { width: var(--controlHXs); }
+.copyBtnPill { padding: 0 10px; }
 .copyBtnCopied { color: var(--success); }
 .copyableRefWrap { display: inline-flex; max-width: 100%; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 4px; vertical-align: middle; }
 .copyableRefWrap .refMonoText { word-break: break-all; font-family: var(--font-mono); }
-.refreshBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.refreshBtn:hover { background-color: var(--card); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.refreshBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.refreshBtn:hover { background-color: var(--card); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.refreshBtn:active { transform: scale(0.98); }
 .refreshBtn:disabled { opacity: 0.7; }
 .readMoreCollapsible { position: relative; overflow: hidden; transition: max-height 500ms ease-out; }
 .readMoreCollapsed { max-height: 152px; }
@@ -43,7 +45,7 @@
 .carouselRegion .carouselViewport { position: relative; }
 .carouselRegion .carouselTrack { margin: 0 -16px; padding: 8px 16px 12px 16px; list-style: none; display: flex; scroll-snap-type: x mandatory; scroll-padding-left: 16px; scroll-padding-right: 16px; gap: 12px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .carouselRegion .carouselTrack::-webkit-scrollbar { display: none; }
-.carouselRegion .carouselArrowBtn { position: absolute; top: 42%; z-index: 10; display: none; width: 42px; height: 42px; transform: translateY(-50%); place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 92%, transparent); color: var(--foreground); box-shadow: 0 12px 24px -6px rgba(11, 35, 60, 0.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.carouselRegion .carouselArrowBtn { position: absolute; top: 42%; z-index: 10; display: none; width: 42px; height: 42px; transform: translateY(-50%); place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 92%, transparent); color: var(--foreground); box-shadow: 0 12px 24px -6px var(--shadow-color-strong); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
 .carouselRegion .carouselArrowBtn:hover:not(:disabled) { background-color: var(--primary); border-color: var(--primary); color: var(--primary-foreground); transform: translateY(-50%) scale(1.06); box-shadow: 0 14px 28px -6px color-mix(in oklab, var(--primary) 42%, transparent); }
 .carouselRegion .carouselArrowBtn:active:not(:disabled) { transform: translateY(-50%) scale(0.95); }
 .carouselRegion .carouselArrowBtn:disabled { pointer-events: none; opacity: 0; transform: translateY(-50%) scale(0.9); }
@@ -75,13 +77,13 @@
 .linesDl .deliveryDd { margin: 0; display: flex; align-items: baseline; gap: 8px; font-weight: 500; color: var(--foreground); }
 .deliveryDd .struckOriginal { color: var(--muted-foreground); }
 .deliveryDd .freeBadgeText { font-weight: 600; color: var(--success); }
-.linesDl .savingsBannerRow { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--success); }
+.priceBreakdown .savingsBannerRow { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--success); }
 .savingsBannerRow .sparkleSvg { width: 14px; height: 14px; flex-shrink: 0; }
 .linesDl .grandTotalRow { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
 .grandTotalRow .grandTotalDt { font-weight: 600; color: var(--foreground); }
 .grandTotalRow .grandTotalDd { margin: 0; font-family: var(--font-heading); font-size: 24px; font-weight: 600; color: var(--foreground); }
 /* Section: Order Summary Card */
-.orderSummaryCard { border-radius: 24px; border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
+.orderSummaryCard { border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
 .orderSummaryBare { border-top: 1px solid var(--border); padding-top: 20px; }
 .summaryTitleRow { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-family: var(--font-sans); font-size: 18px; font-weight: 600; color: var(--foreground); }
 .summaryTitleRow .summaryCountSpan { font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
@@ -103,15 +105,15 @@
 .awaitingPaymentHint { margin: 8px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
 /* Section: Order Timeline & Shipping Info */
 .timelineList { margin: 0; padding: 0; list-style: none; }
-.timelineList .timelineStepLi { display: flex; gap: 16px; }
+.timelineList .timelineStepLi { display: flex; gap: 12px; }
 .timelineStepLi .timelineRailCol { display: flex; flex-shrink: 0; flex-direction: column; align-items: center; }
-.timelineRailCol .stepCircle { position: relative; z-index: 10; display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 2px solid var(--input); background-color: var(--secondary); color: var(--muted-foreground); transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.timelineRailCol .stepCircle { position: relative; z-index: 10; display: grid; width: 28px; height: 28px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 2px solid var(--input); background-color: var(--secondary); color: var(--muted-foreground); transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
 .timelineRailCol .stepCirclePrimary { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); }
-.timelineRailCol .stepCircleDelivered { border-color: var(--success-solid); background-color: var(--success-solid); color: #ffffff; }
-.timelineRailCol .stepCircleCancelled { border-color: var(--destructive-solid); background-color: var(--destructive-solid); color: #ffffff; box-shadow: 0 0 0 4px color-mix(in oklab, var(--destructive) 20%, transparent); }
-.timelineRailCol .stepCircleCurrentPrimary { box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 20%, transparent); }
-.timelineRailCol .stepCircleCurrentSuccess { box-shadow: 0 0 0 4px color-mix(in oklab, var(--success) 25%, transparent); }
-@keyframes pingKeyframes { 75%, 100% { transform: scale(2); opacity: 0; } }
+.timelineRailCol .stepCircleDelivered { border-color: var(--success-solid); background-color: var(--success-solid); color: var(--on-solid); }
+.timelineRailCol .stepCircleCancelled { border-color: var(--destructive-solid); background-color: var(--destructive-solid); color: var(--on-solid); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
+.timelineRailCol .stepCircleCurrentPrimary { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent); }
+.timelineRailCol .stepCircleCurrentSuccess { box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 25%, transparent); }
+@keyframes pingKeyframes { 75%, 100% { transform: scale(1.9); opacity: 0; } }
 .stepCircle .pingRing { position: absolute; inset: 0; border-radius: 9999px; animation: pingKeyframes 2.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 .stepCircle .pingRingDelayed { animation-delay: 1.1s; }
 .stepCircle .pingPrimary1 { background-color: color-mix(in oklab, var(--primary) 40%, transparent); }
@@ -120,34 +122,35 @@
 .stepCircle .pingSuccess2 { background-color: color-mix(in oklab, var(--success) 30%, transparent); }
 .stepCircle .pingDestructive1 { background-color: color-mix(in oklab, var(--destructive) 40%, transparent); }
 .stepCircle .pingDestructive2 { background-color: color-mix(in oklab, var(--destructive) 30%, transparent); }
-.stepCircle .stepIconRelative { position: relative; width: 16px; height: 16px; }
-.stepCircle .stepNumberText { font-size: 12px; font-weight: 600; }
-.timelineRailCol .stepConnector { margin: 6px 0; min-height: 16px; width: 2px; flex: 1 1 0%; border-radius: 9999px; background-color: var(--input); }
+.stepCircle .stepIconRelative { position: relative; width: 14px; height: 14px; }
+.stepCircle .stepNumberText { font-size: 11px; font-weight: 600; }
+.timelineRailCol .stepConnector { margin: 4px 0; min-height: 14px; width: 2px; flex: 1 1 0%; border-radius: 9999px; background-color: var(--input); }
 .timelineRailCol .connectorPrimary { background-color: var(--primary); }
 .timelineRailCol .connectorSuccess { background-color: var(--success); }
 .timelineRailCol .connectorCancelled { background-color: color-mix(in oklab, var(--destructive) 50%, transparent); }
-.timelineStepLi .stepBodyCol { min-width: 0; flex: 1 1 0%; padding-top: 6px; line-height: 1.375; }
-.timelineStepLi .stepBodyPadSm { padding-bottom: 16px; }
-.timelineStepLi .stepBodyPadLg { padding-bottom: 24px; }
-.stepBodyCol .stepTitle { margin: 0; font-weight: 600; color: var(--foreground); }
+.timelineStepLi .stepBodyCol { min-width: 0; flex: 1 1 0%; padding-top: 3px; line-height: 18px; }
+.timelineStepLi .stepBodyPadSm { padding-bottom: 12px; }
+.timelineStepLi .stepBodyPadLg { padding-bottom: 18px; }
+.stepBodyCol .stepTitle { margin: 0; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); }
 .stepBodyCol .stepTitleUpcoming { color: var(--muted-foreground); }
 .stepBodyCol .stepTitleCancelled { color: var(--destructive); }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.stepBodyCol .stepDetailText { margin: 0; font-size: 14px; color: var(--muted-foreground); }
-.stepBodyCol .shippingInfoMargin { margin-top: 12px; }
-.shippingInfoCard { position: relative; display: flex; flex-direction: column; gap: 12px; border-radius: 16px; border: 1px solid #ddd6fe; background-color: rgba(245, 243, 255, 0.65); padding: 16px; }
-:global(.dark) .shippingInfoCard { border-color: rgba(76, 29, 149, 0.50); background-color: rgba(46, 16, 101, 0.22); }
-.shippingInfoCard .shippingDl { margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
-.shippingDl .shippingRow { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 2px; }
-.shippingDl .shippingRowWithAction { padding-right: 56px; }
-.shippingRow .shippingDt { display: flex; min-width: 96px; flex-shrink: 0; align-items: center; gap: 8px; white-space: nowrap; color: var(--muted-foreground); }
+.stepBodyCol .stepDetailText { margin: 2px 0 0 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.stepBodyCol .shippingInfoMargin { margin-top: 8px; }
+.shippingInfoCard { position: relative; display: flex; flex-direction: column; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-shipping-border); background-color: var(--tone-shipping-bg); padding: 12px; }
+.shippingInfoCard .shippingDl { margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 17px; }
+.shippingDl .shippingRow { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 2px; }
+.shippingDl .shippingRowWithAction { padding-right: 52px; }
+.shippingRow .shippingDt { display: flex; min-width: 84px; flex-shrink: 0; align-items: center; gap: 6px; white-space: nowrap; color: var(--muted-foreground); }
 .shippingRow .shippingDd { margin: 0; min-width: 0; flex: 1 1 auto; font-weight: 500; overflow-wrap: anywhere; color: var(--foreground); }
+.shippingDd .shippingEstNote { font-weight: 400; color: var(--muted-foreground); }
 .shippingRow .trackingMonoDd { margin: 0; display: flex; min-width: 0; flex: 1 1 auto; align-items: center; gap: 4px; font-family: var(--font-mono); font-weight: 600; color: var(--foreground); }
 .trackingMonoDd .trackingBreak { min-width: 0; word-break: break-all; }
-.trackingMonoDd .compactCopyBtn { width: 24px; height: 24px; flex-shrink: 0; }
-.shippingInfoCard .shippingActionCorner { position: absolute; top: 12px; right: 12px; }
-.shippingInfoCard .trackShipmentBtn { display: inline-flex; height: 36px; align-self: flex-start; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; background-color: #7c3aed; padding: 0 16px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 4px 10px -2px rgba(124, 58, 237, 0.25); transition: transform 150ms ease; }
-.shippingInfoCard .trackShipmentBtn:hover { transform: translateY(-2px); }
+.trackingMonoDd .compactCopyBtn { width: 22px; height: 22px; flex-shrink: 0; }
+.shippingInfoCard .shippingActionCorner { position: absolute; top: 10px; right: 10px; }
+.shippingInfoCard .trackShipmentBtn { display: inline-flex; height: var(--controlHSm); align-self: flex-start; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControlSm); background-color: var(--tone-shipping-solid); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--on-solid); box-shadow: 0 4px 10px -2px color-mix(in oklab, var(--tone-shipping-solid) 28%, transparent); transition: background-color 180ms ease, transform 160ms ease, box-shadow 180ms ease; }
+.shippingInfoCard .trackShipmentBtn:hover { background-color: color-mix(in oklab, var(--tone-shipping-solid) 86%, black); transform: translateY(-1px); box-shadow: 0 8px 16px -4px color-mix(in oklab, var(--tone-shipping-solid) 38%, transparent); }
+.shippingInfoCard .trackShipmentBtn:active { transform: scale(0.98); }
 /* Section: Cancellation Notice, Refund Summary & Returns List */
 .cancellationCard { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--destructive) 30%, transparent); background-color: color-mix(in oklab, var(--destructive) 5%, transparent); padding: 16px; }
 .cancellationCard .cancelHeadingRow { margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 4px; font-weight: 600; color: var(--destructive); }
@@ -156,8 +159,7 @@
 .cancelReasonLine .mutedLabel { color: var(--muted-foreground); }
 .cancellationCard .refundDoneBanner { margin: 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: color-mix(in oklab, var(--success) 10%, transparent); padding: 12px; font-size: 14px; color: var(--foreground); }
 .refundDoneBanner .successIcon { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; color: var(--success); }
-.cancellationCard .refundPendingBanner { margin: 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: #fef3c7; padding: 12px; font-size: 14px; color: #451a03; }
-:global(.dark) .cancellationCard .refundPendingBanner { background-color: rgba(120, 53, 15, 0.32); color: #fef3c7; }
+.cancellationCard .refundPendingBanner { margin: 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: var(--tone-warning-bg); padding: 12px; font-size: 14px; color: var(--tone-warning-fg-strong); }
 .refundPendingBanner .clockIcon { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
 .cancellationCard .noPaymentText { margin: 0; font-size: 14px; color: var(--muted-foreground); }
 .sharedPanelCard { display: flex; flex-direction: column; gap: 12px; border-radius: 16px; border: 0; background-color: var(--card); padding: 16px; box-shadow: var(--store-elevation-sm); }
@@ -190,8 +192,7 @@
 .returnedItemLi .restockMuted { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .returnCardLi .returnReasonText { margin: 0; font-size: 14px; color: var(--muted-foreground); }
 .returnCardLi .refundSuccessText { margin: 0; font-size: 14px; font-weight: 500; color: var(--success); }
-.returnCardLi .exchangeBadgeText { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #4338ca; }
-:global(.dark) .returnCardLi .exchangeBadgeText { color: #a5b4fc; }
+.returnCardLi .exchangeBadgeText { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--tone-exchange-pill-fg); }
 .returnCardLi .adminRefundRow { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 6px; }
 .adminRefundRow .noRefundText { margin: 0; font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
 /* Section: Theme Toggle & Segmented Control */
@@ -203,8 +204,8 @@
 .themeSegmentedGroup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; border-radius: 12px; border: 1px solid var(--border); background-color: var(--secondary); padding: 4px; }
 .themeSegmentedGroup .segmentBtn { display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; border: 0; background: transparent; padding: 0 8px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
 .themeSegmentedGroup .segmentBtn:hover { color: var(--foreground); }
-.themeSegmentedGroup .segmentBtnActive { background-color: var(--card); font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--border); }
-.themeSettingCard { display: flex; flex-direction: column; gap: 12px; border-radius: 24px; border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
+.themeSegmentedGroup .segmentBtnActive { background-color: var(--card); font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft), 0 0 0 1px var(--border); }
+.themeSettingCard { display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
 .themeSettingCard .settingTextCol { display: flex; flex-direction: column; gap: 2px; }
 .settingTextCol .settingTitle { margin: 0; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: var(--foreground); }
 .settingTextCol .settingDesc { margin: 0; font-size: 12px; color: var(--muted-foreground); }
@@ -234,8 +235,7 @@
 .theadRow .thMiddleRight { padding: 12px 8px; text-align: right; font-weight: 600; }
 .theadRow .thRight { padding: 12px 0 12px 8px; text-align: right; font-weight: 600; }
 .invoiceTable .tbodyRow { border-bottom: 1px solid var(--border); }
-.invoiceTable .tbodyPromoRow { border-bottom: 1px solid var(--border); color: #047857; }
-:global(.dark) .invoiceTable .tbodyPromoRow { color: #6ee7b7; }
+.invoiceTable .tbodyPromoRow { border-bottom: 1px solid var(--border); color: var(--tone-success-fg-strong); }
 .invoiceTable .tdLeft { padding: 12px 8px 12px 0; }
 .invoiceTable .tdLeftMedium { padding: 12px 8px 12px 0; font-weight: 500; }
 .invoiceTable .tdMiddleNum { padding: 12px 8px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -262,38 +262,30 @@
 .badgeIconWrap { position: relative; display: grid; place-items: center; }
 .badgeIconWrap .badgePulseRing { position: absolute; inset: 0; border-radius: 9999px; background-color: currentColor; opacity: 0.3; animation: pingKeyframes 2.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 .badgeIconWrap .badgeIconRel { position: relative; width: 14px; height: 14px; }
-.toneNeutral { background-color: #fef3c7; color: #78350f; }
-:global(.dark) .toneNeutral { background-color: rgba(120, 53, 15, 0.40); color: #fde68a; }
-.toneInfo { background-color: #e0f2fe; color: #0c4a6e; }
-:global(.dark) .toneInfo { background-color: rgba(12, 74, 110, 0.40); color: #bae6fd; }
-.toneProgress { background-color: #ede9fe; color: #4c1d95; }
-:global(.dark) .toneProgress { background-color: rgba(76, 29, 149, 0.40); color: #ddd6fe; }
-.toneSuccess { background-color: #d1fae5; color: #064e3b; }
-:global(.dark) .toneSuccess { background-color: rgba(6, 78, 59, 0.40); color: #a7f3d0; }
-.toneDanger { background-color: #fee2e2; color: #7f1d1d; }
-:global(.dark) .toneDanger { background-color: rgba(127, 29, 29, 0.40); color: #fecaca; }
-.toneSlateRefunded { background-color: #e2e8f0; color: #0f172a; }
-:global(.dark) .toneSlateRefunded { background-color: #1e293b; color: #e2e8f0; }
-.toneSlateCancelled { background-color: #f1f5f9; color: #334155; }
-:global(.dark) .toneSlateCancelled { background-color: #1e293b; color: #cbd5e1; }
-.toneOrangeRefundDue { background-color: #ffedd5; color: #7c2d12; }
-:global(.dark) .toneOrangeRefundDue { background-color: rgba(124, 45, 18, 0.40); color: #fed7aa; }
-.busyBackdrop { position: fixed; inset: 0; z-index: 90; display: grid; cursor: default; place-items: center; background-color: rgba(11, 25, 40, 0.34); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: busyBackdropFadeIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 220ms ease, background-color 220ms ease; }
-.busyBackdropLinger { pointer-events: none; background-color: rgba(11, 25, 40, 0.18); }
-.busyBackdrop .busyPill { display: flex; align-items: center; gap: 12px; border-radius: 9999px; background-color: var(--card); padding: 12px 22px; font-size: 14px; font-weight: 600; color: var(--card-foreground); box-shadow: 0 18px 40px -10px rgba(11, 35, 60, 0.22), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent); animation: busyPillPopIn 220ms cubic-bezier(0.22, 1, 0.36, 1); transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1), padding 220ms cubic-bezier(0.22, 1, 0.36, 1); }
-.busyBackdrop .busyPillSuccess { padding: 10px 22px 10px 14px; box-shadow: 0 20px 44px -10px rgba(16, 185, 129, 0.28), 0 4px 14px rgba(11, 35, 60, 0.10), 0 0 0 1px rgba(16, 185, 129, 0.32); }
+.toneNeutral { background-color: var(--tone-warning-pill-bg); color: var(--tone-warning-pill-fg); }
+.toneInfo { background-color: var(--tone-info-pill-bg); color: var(--tone-info-pill-fg); }
+.toneProgress { background-color: var(--tone-shipping-pill-bg); color: var(--tone-shipping-pill-fg); }
+.toneSuccess { background-color: var(--tone-success-pill-bg); color: var(--tone-success-pill-fg); }
+.toneDanger { background-color: var(--tone-danger-pill-bg); color: var(--tone-danger-pill-fg); }
+.toneSlateRefunded { background-color: var(--tone-slate-bg); color: var(--tone-slate-fg); }
+.toneSlateCancelled { background-color: var(--tone-slate-soft-bg); color: var(--tone-slate-soft-fg); }
+.toneOrangeRefundDue { background-color: var(--tone-refund-pill-bg); color: var(--tone-refund-pill-fg); }
+.busyBackdrop { position: fixed; inset: 0; z-index: 90; display: grid; cursor: default; place-items: center; background-color: var(--backdrop-scrim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: busyBackdropFadeIn 180ms cubic-bezier(0.22, 1, 0.36, 1); transition: opacity 220ms ease, background-color 220ms ease; }
+.busyBackdropLinger { pointer-events: none; background-color: var(--backdrop-scrim-soft); }
+.busyBackdrop .busyPill { display: flex; align-items: center; gap: 12px; border-radius: 9999px; background-color: var(--card); padding: 12px 22px; font-size: 14px; font-weight: 600; color: var(--card-foreground); box-shadow: 0 18px 40px -10px var(--shadow-color-strong), 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent); animation: busyPillPopIn 220ms cubic-bezier(0.22, 1, 0.36, 1); transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1), padding 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.busyBackdrop .busyPillSuccess { padding: 10px 22px 10px 14px; box-shadow: 0 20px 44px -10px color-mix(in oklab, var(--tone-success-solid) 28%, transparent), 0 4px 14px var(--shadow-color), 0 0 0 1px color-mix(in oklab, var(--tone-success-solid) 32%, transparent); }
 .busyPill .busySpinner { width: 20px; height: 20px; flex-shrink: 0; color: var(--primary); animation: spinKeyframes 1s linear infinite; }
 .busyPill .busyTextWait { display: inline-block; }
 .busyPill .busyTextSuccess { display: inline-block; color: var(--foreground); animation: busyTextSlideIn 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .successTickWrap { position: relative; display: inline-grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; }
-.successTickWrap .successTickHalo { pointer-events: none; position: absolute; inset: 0; border-radius: 9999px; background: radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(16, 185, 129, 0) 72%); border: 2px solid rgba(16, 185, 129, 0.55); animation: successHaloExpand 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.successTickWrap .successTickCircle { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9999px; background-image: linear-gradient(135deg, #34d399 0%, #10b981 52%, #059669 100%); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.42), 0 6px 16px -2px rgba(16, 185, 129, 0.52), 0 0 0 3px rgba(16, 185, 129, 0.16); animation: successCircleSpring 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.successTickWrap .successTickHalo { pointer-events: none; position: absolute; inset: 0; border-radius: 9999px; background: radial-gradient(circle, color-mix(in oklab, var(--tone-success-solid) 45%, transparent) 0%, transparent 72%); border: 2px solid color-mix(in oklab, var(--tone-success-solid) 55%, transparent); animation: successHaloExpand 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.successTickWrap .successTickCircle { position: relative; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9999px; background-image: var(--tone-success-grad); box-shadow: inset 0 1px 1px color-mix(in oklab, var(--on-solid) 42%, transparent), 0 6px 16px -2px color-mix(in oklab, var(--tone-success-solid) 52%, transparent), 0 0 0 3px color-mix(in oklab, var(--tone-success-solid) 16%, transparent); animation: successCircleSpring 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 .successTickCircle .tickSvg { width: 20px; height: 20px; overflow: visible; }
-.tickSvg .tickRingPath { stroke: rgba(255, 255, 255, 0.34); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transform-origin: center; transform: rotate(-90deg); animation: successRingSweep 360ms cubic-bezier(0.22, 1, 0.36, 1) 40ms forwards; }
-.tickSvg .tickCheckPath { stroke: #ffffff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transform-origin: center; filter: drop-shadow(0 1px 2px rgba(5, 150, 105, 0.35)); animation: successCheckDraw 380ms cubic-bezier(0.22, 1, 0.36, 1) 110ms forwards; }
+.tickSvg .tickRingPath { stroke: color-mix(in oklab, var(--on-solid) 34%, transparent); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transform-origin: center; transform: rotate(-90deg); animation: successRingSweep 360ms cubic-bezier(0.22, 1, 0.36, 1) 40ms forwards; }
+.tickSvg .tickCheckPath { stroke: var(--on-solid); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transform-origin: center; filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--tone-success-solid) 35%, transparent)); animation: successCheckDraw 380ms cubic-bezier(0.22, 1, 0.36, 1) 110ms forwards; }
 .confirmDialogMax { width: 100%; }
 .confirmDescText { font-size: 14px; line-height: 22px; color: var(--muted-foreground); }
-.confirmPillBtn { gap: 6px; border-radius: 9999px; }
+.confirmPillBtn { gap: 6px; border-radius: var(--radiusControl); }
 .routeProgressTrack { pointer-events: none; position: fixed; left: 0; right: 0; top: 0; z-index: 100; height: 3px; overflow: hidden; }
 .routeProgressTrack .routeProgressBar { width: 100%; height: 100%; transform-origin: left; border-radius: 0 9999px 9999px 0; background-color: var(--primary); transition-property: transform, opacity; transition-timing-function: ease-out; will-change: transform; }
 .routeProgressTrack .routeProgressVisible { opacity: 1; transition-duration: 200ms; }
@@ -302,8 +294,7 @@
 /* Section: Pincode Lookup Hint */
 .pincodeHintLoading { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--primary); }
 .pincodeHintLoading .pincodeSpinSvg { width: 12px; height: 12px; flex-shrink: 0; animation: spinKeyframes 1s linear infinite; }
-.pincodeHintMatched { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #059669; }
-:global(.dark) .pincodeHintMatched { color: #34d399; }
+.pincodeHintMatched { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: var(--tone-success-icon); }
 .pincodeHintMatched .pincodeCheckSvg { width: 14px; height: 14px; flex-shrink: 0; }
 /* Section: Print & Responsive Breakpoints */
 @media print {

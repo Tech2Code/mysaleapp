@@ -4,16 +4,16 @@
 .summaryText .summaryStrong { font-weight: 700; color: var(--foreground); }
 /* Section: Page Controls & Buttons */
 .paginationBar .controlsGroup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; }
-.controlsGroup .navBtn { display: inline-flex; height: 38px; align-items: center; justify-content: center; gap: 6px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.controlsGroup .navBtn:hover:not(:disabled) { background-color: var(--card); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
-.controlsGroup .navBtn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
-.controlsGroup .navBtn:disabled { cursor: not-allowed; opacity: 0.45; }
+.controlsGroup .navBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+.controlsGroup .navBtn:hover:not(:disabled) { background-color: var(--card); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
+.controlsGroup .navBtn:active:not(:disabled) { transform: scale(0.98); }
+.controlsGroup .navBtn:disabled { cursor: not-allowed; opacity: 0.5; }
 .navBtn .navIcon { width: 16px; height: 16px; flex-shrink: 0; }
 .navBtn .navLabel { display: none; }
 .controlsGroup .pagesList { display: flex; align-items: center; gap: 6px; }
-.pagesList .pageBtn { display: inline-flex; min-width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 9999px; border: 0; background-color: transparent; padding: 0 12px; font-size: 14px; font-weight: 600; color: var(--muted-foreground); font-variant-numeric: tabular-nums; transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.pagesList .pageBtn { display: inline-flex; min-width: var(--controlHSm); height: var(--controlHSm); align-items: center; justify-content: center; border-radius: var(--radiusControlSm); border: 0; background-color: transparent; padding: 0 10px; font-size: 14px; font-weight: 600; color: var(--muted-foreground); font-variant-numeric: tabular-nums; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .pagesList .pageBtn:hover:not(:disabled) { background-color: var(--secondary); color: var(--foreground); transform: translateY(-1px); }
-.pagesList .pageBtn:active:not(:disabled) { transform: scale(0.96); }
+.pagesList .pageBtn:active:not(:disabled) { transform: scale(0.98); }
 .pagesList .pageBtnActive { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 45%, transparent); }
 .pagesList .pageBtnActive:hover:not(:disabled) { background-color: var(--store-accent-hover, var(--primary)); color: var(--primary-foreground); }
 .pagesList .ellipsisDot { display: inline-flex; width: 32px; height: 38px; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--muted-foreground); user-select: none; }

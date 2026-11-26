@@ -1,5 +1,5 @@
 import { formatDate, formatPrice } from "@/lib/format"
-import type { OrderItem, OrderReturn, PaymentStatus, ReturnRequest, ReturnRequestStatus, ReturnResolutionType, StatusHistoryEntry } from "./types"
+import type { ExchangeFulfillmentStatus, OrderItem, OrderReturn, PaymentStatus, ReturnRequest, ReturnRequestStatus, ReturnResolutionType, ShippingDetails, StatusHistoryEntry } from "./types"
 
 /**
  * Return rules in one place (pure functions, used by pages, client components and server actions).
@@ -156,8 +156,20 @@ export function returnableQuantities(items: OrderItem[], returns: OrderReturn[])
 // guest track page, timeline, WhatsApp messages), so the wording can't drift.
 // ---------------------------------------------------------------------------
 
-export type ReturnStageKey = "requested" | "approved" | "picked_up" | "rejected" | "withdrawn" | "received" | "partly_refunded" | "refunded"
+export type ReturnStageKey =
+  | "requested"
+  | "approved"
+  | "picked_up"
+  | "rejected"
+  | "withdrawn"
+  | "received"
+  | "exchange_dispatched"
+  | "exchange_completed"
+  | "partly_refunded"
+  | "refunded"
 export type ReturnStageTone = "info" | "progress" | "success" | "danger" | "neutral"
+
+const isReplacementPref = (pref?: string | null) => /^replacement\s*:/i.test(pref ?? "")
 
 /** After this many days a rejected request stops showing as a badge in LISTS (it stays in the order's detail and timeline). */
 export const REJECTED_BADGE_DAYS = 7
@@ -189,6 +201,16 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
     detail: "Goods back, no refund recorded yet. Use “I have refunded” on the return below, or “Refund the returned items” in the status dropdown",
     customerDetail: "We have your items. Your refund will follow",
   },
+  exchange_dispatched: {
+    step: 3, tone: "progress", label: "Exchange dispatched", customerLabel: "Exchange item on the way",
+    detail: "Replacement / exchanged item dispatched to customer. Mark delivered once received",
+    customerDetail: "Your replacement / exchanged item is on the way",
+  },
+  exchange_completed: {
+    step: 4, tone: "success", label: "Exchange complete", customerLabel: "Exchange complete",
+    detail: "Replacement / exchanged item delivered to customer",
+    customerDetail: "Your replacement / exchanged item has been delivered",
+  },
   partly_refunded: {
     step: 4, tone: "progress", label: "Return part-refunded", customerLabel: "Partially refunded",
     detail: "Part of the money refunded", customerDetail: "Part of your refund has been sent",
@@ -203,17 +225,40 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
 export function requestStatusMeta(
   status: ReturnRequestStatus,
   audience: "admin" | "customer",
-  resolutionType?: ReturnResolutionType
+  resolutionType?: ReturnResolutionType,
+  exchangePreference?: string | null,
+  exchangeStatus?: ExchangeFulfillmentStatus | null
 ): { label: string; tone: ReturnStageTone } {
+  if (resolutionType === "exchange" && status === "received") {
+    const isRep = isReplacementPref(exchangePreference)
+    if (exchangeStatus === "delivered") {
+      return {
+        label: isRep ? "Replacement delivered" : "Exchange complete",
+        tone: "success",
+      }
+    }
+    if (exchangeStatus === "dispatched") {
+      return {
+        label: isRep ? (audience === "admin" ? "Replacement dispatched" : "Replacement on the way") : audience === "admin" ? "Exchange dispatched" : "Exchange on the way",
+        tone: "progress",
+      }
+    }
+    return {
+      label: isRep ? "Old item received" : "Exchange received",
+      tone: "progress",
+    }
+  }
   const c = STAGE_COPY[status] // request statuses are stage keys too (picked_up is derived, not a status)
   const raw = audience === "admin" ? c.label : c.customerLabel
-  const label = resolutionType === "exchange" ? raw.replace(/^Return\b/, "Exchange") : raw
+  const word = resolutionType === "exchange" ? (isReplacementPref(exchangePreference) ? "Replacement" : "Exchange") : "Return"
+  const label = resolutionType === "exchange" ? raw.replace(/^Return\b/, word) : raw
   return { label, tone: c.tone }
 }
 
 export type ReturnStageInput = {
   requests: {
     status: ReturnRequestStatus
+    requestedBy?: "customer" | "admin"
     createdAt: string
     decidedAt?: string | null
     adminNote?: string | null
@@ -221,6 +266,12 @@ export type ReturnStageInput = {
     pickedUpAt?: string | null
     resolutionType?: ReturnResolutionType
     exchangePreference?: string | null
+    exchangeMode?: "standard" | "doorstep"
+    exchangeStatus?: ExchangeFulfillmentStatus | null
+    exchangeShippedAt?: string | null
+    exchangeDeliveredAt?: string | null
+    exchangeTracking?: string | null
+    exchangeShipping?: ShippingDetails | null
   }[]
   /** `refundAmount` (item value refunded for that return) is admin-only data; guests don't have it. */
   returns: { refunded: boolean; createdAt: string; refundAmount?: number | null; resolutionType?: ReturnResolutionType }[]
@@ -250,6 +301,10 @@ export type ReturnStage = {
   active: boolean
   /** Show a badge in lists? Withdrawn requests, and rejected ones older than REJECTED_BADGE_DAYS, are history, not news. */
   badge: boolean
+  /** Who initiated the latest return/exchange request (or 'admin' for direct admin-recorded returns). */
+  requestedBy?: "customer" | "admin"
+  /** True when the return was recorded directly by admin without a prior request. */
+  directReturn?: boolean
 }
 
 /** Builds the input from a fully loaded order (OrderWithHistory or TrackedOrder). */
@@ -287,7 +342,7 @@ function refundState(i: ReturnStageInput): "none" | "partly" | "full" {
 const stage = (key: ReturnStageKey, extra: Partial<ReturnStage> = {}): ReturnStage => ({
   key,
   ...STAGE_COPY[key],
-  active: key === "requested" || key === "approved" || key === "picked_up" || key === "received" || key === "partly_refunded",
+  active: key === "requested" || key === "approved" || key === "picked_up" || key === "received" || key === "exchange_dispatched" || key === "partly_refunded",
   badge: key !== "withdrawn",
   ...extra,
 })
@@ -297,36 +352,77 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
   const request = latest(input.requests)
   const hasReturns = input.returns.length > 0 || request?.status === "received"
   const isExchangeReq = request?.resolutionType === "exchange"
+  const isRepReq = isExchangeReq && isReplacementPref(request?.exchangePreference)
+  const isDoorstepReq = isExchangeReq && request?.exchangeMode === "doorstep"
+  const exWord = isRepReq ? "Replacement" : "Exchange"
+  const reqActor: "customer" | "admin" = request ? (request.requestedBy ?? "customer") : "admin"
+  const isDirectReturn = !request && input.returns.length > 0
+  const withActor = (s: ReturnStage): ReturnStage => ({
+    ...s,
+    requestedBy: reqActor,
+    ...(isDirectReturn ? { directReturn: true } : {}),
+  })
 
   // An open request (waiting for a decision / for the goods) is what needs attention, even after an earlier return.
   if (request?.status === "requested") {
-    return stage(
-      "requested",
-      isExchangeReq
-        ? {
-            label: "Exchange requested",
-            customerLabel: "Exchange requested",
-            customerDetail: "Waiting for the shop to approve your exchange request",
-          }
-        : {}
+    return withActor(
+      stage(
+        "requested",
+        isExchangeReq
+          ? {
+              label: `${exWord} requested`,
+              customerLabel: `${exWord} requested`,
+              customerDetail: isRepReq
+                ? "Waiting for the shop to approve your same-item replacement"
+                : "Waiting for the shop to approve your exchange request",
+            }
+          : {}
+      )
     )
   }
   if (request?.status === "approved") {
     if (request.pickedUpAt) {
-      return stage(
-        "picked_up",
-        isExchangeReq
-          ? {
-              customerDetail: "We have collected your items. Your exchange replacement follows once they reach us",
-            }
-          : {}
+      return withActor(
+        stage(
+          "picked_up",
+          isExchangeReq
+            ? {
+                customerDetail: isRepReq
+                  ? "Old item collected. Once it reaches us and is checked, your fresh replacement (same size & colour) will be dispatched"
+                  : "Old item collected. Once it reaches us and passes quality check, your new variant will be dispatched",
+              }
+            : {}
+        )
       )
     }
     const on = request.pickupDate ? formatDate(request.pickupDate) : null
-    return stage("approved", {
-      ...(isExchangeReq ? { label: "Exchange approved", customerLabel: "Exchange approved" } : {}),
-      ...(on ? { detail: `Pickup scheduled for ${on}`, customerDetail: `Pickup scheduled for ${on}. Keep the items ready` } : {}),
-    })
+    if (isDoorstepReq) {
+      return withActor(
+        stage("approved", {
+          label: isRepReq ? "Doorstep replacement" : "Doorstep exchange",
+          customerLabel: isRepReq ? "Doorstep replacement" : "Doorstep exchange",
+          detail: on
+            ? `Doorstep handover expected by ${on}. Mark complete once the agent swaps the items`
+            : "Doorstep handover approved. Mark complete once the agent swaps the items",
+          customerDetail: on
+            ? `Doorstep ${exWord.toLowerCase()} expected by ${on}. Our partner will deliver the new item and collect the old item together`
+            : `Doorstep ${exWord.toLowerCase()} approved. Our partner will deliver the new item and collect the old item together`,
+        })
+      )
+    }
+    return withActor(
+      stage("approved", {
+        ...(isExchangeReq ? { label: `${exWord} approved`, customerLabel: `${exWord} approved` } : {}),
+        ...(on
+          ? {
+              detail: `Expected pickup by ${on}`,
+              customerDetail: isExchangeReq
+                ? `Expected pickup by ${on}. Keep the old item packed and ready`
+                : `Expected pickup by ${on}. Keep the items ready`,
+            }
+          : {}),
+      })
+    )
   }
 
   const refund = hasReturns ? refundState(input) : "none"
@@ -340,16 +436,18 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
     const why = request.adminNote?.trim()
     const decided = asTime(request.decidedAt ?? request.createdAt)
     const stale = input.now ? input.now.getTime() - decided > REJECTED_BADGE_DAYS * 86_400_000 : false
-    return stage("rejected", {
-      ...(isExchangeReq ? { label: "Exchange rejected", customerLabel: "Exchange not approved" } : {}),
-      detail: why ? `Reason: ${why}` : STAGE_COPY.rejected.detail,
-      customerDetail: why ? `Reason: ${why}` : isExchangeReq ? "The shop couldn't approve this exchange" : STAGE_COPY.rejected.customerDetail,
-      badge: !stale,
-    })
+    return withActor(
+      stage("rejected", {
+        ...(isExchangeReq ? { label: `${exWord} rejected`, customerLabel: `${exWord} not approved` } : {}),
+        detail: why ? `Reason: ${why}` : STAGE_COPY.rejected.detail,
+        customerDetail: why ? `Reason: ${why}` : isExchangeReq ? `The shop couldn't approve this ${exWord.toLowerCase()}` : STAGE_COPY.rejected.customerDetail,
+        badge: !stale,
+      })
+    )
   }
 
   if (hasReturns) {
-    if (refund === "full") return stage("refunded")
+    if (refund === "full") return withActor(stage("refunded"))
     const latestReturn = latest(input.returns)
     const hasUnrefundedReturn = input.returns.some((r) => !r.refunded && r.resolutionType !== "exchange")
     const latestIsExchange =
@@ -357,30 +455,64 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
       (input.returns.length > 0 && input.returns.every((r) => r.resolutionType === "exchange")) ||
       (isExchangeReq && input.returns.every((r) => !r.refunded && r.resolutionType !== "refund"))
     if (latestIsExchange && (!request || !latestReturn || asTime(latestReturn.createdAt) >= asTime(request.createdAt))) {
-      return stage("received", {
-        step: 4,
-        label: "Exchange received",
-        customerLabel: "Exchange received",
-        detail: "Returned items received for exchange",
-        customerDetail: "We have received your items for exchange. Your replacement will follow",
-        active: false,
-      })
-    }
-    if (hasUnrefundedReturn && refund === "partly") {
-      // Wait — check below: stage is partly_refunded with active: hasUnrefundedReturn
+      const exStatus = request?.exchangeStatus ?? (request?.exchangeDeliveredAt ? "delivered" : request?.exchangeShippedAt ? "dispatched" : null)
+      const tracking = request?.exchangeTracking?.trim()
+      if (exStatus === "delivered") {
+        return withActor(
+          stage("exchange_completed", {
+            label: isRepReq ? "Replacement delivered" : "Exchange complete",
+            customerLabel: isRepReq ? "Replacement delivered" : "Exchange complete",
+            detail: isRepReq ? "Fresh same-item replacement delivered to customer" : "Exchanged item delivered to customer",
+            customerDetail: isRepReq
+              ? "Your replacement (same item, same size & colour) has been delivered"
+              : "Your exchanged item has been delivered — exchange complete",
+            active: false,
+          })
+        )
+      }
+      if (exStatus === "dispatched") {
+        return withActor(
+          stage("exchange_dispatched", {
+            label: isRepReq ? "Replacement dispatched" : "Exchange dispatched",
+            customerLabel: isRepReq ? "Replacement on the way" : "Exchange item on the way",
+            detail: tracking
+              ? `Dispatched (${tracking}). Mark delivered once customer receives it`
+              : `${exWord} dispatched to customer. Mark delivered once received`,
+            customerDetail: tracking
+              ? `Your ${isRepReq ? "fresh replacement" : "exchanged item"} is on the way (${tracking})`
+              : `Your ${isRepReq ? "fresh replacement (same item, same size & colour)" : "exchanged item"} is on the way`,
+            active: true,
+          })
+        )
+      }
+      return withActor(
+        stage("received", {
+          step: 3,
+          tone: "progress",
+          label: isRepReq ? "Old item received" : "Exchange received",
+          customerLabel: isRepReq ? "Old item received" : "Old item received",
+          detail: isRepReq
+            ? "Old item received. Dispatch the fresh same-item replacement from the status dropdown"
+            : "Old item received & checked. Dispatch the requested variant from the status dropdown",
+          customerDetail: isRepReq
+            ? "We received your old item and are preparing your fresh same-item replacement"
+            : "We received your old item and checked it. Your new variant is being prepared for dispatch",
+          active: true,
+        })
+      )
     }
     if (refund === "partly") {
       const money =
         input.refundedAmount > 0 && input.paidAmount > 0
           ? `${formatPrice(input.refundedAmount)} of ${formatPrice(input.paidAmount)} refunded`
           : STAGE_COPY.partly_refunded.detail
-      return stage("partly_refunded", { detail: money, active: hasUnrefundedReturn })
+      return withActor(stage("partly_refunded", { detail: money, active: hasUnrefundedReturn }))
     }
-    return stage("received")
+    return withActor(stage("received"))
   }
 
   if (request?.status === "withdrawn") {
-    return stage("withdrawn", isExchangeReq ? { label: "Exchange cancelled", customerLabel: "Exchange cancelled" } : {})
+    return withActor(stage("withdrawn", isExchangeReq ? { label: "Exchange cancelled", customerLabel: "Exchange cancelled" } : {}))
   }
   return null
 }
@@ -398,22 +530,35 @@ export const canRequestAgain = (requests: Pick<ReturnRequest, "status">[], windo
  */
 export function customerStatusLine(orderDescription: string, s: ReturnStage | null, opts: { canRequestAgain?: boolean } = {}): string {
   if (!s || s.key === "withdrawn") return /[.!?]$/.test(orderDescription) ? orderDescription : `${orderDescription}.`
-  const isExchange = s.customerLabel.startsWith("Exchange") || s.customerDetail.includes("exchange")
+  const isRep = s.customerLabel.startsWith("Replacement") || s.customerDetail.includes("same-item replacement")
+  const isExchange = isRep || s.customerLabel.startsWith("Exchange") || s.customerDetail.includes("exchange") || s.customerDetail.includes("variant")
+  const kind = isRep ? "Replacement" : "Exchange"
   switch (s.key) {
     case "requested":
-      return isExchange ? "Your exchange request is being reviewed." : "Your return is being reviewed."
+      return isExchange ? `Your ${kind.toLowerCase()} request is being reviewed.` : "Your return is being reviewed."
     case "approved":
-      return s.customerDetail.startsWith("Pickup scheduled")
-        ? `${isExchange ? "Exchange approved" : "Return approved"}. ${s.customerDetail}.`
-        : `${isExchange ? "Exchange approved" : "Return approved"} — send the items back as asked.`
+      if (s.customerDetail.startsWith("Doorstep")) return `${s.customerDetail}.`
+      return s.customerDetail.startsWith("Expected pickup") || s.customerDetail.startsWith("Pickup scheduled")
+        ? `${isExchange ? `${kind} approved` : "Return approved"}. ${s.customerDetail}.`
+        : isExchange
+          ? `${kind} approved — send the old item back as asked.`
+          : "Return approved — send the items back as asked."
     case "picked_up":
-      return isExchange
-        ? "Pickup successful. Your exchange replacement follows once we receive the items."
-        : "Pickup successful. Your refund follows once we receive the items."
+      return isRep
+        ? "Old item picked up. Your fresh replacement (same size & colour) will be dispatched once we receive it."
+        : isExchange
+          ? "Old item picked up. Your new variant will be dispatched once we receive and check it."
+          : "Pickup successful. Your refund follows once we receive the items."
     case "received":
-      return isExchange
-        ? "We have received your items for exchange. Your replacement will follow."
-        : "We have your items. Your refund will follow."
+      return isRep
+        ? "We received your old item and are preparing your fresh same-item replacement."
+        : isExchange
+          ? "We received your old item and checked it. Your new variant is being prepared for dispatch."
+          : "We have your items. Your refund will follow."
+    case "exchange_dispatched":
+      return `${s.customerDetail}.`
+    case "exchange_completed":
+      return `${s.customerDetail}.`
     case "partly_refunded":
       return "Part of your refund has been sent."
     case "refunded":
@@ -426,7 +571,7 @@ export function customerStatusLine(orderDescription: string, s: ReturnStage | nu
 }
 
 export type ReturnTimelineEntry = {
-  key: "requested" | "approved" | "pickup" | "picked_up" | "rejected" | "withdrawn" | "received" | "refund"
+  key: "requested" | "approved" | "pickup" | "picked_up" | "rejected" | "withdrawn" | "received" | "exchange_dispatched" | "exchange_completed" | "refund"
   label: string
   customerLabel: string
   /** ISO time it happened; null while still to come (or unknown). */
@@ -435,6 +580,8 @@ export type ReturnTimelineEntry = {
   note: string | null
   /** Admin-only extra line (may contain amounts), e.g. "Refunded ₹300 · No refund recorded" per return. Never shown to guests. */
   adminDetail?: string | null
+  /** Structured outbound courier details for dispatched replacement/exchange items. */
+  shipping?: ShippingDetails | null
   state: "done" | "current" | "upcoming" | "stopped"
 }
 
@@ -473,17 +620,20 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   // only a live or completed request gets the request, approval and pickup steps.
   const stepRequest = stopped ? request : latest(input.requests.filter((q) => q.status !== "rejected" && q.status !== "withdrawn"))
   const isExchange = stepRequest?.resolutionType === "exchange"
+  const isRep = isExchange && isReplacementPref(stepRequest?.exchangePreference)
+  const isDoorstep = isExchange && stepRequest?.exchangeMode === "doorstep"
+  const exWord = isRep ? "Replacement" : "Exchange"
 
   // a request exists for every stage except "goods recorded directly by the admin"
   if (stepRequest) {
     entries.push({
       key: "requested",
-      label: isExchange ? "Exchange requested" : "Return requested",
-      customerLabel: isExchange ? "Exchange requested" : "Return requested",
+      label: isExchange ? `${exWord} requested` : "Return requested",
+      customerLabel: isExchange ? `${exWord} requested` : "Return requested",
       at: stepRequest.createdAt,
       note:
         isExchange && stepRequest.exchangePreference
-          ? `Preference: ${stepRequest.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`
+          ? `${isRep ? "Promise" : "Preference"}: ${stepRequest.exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "")}`
           : null,
       state: "done",
     })
@@ -494,16 +644,16 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
       stage.key === "rejected"
         ? {
             key: "rejected",
-            label: isExchange ? "Exchange rejected" : "Return rejected",
-            customerLabel: isExchange ? "Exchange not approved" : "Return not approved",
+            label: isExchange ? `${exWord} rejected` : "Return rejected",
+            customerLabel: isExchange ? `${exWord} not approved` : "Return not approved",
             at: request?.decidedAt ?? request?.createdAt ?? null,
             note: request?.adminNote?.trim() || null,
             state: "stopped",
           }
         : {
             key: "withdrawn",
-            label: isExchange ? "Exchange cancelled" : "Return cancelled",
-            customerLabel: isExchange ? "Exchange cancelled" : "Return cancelled",
+            label: isExchange ? `${exWord} cancelled` : "Return cancelled",
+            customerLabel: isExchange ? `${exWord} cancelled` : "Return cancelled",
             at: request?.decidedAt ?? request?.createdAt ?? null,
             note: null,
             state: "stopped",
@@ -518,44 +668,84 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
     const approved = stage.key !== "requested"
     entries.push({
       key: "approved",
-      label: approved ? (isExchange ? "Exchange approved" : "Return approved") : "Approval",
-      customerLabel: approved ? (isExchange ? "Exchange approved" : "Return approved") : "Waiting for approval",
+      label: approved ? (isDoorstep ? `Doorstep ${exWord.toLowerCase()} approved` : isExchange ? `${exWord} approved` : "Return approved") : "Approval",
+      customerLabel: approved ? (isDoorstep ? `Doorstep ${exWord.toLowerCase()} approved` : isExchange ? `${exWord} approved` : "Return approved") : "Waiting for approval",
       at: approved ? (request.decidedAt ?? null) : null,
       note: approved ? (request.adminNote?.trim() || null) : null,
       state: approved ? "done" : "current",
     })
+    if (isDoorstep) {
+      const completed = stage.key === "exchange_completed"
+      entries.push({
+        key: "pickup",
+        label: "Doorstep handover scheduled",
+        customerLabel: "Doorstep exchange scheduled",
+        at: null,
+        note: request.pickupDate ? `Expected by ${formatDate(request.pickupDate)}` : null,
+        shipping: request.exchangeShipping ?? null,
+        state: completed ? "done" : "current",
+      })
+      entries.push({
+        key: "exchange_completed",
+        label: isRep ? "Replacement delivered" : "Exchange complete",
+        customerLabel: isRep ? "Replacement delivered" : "Exchange complete",
+        at: request.exchangeDeliveredAt ?? lastReturn?.createdAt ?? null,
+        note: completed ? "Old item collected & new item handed over" : null,
+        state: completed ? "done" : "upcoming",
+      })
+      return entries
+    }
     // Myntra-style pickup steps: scheduled (with the date) -> successful
     const waiting = stage.key === "requested"
     const pickedUp = !waiting && stage.key !== "approved"
     entries.push({
       key: "pickup", label: "Pickup scheduled", customerLabel: waiting ? "Pickup to be scheduled" : "Pickup scheduled", at: null,
-      note: !waiting && request.pickupDate ? `Pickup on ${formatDate(request.pickupDate)}` : null,
+      note: !waiting && request.pickupDate ? `Expected pickup by ${formatDate(request.pickupDate)}` : null,
       state: waiting ? "upcoming" : pickedUp ? "done" : "current",
     })
     entries.push({
-      key: "picked_up", label: "Pickup successful", customerLabel: "Pickup successful",
+      key: "picked_up", label: "Pickup successful", customerLabel: "Old item picked up",
       at: request.pickedUpAt ?? null, note: null,
       state: stage.key === "picked_up" ? "current" : pickedUp ? "done" : "upcoming",
     })
   }
 
   if (open) {
-    entries.push({ key: "received", label: "Goods received", customerLabel: isExchange ? "Items received" : "Return received", at: null, note: null, state: "upcoming" })
-    entries.push({
-      key: "refund",
-      label: isExchange ? "Replacement" : "Refund",
-      customerLabel: isExchange ? "Replacement to follow" : "Refund to follow",
-      at: null,
-      note: null,
-      state: "upcoming",
-    })
+    entries.push({ key: "received", label: "Old item received", customerLabel: isExchange ? "Old item received" : "Return received", at: null, note: null, state: "upcoming" })
+    if (isExchange) {
+      entries.push({
+        key: "exchange_dispatched",
+        label: isRep ? "Replacement dispatched" : "Exchange dispatched",
+        customerLabel: isRep ? "Replacement dispatched" : "New variant dispatched",
+        at: null,
+        note: null,
+        state: "upcoming",
+      })
+      entries.push({
+        key: "exchange_completed",
+        label: isRep ? "Replacement delivered" : "Exchange complete",
+        customerLabel: isRep ? "Replacement delivered" : "Exchange complete",
+        at: null,
+        note: null,
+        state: "upcoming",
+      })
+    } else {
+      entries.push({
+        key: "refund",
+        label: "Refund",
+        customerLabel: "Refund to follow",
+        at: null,
+        note: null,
+        state: "upcoming",
+      })
+    }
     return entries
   }
 
   entries.push({
     key: "received",
-    label: isExchange ? "Exchange received" : "Return received",
-    customerLabel: isExchange ? "Exchange received" : "Return received",
+    label: isExchange ? (isRep ? "Old item received" : "Exchange received") : "Return received",
+    customerLabel: isExchange ? "Old item received" : "Return received",
     at: lastReturn?.createdAt ?? null,
     note: null,
     adminDetail: returnRefundSummary(input.returns),
@@ -563,13 +753,24 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
   })
   const refund = refundState(input)
   if (isExchange) {
+    const dispatched = stage.key === "exchange_dispatched" || stage.key === "exchange_completed"
+    const delivered = stage.key === "exchange_completed"
     entries.push({
-      key: "refund",
-      label: "Exchange completed",
-      customerLabel: "Replacement arranged",
-      at: lastReturn?.createdAt ?? null,
+      key: "exchange_dispatched",
+      label: isRep ? "Replacement dispatched" : "Exchange dispatched",
+      customerLabel: isRep ? "Replacement dispatched" : "New variant dispatched",
+      at: stepRequest?.exchangeShippedAt ?? null,
+      note: stepRequest?.exchangeShipping ? null : (stepRequest?.exchangeTracking?.trim() || null),
+      shipping: stepRequest?.exchangeShipping ?? null,
+      state: delivered ? "done" : dispatched ? "current" : "upcoming",
+    })
+    entries.push({
+      key: "exchange_completed",
+      label: isRep ? "Replacement delivered" : "Exchange complete",
+      customerLabel: isRep ? "Replacement delivered" : "Exchange complete",
+      at: stepRequest?.exchangeDeliveredAt ?? null,
       note: null,
-      state: "done",
+      state: delivered ? "done" : "upcoming",
     })
     return entries
   }

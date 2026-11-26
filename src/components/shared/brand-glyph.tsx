@@ -1,17 +1,33 @@
 /**
+ * Single source of truth for the brand symbol & icon palette.
+ * Used by LogoMark (header/footer/admin), BrandMark (favicon, Apple icon, PWA icons, OG image),
+ * manifest.ts, and viewport themeColor so changing any color or glyph updates the entire app in sync.
+ */
+export const BRAND_PALETTE = {
+  boxColor: "#fffaf4",
+  ribbon: "#fbd07c",
+  accent: "#9e333b",
+  themeColor: "#b85c38",
+  backgroundColor: "#fbf7f2",
+  gradient: "linear-gradient(140deg, #dc6d38 0%, #c04e3f 48%, #8c2836 100%)",
+  borderColor: "rgba(255, 238, 214, 0.32)",
+} as const
+
+/**
  * The brand symbol: a sculpted boutique gift box with a satin gold ribbon bow, heart knot,
- * and artisan sparkle star. It does not depend on the shop name (owner-editable), so the
- * header logo, PWA icons, Apple touch icon, and favicon stay consistent.
- * Uses pure SVG primitives compatible with next/og ImageResponse.
+ * and artisan sparkle star. Uses explicit hex colors (never currentColor) so next/og ImageResponse
+ * and browser DOM render identically.
  */
 export function BrandGlyph({
   size,
   className,
-  ribbon = "#f7c873",
-  accent = "#b84349",
+  boxColor = BRAND_PALETTE.boxColor,
+  ribbon = BRAND_PALETTE.ribbon,
+  accent = BRAND_PALETTE.accent,
 }: {
   size: number
   className?: string
+  boxColor?: string
   ribbon?: string
   accent?: string
 }) {
@@ -54,7 +70,7 @@ export function BrandGlyph({
       />
 
       {/* Gift box base (warm ivory) */}
-      <rect x="9.5" y="23.5" width="29" height="17.5" rx="4.2" fill="currentColor" fillOpacity="0.95" />
+      <rect x="9.5" y="23.5" width="29" height="17.5" rx="4.2" fill={boxColor} fillOpacity="0.95" />
 
       {/* Subtle shadow band right below the lid */}
       <rect x="9.5" y="23.5" width="29" height="2.8" fill={accent} fillOpacity="0.24" />
@@ -63,7 +79,7 @@ export function BrandGlyph({
       <rect x="9.5" y="30" width="29" height="4.4" fill={ribbon} />
 
       {/* Gift box overhanging lid */}
-      <rect x="7" y="16.8" width="34" height="7.4" rx="3" fill="currentColor" />
+      <rect x="7" y="16.8" width="34" height="7.4" rx="3" fill={boxColor} />
 
       {/* Vertical satin ribbon across lid & box */}
       <rect x="21.4" y="16.8" width="5.2" height="24.2" fill={ribbon} />
@@ -72,7 +88,7 @@ export function BrandGlyph({
       <path d="M23.2 18.5L18.2 23.2L20.8 24.4L24 20.2L27.2 24.4L29.8 23.2L24.8 18.5H23.2Z" fill={ribbon} />
 
       {/* Center jewel knot on lid */}
-      <circle cx="24" cy="17.2" r="3.4" fill="currentColor" />
+      <circle cx="24" cy="17.2" r="3.4" fill={boxColor} />
       <circle cx="24" cy="17.2" r="1.9" fill={accent} />
     </svg>
   )

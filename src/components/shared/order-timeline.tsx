@@ -17,6 +17,8 @@ type Step = {
   detail: string
   /** Green circle (Delivered, or the refund done). */
   success?: boolean
+  /** Optional outbound courier details (e.g. replacement/exchange dispatch). */
+  shipping?: ShippingDetails | null
 }
 
 const PULSE = {
@@ -103,7 +105,8 @@ function returnSteps(input: ReturnStageInput, audience: "admin" | "customer"): S
       detail:
         [e.at ? formatDateTime(e.at) : null, e.note, audience === "admin" ? e.adminDetail : null].filter(Boolean).join(" · ") ||
         fallbackDetail,
-      success: e.key === "refund" && e.state === "done",
+      success: (e.key === "refund" || e.key === "exchange_completed") && e.state === "done",
+      shipping: e.shipping ?? null,
     }
   })
 }
@@ -185,13 +188,14 @@ export function OrderTimeline({
               />
             )}
             </div>
-            <div className={cn(styles.stepBodyCol, next && (step.key === "shipped" && shipping ? styles.stepBodyPadSm : styles.stepBodyPadLg))}>
+            <div className={cn(styles.stepBodyCol, next && ((step.key === "shipped" && shipping) || step.shipping ? styles.stepBodyPadSm : styles.stepBodyPadLg))}>
               <p className={cn(styles.stepTitle, !reached && styles.stepTitleUpcoming, isCancelled && styles.stepTitleCancelled)}>
                 {step.label}
                 {step.state === "current" && <span className={styles.srOnly}> (current status)</span>}
               </p>
               <p className={styles.stepDetailText}>{step.detail}</p>
               {step.key === "shipped" && reached && shipping && <ShippingInfo shipping={shipping} className={styles.shippingInfoMargin} action={shippingAction} />}
+              {step.key !== "shipped" && reached && step.shipping && <ShippingInfo shipping={step.shipping} className={styles.shippingInfoMargin} />}
             </div>
           </li>
         )

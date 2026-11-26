@@ -10,18 +10,18 @@
 .imageLink .productPhoto { transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1); }
 .productCard:hover .productPhoto { transform: scale(1.06); }
 .imageLink .productPhotoSoldOut { opacity: 0.6; filter: grayscale(100%); }
-.imageLink .hoverVignette { pointer-events: none; position: absolute; inset: 0; background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0%, transparent 60%); opacity: 0; transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+.imageLink .hoverVignette { pointer-events: none; position: absolute; inset: 0; background-image: linear-gradient(0deg, var(--backdrop-scrim-soft) 0%, transparent 60%); opacity: 0; transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); }
 .productCard:hover .hoverVignette { opacity: 1; }
 /* Section: Badges & Rating Overlay */
 .mediaFrame .badgeStack { pointer-events: none; position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
-.badgeStack .discountBadge { border-radius: 9999px; background-color: var(--primary); padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
-.badgeStack .soldOutBadge { border-radius: 9999px; background-color: var(--destructive-solid); padding: 2px 8px; font-size: 11px; font-weight: 700; color: #ffffff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
-.mediaFrame .ratingPill { pointer-events: none; position: absolute; bottom: 8px; left: 8px; display: inline-flex; max-width: calc(100% - 52px); align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 9999px; background-color: color-mix(in oklab, var(--card) 86%, transparent); padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--foreground); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-variant-numeric: tabular-nums; }
-.ratingPill .pillStar { width: 12px; height: 12px; fill: #FFB020; color: #FFB020; }
+.badgeStack .discountBadge { border-radius: 9999px; background-color: var(--primary); padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 2px 6px var(--shadow-color); }
+.badgeStack .soldOutBadge { border-radius: 9999px; background-color: var(--destructive-solid); padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--on-solid); box-shadow: 0 2px 6px var(--shadow-color); }
+.mediaFrame .ratingPill { pointer-events: none; position: absolute; bottom: 8px; left: 8px; display: inline-flex; max-width: calc(100% - 52px); align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 9999px; background-color: color-mix(in oklab, var(--card) 86%, transparent); padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-variant-numeric: tabular-nums; }
+.ratingPill .pillStar { width: 12px; height: 12px; fill: var(--tone-star); color: var(--tone-star); }
 .ratingPill .pillDivider { color: color-mix(in oklab, var(--muted-foreground) 50%, transparent); }
 .ratingPill .pillCount { font-weight: 500; color: var(--muted-foreground); }
 /* Section: Wishlist & Quick Add CTA (10% Accent Button) */
-.wishlistTrigger { display: grid; place-items: center; border-radius: 9999px; border: 0; background-color: color-mix(in oklab, var(--card) 86%, transparent); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.wishlistTrigger { display: grid; place-items: center; border-radius: 9999px; border: 0; background-color: color-mix(in oklab, var(--card) 86%, transparent); box-shadow: 0 4px 12px var(--shadow-color-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .wishlistTrigger:hover { background-color: var(--card); transform: scale(1.08); box-shadow: var(--store-elevation-md); }
 .wishlistTrigger:active { transform: scale(0.92); }
 .wishlistSizeMd { width: 36px; height: 36px; }
@@ -31,7 +31,7 @@
 .wishlistTrigger .heartInactive { color: color-mix(in oklab, var(--foreground) 72%, transparent); }
 .wishlistTrigger .heartActive { fill: var(--primary); color: var(--primary); }
 .mediaFrame .cardWishlistPos { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; }
-.mediaFrame .quickAddDisabled { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; cursor: not-allowed; place-items: center; border-radius: 9999px; background-color: var(--muted); color: var(--muted-foreground); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 0; }
+.mediaFrame .quickAddDisabled { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; cursor: not-allowed; place-items: center; border-radius: 9999px; background-color: var(--muted); color: var(--muted-foreground); box-shadow: 0 1px 3px var(--shadow-color-soft); border: 0; }
 .mediaFrame .quickAddBtn { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 8px 16px -4px color-mix(in oklab, var(--primary) 45%, transparent); border: 0; transition: transform 200ms ease, opacity 200ms ease, background-color 150ms ease; }
 .mediaFrame .quickAddBtn:hover { background-color: var(--store-accent-hover, var(--primary)); transform: scale(1.1); }
 .mediaFrame .quickAddBtn:active { transform: scale(0.9); }

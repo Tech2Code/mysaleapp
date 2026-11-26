@@ -1,0 +1,372 @@
+/* ============================================================================
+ * ADMIN PANEL THEME TOKENS — Light & Dark
+ * ============================================================================
+ * Edit ONLY this file to re-theme the Admin Panel independently of the User
+ * Storefront (`src/styles/theme-store.css`).
+ * Scoped via `:root:has([data-slot="admin-layout"])` so it cascades into every
+ * admin page, sidebar, card, table, dialog, select popover & toast.
+ * ============================================================================ */
+
+:root:has([data-slot="admin-layout"]) {
+  --app-header-h: var(--admin-topbar-h);
+  --store-header-h: var(--admin-topbar-h);
+
+  /* Admin Core Brand & Surfaces (Warm Artisanal Terracotta + Crisp Slate) */
+  --background: oklch(0.985 0.008 75);
+  --foreground: oklch(0.24 0.03 45);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.03 45);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.03 45);
+  --primary: oklch(0.58 0.14 40);
+  --primary-foreground: oklch(0.99 0.005 75);
+  --secondary: oklch(0.95 0.025 60);
+  --secondary-foreground: oklch(0.3 0.04 45);
+  --muted: oklch(0.955 0.012 70);
+  --muted-foreground: oklch(0.48 0.03 50);
+  --accent: oklch(0.93 0.04 20);
+  --accent-foreground: oklch(0.32 0.06 30);
+  --border: rgba(15, 23, 42, 0.09);
+  --input: rgba(15, 23, 42, 0.14);
+  --ring: oklch(0.58 0.14 40);
+
+  /* Admin Layout Surfaces & Elevation */
+  --admin-surface: #f2f4f8;
+  --admin-card: #ffffff;
+  --admin-card-hover: #fafbfd;
+  --admin-well: #e8ecf2;
+  --admin-border: transparent;
+  --admin-border-strong: rgba(15, 23, 42, 0.08);
+  --admin-shadow-xs: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 2px 10px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --admin-shadow-sm: inset 0 1px 0 0 rgba(255, 255, 255, 0.95), 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --admin-shadow-md: inset 0 1px 0 0 rgba(255, 255, 255, 0.98), 0 14px 34px -6px rgba(15, 23, 42, 0.11), 0 4px 10px rgba(15, 23, 42, 0.05);
+  --store-elevation-sm: 0 0 0 1px var(--admin-border-strong), var(--admin-shadow-xs);
+  --store-elevation-md: 0 0 0 1px var(--admin-border-strong), var(--admin-shadow-sm);
+  --admin-highlight-bg: linear-gradient(155deg, #fff8f4 0%, #ffffff 56%, #fff4ed 100%);
+  --admin-highlight-border: rgba(194, 89, 52, 0.22);
+  --admin-highlight-fg: #18181b;
+  --admin-highlight-shadow: 0 2px 10px -2px rgba(194, 89, 52, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --admin-showcase-bg: radial-gradient(circle at 18% 18%, oklch(0.65 0.14 40 / 0.12), transparent 52%), radial-gradient(circle at 82% 80%, oklch(0.6 0.08 240 / 0.08), transparent 50%), linear-gradient(145deg, #f1f3f6 0%, #e9ecf1 100%);
+  --admin-scrollbar: rgba(100, 116, 139, 0.18);
+  --admin-scrollbar-hover: rgba(100, 116, 139, 0.34);
+
+  /* Admin Sidebar */
+  --sidebar: oklch(0.965 0.012 70);
+  --sidebar-foreground: oklch(0.24 0.03 45);
+  --sidebar-primary: oklch(0.58 0.14 40);
+  --sidebar-primary-foreground: oklch(0.99 0.005 75);
+  --sidebar-accent: oklch(0.935 0.025 60);
+  --sidebar-accent-foreground: oklch(0.3 0.04 45);
+  --sidebar-border: rgba(15, 23, 42, 0.06);
+  --sidebar-ring: oklch(0.58 0.14 40);
+
+  /* Admin Radii & Button Sizing */
+  --radiusControl: 8px;
+  --radiusControlSm: 6px;
+  --radiusCard: 12px;
+  --radiusPanel: 10px;
+  --radiusModal: 16px;
+  --btnDefaultH: 40px;
+  --btnDefaultPx: 16px;
+
+  /* Brand Logo & Ambient Accents */
+  --logo-grad-start: #d96b38;
+  --logo-grad-end: #8e2936;
+  --logo-fg: #fffaf4;
+  --hero-a: oklch(0.93 0.05 50);
+  --hero-b: oklch(0.92 0.05 15);
+  --hero-c: oklch(0.95 0.04 90);
+  --text-gradient-mid: oklch(0.6 0.16 15);
+
+  /* Brand Actions (Success / Destructive / WhatsApp) */
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-solid: oklch(0.53 0.2 25);
+  --success: oklch(0.58 0.13 155);
+  --success-solid: oklch(0.5 0.13 155);
+  --whatsapp: oklch(0.66 0.17 150);
+  --whatsapp-solid: oklch(0.5 0.13 152);
+  --on-solid: #ffffff;
+
+  /* Admin Semantic Status & Tone Tokens — Success (Emerald) */
+  --tone-success-bg: rgba(236, 253, 245, 0.65);
+  --tone-success-bg-soft: rgba(16, 185, 129, 0.1);
+  --tone-success-border: rgba(110, 231, 183, 0.75);
+  --tone-success-fg: #022c22;
+  --tone-success-fg-strong: #047857;
+  --tone-success-icon: #059669;
+  --tone-success-solid: #059669;
+  --tone-success-solid-hover: #047857;
+  --tone-success-solid-fg: #ffffff;
+  --tone-success-pill-bg: #d1fae5;
+  --tone-success-pill-fg: #064e3b;
+  --tone-success-grad: linear-gradient(135deg, #34d399 0%, #10b981 52%, #059669 100%);
+
+  /* Admin Semantic Status & Tone Tokens — Warning (Amber) */
+  --tone-warning-bg: #fef3c7;
+  --tone-warning-bg-soft: rgba(255, 251, 235, 0.7);
+  --tone-warning-border: rgba(252, 211, 77, 0.8);
+  --tone-warning-fg: #78350f;
+  --tone-warning-fg-strong: #451a03;
+  --tone-warning-icon: #d97706;
+  --tone-warning-solid: #f59e0b;
+  --tone-warning-pill-bg: #fef3c7;
+  --tone-warning-pill-fg: #78350f;
+
+  /* Admin Semantic Status & Tone Tokens — Info (Sky) */
+  --tone-info-bg: rgba(240, 249, 255, 0.7);
+  --tone-info-bg-soft: rgba(14, 165, 233, 0.12);
+  --tone-info-border: #bae6fd;
+  --tone-info-fg: #0c4a6e;
+  --tone-info-icon: #0284c7;
+  --tone-info-solid: #0ea5e9;
+  --tone-info-pill-bg: #e0f2fe;
+  --tone-info-pill-fg: #0c4a6e;
+  --tone-seo-link: #1a0dab;
+
+  /* Admin Semantic Status & Tone Tokens — Exchange (Indigo) */
+  --tone-exchange-bg: rgba(99, 102, 241, 0.08);
+  --tone-exchange-border: rgba(99, 102, 241, 0.25);
+  --tone-exchange-fg: #312e81;
+  --tone-exchange-fg-muted: #3730a3;
+  --tone-exchange-icon: #4f46e5;
+  --tone-exchange-pill-bg: rgba(99, 102, 241, 0.12);
+  --tone-exchange-pill-fg: #4338ca;
+
+  /* Admin Semantic Status & Tone Tokens — Shipping / Progress (Violet) */
+  --tone-shipping-bg: rgba(245, 243, 255, 0.65);
+  --tone-shipping-bg-soft: rgba(139, 92, 246, 0.12);
+  --tone-shipping-border: #ddd6fe;
+  --tone-shipping-fg: #4c1d95;
+  --tone-shipping-icon: #6d28d9;
+  --tone-shipping-solid: #7c3aed;
+  --tone-shipping-pill-bg: #ede9fe;
+  --tone-shipping-pill-fg: #4c1d95;
+
+  /* Admin Semantic Status & Tone Tokens — Refund Due (Orange) */
+  --tone-refund-bg: rgba(255, 247, 237, 0.7);
+  --tone-refund-border: #fed7aa;
+  --tone-refund-fg: #7c2d12;
+  --tone-refund-pill-bg: #ffedd5;
+  --tone-refund-pill-fg: #7c2d12;
+
+  /* Admin Semantic Status & Tone Tokens — Danger (Rose) */
+  --tone-danger-bg: #fee2e2;
+  --tone-danger-bg-soft: rgba(244, 63, 94, 0.12);
+  --tone-danger-border: rgba(239, 68, 68, 0.35);
+  --tone-danger-fg: #7f1d1d;
+  --tone-danger-icon: #be123c;
+  --tone-danger-solid: #f43f5e;
+  --tone-danger-solid-soft: #fb7185;
+  --tone-danger-pill-bg: #fee2e2;
+  --tone-danger-pill-fg: #7f1d1d;
+
+  /* Admin Semantic Status & Tone Tokens — Neutral Slate */
+  --tone-slate-bg: #e2e8f0;
+  --tone-slate-fg: #0f172a;
+  --tone-slate-soft-bg: #f1f5f9;
+  --tone-slate-soft-fg: #334155;
+
+  /* Rating Stars & Overlays */
+  --tone-star: #f59e0b;
+  --tone-star-soft: #fbbf24;
+  --backdrop-scrim: rgba(15, 23, 42, 0.36);
+  --backdrop-scrim-soft: rgba(15, 23, 42, 0.18);
+  --backdrop-scrim-strong: rgba(0, 0, 0, 0.62);
+  --shadow-color: rgba(15, 23, 42, 0.1);
+  --shadow-color-soft: rgba(15, 23, 42, 0.05);
+  --shadow-color-strong: rgba(15, 23, 42, 0.22);
+
+  /* Admin Toast Notifications (Sonner) */
+  --toast-normal-bg: oklch(0.21 0.02 45 / 96%);
+  --toast-normal-text: oklch(0.98 0.005 80);
+  --toast-normal-border: oklch(1 0 0 / 16%);
+  --toast-success-bg: oklch(0.23 0.045 155 / 96%);
+  --toast-success-text: oklch(0.98 0.01 155);
+  --toast-success-border: oklch(0.68 0.17 155 / 50%);
+  --toast-error-bg: oklch(0.24 0.075 25 / 96%);
+  --toast-error-text: oklch(0.98 0.01 25);
+  --toast-error-border: oklch(0.66 0.2 25 / 55%);
+  --toast-warning-bg: oklch(0.25 0.06 75 / 96%);
+  --toast-warning-text: oklch(0.98 0.01 80);
+  --toast-warning-border: oklch(0.76 0.16 75 / 50%);
+  --toast-info-bg: oklch(0.23 0.04 240 / 96%);
+  --toast-info-text: oklch(0.98 0.01 240);
+  --toast-info-border: oklch(0.7 0.14 240 / 50%);
+}
+
+.dark:has([data-slot="admin-layout"]) {
+  color-scheme: dark;
+
+  /* Admin Core Brand & Surfaces (Dark) */
+  --background: oklch(0.18 0.015 45);
+  --foreground: oklch(0.95 0.01 75);
+  --card: oklch(0.22 0.018 45);
+  --card-foreground: oklch(0.95 0.01 75);
+  --popover: oklch(0.22 0.018 45);
+  --popover-foreground: oklch(0.95 0.01 75);
+  --primary: oklch(0.72 0.13 45);
+  --primary-foreground: oklch(0.18 0.02 45);
+  --secondary: oklch(0.27 0.02 45);
+  --secondary-foreground: oklch(0.95 0.01 75);
+  --muted: oklch(0.26 0.015 45);
+  --muted-foreground: oklch(0.72 0.02 60);
+  --accent: oklch(0.3 0.04 25);
+  --accent-foreground: oklch(0.95 0.01 75);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.13 45);
+
+  /* Admin Layout Surfaces & Elevation (Dark) */
+  --admin-surface: #090b0f;
+  --admin-card: #12151c;
+  --admin-card-hover: #171b24;
+  --admin-well: #1a1f29;
+  --admin-border: transparent;
+  --admin-border-strong: rgba(255, 255, 255, 0.1);
+  --admin-shadow-xs: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 4px 14px -2px rgba(0, 0, 0, 0.45);
+  --admin-shadow-sm: inset 0 1px 0 0 rgba(255, 255, 255, 0.09), 0 10px 26px -4px rgba(0, 0, 0, 0.55);
+  --admin-shadow-md: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 16px 36px -6px rgba(0, 0, 0, 0.65);
+  --store-elevation-sm: 0 0 0 1px var(--admin-border-strong), var(--admin-shadow-xs);
+  --store-elevation-md: 0 0 0 1px var(--admin-border-strong), var(--admin-shadow-sm);
+  --admin-highlight-bg: linear-gradient(155deg, #1f1714 0%, #13161c 65%);
+  --admin-highlight-border: rgba(251, 146, 60, 0.22);
+  --admin-highlight-fg: #fafafa;
+  --admin-highlight-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+  --admin-showcase-bg: radial-gradient(circle at 18% 18%, oklch(0.58 0.14 40 / 0.18), transparent 52%), radial-gradient(circle at 82% 80%, oklch(0.5 0.08 240 / 0.12), transparent 50%), linear-gradient(145deg, #13161c 0%, #0b0d11 100%);
+  --admin-scrollbar: rgba(148, 163, 184, 0.16);
+  --admin-scrollbar-hover: rgba(148, 163, 184, 0.32);
+
+  /* Admin Sidebar (Dark) */
+  --sidebar: oklch(0.16 0.015 45);
+  --sidebar-foreground: oklch(0.95 0.01 75);
+  --sidebar-primary: oklch(0.72 0.13 45);
+  --sidebar-primary-foreground: oklch(0.18 0.02 45);
+  --sidebar-accent: oklch(0.24 0.02 45);
+  --sidebar-accent-foreground: oklch(0.95 0.01 75);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.72 0.13 45);
+
+  /* Brand Logo & Ambient Accents (Dark) */
+  --logo-grad-start: #d96b38;
+  --logo-grad-end: #8e2936;
+  --logo-fg: #fffaf4;
+  --hero-a: oklch(0.3 0.06 45);
+  --hero-b: oklch(0.28 0.06 15);
+  --hero-c: oklch(0.26 0.04 80);
+  --text-gradient-mid: oklch(0.68 0.15 20);
+
+  /* Brand Actions (Dark) */
+  --destructive: oklch(0.7 0.19 22);
+  --destructive-solid: oklch(0.53 0.2 25);
+  --success: oklch(0.72 0.14 155);
+  --success-solid: oklch(0.5 0.13 155);
+  --whatsapp: oklch(0.72 0.17 150);
+  --whatsapp-solid: oklch(0.5 0.13 152);
+  --on-solid: #ffffff;
+
+  /* Admin Semantic Status & Tone Tokens — Success (Dark) */
+  --tone-success-bg: rgba(2, 44, 34, 0.26);
+  --tone-success-bg-soft: rgba(16, 185, 129, 0.16);
+  --tone-success-border: rgba(6, 95, 70, 0.55);
+  --tone-success-fg: #a7f3d0;
+  --tone-success-fg-strong: #6ee7b7;
+  --tone-success-icon: #34d399;
+  --tone-success-solid: #10b981;
+  --tone-success-solid-hover: #34d399;
+  --tone-success-solid-fg: #022c22;
+  --tone-success-pill-bg: rgba(6, 78, 59, 0.4);
+  --tone-success-pill-fg: #a7f3d0;
+  --tone-success-grad: linear-gradient(135deg, #34d399 0%, #10b981 52%, #059669 100%);
+
+  /* Admin Semantic Status & Tone Tokens — Warning (Dark) */
+  --tone-warning-bg: rgba(120, 53, 15, 0.4);
+  --tone-warning-bg-soft: rgba(69, 26, 3, 0.28);
+  --tone-warning-border: rgba(146, 64, 14, 0.55);
+  --tone-warning-fg: #fde68a;
+  --tone-warning-fg-strong: #fef3c7;
+  --tone-warning-icon: #fbbf24;
+  --tone-warning-solid: #f59e0b;
+  --tone-warning-pill-bg: rgba(120, 53, 15, 0.4);
+  --tone-warning-pill-fg: #fde68a;
+
+  /* Admin Semantic Status & Tone Tokens — Info (Dark) */
+  --tone-info-bg: rgba(8, 47, 73, 0.24);
+  --tone-info-bg-soft: rgba(14, 165, 233, 0.18);
+  --tone-info-border: rgba(12, 74, 110, 0.5);
+  --tone-info-fg: #bae6fd;
+  --tone-info-icon: #7dd3fc;
+  --tone-info-solid: #38bdf8;
+  --tone-info-pill-bg: rgba(12, 74, 110, 0.4);
+  --tone-info-pill-fg: #bae6fd;
+  --tone-seo-link: #8ab4f8;
+
+  /* Admin Semantic Status & Tone Tokens — Exchange (Dark) */
+  --tone-exchange-bg: rgba(99, 102, 241, 0.14);
+  --tone-exchange-border: rgba(99, 102, 241, 0.3);
+  --tone-exchange-fg: #c7d2fe;
+  --tone-exchange-fg-muted: #a5b4fc;
+  --tone-exchange-icon: #a5b4fc;
+  --tone-exchange-pill-bg: rgba(99, 102, 241, 0.22);
+  --tone-exchange-pill-fg: #c7d2fe;
+
+  /* Admin Semantic Status & Tone Tokens — Shipping / Progress (Dark) */
+  --tone-shipping-bg: rgba(46, 16, 101, 0.22);
+  --tone-shipping-bg-soft: rgba(167, 139, 250, 0.15);
+  --tone-shipping-border: rgba(76, 29, 149, 0.5);
+  --tone-shipping-fg: #ddd6fe;
+  --tone-shipping-icon: #c4b5fd;
+  --tone-shipping-solid: #7c3aed;
+  --tone-shipping-pill-bg: rgba(76, 29, 149, 0.4);
+  --tone-shipping-pill-fg: #ddd6fe;
+
+  /* Admin Semantic Status & Tone Tokens — Refund Due (Dark) */
+  --tone-refund-bg: rgba(67, 20, 7, 0.24);
+  --tone-refund-border: rgba(124, 45, 18, 0.5);
+  --tone-refund-fg: #fed7aa;
+  --tone-refund-pill-bg: rgba(124, 45, 18, 0.4);
+  --tone-refund-pill-fg: #fed7aa;
+
+  /* Admin Semantic Status & Tone Tokens — Danger (Dark) */
+  --tone-danger-bg: rgba(127, 29, 29, 0.35);
+  --tone-danger-bg-soft: rgba(251, 113, 133, 0.15);
+  --tone-danger-border: rgba(185, 28, 28, 0.5);
+  --tone-danger-fg: #fecaca;
+  --tone-danger-icon: #fda4af;
+  --tone-danger-solid: #fb7185;
+  --tone-danger-solid-soft: #fda4af;
+  --tone-danger-pill-bg: rgba(127, 29, 29, 0.4);
+  --tone-danger-pill-fg: #fecaca;
+
+  /* Admin Semantic Status & Tone Tokens — Neutral Slate (Dark) */
+  --tone-slate-bg: #1e293b;
+  --tone-slate-fg: #e2e8f0;
+  --tone-slate-soft-bg: #1e293b;
+  --tone-slate-soft-fg: #cbd5e1;
+
+  /* Rating Stars & Overlays (Dark) */
+  --tone-star: #fbbf24;
+  --tone-star-soft: #fcd34d;
+  --backdrop-scrim: rgba(0, 0, 0, 0.52);
+  --backdrop-scrim-soft: rgba(0, 0, 0, 0.28);
+  --backdrop-scrim-strong: rgba(0, 0, 0, 0.72);
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-color-soft: rgba(0, 0, 0, 0.28);
+  --shadow-color-strong: rgba(0, 0, 0, 0.65);
+
+  /* Admin Toast Notifications (Sonner — Dark) */
+  --toast-normal-bg: oklch(0.21 0.02 45 / 96%);
+  --toast-normal-text: oklch(0.98 0.005 80);
+  --toast-normal-border: oklch(1 0 0 / 16%);
+  --toast-success-bg: oklch(0.23 0.045 155 / 96%);
+  --toast-success-text: oklch(0.98 0.01 155);
+  --toast-success-border: oklch(0.68 0.17 155 / 50%);
+  --toast-error-bg: oklch(0.24 0.075 25 / 96%);
+  --toast-error-text: oklch(0.98 0.01 25);
+  --toast-error-border: oklch(0.66 0.2 25 / 55%);
+  --toast-warning-bg: oklch(0.25 0.06 75 / 96%);
+  --toast-warning-text: oklch(0.98 0.01 80);
+  --toast-warning-border: oklch(0.76 0.16 75 / 50%);
+  --toast-info-bg: oklch(0.23 0.04 240 / 96%);
+  --toast-info-text: oklch(0.98 0.01 240);
+  --toast-info-border: oklch(0.7 0.14 240 / 50%);
+}

@@ -1,13 +1,13 @@
 /* Section: Storefront Footer (Borderless Tonal Depth + Elevated Action Pills) */
-.storeFooter { margin-top: 48px; border: 0; background: linear-gradient(180deg, var(--store-section-tint, var(--muted)) 0%, var(--muted) 100%); box-shadow: 0 -12px 36px -18px rgba(11, 53, 80, 0.05); }
+.storeFooter { margin-top: 48px; border: 0; background: linear-gradient(180deg, var(--store-section-tint, var(--muted)) 0%, var(--muted) 100%); box-shadow: 0 -12px 36px -18px var(--shadow-color-soft); }
 .storeFooter .footerGrid { margin: 0 auto; width: 100%; max-width: 1280px; padding: 36px 16px 28px 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 /* Section: Brand Column & Action Buttons */
 .footerGrid .brandColumn { grid-column: span 2 / span 2; display: flex; flex-direction: column; gap: 12px; }
 .brandColumn .shopDescription { max-width: 320px; font-size: 14px; line-height: 22px; color: var(--muted-foreground); margin: 0; }
 .brandColumn .actionStack { display: flex; width: 100%; max-width: 224px; flex-direction: column; gap: 10px; }
-.actionStack .whatsappBtn { display: inline-flex; height: 40px; width: 100%; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 16px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--whatsapp) 32%, transparent); transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
-.actionStack .whatsappBtn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -4px color-mix(in oklab, var(--whatsapp) 42%, transparent); }
-.actionStack .whatsappBtn:active { transform: translateY(0) scale(0.98); }
+.actionStack .whatsappBtn { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--whatsapp-solid); padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--on-solid); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--whatsapp) 32%, transparent); transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.actionStack .whatsappBtn:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 10px 22px -4px color-mix(in oklab, var(--whatsapp) 42%, transparent); }
+.actionStack .whatsappBtn:active { transform: scale(0.98); }
 .whatsappBtn .whatsappIcon { width: 16px; height: 16px; }
 .actionStack .installBtn { width: 100%; justify-content: center; }
 /* Section: Navigation Columns */

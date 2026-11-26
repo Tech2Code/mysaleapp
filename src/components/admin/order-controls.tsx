@@ -176,23 +176,9 @@ export function OrderStatusControl({
         return
       }
       form.reset(values)
-      const nextShipping: ShippingDetails | null = shippingPayload
-        ? {
-            carrier: shippingPayload.carrier,
-            trackingNumber: shippingPayload.trackingNumber ?? null,
-            trackingUrl: shippingPayload.trackingUrl ?? null,
-            expectedDelivery: shippingPayload.expectedDelivery ?? null,
-          }
-        : shipping
-      const updatedNotifyUrl = whatsappLink(
-        `91${phone}`,
-        buildStatusUpdateMessage(shop, { orderCode, customerName, status: values.status, shipping: nextShipping, returnStage: announcedStage })
-      )
       later(() => {
         setToConfirm(null)
-        toast.success(`Status changed to ${STATUS_META[values.status].label}`, {
-          action: { label: "Notify on WhatsApp", onClick: () => window.open(updatedNotifyUrl, "_blank", "noopener") },
-        })
+        toast.success(`Status changed to ${STATUS_META[values.status].label}`)
       })
       router.refresh()
     })
@@ -362,6 +348,7 @@ export function RevertOrderStatusDialog({
   const [reason, setReason] = useState("")
   const [clearShipping, setClearShipping] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [reasonTouched, setReasonTouched] = useState(false)
   const [reasonError, setReasonError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
@@ -377,6 +364,7 @@ export function RevertOrderStatusDialog({
       setReason("")
       setClearShipping(false)
       setSubmitted(false)
+      setReasonTouched(false)
       setReasonError(null)
     }
   }
@@ -432,7 +420,8 @@ export function RevertOrderStatusDialog({
               setReason(e.target.value)
               if (reasonError) setReasonError(null)
             }}
-            error={reasonError ?? ((submitted || trimmedReason.length > 0) && reasonInvalid ? OTHER_DETAIL_MESSAGE : undefined)}
+            onBlur={() => setReasonTouched(true)}
+            error={reasonError ?? ((submitted || reasonTouched) && reasonInvalid ? OTHER_DETAIL_MESSAGE : undefined)}
           />
           {from === "shipped" && hasShipping && (
             <SwitchField
@@ -463,6 +452,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
   const [reason, setReason] = useState<string>("")
   const [detail, setDetail] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [detailTouched, setDetailTouched] = useState(false)
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [pending, startTransition] = useTransition()
   const later = useToastAfter(pending)
@@ -502,6 +492,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
       setReason("")
       setDetail("")
       setSubmitted(false)
+      setDetailTouched(false)
       setServerFieldErrors({})
     }
   }
@@ -545,9 +536,10 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
               setDetail(e.target.value)
               if (serverFieldErrors.detail) setServerFieldErrors((p) => ({ ...p, detail: "" }))
             }}
+            onBlur={() => setDetailTouched(true)}
             error={
               serverFieldErrors.detail ||
-              ((submitted || Boolean(detail.trim())) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
+              ((submitted || detailTouched) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
                 ? OTHER_DETAIL_MESSAGE
                 : undefined)
             }

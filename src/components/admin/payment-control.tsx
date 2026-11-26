@@ -26,11 +26,10 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/features/orders/types"
-import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { paymentDue } from "@/features/orders/payment-due"
 import { allowedPaymentStatuses, isPaymentMoneyLocked, paymentEditNote } from "@/features/orders/payment-rules"
-import { buildPaymentMessage, whatsappLink } from "@/features/orders/whatsapp"
 import { formatDateTime, formatPrice } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
@@ -92,12 +91,12 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
  */
 export function PaymentControl({ order }: { order: PaymentOrder }) {
   const router = useRouter()
-  const shop = useStoreSettings()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState("")
+  const [reasonTouched, setReasonTouched] = useState(false)
   // Which action is waiting for "are you sure?" (verify / reject / refund change money records).
   const [refundValues, setRefundValues] = useState<Omit<PaymentValues, "otherMethod"> | null>(null)
   const [refundOpen, setRefundOpen] = useState(false)
@@ -149,12 +148,6 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
   const canSubmitDialog = isRefunding ? true : hasPaymentChanges
 
-  const notifyUrl = (result: "paid" | "failed", amount?: number | null, why?: string | null) =>
-    whatsappLink(
-      `91${order.phone}`,
-      buildPaymentMessage(shop, { orderCode: order.orderCode, customerName: order.customerName, result, amount, reason: why })
-    )
-
   const run = (values: Omit<PaymentValues, "otherMethod">, after: (confirmed: boolean) => void, onFail?: () => void) =>
     startTransition(async () => {
       // expectedRefunded: what this screen showed, so a double click / stale tab can't refund twice
@@ -183,9 +176,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       (confirmed) => {
         setAsk(null)
         setRejecting(false)
-        later(() => toast.success(confirmed ? "Payment verified. Order confirmed." : "Payment marked as paid", {
-          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("paid", order.total), "_blank", "noopener") },
-        }))
+        later(() => toast.success(confirmed ? "Payment verified. Order confirmed." : "Payment marked as paid"))
       }
     )
 
@@ -201,9 +192,8 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
         setAsk(null)
         setRejecting(false)
         setReason("")
-        later(() => toast.success("Payment rejected. The customer can submit it again.", {
-          action: { label: "Notify on WhatsApp", onClick: () => window.open(notifyUrl("failed", null, trimmedReason || null), "_blank", "noopener") },
-        }))
+        setReasonTouched(false)
+        later(() => toast.success("Payment rejected. The customer can submit it again."))
       }
     )
   }
@@ -211,7 +201,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
   const onSave = form.handleSubmit((values) => {
     form.clearErrors()
     const cleanOther = values.otherMethod.trim()
-    const cleanRef = values.reference.trim()
+    const cleanRef = refundOnly || values.status === "refunded" ? values.reference.trim().toUpperCase() : values.reference.trim()
     const cleanAmt = values.amount.trim()
     const numAmt = Number(cleanAmt)
     const cleanNote = values.note.trim()
@@ -221,7 +211,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       if (cleanRef.length < LIMITS.utr.min) {
         form.setError("reference", { message: `Enter the refund UTR / reference (${LIMITS.utr.min}–${LIMITS.utr.max} characters)` })
         hasErr = true
-      } else if (cleanRef === (order.paymentReference ?? "").trim()) {
+      } else if (cleanRef.toUpperCase() === (order.paymentReference ?? "").trim().toUpperCase()) {
         form.setError("reference", { message: "Enter your refund UTR, not the customer's incoming payment UTR" })
         hasErr = true
       }
@@ -389,7 +379,17 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             {order.status === "cancelled" ? "Payment received (mark paid)" : "Verify payment & confirm order"}
           </Button>
           {needsVerification && !rejecting && (
-            <Button type="button" variant="outline" onClick={() => setRejecting(true)} className={styles.pillBtn}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejecting(true)
+                requestAnimationFrame(() => {
+                  document.querySelector<HTMLElement>("[placeholder*='UTR']")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                })
+              }}
+              className={styles.pillBtn}
+            >
               <BanIcon className={styles.iconMd} /> Reject…
             </Button>
           )}
@@ -405,14 +405,15 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             rows={2}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            onBlur={() => setReasonTouched(true)}
             placeholder="e.g. We couldn't find this UTR. Please check and resend."
-            error={reason.trim().length > 0 && reason.trim().length < 5 ? "Please write at least 5 characters" : undefined}
+            error={reasonTouched && reason.trim().length < 5 ? "Please write at least 5 characters" : undefined}
           />
           <div className={styles.rejectBtnRow}>
             <Button type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className={styles.pillBtn}>
               {pending ? <Loader2Icon className={styles.spinIcon} /> : <BanIcon className={styles.iconMd} />} Reject payment
             </Button>
-            <Button type="button" variant="ghost" onClick={() => { setRejecting(false); setReason("") }} className={styles.pillBtn}>
+            <Button type="button" variant="ghost" onClick={() => { setRejecting(false); setReason(""); setReasonTouched(false) }} className={styles.pillBtn}>
               <XIcon className={styles.iconMd} /> Cancel
             </Button>
           </div>
@@ -462,30 +463,81 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                     required={isRefunding || statusNow === "submitted" || (statusNow === "paid" && (methodNow === "upi" || methodNow === "bank_transfer"))}
                     fieldSize="md"
                     kind={order.paymentGateway || isRefunding ? "gatewayRef" : "paymentRef"}
+                    autoCapitalize={isRefunding ? "characters" : undefined}
                     placeholder={isRefunding ? "e.g. 412345678901" : undefined}
                     disabled={lockPaidFields && !refundOnly}
-                    className={styles.monoText}
+                    className={cn(styles.monoText, isRefunding && styles.uppercaseInput)}
                     error={errors.reference?.message}
-                    {...form.register("reference")}
+                    {...form.register("reference", {
+                      onChange: (e) => {
+                        if (!isRefunding) return
+                        const el = e.target as HTMLInputElement
+                        const upper = el.value.toUpperCase()
+                        if (upper !== el.value) {
+                          const start = el.selectionStart
+                          const end = el.selectionEnd
+                          el.value = upper
+                          if (start != null && end != null) el.setSelectionRange(start, end)
+                        }
+                      },
+                    })}
                   />
-                  <TextField
-                    label={isRefunding ? "Amount to refund" : "Amount received"}
-                    required={isRefunding || statusNow === "paid"}
-                    kind="money"
-                    maxLength={String(LIMITS.paymentAmount.max).length + 3}
-                    fieldSize="md"
-                    inputMode="decimal"
-                    leading="₹"
-                    placeholder={isRefunding ? String(remainingToRefund) : String(order.total)}
-                    disabled={lockPaidFields && !refundOnly}
-                    hint={
-                      isRefunding
-                        ? `Max refundable: ${formatPrice(remainingToRefund)}. Enter a smaller amount for a partial refund.`
-                        : `Order total is ${formatPrice(order.total)}.`
-                    }
-                    error={errors.amount?.message}
-                    {...form.register("amount")}
-                  />
+                  {isRefunding && remainingToRefund > 0 ? (
+                    <div className={styles.refundAmountRow}>
+                      <TextField
+                        containerClassName={styles.refundAmountField}
+                        label="Amount to refund"
+                        required
+                        kind="money"
+                        maxLength={String(LIMITS.paymentAmount.max).length + 3}
+                        fieldSize="md"
+                        inputMode="decimal"
+                        leading="₹"
+                        placeholder={String(remainingToRefund)}
+                        disabled={lockPaidFields && !refundOnly}
+                        hint={`Max refundable: ${formatPrice(remainingToRefund)}. Enter a smaller amount for a partial refund.`}
+                        error={errors.amount?.message}
+                        {...form.register("amount")}
+                      />
+                      <button
+                        type="button"
+                        disabled={pending || (lockPaidFields && !refundOnly)}
+                        aria-pressed={amtTrimmed !== "" && Math.abs(Number(amtTrimmed) - remainingToRefund) < 0.005}
+                        onClick={() => {
+                          form.setValue("amount", String(remainingToRefund), { shouldDirty: true, shouldValidate: true })
+                          form.clearErrors("amount")
+                        }}
+                        className={cn(
+                          styles.fullRefundBtn,
+                          amtTrimmed !== "" && Math.abs(Number(amtTrimmed) - remainingToRefund) < 0.005 && styles.fullRefundBtnSelected
+                        )}
+                      >
+                        {amtTrimmed !== "" && Math.abs(Number(amtTrimmed) - remainingToRefund) < 0.005 && (
+                          <CheckIcon className={styles.iconSm} aria-hidden />
+                        )}
+                        Full ({formatPrice(remainingToRefund)})
+                      </button>
+                    </div>
+                  ) : (
+                    <TextField
+                      label={isRefunding ? "Amount to refund" : "Amount received"}
+                      required={isRefunding || statusNow === "paid"}
+                      kind="money"
+                      maxLength={String(LIMITS.paymentAmount.max).length + 3}
+                      fieldSize="md"
+                      inputMode="decimal"
+                      leading="₹"
+                      placeholder={isRefunding ? String(remainingToRefund) : String(order.total)}
+                      disabled={lockPaidFields && !refundOnly}
+                      hint={
+                        isRefunding
+                          ? `Max refundable: ${formatPrice(remainingToRefund)}. Enter a smaller amount for a partial refund.`
+                          : `Order total is ${formatPrice(order.total)}.`
+                      }
+                      error={errors.amount?.message}
+                      {...form.register("amount")}
+                    />
+                  )}
                   <TextAreaField
                     label={isRefunding ? "Refund reason / note (visible to the customer)" : statusNow === "failed" ? "Reason for rejection (visible to the customer)" : "Note (visible to the customer)"}
                     required={isRefunding || statusNow === "failed"}

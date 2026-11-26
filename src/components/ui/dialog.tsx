@@ -349,11 +349,20 @@ function DialogHeader({
 function DialogBody({
   className,
   children,
+  resetScrollKey,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & { resetScrollKey?: string | number }) {
   const mobileFullScreen = React.useContext(DialogMobileFullScreenContext)
+  const bodyRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (resetScrollKey === undefined) return
+    bodyRef.current?.scrollTo({ top: 0, behavior: "instant" })
+  }, [resetScrollKey])
+
   return (
     <div
+      ref={bodyRef}
       data-slot="dialog-body"
       className={cn(
         styles.dialogBody,
@@ -388,7 +397,7 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close render={<Button type="button" variant="outline" className={styles.pillOutlineBtn} />}>
+        <DialogPrimitive.Close render={<Button type="button" variant="outline" />}>
           Close
         </DialogPrimitive.Close>
       )}

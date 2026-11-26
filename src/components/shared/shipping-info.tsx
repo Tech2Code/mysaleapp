@@ -44,9 +44,11 @@ export function ShippingInfo({ shipping, className, action }: { shipping: Shippi
         {shipping.expectedDelivery && (
           <div className={styles.shippingRow}>
             <dt className={styles.shippingDt}>
-              <CalendarClockIcon className={styles.icon16} aria-hidden /> Expected by
+              <CalendarClockIcon className={styles.icon16} aria-hidden /> Estimated delivery
             </dt>
-            <dd className={styles.shippingDd}>{formatDate(`${shipping.expectedDelivery}T00:00:00`)}</dd>
+            <dd className={styles.shippingDd}>
+              By {formatDate(`${shipping.expectedDelivery}T00:00:00`)}
+            </dd>
           </div>
         )}
       </dl>

@@ -78,9 +78,9 @@ describe("returnStage", () => {
     expect(stageDetail(s, "customer")).toBe(s.customerDetail)
   })
 
-  it("handles exchange requests with exchange labels and marks received exchanges as complete (active: false)", () => {
+  it("handles exchange & replacement lifecycle: active until replacement/exchanged item is delivered", () => {
     const exReq = (status: ReturnStageInput["requests"][number]["status"], extra = {}) =>
-      req(status, "2026-01-01T10:00:00Z", { resolutionType: "exchange" as const, exchangePreference: "Size M", ...extra })
+      req(status, "2026-01-01T10:00:00Z", { resolutionType: "exchange" as const, exchangePreference: "Exchange: Size M", ...extra })
 
     expect(returnStage({ ...base, requests: [exReq("requested")] })).toMatchObject({
       key: "requested",
@@ -94,6 +94,7 @@ describe("returnStage", () => {
       customerLabel: "Exchange approved",
       active: true,
     })
+    // Old item received is only the halfway mark — still active until outbound item is dispatched & delivered
     const exReceived = returnStage({
       ...base,
       requests: [exReq("received")],
@@ -101,22 +102,152 @@ describe("returnStage", () => {
     })
     expect(exReceived).toMatchObject({
       key: "received",
-      step: 4,
+      step: 3,
       label: "Exchange received",
-      customerLabel: "Exchange received",
+      customerLabel: "Old item received",
+      active: true,
+    })
+    const exDispatched = returnStage({
+      ...base,
+      requests: [exReq("received", { exchangeStatus: "dispatched", exchangeShippedAt: "2026-01-06T10:00:00Z", exchangeTracking: "AWB123" })],
+      returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
+    })
+    expect(exDispatched).toMatchObject({
+      key: "exchange_dispatched",
+      step: 3,
+      label: "Exchange dispatched",
+      customerLabel: "Exchange item on the way",
+      active: true,
+    })
+    const exCompleted = returnStage({
+      ...base,
+      requests: [exReq("received", { exchangeStatus: "delivered", exchangeShippedAt: "2026-01-06T10:00:00Z", exchangeDeliveredAt: "2026-01-08T10:00:00Z" })],
+      returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
+    })
+    expect(exCompleted).toMatchObject({
+      key: "exchange_completed",
+      step: 4,
+      label: "Exchange complete",
+      customerLabel: "Exchange complete",
       active: false,
     })
     const timeline = returnTimeline({
       ...base,
-      requests: [exReq("received")],
+      requests: [
+        exReq("received", {
+          exchangeStatus: "delivered",
+          exchangeShippedAt: "2026-01-06T10:00:00Z",
+          exchangeDeliveredAt: "2026-01-08T10:00:00Z",
+          exchangeShipping: {
+            carrier: "Delhivery",
+            trackingNumber: "AWB12345678",
+            trackingUrl: "https://www.delhivery.com/track/package/AWB12345678",
+            expectedDelivery: "2026-01-08",
+          },
+        }),
+      ],
       returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
     })
-    expect(timeline.at(-1)).toMatchObject({
-      key: "refund",
-      label: "Exchange completed",
-      customerLabel: "Replacement arranged",
+    expect(timeline.at(-2)).toMatchObject({
+      key: "exchange_dispatched",
       state: "done",
+      note: null,
+      shipping: { carrier: "Delhivery", trackingNumber: "AWB12345678" },
     })
+    expect(timeline.at(-1)).toMatchObject({ key: "exchange_completed", label: "Exchange complete", state: "done" })
+
+    // Same-item Replacement labels
+    const repReq = (status: ReturnStageInput["requests"][number]["status"], extra = {}) =>
+      req(status, "2026-01-01T10:00:00Z", {
+        resolutionType: "exchange" as const,
+        exchangePreference: "Replacement: Same item, same size & colour",
+        ...extra,
+      })
+    expect(returnStage({ ...base, requests: [repReq("requested")] })).toMatchObject({
+      key: "requested",
+      label: "Replacement requested",
+      customerLabel: "Replacement requested",
+      active: true,
+    })
+    expect(
+      returnStage({
+        ...base,
+        requests: [repReq("received", { exchangeStatus: "delivered", exchangeDeliveredAt: "2026-01-08T10:00:00Z" })],
+        returns: [{ refunded: false, createdAt: "2026-01-05T10:00:00Z", resolutionType: "exchange" }],
+      })
+    ).toMatchObject({
+      key: "exchange_completed",
+      label: "Replacement delivered",
+      customerLabel: "Replacement delivered",
+      active: false,
+    })
+  })
+
+  it("handles doorstep exchange mode: skips separate pickup/warehouse steps and completes in 1 visit", () => {
+    const doorstepApproved = returnStage({
+      ...base,
+      requests: [
+        req("approved", "2026-01-01T10:00:00Z", {
+          resolutionType: "exchange" as const,
+          exchangePreference: "Replacement: Same item, same size & colour",
+          exchangeMode: "doorstep" as const,
+          pickupDate: "2026-01-05",
+        }),
+      ],
+    })
+    expect(doorstepApproved).toMatchObject({
+      key: "approved",
+      label: "Doorstep replacement",
+      customerLabel: "Doorstep replacement",
+      active: true,
+    })
+    expect(doorstepApproved?.customerDetail).toContain("deliver the new item and collect the old item together")
+
+    const tApproved = returnTimeline({
+      ...base,
+      requests: [
+        req("approved", "2026-01-01T10:00:00Z", {
+          resolutionType: "exchange" as const,
+          exchangePreference: "Exchange: Size L",
+          exchangeMode: "doorstep" as const,
+          pickupDate: "2026-01-05",
+          exchangeShipping: {
+            carrier: "Blue Dart",
+            trackingNumber: "BD998877",
+            trackingUrl: "https://bluedart.com/track/BD998877",
+            expectedDelivery: "2026-01-05",
+          },
+        }),
+      ],
+    })
+    expect(tApproved.map((e) => `${e.key}:${e.state}`)).toEqual([
+      "requested:done",
+      "approved:done",
+      "pickup:current",
+      "exchange_completed:upcoming",
+    ])
+    expect(tApproved.find((e) => e.key === "pickup")?.shipping).toMatchObject({ carrier: "Blue Dart", trackingNumber: "BD998877" })
+
+    const tDone = returnTimeline({
+      ...base,
+      requests: [
+        req("received", "2026-01-01T10:00:00Z", {
+          resolutionType: "exchange" as const,
+          exchangePreference: "Exchange: Size L",
+          exchangeMode: "doorstep" as const,
+          pickupDate: "2026-01-05",
+          exchangeStatus: "delivered" as const,
+          exchangeDeliveredAt: "2026-01-05T14:00:00Z",
+        }),
+      ],
+      returns: [{ refunded: false, createdAt: "2026-01-05T14:00:00Z", resolutionType: "exchange" }],
+    })
+    expect(tDone.map((e) => `${e.key}:${e.state}`)).toEqual([
+      "requested:done",
+      "approved:done",
+      "pickup:done",
+      "exchange_completed:done",
+    ])
   })
 })
 
@@ -137,7 +268,7 @@ describe("returnTimeline", () => {
   it("approved: pickup scheduled is current, then pickup successful, then received", () => {
     const approved = { ...base, requests: [req("approved", undefined, { decidedAt: "2026-01-02T00:00:00Z", pickupDate: "2026-01-05" })] }
     expect(keys(approved)).toEqual(["requested:done", "approved:done", "pickup:current", "picked_up:upcoming", "received:upcoming", "refund:upcoming"])
-    expect(returnTimeline(approved).find((e) => e.key === "pickup")?.note).toMatch(/^Pickup on /)
+    expect(returnTimeline(approved).find((e) => e.key === "pickup")?.note).toMatch(/^Expected pickup by /)
     expect(returnStage(approved)?.key).toBe("approved")
 
     const pickedUp = { ...base, requests: [req("approved", undefined, { pickupDate: "2026-01-05", pickedUpAt: "2026-01-05T12:00:00Z" })] }

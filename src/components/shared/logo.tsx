@@ -1,6 +1,6 @@
 "use client"
 
-import { BrandGlyph } from "./brand-glyph"
+import { BRAND_PALETTE, BrandGlyph } from "./brand-glyph"
 import { ScrollLink } from "./scroll-link"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { cn } from "@/lib/utils"
@@ -17,7 +17,13 @@ export function LogoMark({ className }: { className?: string }) {
       )}
     >
       <span className={styles.logoSheen} />
-      <BrandGlyph size={24} ribbon="#fbd07c" accent="#9e333b" className={styles.glyphRelative} />
+      <BrandGlyph
+        size={24}
+        boxColor={BRAND_PALETTE.boxColor}
+        ribbon={BRAND_PALETTE.ribbon}
+        accent={BRAND_PALETTE.accent}
+        className={styles.glyphRelative}
+      />
     </span>
   )
 }

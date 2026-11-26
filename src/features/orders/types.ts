@@ -250,6 +250,10 @@ export type ReturnRequestStatus = (typeof RETURN_REQUEST_STATUSES)[number]
 export const RETURN_RESOLUTION_TYPES = ["refund", "exchange"] as const
 export type ReturnResolutionType = (typeof RETURN_RESOLUTION_TYPES)[number]
 
+export type ExchangeFulfillmentStatus = "dispatched" | "delivered"
+export type ExchangeMode = "standard" | "doorstep"
+export type ReturnRequestActor = "customer" | "admin"
+
 /** A customer's request to send items back. The admin approves or rejects it. */
 export type ReturnRequest = {
   id: string
@@ -257,6 +261,8 @@ export type ReturnRequest = {
   reason: string
   details: string | null
   status: ReturnRequestStatus
+  /** Who opened this request ('customer' by default; 'admin' when created on their behalf). */
+  requestedBy?: ReturnRequestActor
   /** Shown to the customer: pickup / shipping instructions, or the reason for a rejection. */
   adminNote: string | null
   createdAt: string
@@ -269,6 +275,14 @@ export type ReturnRequest = {
   resolutionType?: ReturnResolutionType
   /** Customer's preferred replacement note when resolutionType === 'exchange' (e.g. size, colour, or piece). */
   exchangePreference?: string | null
+  /** 'standard' (pickup & QC first) or 'doorstep' (1-visit simultaneous handover). */
+  exchangeMode?: ExchangeMode
+  /** Outbound fulfillment status for exchange/replacement after old items are received. */
+  exchangeStatus?: ExchangeFulfillmentStatus | null
+  exchangeShippedAt?: string | null
+  exchangeDeliveredAt?: string | null
+  exchangeTracking?: string | null
+  exchangeShipping?: ShippingDetails | null
 }
 
 /** Immutable seller & GST details captured when the order was created, so past invoices never drift when settings change. */
@@ -403,6 +417,7 @@ export type OrderRow = {
     reason: string
     details: string | null
     status: ReturnRequestStatus
+    requested_by?: ReturnRequestActor | null
     admin_note: string | null
     created_at: string
     decided_at: string | null
@@ -410,6 +425,12 @@ export type OrderRow = {
     picked_up_at?: string | null
     resolution_type?: ReturnResolutionType | null
     exchange_preference?: string | null
+    exchange_mode?: ExchangeMode | null
+    exchange_status?: ExchangeFulfillmentStatus | null
+    exchange_shipped_at?: string | null
+    exchange_delivered_at?: string | null
+    exchange_tracking?: string | null
+    exchange_shipping?: ShippingDetails | null
   }[]
 }
 
@@ -501,6 +522,7 @@ function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): Return
   return returnStage({
     requests: (row.return_requests ?? []).map((r) => ({
       status: r.status,
+      requestedBy: r.requested_by ?? undefined,
       createdAt: r.created_at,
       decidedAt: r.decided_at,
       adminNote: r.admin_note,
@@ -508,6 +530,12 @@ function stageOfRow(row: OrderRow, pricing: OrderPricing & OrderPayment): Return
       pickedUpAt: r.picked_up_at ?? null,
       resolutionType: r.resolution_type ?? undefined,
       exchangePreference: r.exchange_preference ?? null,
+      exchangeMode: r.exchange_mode ?? undefined,
+      exchangeStatus: r.exchange_status ?? null,
+      exchangeShippedAt: r.exchange_shipped_at ?? null,
+      exchangeDeliveredAt: r.exchange_delivered_at ?? null,
+      exchangeTracking: r.exchange_tracking ?? null,
+      exchangeShipping: r.exchange_shipping ?? null,
     })),
     returns: (row.returns ?? []).map((r) => ({
       refunded: r.refunded,
@@ -600,6 +628,7 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
         reason: r.reason,
         details: r.details,
         status: r.status,
+        ...(r.requested_by ? { requestedBy: r.requested_by } : {}),
         adminNote: r.admin_note,
         createdAt: r.created_at,
         decidedAt: r.decided_at,
@@ -607,6 +636,12 @@ export function mapOrderWithHistory(row: OrderRow): OrderWithHistory {
         pickedUpAt: r.picked_up_at ?? null,
         ...(r.resolution_type ? { resolutionType: r.resolution_type } : {}),
         ...(r.exchange_preference !== undefined ? { exchangePreference: r.exchange_preference } : {}),
+        ...(r.exchange_mode ? { exchangeMode: r.exchange_mode } : {}),
+        ...(r.exchange_status !== undefined ? { exchangeStatus: r.exchange_status } : {}),
+        ...(r.exchange_shipped_at !== undefined ? { exchangeShippedAt: r.exchange_shipped_at } : {}),
+        ...(r.exchange_delivered_at !== undefined ? { exchangeDeliveredAt: r.exchange_delivered_at } : {}),
+        ...(r.exchange_tracking !== undefined ? { exchangeTracking: r.exchange_tracking } : {}),
+        ...(r.exchange_shipping !== undefined ? { exchangeShipping: r.exchange_shipping } : {}),
       }))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     returns: (row.returns ?? [])

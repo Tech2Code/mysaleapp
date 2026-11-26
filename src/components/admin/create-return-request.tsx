@@ -30,6 +30,8 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const [reason, setReason] = useState<string>("")
   const [details, setDetails] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const markTouched = (field: string) => setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }))
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const itemsListRef = useRef<HTMLUListElement>(null)
   const exchangeBoxRef = useRef<HTMLDivElement>(null)
@@ -56,6 +58,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
   const exchangeKindMissing = resolutionType === "exchange" && !exchangeKind
   const exchangePrefMissing =
     resolutionType === "exchange" &&
+    exchangeKind === "exchange" &&
     exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim().length < 2
   const showLowerFields = resolutionType === "refund" || Boolean(exchangeKind)
 
@@ -98,16 +101,14 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       return
     }
     startTransition(async () => {
-      const rawPref = exchangePreference.trim()
+      const cleanPref = exchangePreference.trim().replace(/^(Replacement|Exchange):\s*/i, "")
       const formattedPref =
         resolutionType === "exchange"
           ? exchangeKind === "replacement"
-            ? rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
-              ? `Replacement: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
-              : rawPref
-            : rawPref.replace(/^(Replacement|Exchange):\s*/i, "")
-              ? `Exchange: ${rawPref.replace(/^(Replacement|Exchange):\s*/i, "")}`
-              : rawPref
+            ? cleanPref
+              ? `Replacement: Same item, same size & colour — ${cleanPref}`
+              : "Replacement: Same item, same size & colour"
+            : `Exchange: ${cleanPref}`
           : undefined
       const res = await createReturnRequestAsAdmin({
         orderId,
@@ -135,6 +136,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
         setReason("")
         setDetails("")
         setSubmitted(false)
+        setTouched({})
         setServerFieldErrors({})
         toast.success("Request created. Approve it from the status dropdown.")
       })
@@ -153,6 +155,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
       setReason("")
       setDetails("")
       setSubmitted(false)
+      setTouched({})
       setServerFieldErrors({})
     }
   }
@@ -254,9 +257,10 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
                       setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
                     }
                   }}
+                  onBlur={() => markTouched("exchangePreference")}
                   error={
                     serverFieldErrors.exchangePreference ||
-                    ((submitted || exchangePreference.length > 0) && exchangePrefMissing
+                    ((submitted || touched.exchangePreference) && exchangePrefMissing
                       ? "Please enter the customer's exchange preference (at least 2 characters)"
                       : undefined)
                   }
@@ -264,11 +268,11 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
               )}
               {exchangeKind === "replacement" && (
                 <TextField
-                  label="Replacement details *"
-                  required
+                  label="Replacement note (optional)"
                   fieldSize="md"
-                  maxLength={180}
-                  placeholder="e.g. Send a fresh undamaged piece of the same item"
+                  maxLength={140}
+                  placeholder="e.g. Lid was cracked (optional)"
+                  hint="Replacement is always the exact same product (same size & colour)."
                   value={exchangePreference}
                   onChange={(e) => {
                     setExchangePreference(e.target.value)
@@ -276,12 +280,7 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
                       setServerFieldErrors((prev) => ({ ...prev, exchangePreference: "" }))
                     }
                   }}
-                  error={
-                    serverFieldErrors.exchangePreference ||
-                    ((submitted || exchangePreference.length > 0) && exchangePrefMissing
-                      ? "Please enter the replacement details (at least 2 characters)"
-                      : undefined)
-                  }
+                  error={serverFieldErrors.exchangePreference}
                 />
               )}
             </div>
@@ -321,9 +320,10 @@ export function CreateReturnRequest({ orderId, orderCode, items, returns }: { or
                     setServerFieldErrors((prev) => ({ ...prev, details: "" }))
                   }
                 }}
+                onBlur={() => markTouched("details")}
                 error={
                   serverFieldErrors.details ||
-                  ((submitted || details.trim().length > 0) && detailsMissing ? OTHER_DETAIL_MESSAGE : undefined)
+                  ((submitted || touched.details) && detailsMissing ? OTHER_DETAIL_MESSAGE : undefined)
                 }
               />
             </div>

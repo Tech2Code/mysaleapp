@@ -140,9 +140,9 @@ export function CourierDialog({
               name="expectedDelivery"
               render={({ field }) => (
                 <DateField
-                  label="Expected delivery date"
+                  label="Estimated delivery by"
                   fieldSize="md"
-                  hint={`Within the next ${LIMITS.expectedDeliveryDays.max} days.`}
+                  hint={`Shown to customers as “By [date]”. Within the next ${LIMITS.expectedDeliveryDays.max} days.`}
                   error={errors.expectedDelivery?.message}
                   value={field.value}
                   onChange={field.onChange}

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { DownloadIcon, KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, ShieldCheckIcon, UserXIcon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useState, useTransition } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
@@ -427,9 +427,21 @@ function DeactivateAccountCard() {
   const [reasonChoice, setReasonChoice] = useState("")
   const [customNote, setCustomNote] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [noteTouched, setNoteTouched] = useState(false)
+  const customNoteWrapRef = useRef<HTMLDivElement>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
+
+  useEffect(() => {
+    return () => {
+      setOpen(false)
+      setReasonChoice("")
+      setCustomNote("")
+      setSubmitted(false)
+      setNoteTouched(false)
+    }
+  }, [])
 
   const needsOtherDetail = otherNeedsDetail(reasonChoice, customNote)
   const canDeactivate = Boolean(reasonChoice) && !needsOtherDetail
@@ -441,6 +453,7 @@ function DeactivateAccountCard() {
       setReasonChoice("")
       setCustomNote("")
       setSubmitted(false)
+      setNoteTouched(false)
     }
   }
 
@@ -512,26 +525,36 @@ function DeactivateAccountCard() {
               placeholder="Select a reason"
               fieldSize="md"
               value={reasonChoice}
-              onValueChange={setReasonChoice}
+              onValueChange={(val) => {
+                setReasonChoice(val)
+                if (val === OTHER_REASON) {
+                  requestAnimationFrame(() => {
+                    customNoteWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                  })
+                }
+              }}
               options={DEACTIVATION_REASONS.map((r) => ({ value: r, label: r }))}
               error={submitted && !reasonChoice ? "Please select why you are deactivating" : undefined}
             />
 
             {reasonChoice === OTHER_REASON && (
-              <TextAreaField
-                label="Please tell us the reason"
-                required
-                rows={2}
-                maxLength={140}
-                placeholder="Tell us how we can improve (at least 5 letters)"
-                value={customNote}
-                onChange={(e) => setCustomNote(e.target.value)}
-                error={
-                  (submitted || Boolean(customNote.trim())) && needsOtherDetail
-                    ? OTHER_DETAIL_MESSAGE
-                    : undefined
-                }
-              />
+              <div ref={customNoteWrapRef}>
+                <TextAreaField
+                  label="Please tell us the reason"
+                  required
+                  rows={2}
+                  maxLength={140}
+                  placeholder="Tell us how we can improve (at least 5 letters)"
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value)}
+                  onBlur={() => setNoteTouched(true)}
+                  error={
+                    (submitted || noteTouched) && needsOtherDetail
+                      ? OTHER_DETAIL_MESSAGE
+                      : undefined
+                  }
+                />
+              </div>
             )}
           </DialogBody>
 

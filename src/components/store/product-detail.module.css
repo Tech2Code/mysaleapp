@@ -7,14 +7,14 @@
 .thumbRail .thumbBtnActive { opacity: 1; box-shadow: 0 0 0 2px var(--primary); }
 .galleryLayout .mainStage { position: relative; aspect-ratio: 4 / 5; flex: 1 1 0%; overflow: hidden; border-radius: 16px; background-color: var(--muted); box-shadow: var(--store-elevation-sm); user-select: none; container-type: inline-size; }
 .mainStage .slideLayer { position: absolute; inset: 0; }
-.mainStage .navArrowPrev { position: absolute; top: 50%; left: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowPrev { position: absolute; top: 50%; left: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
 .mainStage .navArrowPrev:hover { background-color: var(--card); }
 .mainStage .navArrowPrev:active { transform: translateY(-50%) scale(0.95); }
-.mainStage .navArrowNext { position: absolute; top: 50%; right: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowNext { position: absolute; top: 50%; right: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
 .mainStage .navArrowNext:hover { background-color: var(--card); }
 .mainStage .navArrowNext:active { transform: translateY(-50%) scale(0.95); }
 .arrowIcon { width: 20px; height: 20px; }
-.mainStage .photoCounterPill { pointer-events: none; position: absolute; right: 12px; bottom: 12px; z-index: 10; border-radius: 9999px; background-color: rgba(0, 0, 0, 0.62); padding: 2px 10px; font-size: 11px; font-weight: 600; color: #ffffff; font-variant-numeric: tabular-nums; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.mainStage .photoCounterPill { pointer-events: none; position: absolute; right: 12px; bottom: 12px; z-index: 10; border-radius: 9999px; background-color: var(--backdrop-scrim-strong); padding: 2px 10px; font-size: 11px; font-weight: 600; color: var(--on-solid); font-variant-numeric: tabular-nums; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 /* Section: Product Detail Page Layout */
 .crumbsBar { margin: 0 auto; width: 100%; max-width: 1280px; padding: 12px 16px 8px 16px; }
 .detailGrid { margin: 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; display: grid; gap: 16px; }
@@ -28,7 +28,7 @@
 .priceHeaderRow .saveBadge { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 4px 12px; font-size: 14px; font-weight: 600; color: var(--primary); }
 .priceHeaderRow .reviewsAnchorPill { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .priceHeaderRow .reviewsAnchorPill:hover { transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
-.reviewsAnchorPill .starGoldIcon { width: 14px; height: 14px; fill: #FFB020; color: #FFB020; }
+.reviewsAnchorPill .starGoldIcon { width: 14px; height: 14px; fill: var(--tone-star); color: var(--tone-star); }
 .reviewsAnchorPill .ratingScoreText { font-variant-numeric: tabular-nums; }
 .reviewsAnchorPill .ratingCountText { color: var(--muted-foreground); }
 .infoColumn .taxNoteText { margin: 4px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
@@ -36,8 +36,7 @@
 .infoColumn .highlightsList { margin: 16px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .highlightsList .highlightItem { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--foreground); }
 .highlightItem .checkIcon { margin-top: 2px; width: 18px; height: 18px; flex-shrink: 0; color: var(--success); }
-.infoColumn .surchargesBox { margin-top: 16px; border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.35); background-color: rgba(255, 251, 235, 0.75); padding: 16px; font-size: 14px; }
-:global(.dark) .infoColumn .surchargesBox { border-color: rgba(120, 53, 15, 0.55); background-color: rgba(69, 26, 3, 0.25); }
+.infoColumn .surchargesBox { margin-top: 16px; border-radius: 16px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 16px; font-size: 14px; }
 .surchargesBox .surchargeHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .surchargeHeading .infoIcon { width: 16px; height: 16px; }
 .surchargesBox .surchargeList { margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }

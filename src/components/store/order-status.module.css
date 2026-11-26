@@ -1,6 +1,6 @@
 /* Section: Order Placed Confirmation View */
 .orderPlacedWrap { margin: 0 auto; max-width: 576px; text-align: center; }
-.orderPlacedWrap .checkBadge { margin: 0 auto; display: grid; width: 96px; height: 96px; place-items: center; border-radius: 9999px; background-image: linear-gradient(135deg, var(--success-solid), var(--whatsapp-solid)); color: #ffffff; box-shadow: 0 24px 48px -12px color-mix(in oklab, var(--success) 35%, transparent); }
+.orderPlacedWrap .checkBadge { margin: 0 auto; display: grid; width: 96px; height: 96px; place-items: center; border-radius: 9999px; background-image: linear-gradient(135deg, var(--success-solid), var(--whatsapp-solid)); color: var(--on-solid); box-shadow: 0 24px 48px -12px color-mix(in oklab, var(--success) 35%, transparent); }
 .checkBadge .checkSvg { width: 48px; height: 48px; }
 .orderPlacedWrap .placedHeadline { margin: 32px 0 0 0; font-size: 36px; line-height: 42px; font-weight: 600; color: var(--foreground); }
 .orderPlacedWrap .placedSubtext { margin: 12px 0 0 0; color: var(--muted-foreground); }
@@ -12,12 +12,12 @@
 .statusFallbackCard .inlineAccentLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .statusFallbackCard .inlineAccentLink:hover { text-decoration: underline; }
 .orderPlacedWrap .actionBtnRow { margin-top: 32px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
-.actionBtnRow .pillBtn { border-radius: 9999px; padding: 0 24px; }
+.actionBtnRow .pillBtn { border-radius: var(--radiusControl); padding: 0 24px; }
 .orderPlacedWrap .whatsappSendLink { margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--whatsapp); }
 .orderPlacedWrap .whatsappSendLink:hover { text-decoration: underline; }
 .waIcon { width: 16px; height: 16px; }
 /* Section: Track Order Empty State */
-.trackEmptyBox { display: flex; height: 100%; min-height: 320px; flex-direction: column; align-items: center; justify-content: center; border-radius: 24px; border: 1px dashed var(--border); background-color: var(--card); padding: 24px; text-align: center; }
+.trackEmptyBox { display: flex; height: 100%; min-height: 320px; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--radiusCard); border: 1px dashed var(--border); background-color: var(--card); padding: 24px; text-align: center; }
 .trackEmptyBox .searchIconCircle { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 9999px; background-color: var(--secondary); }
 .searchIconCircle .pkgIcon { width: 28px; height: 28px; color: var(--primary); }
 .trackEmptyBox .emptyTitle { margin: 20px 0 0 0; font-family: var(--font-heading); font-size: 24px; line-height: 30px; font-weight: 600; }
@@ -28,7 +28,7 @@
 .accountPrompt .promptLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .accountPrompt .promptLink:hover { text-decoration: underline; }
 /* Section: Track Order Result Card */
-.trackResultCard { display: flex; flex-direction: column; gap: 24px; border-radius: 24px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; }
+.trackResultCard { display: flex; flex-direction: column; gap: 24px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; }
 .trackResultCard .resultHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .resultHeader .codeRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .codeRow .orderCodeText { margin: 0; font-family: var(--font-mono); font-size: 20px; line-height: 28px; font-weight: 600; color: var(--foreground); }
@@ -53,11 +53,11 @@
 /* Section: Track Order Body Grid & Form */
 .trackBodyGrid { display: grid; column-gap: 24px; row-gap: 16px; align-items: stretch; }
 .trackBodyGridAlignedStart { align-items: flex-start; }
-.trackBodyGrid .lookupForm { display: flex; flex-direction: column; gap: 8px; border-radius: 24px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; }
+.trackBodyGrid .lookupForm { display: flex; flex-direction: column; gap: 8px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; }
 .lookupForm .formTitle { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
 .lookupForm .formSubtitle { margin: 4px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
 .lookupForm .codeFieldInput { font-family: var(--font-mono); text-transform: uppercase; }
-.lookupForm .submitBtn { width: 100%; border-radius: 9999px; }
+.lookupForm .submitBtn { width: 100%; border-radius: var(--radiusControl); }
 .spinIcon { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }
 .lookupForm .helpFooter { margin-top: auto; border-top: 1px solid var(--border); padding-top: 16px; font-size: 14px; }
@@ -75,11 +75,9 @@
 .copyRowValWrap .copyRowIconBtn:hover { background-color: var(--card); color: var(--foreground); }
 .copyRowIconBtn .copyMiniSvg { width: 14px; height: 14px; }
 .refFormStack { display: flex; flex-direction: column; gap: 4px; }
-.refFormStack .refSubmitBtn { width: 100%; border-radius: 9999px; }
-.paidReceiptBox { border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.35); background-color: rgba(236, 253, 245, 0.75); padding: 20px; }
-:global(.dark) .paidReceiptBox { border-color: rgba(6, 78, 59, 0.55); background-color: rgba(6, 78, 59, 0.22); }
-.paidReceiptBox .paidHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: #064e3b; }
-:global(.dark) .paidReceiptBox .paidHeading { color: #a7f3d0; }
+.refFormStack .refSubmitBtn { width: 100%; border-radius: var(--radiusControl); }
+.paidReceiptBox { border-radius: 16px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg); padding: 20px; }
+.paidReceiptBox .paidHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: var(--tone-success-fg); }
 .paidHeading .badgeIcon { width: 20px; height: 20px; }
 .paidReceiptBox .receiptDl { margin: 12px 0 0 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
 .receiptDl .receiptRow { display: flex; justify-content: space-between; gap: 16px; }
@@ -87,10 +85,8 @@
 .receiptRow .receiptValBold { margin: 0; font-weight: 600; }
 .receiptRow .receiptValMed { margin: 0; min-width: 0; text-align: right; font-weight: 500; }
 .paidReceiptBox .paymentNoteText { margin: 12px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
-.verifyingBox { border-radius: 16px; border: 1px solid rgba(245, 158, 11, 0.35); background-color: rgba(255, 251, 235, 0.75); padding: 20px; }
-:global(.dark) .verifyingBox { border-color: rgba(120, 53, 15, 0.55); background-color: rgba(69, 26, 3, 0.25); }
-.verifyingBox .verifyingHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: #78350f; }
-:global(.dark) .verifyingBox .verifyingHeading { color: #fde68a; }
+.verifyingBox { border-radius: 16px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 20px; }
+.verifyingBox .verifyingHeading { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 16px; font-weight: 600; color: var(--tone-warning-fg); }
 .verifyingHeading .hourglassIcon { width: 20px; height: 20px; }
 .verifyingBox .verifyingSub { margin: 8px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
 .verifyingSub .refHighlight { font-weight: 600; color: var(--foreground); }
@@ -99,8 +95,7 @@
 .payNowPanel { display: flex; flex-direction: column; gap: 20px; border-radius: 16px; border: 2px solid color-mix(in oklab, var(--primary) 32%, transparent); background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 20px; }
 .payNowPanel .payPanelTitle { margin: 0; font-family: var(--font-heading); font-size: 20px; line-height: 26px; font-weight: 600; }
 .payNowPanel .payPanelSub { margin: 4px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
-.payNowPanel .deadlineNotice { margin: 8px 0 0 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: rgba(254, 243, 199, 0.85); padding: 12px; font-size: 12px; line-height: 17px; color: #451a03; }
-:global(.dark) .payNowPanel .deadlineNotice { background-color: rgba(120, 53, 15, 0.32); color: #fef3c7; }
+.payNowPanel .deadlineNotice { margin: 8px 0 0 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 12px; background-color: var(--tone-warning-bg); padding: 12px; font-size: 12px; line-height: 17px; color: var(--tone-warning-fg-strong); }
 .deadlineNotice .clockIcon { margin-top: 2px; width: 14px; height: 14px; flex-shrink: 0; }
 .deadlineNotice .deadlineStrong { font-weight: 600; }
 .payNowPanel .rejectedAlert { margin: 0; display: flex; gap: 8px; border-radius: 12px; background-color: color-mix(in oklab, var(--destructive) 12%, transparent); padding: 12px; font-size: 14px; color: var(--destructive); }
@@ -109,14 +104,17 @@
 .payNowPanel .upiStepStack { display: flex; flex-direction: column; gap: 16px; }
 .upiStepStack .stepLabelRow { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .stepLabelRow .stepNumCircle { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 9999px; background-color: var(--primary); font-size: 12px; color: var(--primary-foreground); }
-.upiStepStack .upiAppBtn { display: flex; height: 48px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--primary); font-size: 16px; font-weight: 600; color: var(--primary-foreground); box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent); }
+.upiStepStack .upiAppBtn { display: flex; height: var(--controlHXl); align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--primary); font-size: 15px; font-weight: 600; color: var(--primary-foreground); box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent); transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease; }
+.upiStepStack .upiAppBtn:hover { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); box-shadow: 0 14px 28px -6px color-mix(in oklab, var(--primary) 45%, transparent); }
+.upiStepStack .upiAppBtn:active { transform: scale(0.98); }
 .upiAppBtn .phoneSvg { width: 20px; height: 20px; }
-.upiStepStack .toggleQrBtn { display: flex; height: 40px; width: 100%; cursor: pointer; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; border: 1px solid var(--input); background-color: var(--secondary); padding: 0 16px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: background-color 150ms ease; }
-.upiStepStack .toggleQrBtn:hover { background-color: var(--muted); }
+.upiStepStack .toggleQrBtn { display: flex; height: var(--controlHMd); width: 100%; cursor: pointer; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.upiStepStack .toggleQrBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
+.upiStepStack .toggleQrBtn:active { transform: scale(0.98); }
 .toggleQrBtn .qrSvg { width: 16px; height: 16px; color: var(--primary); }
 .upiStepStack .qrCardBox { display: none; align-items: center; gap: 16px; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 65%, transparent); padding: 16px; }
 .upiStepStack .qrCardVisible { display: flex; }
-.qrCardBox .qrWhitePad { flex-shrink: 0; border-radius: 12px; border: 1px solid rgba(212, 212, 212, 0.8); background-color: #ffffff; padding: 6px; }
+.qrCardBox .qrWhitePad { flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border); background-color: var(--on-solid); padding: 6px; }
 .qrCardBox .qrTextCol { font-size: 14px; color: var(--muted-foreground); }
 .qrTextCol .qrTitleRow { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--foreground); }
 .qrTitleRow .qrIcon { width: 16px; height: 16px; color: var(--primary); }
@@ -131,8 +129,9 @@
 /* Section: Cancel Order & Delivery Editor */
 .cancelLockedNotice { margin: 0; border-radius: 16px; background-color: var(--secondary); padding: 16px; font-size: 14px; color: var(--muted-foreground); }
 .cancelLockedNotice .waInlineLink { font-weight: 600; color: var(--foreground); text-decoration: underline; text-underline-offset: 4px; }
-.cancelTriggerBtn { display: inline-flex; height: 44px; align-items: center; justify-content: center; gap: 6px; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--destructive) 45%, transparent); background: transparent; padding: 0 24px; font-size: 14px; font-weight: 600; color: var(--destructive); transition: background-color 150ms ease; }
-.cancelTriggerBtn:hover { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); }
+.cancelTriggerBtn { display: inline-flex; height: var(--controlHLg); align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid color-mix(in oklab, var(--destructive) 45%, transparent); background: transparent; padding: 0 20px; font-size: 14px; font-weight: 600; color: var(--destructive); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.cancelTriggerBtn:hover { border-color: color-mix(in oklab, var(--destructive) 65%, transparent); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); transform: translateY(-1px); }
+.cancelTriggerBtn:active { transform: scale(0.98); }
 .cancelTriggerBtn .banSvg { width: 16px; height: 16px; }
 .cancelDialogMax { width: 100%; }
 .cancelFormFields { display: flex; flex-direction: column; gap: 8px; }
@@ -149,12 +148,12 @@
 .refundModeOptionBtn .refundOptionTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
 .refundOptionTextCol .refundOptionHeading { font-size: 13px; font-weight: 600; color: var(--foreground); }
 .refundOptionTextCol .refundOptionSub { font-size: 11.5px; line-height: 16px; color: var(--muted-foreground); }
-.dialogPillBtn { gap: 6px; border-radius: 9999px; }
+.dialogPillBtn { gap: 6px; border-radius: var(--radiusControl); }
 .dialogPillBtn .btnIcon { width: 16px; height: 16px; }
-.deliverySectionCard { border-radius: 24px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 20px; font-size: 14px; }
+.deliverySectionCard { border-radius: var(--radiusCard); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 20px; font-size: 14px; }
 .deliverySectionCard .deliveryTopRow { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .deliveryTopRow .deliveryHeading { margin: 0; font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 600; }
-.deliveryTopRow .editBtn { border-radius: 9999px; }
+.deliveryTopRow .editBtn { border-radius: var(--radiusControlSm); }
 .deliverySectionCard .recipientLine { margin: 0; font-weight: 500; color: var(--foreground); }
 .deliverySectionCard .addressLine { margin: 2px 0 0 0; color: var(--muted-foreground); }
 .deliverySectionCard .noteLine { margin: 8px 0 0 0; color: var(--muted-foreground); }

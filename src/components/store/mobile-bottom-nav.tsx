@@ -3,7 +3,7 @@
 import { HeartIcon, HomeIcon, LayoutGridIcon, ShoppingBagIcon, UserRoundIcon } from "lucide-react"
 import * as m from "motion/react-m"
 import { usePathname } from "next/navigation"
-import { Suspense } from "react"
+import { Suspense, useLayoutEffect } from "react"
 import { ScrollLink } from "@/components/shared/scroll-link"
 import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
@@ -32,9 +32,10 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
   const openCart = useCart((s) => s.setOpen)
   const wishCount = useWishlist((s) => s.ids.length)
 
-  // On product detail pages with the sticky buy bar, keep the bottom nav tucked away so the buy CTA owns the bottom edge.
+  // On product detail and checkout pages with their own sticky bottom CTA, keep the bottom nav tucked away.
   const isProductDetail = pathname !== null && /^\/products\/[^/]+$/.test(pathname)
   const isCheckout = pathname === "/checkout"
+
   if (isProductDetail || isCheckout) return null
 
   const isHome = pathname === "/"
@@ -143,7 +144,21 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
 }
 
 function BottomNavWithPath() {
-  return <BottomNavTabs pathname={usePathname()} />
+  const pathname = usePathname()
+  const isProductDetail = /^\/products\/[^/]+$/.test(pathname) || pathname === "/checkout"
+
+  useLayoutEffect(() => {
+    if (isProductDetail) {
+      document.body.setAttribute("data-product-detail", "true")
+    } else {
+      document.body.removeAttribute("data-product-detail")
+    }
+    return () => {
+      document.body.removeAttribute("data-product-detail")
+    }
+  }, [isProductDetail])
+
+  return <BottomNavTabs pathname={pathname} />
 }
 
 export function MobileBottomNav() {

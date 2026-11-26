@@ -21,7 +21,20 @@ import {
 export const ADMIN_ORDERS_PAGE_SIZE = 20
 
 /** Just enough of the return rows for a list row to show its return stage (see returnStage()). */
-const RETURN_EMBED = "returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const RETURN_EMBED_BASE = "returns:order_returns(refunded, resolution_type, created_at), return_requests(status, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const RETURN_EMBED = "returns:order_returns(refunded, resolution_type, created_at), return_requests(status, requested_by, created_at, decided_at, admin_note, pickup_date, picked_up_at, resolution_type, exchange_preference, exchange_mode, exchange_status, exchange_shipped_at, exchange_delivered_at, exchange_tracking)"
+const ORDER_DETAIL_BASE = "*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)"
+const ORDER_DETAIL = "*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, requested_by, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference, exchange_mode, exchange_status, exchange_shipped_at, exchange_delivered_at, exchange_tracking, exchange_shipping)"
+
+const isMissingExchangeCol = (err: { message?: string } | null | undefined) =>
+  Boolean(
+    err?.message &&
+      (err.message.includes("exchange_status") ||
+        err.message.includes("requested_by") ||
+        err.message.includes("exchange_mode") ||
+        err.message.includes("exchange_shipping")) &&
+      err.message.includes("does not exist")
+  )
 
 export type OrderFilters = { status?: string; payment?: string; view?: string; q?: string; page?: string; year?: string; month?: string; today?: string }
 /** Payment filter values the admin orders list accepts (besides "all"). */
@@ -192,26 +205,7 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1)
   const from = (page - 1) * ADMIN_ORDERS_PAGE_SIZE
 
-  let query = supabase
-    .from("orders")
-    .select(`*, ${RETURN_EMBED}`, { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(from, from + ADMIN_ORDERS_PAGE_SIZE - 1)
-
-  if (isOrderView(filters.view)) {
-    query = (await orderViewFilter(supabase, filters.view))(query)
-  } else {
-    if (isOrderStatus(filters.status)) query = query.eq("status", filters.status)
-    if (isPaymentFilter(filters.payment)) {
-      if (filters.payment === "refund-due") {
-        query = query.eq("status", "cancelled").in("payment_status", ["paid", "submitted"])
-      } else {
-        query = query.eq("payment_status", filters.payment)
-        // a cancelled order is not "waiting" for a rejected/pending payment
-        if (filters.payment === "pending" || filters.payment === "failed") query = query.neq("status", "cancelled")
-      }
-    }
-  }
+  const viewFilterFn = isOrderView(filters.view) ? await orderViewFilter(supabase, filters.view) : null
 
   // Search by order code, phone or customer name. Strip characters that have
   // meaning in PostgREST filter syntax so user input can't alter the filter.
@@ -222,20 +216,49 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
     await adminCheck
     return { orders: [], total: 0, page }
   }
-  if (q) {
-    query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
-  } else if (!isOrderView(filters.view) && (filters.year !== undefined || filters.month !== undefined)) {
-    const period = resolveOrderPeriod({ year: filters.year, month: filters.month }, filters.today)
-    if (period.startIso && period.endIso) {
-      query = query.gte("created_at", period.startIso).lt("created_at", period.endIso)
+
+  const buildQuery = (embed: string) => {
+    let query = supabase
+      .from("orders")
+      .select(`*, ${embed}`, { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, from + ADMIN_ORDERS_PAGE_SIZE - 1)
+
+    if (viewFilterFn) {
+      query = viewFilterFn(query)
+    } else {
+      if (isOrderStatus(filters.status)) query = query.eq("status", filters.status)
+      if (isPaymentFilter(filters.payment)) {
+        if (filters.payment === "refund-due") {
+          query = query.eq("status", "cancelled").in("payment_status", ["paid", "submitted"])
+        } else {
+          query = query.eq("payment_status", filters.payment)
+          // a cancelled order is not "waiting" for a rejected/pending payment
+          if (filters.payment === "pending" || filters.payment === "failed") query = query.neq("status", "cancelled")
+        }
+      }
     }
+
+    if (q) {
+      query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
+    } else if (!isOrderView(filters.view) && (filters.year !== undefined || filters.month !== undefined)) {
+      const period = resolveOrderPeriod({ year: filters.year, month: filters.month }, filters.today)
+      if (period.startIso && period.endIso) {
+        query = query.gte("created_at", period.startIso).lt("created_at", period.endIso)
+      }
+    }
+    return query.returns<OrderRow[]>()
   }
 
-  const [, { data, error, count }] = await Promise.all([adminCheck, query.returns<OrderRow[]>()])
+  const [, initialRes] = await Promise.all([adminCheck, buildQuery(RETURN_EMBED)])
+  let { data, error, count } = initialRes
+  if (isMissingExchangeCol(error)) {
+    ({ data, error, count } = await buildQuery(RETURN_EMBED_BASE))
+  }
   // PGRST103: ?page= is past the last page (e.g. a filter shrank the list) -> show the first page instead of crashing
   if (error?.code === "PGRST103" && page > 1) return listOrders({ ...filters, page: "1" })
   if (error) throw new Error(error.message)
-  return { orders: data.map(mapOrder), total: count ?? 0, page }
+  return { orders: (data ?? []).map(mapOrder), total: count ?? 0, page }
 }
 
 export async function getOrderById(idOrCode: string): Promise<OrderWithHistory | null> {
@@ -249,13 +272,15 @@ export async function getOrderById(idOrCode: string): Promise<OrderWithHistory |
     return null
   }
   const supabase = await getServerSupabase()
-  const query = supabase
-    .from("orders")
-    .select("*, history:order_status_history(status, changed_at), private_note:order_admin_notes(note), returns:order_returns(id, items, reason, refunded, refund_amount, resolution_type, created_at), return_requests(id, items, reason, details, status, admin_note, created_at, decided_at, pickup_date, picked_up_at, resolution_type, exchange_preference)")
-  const [, { data, error }] = await Promise.all([
-    adminCheck,
-    (isUuid ? query.eq("id", raw) : query.eq("order_code", upperCode)).maybeSingle<OrderRow>(),
-  ])
+  const fetchOrder = (selectStr: string) => {
+    const query = supabase.from("orders").select(selectStr)
+    return (isUuid ? query.eq("id", raw) : query.eq("order_code", upperCode)).maybeSingle<OrderRow>()
+  }
+  const [, initialRes] = await Promise.all([adminCheck, fetchOrder(ORDER_DETAIL)])
+  let { data, error } = initialRes
+  if (isMissingExchangeCol(error)) {
+    ({ data, error } = await fetchOrder(ORDER_DETAIL_BASE))
+  }
   if (error) throw new Error(error.message)
   return data ? mapOrderWithHistory(data) : null
 }
@@ -309,7 +334,7 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
 
   const now = new Date()
 
-  const [, toVerifyCount, [statsRes, recentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes]] = await Promise.all([
+  const [, toVerifyCount, [statsRes, initialRecentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes]] = await Promise.all([
     adminCheck,
     getPaymentsToVerifyCount(),
     Promise.all([
@@ -336,6 +361,10 @@ export async function getDashboard(range: DashboardRange): Promise<DashboardData
         .returns<{ id: string; slug: string; name: string; stock: number; images: string[] | null }[]>(),
     ]),
   ])
+  let recentRes = initialRecentRes
+  if (isMissingExchangeCol(recentRes.error)) {
+    recentRes = await supabase.from("orders").select(`*, ${RETURN_EMBED_BASE}`).order("created_at", { ascending: false }).limit(6).returns<OrderRow[]>()
+  }
   const failed = [statsRes, recentRes, awaitingRes, fulfilRes, returnsRes, pickupsRes, refundsRes, lowStockRes].find((r) => r.error)
   if (failed?.error) throw new Error(failed.error.message)
   const stats = statsRes.data as DashboardStats

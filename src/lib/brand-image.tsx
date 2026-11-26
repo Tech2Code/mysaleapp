@@ -1,11 +1,11 @@
-import { BrandGlyph } from "@/components/shared/brand-glyph"
+import { BRAND_PALETTE, BrandGlyph } from "@/components/shared/brand-glyph"
 
-/** Shared JSX for generated icons (rendered by next/og ImageResponse for favicon, Apple icon, and PWA icons). */
+/** Shared JSX for generated icons (rendered by next/og ImageResponse for favicon, Apple icon, PWA icons, and OG image). */
 export function BrandMark({ size, padding = 0 }: { size: number; padding?: number }) {
   const inner = size - padding * 2
   const radius = Math.round(padding ? inner * 0.46 : inner * 0.25)
   const border = Math.max(1, Math.round(inner * 0.025))
-  const glyphSize = Math.round(inner * 0.74)
+  const glyphSize = Math.round(inner * 0.72)
 
   return (
     <div
@@ -15,7 +15,7 @@ export function BrandMark({ size, padding = 0 }: { size: number; padding?: numbe
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: padding ? "#fbf7f2" : "transparent",
+        background: padding ? BRAND_PALETTE.backgroundColor : "transparent",
       }}
     >
       <div
@@ -26,21 +26,16 @@ export function BrandMark({ size, padding = 0 }: { size: number; padding?: numbe
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(140deg, #dc6d38 0%, #c04e3f 48%, #8c2836 100%)",
-          border: `${border}px solid rgba(255, 238, 214, 0.32)`,
-          boxShadow: "inset 0 2px 6px rgba(255, 255, 255, 0.22)",
+          background: BRAND_PALETTE.gradient,
+          border: `${border}px solid ${BRAND_PALETTE.borderColor}`,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fffaf4",
-          }}
-        >
-          <BrandGlyph size={glyphSize} ribbon="#fbd07c" accent="#9a2f38" />
-        </div>
+        <BrandGlyph
+          size={glyphSize}
+          boxColor={BRAND_PALETTE.boxColor}
+          ribbon={BRAND_PALETTE.ribbon}
+          accent={BRAND_PALETTE.accent}
+        />
       </div>
     </div>
   )

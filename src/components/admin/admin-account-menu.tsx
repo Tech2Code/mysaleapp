@@ -670,7 +670,7 @@ function AdminPinGateDialog({
                 ref={pinInputRef}
                 label="4-digit PIN"
                 kind="adminPin"
-                fieldSize="lg"
+                fieldSize="md"
                 placeholder="••••"
                 autoFocus
                 value={pin}

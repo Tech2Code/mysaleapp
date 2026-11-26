@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { BRAND_PALETTE } from "@/components/shared/brand-glyph"
 import { getStoreSettings } from "@/features/settings/queries"
 
 /** Makes the site installable as an app ("Add to Home screen"). */
@@ -12,8 +13,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#fbf7f2",
-    theme_color: "#b85c38",
+    background_color: BRAND_PALETTE.backgroundColor,
+    theme_color: BRAND_PALETTE.themeColor,
     categories: ["shopping", "lifestyle"],
     lang: "en-IN",
     icons: [

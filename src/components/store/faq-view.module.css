@@ -1,6 +1,6 @@
 /* Section: FAQ Page Layout & Search Toolbar */
 .faqPageContainer { margin: 0 auto; width: 100%; max-width: 1024px; padding: 32px 16px 64px 16px; display: flex; flex-direction: column; gap: 24px; }
-.faqPageContainer .faqToolbarCard { display: flex; flex-direction: column; gap: 16px; border-radius: 24px; background-color: var(--card); padding: 18px; box-shadow: var(--store-elevation-sm); }
+.faqPageContainer .faqToolbarCard { display: flex; flex-direction: column; gap: 16px; border-radius: var(--radiusCard); background-color: var(--card); padding: 18px; box-shadow: var(--store-elevation-sm); }
 .faqToolbarCard .faqSearchField { width: 100%; }
 .faqToolbarCard .faqCategoryTabs { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 2px; margin: -2px; scrollbar-width: none; }
 .faqToolbarCard .faqCategoryTabs::-webkit-scrollbar { display: none; }
@@ -29,23 +29,24 @@
 .faqAnswerPanel .faqAnswerText { margin: 0; font-size: 14.5px; line-height: 23px; color: color-mix(in oklab, var(--foreground) 86%, transparent); }
 .faqAnswerPanel .faqAnswerLink { display: inline-flex; width: fit-content; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .faqAnswerPanel .faqAnswerLink:hover { text-decoration: underline; }
-.faqAnswerLink .faqInlineIcon { width: 14px; height: 14px; }
+.faqInlineIcon { width: 14px; height: 14px; flex-shrink: 0; }
 /* Section: Empty Search State */
-.faqPageContainer .faqEmptyCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 24px; border: 1px dashed var(--border); background-color: var(--card); padding: 48px 20px; text-align: center; box-shadow: var(--store-elevation-sm); }
+.faqPageContainer .faqEmptyCard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: var(--radiusCard); border: 1px dashed var(--border); background-color: var(--card); padding: 48px 20px; text-align: center; box-shadow: var(--store-elevation-sm); }
 .faqEmptyCard .faqEmptyTitle { margin: 0; font-family: var(--font-heading); font-size: 19px; font-weight: 600; color: var(--foreground); }
 .faqEmptyCard .faqEmptySub { margin: 0; max-width: 420px; font-size: 13.5px; line-height: 20px; color: var(--muted-foreground); }
-.faqEmptyCard .faqResetBtn { border-radius: 9999px; gap: 6px; }
+.faqEmptyCard .faqResetBtn { border-radius: var(--radiusControl); gap: 6px; }
 /* Section: Bottom Support Banner */
-.faqPageContainer .faqSupportBanner { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: 24px; background-color: var(--card); padding: 24px; box-shadow: var(--store-elevation-sm); }
+.faqPageContainer .faqSupportBanner { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: var(--radiusCard); background-color: var(--card); padding: 24px; box-shadow: var(--store-elevation-sm); }
 .faqSupportBanner .faqSupportCopy { display: flex; flex-direction: column; gap: 6px; }
 .faqSupportCopy .faqSupportEyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; }
 .faqSupportCopy .faqSupportHeading { margin: 0; font-family: var(--font-heading); font-size: 22px; line-height: 28px; font-weight: 600; color: var(--foreground); }
 .faqSupportCopy .faqSupportSub { margin: 0; max-width: 520px; font-size: 14px; line-height: 21px; color: var(--muted-foreground); }
 .faqSupportBanner .faqSupportActions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.faqSupportActions .faqWhatsappCta { display: inline-flex; height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 20px; font-size: 14px; font-weight: 600; color: #ffffff; box-shadow: 0 8px 20px -6px color-mix(in oklab, var(--whatsapp) 32%, transparent); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease; }
-.faqSupportActions .faqWhatsappCta:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 90%, black); transform: translateY(-1px); }
+.faqSupportActions .faqWhatsappCta { display: inline-flex; height: var(--controlHLg); align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--whatsapp-solid); padding: 0 20px; font-size: 14px; font-weight: 600; color: var(--on-solid); box-shadow: 0 8px 20px -6px color-mix(in oklab, var(--whatsapp) 34%, transparent); transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, box-shadow 180ms ease; }
+.faqSupportActions .faqWhatsappCta:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 12px 24px -6px color-mix(in oklab, var(--whatsapp) 44%, transparent); }
+.faqSupportActions .faqWhatsappCta:active { transform: scale(0.98); }
 .faqWhatsappCta .faqActionIcon { width: 16px; height: 16px; flex-shrink: 0; }
-.faqSupportActions .faqSecondaryCta { height: 44px; border-radius: 9999px; padding: 0 18px; gap: 6px; font-weight: 600; }
+.faqSupportActions .faqSecondaryCta { height: var(--controlHLg); border-radius: var(--radiusControl); padding: 0 18px; gap: 6px; font-weight: 600; }
 .faqSecondaryCta .faqActionIcon { width: 15px; height: 15px; flex-shrink: 0; }
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {

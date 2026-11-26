@@ -11,6 +11,8 @@ const ICONS: Record<ReturnStageKey, LucideIcon> = {
   rejected: XCircleIcon,
   withdrawn: BanIcon,
   received: PackageOpenIcon,
+  exchange_dispatched: TruckIcon,
+  exchange_completed: CheckCircle2Icon,
   partly_refunded: Undo2Icon,
   refunded: Undo2Icon,
 }

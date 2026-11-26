@@ -564,6 +564,10 @@ const decideSchema = z.object({
   note: v.note(LIMITS.returnDetail.max).optional(),
   /** Approve: the day the goods are collected (YYYY-MM-DD). */
   pickupDate: v.futureDate(LIMITS.pickupDays.max).optional(),
+  /** Approve exchange: 'standard' (pickup & QC first) or 'doorstep' (1-visit simultaneous handover). */
+  exchangeMode: z.enum(["standard", "doorstep"]).optional(),
+  /** Optional courier details entered right when approving a doorstep exchange. */
+  shipping: shippingSchema.optional(),
 })
 
 /** Approve a customer's return request (with instructions) or reject it (with a reason the customer sees). */
@@ -573,12 +577,19 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
 
   const parsed = decideSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
-  const { requestId, approve, note, pickupDate } = parsed.data
+  const { requestId, approve, note, pickupDate, exchangeMode, shipping } = parsed.data
   if (approve && !pickupDate) return fail("Pick the pickup date.", { pickupDate: ["Pick the pickup date"] })
   if (!approve && !note) return fail("Tell the customer why the return isn't approved.", { note: ["Write a reason"] })
 
   const supabase = await getServerSupabase()
-  const { error } = await supabase.rpc("decide_return_request", { p_request_id: requestId, p_approve: approve, p_note: note ?? null, p_pickup_date: approve ? pickupDate : null })
+  const { error } = await supabase.rpc("decide_return_request", {
+    p_request_id: requestId,
+    p_approve: approve,
+    p_note: note ?? null,
+    p_pickup_date: approve ? pickupDate : null,
+    ...(approve && exchangeMode === "doorstep" ? { p_exchange_mode: "doorstep" } : {}),
+    ...(approve && exchangeMode === "doorstep" && shipping ? { p_shipping: shipping } : {}),
+  })
   if (error) {
     if (error.message.includes("NOT_PENDING")) return fail("This request was already decided or withdrawn.")
     if (error.message.includes("BAD_PICKUP_DATE")) return fail(mapRpcError("BAD_PICKUP_DATE", "Pick a valid date"), { pickupDate: ["Pick a date from today"] })
@@ -589,7 +600,11 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
     action: approve ? "return_request.approve" : "return_request.reject",
     targetType: "order",
     targetId: requestId,
-    metadata: { pickupDate: approve ? pickupDate : null },
+    metadata: {
+      pickupDate: approve ? pickupDate : null,
+      ...(approve && exchangeMode ? { exchangeMode } : {}),
+      ...(approve && exchangeMode === "doorstep" && shipping ? { shipping } : {}),
+    },
   })
   revalidatePathsForAdmin()
   revalidatePathsForCustomer()
@@ -688,6 +703,55 @@ export async function refundReturn(input: unknown): Promise<ActionResult<{ refun
   revalidatePathsForCustomer()
   const out = (data ?? {}) as { refundedAmount?: number; fullyRefunded?: boolean }
   return { ok: true, data: { refundedAmount: Number(out.refundedAmount ?? 0), fullyRefunded: Boolean(out.fullyRefunded) } }
+}
+
+const exchangeFulfillmentSchema = z.object({
+  requestId: z.uuid(),
+  stage: z.enum(["dispatched", "delivered", "undo_dispatched", "undo_delivered", "set_courier"]),
+  tracking: v.note(200).optional(),
+  shipping: shippingSchema.optional(),
+})
+
+/** Advance or undo outbound exchange/replacement fulfillment (dispatched -> delivered) or save optional doorstep courier details. */
+export async function advanceExchangeFulfillment(input: unknown): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  const parsed = exchangeFulfillmentSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
+
+  const { requestId, stage, tracking, shipping } = parsed.data
+  if (stage === "set_courier" && !shipping) return fail("Enter the courier details.")
+  const trackingSummary =
+    tracking ??
+    (shipping
+      ? shipping.trackingNumber
+        ? `${shipping.carrier} · ${shipping.trackingNumber}`
+        : shipping.carrier
+      : undefined)
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.rpc("advance_exchange_fulfillment", {
+    p_request_id: requestId,
+    p_stage: stage,
+    p_tracking: trackingSummary ?? null,
+    ...(shipping ? { p_shipping: shipping } : {}),
+  })
+  if (error) {
+    if (error.message.includes("Could not find the function") || error.message.includes("advance_exchange_fulfillment")) {
+      return fail("Run npm run db:push to apply migration 0065_exchange_courier.sql before updating outbound exchange status.")
+    }
+    return fail(mapRpcError(error.message, "Could not update exchange fulfillment"))
+  }
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: `exchange.${stage}`,
+    targetType: "order",
+    targetId: requestId,
+    metadata: shipping ? { shipping } : trackingSummary ? { tracking: trackingSummary } : undefined,
+  })
+  revalidatePathsForAdmin()
+  revalidatePathsForCustomer()
+  return { ok: true }
 }
 
 const createRequestSchema = z.object({

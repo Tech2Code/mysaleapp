@@ -1,7 +1,7 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CheckCircle2Icon, CopyIcon, Loader2Icon, MapPinIcon, PlusIcon, QrCodeIcon, SmartphoneIcon, TicketPercentIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, CheckCircle2Icon, CheckIcon, CopyIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, QrCodeIcon, SmartphoneIcon, TicketPercentIcon, XIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
@@ -10,7 +10,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
-import { NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
+import { joinCityState, NO_STATE, splitCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { PriceBreakdown } from "@/components/shared/price-breakdown"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -25,8 +25,8 @@ import {
 import { Skeletonize } from "@/components/shared/skeletonize"
 import { getMyProfile } from "@/features/account/actions"
 import type { Profile } from "@/features/account/schema"
-import { listMyAddresses } from "@/features/addresses/actions"
-import type { Address } from "@/features/addresses/types"
+import { listMyAddresses, saveAddress as saveAccountAddress } from "@/features/addresses/actions"
+import { ADDRESS_LABELS, MAX_ADDRESSES, type Address } from "@/features/addresses/types"
 import { cancelOrder, createGatewayCheckoutSession, placeOrder, trackOrder, validatePromoCode, verifyGatewayPayment } from "@/features/orders/actions"
 import { openGatewayCheckout } from "@/features/orders/gateway-client"
 import { applyPromoToCharges, calculateCharges, computePromoDiscount, formatWeightGrams, type ValidatedPromo } from "@/features/orders/pricing"
@@ -34,7 +34,7 @@ import { placeholderCartLines } from "@/features/products/placeholders"
 import { checkoutSchema, paymentReferenceSchema, type CheckoutInput } from "@/features/orders/schema"
 import { buildUpiUrl } from "@/features/orders/upi"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
-import { formatPrice } from "@/lib/format"
+import { formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
 import { useCart } from "@/store/cart"
@@ -49,6 +49,152 @@ import styles from "./checkout-form.module.css"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 const EMPTY_ADDRESSES: Address[] = []
+
+type OneTimeAddress = {
+  fullName: string
+  phone: string
+  address: string
+  city: string
+  state: IndianState
+  pincode: string
+}
+
+function CheckoutAddressModalBody({
+  initial,
+  canSaveMore,
+  saving,
+  openedFromList,
+  onBackToList,
+  onCancel,
+  onSubmitAddress,
+}: {
+  initial: { fullName: string; phone: string; address?: string; city?: string; state?: IndianState; pincode?: string }
+  canSaveMore: boolean
+  saving: boolean
+  openedFromList: boolean
+  onBackToList: () => void
+  onCancel: () => void
+  onSubmitAddress: (values: CheckoutInput, opts: { saveToAccount: boolean; label: (typeof ADDRESS_LABELS)[number] }) => void
+}) {
+  const [saveToAccount, setSaveToAccount] = useState(canSaveMore && !initial.address)
+  const [label, setLabel] = useState<(typeof ADDRESS_LABELS)[number]>("Home")
+  const addrForm = useForm<CheckoutInput>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      name: initial.fullName,
+      phone: initial.phone,
+      address: initial.address ?? "",
+      city: initial.city ?? "",
+      state: initial.state ?? NO_STATE,
+      pincode: initial.pincode ?? "",
+      note: "",
+    },
+  })
+  const { errors } = addrForm.formState
+  const modalArea = usePincodeLookup({
+    pincode: useWatch({ control: addrForm.control, name: "pincode" }) ?? "",
+    getCity: () => addrForm.getValues("city"),
+    setCity: (city) => addrForm.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
+    getState: () => addrForm.getValues("state"),
+    setState: (state) => addrForm.setValue("state", state as IndianState, { shouldValidate: true, shouldDirty: true }),
+  })
+
+  const handleSave = addrForm.handleSubmit((values) => {
+    if (modalArea.error) {
+      addrForm.setError("pincode", { message: modalArea.error })
+      return
+    }
+    onSubmitAddress(values, { saveToAccount: canSaveMore && saveToAccount, label })
+  })
+
+  return (
+    <form onSubmit={handleSave} noValidate className={styles.addrModalForm}>
+      <DialogBody className={styles.addrModalBody}>
+        {canSaveMore && saveToAccount && (
+          <div className={styles.labelChipsGroup} role="group" aria-label="Address label">
+            <span className={styles.labelChipsCaption}>Save as</span>
+            <div className={styles.labelChipsRow}>
+              {ADDRESS_LABELS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  aria-pressed={label === l}
+                  onClick={() => setLabel(l)}
+                  className={cn(styles.labelChipBtn, label === l && styles.labelChipBtnActive)}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className={styles.addressFieldsGrid}>
+          <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...addrForm.register("name")} />
+          <TextField
+            label="WhatsApp / mobile number"
+            kind="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="98765 43210"
+            leading="+91"
+            error={errors.phone?.message}
+            {...addrForm.register("phone")}
+          />
+          <TextAreaField
+            label="Full address"
+            maxLength={LIMITS.address.max}
+            autoComplete="street-address"
+            rows={3}
+            placeholder="House no., street, landmark"
+            containerClassName={styles.spanTwoCols}
+            error={errors.address?.message}
+            {...addrForm.register("address")}
+          />
+          <TextField
+            label="Pincode"
+            kind="pincode"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            maxLength={6}
+            hint={modalArea.hint}
+            error={errors.pincode?.message || modalArea.error}
+            {...addrForm.register("pincode")}
+          />
+          <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...addrForm.register("city")} />
+          <FormSelectField control={addrForm.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.spanTwoCols} />
+        </div>
+        {canSaveMore ? (
+          <SwitchField
+            label="Save this address to my account"
+            description="Pick it in one tap on future orders"
+            checked={saveToAccount}
+            onCheckedChange={setSaveToAccount}
+          />
+        ) : (
+          <p className={styles.addrLimitNote}>
+            You have reached the {MAX_ADDRESSES} saved address limit. This address will be used for this order only.
+          </p>
+        )}
+      </DialogBody>
+      <DialogFooter>
+        {openedFromList ? (
+          <Button type="button" variant="outline" size="lg" disabled={saving} onClick={onBackToList} className={styles.footerBackBtn}>
+            <ArrowLeftIcon className={styles.icon16} /> Back
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" size="lg" disabled={saving} onClick={onCancel} className={styles.footerBackBtn}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" size="lg" disabled={saving} className={styles.footerConfirmBtn}>
+          {saving ? <Loader2Icon className={styles.spinSmSvg} /> : <CheckIcon className={styles.icon16} />}
+          {saving ? "Saving…" : canSaveMore && saveToAccount ? "Save & deliver here" : "Deliver to this address"}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+}
 
 /** `preview`: render the placeholder form as-is; loading.tsx wraps it in <Skeletonize>. Before hydration it wraps itself. */
 export function CheckoutForm({
@@ -84,6 +230,12 @@ export function CheckoutForm({
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
   const selected = selectedId === "new" || addresses.some((a) => a.id === selectedId) ? selectedId : (addresses[0]?.id ?? "new")
   const [saveAddress, setSaveAddress] = useState(true)
+  const [oneTimeAddress, setOneTimeAddress] = useState<OneTimeAddress | null>(null)
+  const [addressModal, setAddressModal] = useState<null | "list" | "new">(null)
+  const [openedNewFromList, setOpenedNewFromList] = useState(false)
+  const [editingOneTime, setEditingOneTime] = useState(false)
+  const [addrModalKey, setAddrModalKey] = useState(0)
+  const [savingAddr, startSaveAddr] = useTransition()
   const [hasOrderNote, setHasOrderNote] = useState(false)
   const [payDialogOpen, setPayDialogOpen] = useState(false)
   const [showMobileQr, setShowMobileQr] = useState(false)
@@ -97,7 +249,7 @@ export function CheckoutForm({
   const [legalModalTab, setLegalModalTab] = useState<LegalDocTab>("terms")
   const [redirecting, setRedirecting] = useState(false)
   const [frozenAvailable, setFrozenAvailable] = useState<typeof available | null>(null)
-  useBlockWhile(pending || redirecting)
+  useBlockWhile(pending || redirecting || savingAddr)
   const [promoPending, startPromoTransition] = useTransition()
   const fetchedForUser = useRef<string | null>(null)
   const prevUserId = useRef<string | null>(user?.id ?? null)
@@ -110,6 +262,8 @@ export function CheckoutForm({
     setClearedOnSignOut(!ownerId)
     setSelected("new")
     setSaveAddress(true)
+    setOneTimeAddress(null)
+    setAddressModal(null)
     setHasOrderNote(false)
     setPayDialogOpen(false)
     setShowMobileQr(false)
@@ -129,6 +283,7 @@ export function CheckoutForm({
 
   useLayoutEffect(() => {
     return () => {
+      setAddressModal(null)
       setPayDialogOpen(false)
       setShowMobileQr(false)
       setPaymentRef("")
@@ -192,12 +347,88 @@ export function CheckoutForm({
     })
   }
 
-  const useNewAddress = () => {
+  const openNewAddressModal = (fromList = false, editExistingOneTime = false) => {
+    setOpenedNewFromList(fromList)
+    setEditingOneTime(editExistingOneTime)
+    setAddrModalKey((k) => k + 1)
+    setAddressModal("new")
+  }
+
+  const applyOneTimeAddress = (addr: OneTimeAddress) => {
+    setOneTimeAddress(addr)
     setSelected("new")
-    lastAppliedSavedKey.current = ""
-    primeArea("", "", NO_STATE)
-    const current = form.getValues()
-    form.reset({ name: current.name, phone: current.phone, address: "", city: "", state: NO_STATE, pincode: "", note: current.note })
+    setSaveAddress(false)
+    lastAppliedSavedKey.current = "new"
+    primeArea(addr.pincode, addr.city, addr.state)
+    form.reset({
+      name: addr.fullName,
+      phone: addr.phone,
+      address: addr.address,
+      city: addr.city,
+      state: addr.state,
+      pincode: addr.pincode,
+      note: form.getValues("note"),
+    })
+  }
+
+  const handleModalAddressSubmit = (
+    values: CheckoutInput,
+    opts: { saveToAccount: boolean; label: (typeof ADDRESS_LABELS)[number] }
+  ) => {
+    const cleanPhone = normalizeIndianPhone(values.phone) ?? values.phone.trim()
+    if (!opts.saveToAccount) {
+      applyOneTimeAddress({
+        fullName: values.name.trim(),
+        phone: cleanPhone,
+        address: values.address.trim(),
+        city: values.city.trim(),
+        state: values.state,
+        pincode: values.pincode.trim(),
+      })
+      setAddressModal(null)
+      toast.success("Delivery address updated for this order")
+      return
+    }
+    startSaveAddr(async () => {
+      try {
+        const res = await saveAccountAddress(null, {
+          label: opts.label,
+          fullName: values.name.trim(),
+          phone: cleanPhone,
+          address: values.address.trim(),
+          city: values.city.trim(),
+          state: values.state,
+          pincode: values.pincode.trim(),
+          isDefault: false,
+        })
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        const updatedList = await listMyAddresses()
+        setClientAddresses(updatedList)
+        const expectedCity = joinCityState(values.city.trim(), values.state).toLowerCase()
+        const matched =
+          updatedList
+            .slice()
+            .reverse()
+            .find(
+              (a) =>
+                a.pincode.trim() === values.pincode.trim() &&
+                a.address.trim().toLowerCase() === values.address.trim().toLowerCase() &&
+                a.city.trim().toLowerCase() === expectedCity
+            ) ?? updatedList[updatedList.length - 1]
+        if (matched) {
+          setOneTimeAddress(null)
+          fillFrom(matched)
+        }
+        setAddressModal(null)
+        toast.success("Address saved & selected for delivery")
+        router.refresh()
+      } catch {
+        toast.error("Couldn't save address. Please try again.")
+      }
+    })
   }
 
   const activeSavedAddress = signedIn && selected !== "new" ? addresses.find((a) => a.id === selected) : undefined
@@ -222,8 +453,8 @@ export function CheckoutForm({
       })
       return
     }
-    if (selected === "new") {
-      lastAppliedSavedKey.current = ""
+    if (selected === "new" && lastAppliedSavedKey.current === "new") {
+      return
     }
     if (form.formState.isDirty) return
     const first = canUseInitial ? initialAddresses[0] : undefined
@@ -311,7 +542,7 @@ export function CheckoutForm({
         setClearedOnSignOut(false)
         setClientAddresses(list)
         setClientProfile(profile ? { fullName: profile.fullName, phone: profile.phone } : null)
-        if (!switchedAccount && form.formState.isDirty) return
+        if (!switchedAccount && (form.formState.isDirty || lastAppliedSavedKey.current === "new")) return
         const first = list[0]
         if (first) {
           setSelected(first.id)
@@ -382,6 +613,7 @@ export function CheckoutForm({
             const latest = await trackOrder({ code: res.data.orderCode, phoneLast4: res.data.phoneLast4 })
             if (latest.ok && latest.data.paymentStatus === "paid") {
               showBusySuccess("Payment confirmed!")
+              setOneTimeAddress(null)
               setFrozenAvailable(available)
               setRedirecting(true)
               try {
@@ -428,6 +660,7 @@ export function CheckoutForm({
         })
 
         showBusySuccess(verified.ok ? "Payment confirmed!" : "Order placed!")
+        setOneTimeAddress(null)
         setFrozenAvailable(available)
         setRedirecting(true)
         try {
@@ -563,6 +796,7 @@ export function CheckoutForm({
           return
         }
         showBusySuccess("Order placed!")
+        setOneTimeAddress(null)
         setFrozenAvailable(available)
         setRedirecting(true)
         try {
@@ -615,7 +849,8 @@ export function CheckoutForm({
   const hasAddressFieldError = Boolean(
     errors.name || errors.phone || errors.address || errors.pincode || errors.city || errors.state || area.error
   )
-  const showAddressInputs = !signedIn || addresses.length === 0 || selected === "new" || hasAddressFieldError
+  const hasCompactSelectedCard = Boolean(signedIn && addresses.length > 0 && (activeSavedAddress || oneTimeAddress) && !hasAddressFieldError)
+  const showAddressInputs = !hasCompactSelectedCard
 
   const view = (
     <>
@@ -633,7 +868,7 @@ export function CheckoutForm({
               </h2>
               <p className={styles.stepSubtext}>
                 {signedIn ? (
-                  addresses.length > 0 ? "Select a delivery address or add a new one." : "Enter where we should deliver."
+                  addresses.length > 0 ? "Confirm where we should deliver this order." : "Enter where we should deliver."
                 ) : authReady ? (
                   <>
                     Checking out as a guest.{" "}
@@ -649,7 +884,6 @@ export function CheckoutForm({
             </div>
             {signedIn && addresses.length > 0 && (
               <Link
-
                 href="/account/profile?tab=addresses"
                 className={styles.smallActionLink}
               >
@@ -658,48 +892,73 @@ export function CheckoutForm({
             )}
           </div>
 
-          {signedIn && addresses.length > 0 && (
-            <fieldset className={styles.addressFieldset}>
-              <legend className={styles.srOnly}>Saved addresses</legend>
-              <div className={styles.savedAddrGrid}>
-                {addresses.map((a) => {
-                  const active = selected === a.id
-                  return (
-                    <label
-                      key={a.id}
-                      className={cn(
-                        styles.savedAddrCard,
-                        active && styles.savedAddrCardActive
-                      )}
-                    >
-                      <input type="radio" name="saved-address" className={styles.srOnly} checked={active} onChange={() => fillFrom(a)} />
-                      <span className={styles.addrTitleRow}>
-                        <MapPinIcon className={styles.pinSvg} aria-hidden /> {a.label}
-                        {a.isDefault && <span className={styles.defaultBadge}>Default</span>}
-                        {active && <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden />}
+          {hasCompactSelectedCard && (
+            <div className={styles.selectedAddrWrap}>
+              <div className={styles.selectedAddrCard}>
+                {activeSavedAddress ? (
+                  <>
+                    <span className={styles.addrTitleRow}>
+                      <MapPinIcon className={styles.pinSvg} aria-hidden />
+                      <span>{activeSavedAddress.label}</span>
+                      {activeSavedAddress.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                      <span className={styles.deliveringBadge}>
+                        <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
                       </span>
-                      <span className={styles.addrPersonLine}>
-                        {a.fullName} <span className={styles.addrPhoneMuted}>· +91 {a.phone}</span>
+                    </span>
+                    <span className={styles.addrPersonLine}>
+                      {activeSavedAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {activeSavedAddress.phone}</span>
+                    </span>
+                    <span className={styles.addrStreetLine}>
+                      {activeSavedAddress.address}, {activeSavedAddress.city} - {activeSavedAddress.pincode}
+                    </span>
+                  </>
+                ) : oneTimeAddress ? (
+                  <>
+                    <span className={styles.addrTitleRow}>
+                      <MapPinIcon className={styles.pinSvg} aria-hidden />
+                      <span className={styles.oneTimeBadge}>One-time address</span>
+                      <span className={styles.deliveringBadge}>
+                        <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
                       </span>
-                      <span className={styles.addrStreetLine}>
-                        {a.address}, {a.city} - {a.pincode}
-                      </span>
-                    </label>
-                  )
-                })}
+                    </span>
+                    <span className={styles.addrPersonLine}>
+                      {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
+                    </span>
+                    <span className={styles.addrStreetLine}>
+                      {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              <div className={styles.addrActionsBar}>
+                {(addresses.length > 1 || Boolean(oneTimeAddress)) && (
+                  <button
+                    type="button"
+                    onClick={() => setAddressModal("list")}
+                    className={styles.addrActionBtn}
+                  >
+                    Change address{addresses.length > 1 ? ` (${addresses.length})` : ""}
+                  </button>
+                )}
+                {!activeSavedAddress && oneTimeAddress && (
+                  <button
+                    type="button"
+                    onClick={() => openNewAddressModal(false, true)}
+                    className={styles.addrActionBtn}
+                  >
+                    <PencilIcon className={styles.actionIcon14} aria-hidden /> Edit
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={useNewAddress}
-                  aria-pressed={selected === "new"}
-                  className={cn(
-                    styles.addNewAddrBtn,
-                    selected === "new" && styles.addNewAddrBtnActive
-                  )}
+                  onClick={() => openNewAddressModal(false)}
+                  className={cn(styles.addrActionBtn, styles.addrActionBtnPrimary)}
                 >
-                  <PlusIcon className={styles.plusSvg} /> Add new address
+                  <PlusIcon className={styles.actionIcon14} aria-hidden /> Add new address
                 </button>
               </div>
-            </fieldset>
+            </div>
           )}
 
           {showAddressInputs && (
@@ -739,7 +998,7 @@ export function CheckoutForm({
             </div>
           )}
 
-          {signedIn && selected === "new" && (
+          {signedIn && showAddressInputs && selected === "new" && (
             <SwitchField
               label="Save this address to my account"
               description="Use it next time in one tap"
@@ -1026,6 +1285,135 @@ export function CheckoutForm({
     </form>
 
     <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
+
+    <Dialog
+      open={addressModal !== null}
+      onOpenChange={(next) => {
+        if (savingAddr) return
+        if (!next) setAddressModal(null)
+      }}
+      onBackStep={() => {
+        if (savingAddr) return true
+        if (addressModal === "new" && openedNewFromList) {
+          setAddressModal("list")
+          return true
+        }
+        return false
+      }}
+    >
+      <DialogContent mobileFullScreen className={styles.addrModalContent}>
+        <DialogHeader>
+          <DialogTitle>
+            {addressModal === "list"
+              ? "Choose delivery address"
+              : editingOneTime && oneTimeAddress
+                ? "Edit delivery address"
+                : "Add new delivery address"}
+          </DialogTitle>
+          <DialogDescription>
+            {addressModal === "list"
+              ? "Select one of your saved addresses or add a new one for this order."
+              : "Enter where we should deliver your order."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {addressModal === "list" ? (
+          <>
+            <DialogBody resetScrollKey="list" className={styles.addrModalBody}>
+              <div role="radiogroup" aria-label="Saved delivery addresses" className={styles.addrRadioList}>
+                {addresses.map((a) => {
+                  const active = selected === a.id
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => {
+                        fillFrom(a)
+                        setAddressModal(null)
+                      }}
+                      className={cn(styles.addrRadioCard, active && styles.addrRadioCardActive)}
+                    >
+                      <span className={styles.radioCircle} aria-hidden>
+                        {active && <CheckIcon className={styles.checkTinySvg} />}
+                      </span>
+                      <span className={styles.radioBodyCol}>
+                        <span className={styles.addrTitleRow}>
+                          <MapPinIcon className={styles.pinSvg} aria-hidden />
+                          <span>{a.label}</span>
+                          {a.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                        </span>
+                        <span className={styles.addrPersonLine}>
+                          {a.fullName} <span className={styles.addrPhoneMuted}>· +91 {a.phone}</span>
+                        </span>
+                        <span className={styles.addrStreetLine}>
+                          {a.address}, {a.city} - {a.pincode}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+                {oneTimeAddress && (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={selected === "new"}
+                    onClick={() => {
+                      applyOneTimeAddress(oneTimeAddress)
+                      setAddressModal(null)
+                    }}
+                    className={cn(styles.addrRadioCard, selected === "new" && styles.addrRadioCardActive)}
+                  >
+                    <span className={styles.radioCircle} aria-hidden>
+                      {selected === "new" && <CheckIcon className={styles.checkTinySvg} />}
+                    </span>
+                    <span className={styles.radioBodyCol}>
+                      <span className={styles.addrTitleRow}>
+                        <MapPinIcon className={styles.pinSvg} aria-hidden />
+                        <span className={styles.oneTimeBadge}>One-time address</span>
+                      </span>
+                      <span className={styles.addrPersonLine}>
+                        {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
+                      </span>
+                      <span className={styles.addrStreetLine}>
+                        {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
+                      </span>
+                    </span>
+                  </button>
+                )}
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" size="lg" onClick={() => setAddressModal(null)} className={styles.footerBackBtn}>
+                Cancel
+              </Button>
+              <Button type="button" size="lg" onClick={() => openNewAddressModal(true)} className={styles.footerConfirmBtn}>
+                <PlusIcon className={styles.icon16} /> Add new address
+              </Button>
+            </DialogFooter>
+          </>
+        ) : addressModal === "new" ? (
+          <CheckoutAddressModalBody
+            key={addrModalKey}
+            initial={
+              editingOneTime && oneTimeAddress
+                ? oneTimeAddress
+                : {
+                    fullName: initialProfile?.fullName || addresses[0]?.fullName || "",
+                    phone: initialProfile?.phone || addresses[0]?.phone || "",
+                  }
+            }
+            canSaveMore={addresses.length < MAX_ADDRESSES}
+            saving={savingAddr}
+            openedFromList={openedNewFromList}
+            onBackToList={() => setAddressModal("list")}
+            onCancel={() => setAddressModal(null)}
+            onSubmitAddress={handleModalAddressSubmit}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
 
     <Dialog
         open={payDialogOpen}

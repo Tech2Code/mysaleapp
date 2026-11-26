@@ -8,9 +8,9 @@
 .iconSm { width: 14px; height: 14px; flex-shrink: 0; }
 .iconMd { width: 16px; height: 16px; flex-shrink: 0; }
 .iconLg { width: 20px; height: 20px; flex-shrink: 0; }
-.pillBtn { border-radius: 9999px; }
-.pillBtnGap { gap: 6px; border-radius: 9999px; }
-.pillBtnFull { width: 100%; border-radius: 9999px; }
+.pillBtn { border-radius: var(--radiusControl); }
+.pillBtnGap { gap: 6px; border-radius: var(--radiusControl); }
+.pillBtnFull { width: 100%; border-radius: var(--radiusControl); }
 .monoText { font-family: var(--font-mono); }
 .boldSpan { font-weight: 600; }
 .dialogSmMax { width: 100%; }
@@ -21,11 +21,11 @@
 .dialogBodyStack4 { display: flex; flex-direction: column; gap: 16px; }
 /* Orders View Pagination */
 .paginationNav { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; }
-.paginationNav .pageLink { height: 34px; border-radius: 8px; background-color: var(--card); padding-left: 12px; padding-right: 12px; font-size: 12px; line-height: 16px; }
+.paginationNav .pageLink { height: var(--controlHSm); border-radius: var(--radiusControl); background-color: var(--card); padding-left: 14px; padding-right: 14px; font-size: 13px; line-height: 18px; }
 .paginationNav .pageLinkDisabled { pointer-events: none; opacity: 0.5; }
 .paginationNav .pageInfo { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 /* Orders Table & Tiles */
-.emptyCard { overflow: hidden; border-radius: 16px; border: 1px solid var(--border); padding: 32px; text-align: center; }
+.emptyCard { overflow: hidden; border-radius: var(--radiusCard); border: 1px solid var(--border); padding: 32px; text-align: center; }
 .emptyCard .emptyText { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .ordersTableRoot { display: flex; flex-direction: column; gap: 12px; }
 .ordersTableRoot .switcherBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px; }
@@ -33,7 +33,7 @@
 .switcherBar .viewSwitcher { display: flex; align-items: center; border-radius: 8px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 60%, transparent); padding: 2px; font-size: 12px; line-height: 16px; font-weight: 500; }
 .viewSwitcher .viewBtn { display: flex; align-items: center; gap: 6px; border-radius: 6px; padding: 4px 10px; color: var(--muted-foreground); cursor: pointer; transition: color 150ms ease, background-color 150ms ease; }
 .viewSwitcher .viewBtn:hover { color: var(--foreground); }
-.viewSwitcher .viewBtnActive { background-color: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); font-weight: 600; }
+.viewSwitcher .viewBtnActive { background-color: var(--card); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); font-weight: 600; }
 .ordersTilesGrid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 16px; }
 .ordersTilesGrid .orderTile { display: flex; flex-direction: column; justify-content: space-between; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
 .ordersTilesGrid .orderTileNew { border-color: color-mix(in oklab, var(--primary) 45%, transparent); background-color: color-mix(in oklab, var(--primary) 2%, var(--card)); }
@@ -42,7 +42,7 @@
 .tileHeader .codeRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .codeRow .orderCodeLink { font-family: var(--font-mono); font-size: 16px; line-height: 24px; font-weight: 700; color: var(--primary); }
 .codeRow .orderCodeLink:hover { text-decoration: underline; }
-.newBadge { display: inline-flex; height: 20px; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 9999px; background-color: var(--primary); padding: 0 8px; font-family: var(--font-sans); font-size: 10px; line-height: 1; font-weight: 700; letter-spacing: 0.4px; color: var(--primary-foreground); text-transform: uppercase; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.newBadge { display: inline-flex; height: 20px; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 9999px; background-color: var(--primary); padding: 0 8px; font-family: var(--font-sans); font-size: 10px; line-height: 1; font-weight: 700; letter-spacing: 0.4px; color: var(--primary-foreground); text-transform: uppercase; box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .tileHeader .placedTime { margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .tileHeader .totalBox { text-align: right; }
 .totalBox .totalLabel { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
@@ -88,6 +88,11 @@
 .cellProductLine .cellProductQty { font-family: var(--font-mono); font-weight: 600; }
 .cellStatusWrap { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .cellStatusWrap .cellUpdatedSub { font-size: 11px; line-height: 16px; color: var(--muted-foreground); }
+.actorMetaLine { display: flex; align-items: center; gap: 5px; font-size: 11px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }
+.actorMetaLine .actorMetaIcon { width: 12px; height: 12px; flex-shrink: 0; }
+.actorMetaLine .actorMetaIconAdmin { color: var(--tone-exchange-icon); }
+.actorMetaLine .actorMetaIconCustomer { color: var(--tone-info-icon); }
+.actorMetaLine .actorMetaIconSystem { color: var(--tone-warning-icon); }
 .cellTotal { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .cellPlaced { display: none; padding-right: 20px; text-align: right; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 /* Order Filters & Customer Orders Filter Bar */
@@ -104,36 +109,37 @@
 .selectSpan2Width52 { grid-column: span 2 / span 2; width: 100%; }
 .browserCard .bottomFilterRow { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 12px; }
 .browserCard .bottomFilterRowOpen { display: grid; }
-.bottomFilterRow .resetFilterBtn { grid-column: span 2 / span 2; display: inline-flex; height: 40px; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 55%, transparent); padding: 0 14px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); transition: background-color 150ms ease, transform 150ms ease; }
-.bottomFilterRow .resetFilterBtn:hover { background-color: var(--secondary); }
+.bottomFilterRow .resetFilterBtn { grid-column: span 2 / span 2; display: inline-flex; height: var(--controlHMd); flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--secondary); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.bottomFilterRow .resetFilterBtn:hover { background-color: color-mix(in oklab, var(--secondary) 86%, var(--foreground) 14%); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
 .bottomFilterRow .resetFilterBtn:active { transform: scale(0.98); }
-.customerFilterCard { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+.customerFilterCard { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); padding: 14px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .customerFilterCard .tabsRow { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 12px; }
 .tabsRow .statusTabsGroup { display: flex; width: 100%; align-items: center; gap: 4px; overflow-x: auto; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); background-color: color-mix(in oklab, var(--muted) 50%, transparent); padding: 4px; }
 .statusTabsGroup .statusTabBtn { display: inline-flex; height: 34px; flex: 1 1 0%; flex-shrink: 0; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; padding: 0 14px; font-size: 12px; line-height: 16px; font-weight: 500; color: color-mix(in oklab, var(--foreground) 75%, transparent); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
 .statusTabsGroup .statusTabBtn:hover { background-color: color-mix(in oklab, var(--background) 90%, transparent); color: var(--foreground); }
-.statusTabsGroup .statusTabBtnSelected { background-color: var(--primary); font-weight: 600; color: var(--primary-foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.statusTabsGroup .statusTabBtnSelected { background-color: var(--primary); font-weight: 600; color: var(--primary-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .statusTabsGroup .statusTabBtnSelected:hover { background-color: var(--primary); color: var(--primary-foreground); }
 .statusTabBtn .tabCountBadge { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; gap: 4px; border-radius: 9999px; padding: 0 6px; font-size: 11px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
-.statusTabBtn .tabCountSelected { background-color: var(--primary-foreground); color: var(--primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
-.statusTabBtn .tabCountAttention { background-color: rgba(245, 158, 11, 0.2); color: #451a03; box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4); }
-:global(.dark) .statusTabBtn .tabCountAttention { background-color: rgba(245, 158, 11, 0.25); color: #fde68a; }
-.statusTabBtn .tabCountDefault { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px color-mix(in oklab, var(--border) 80%, transparent); }
-.tabCountBadge .attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: #f59e0b; }
-.tabsRow .customerResetBtn { display: inline-flex; height: 36px; width: 100%; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 55%, transparent); padding: 0 14px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); transition: background-color 150ms ease, transform 150ms ease; }
-.tabsRow .customerResetBtn:hover { background-color: var(--secondary); }
+.statusTabBtn .tabCountSelected { background-color: var(--primary-foreground); color: var(--primary); box-shadow: 0 1px 2px var(--shadow-color-soft); }
+.statusTabBtn .tabCountAttention { background-color: color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); color: var(--tone-warning-fg-strong); box-shadow: 0 0 0 1px color-mix(in oklab, var(--tone-warning-solid) 40%, transparent); }
+.statusTabBtn .tabCountDefault { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft), 0 0 0 1px color-mix(in oklab, var(--border) 80%, transparent); }
+.tabCountBadge .attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: var(--tone-warning-solid); }
+.tabsRow .customerResetBtn { display: inline-flex; height: var(--controlHSm); width: 100%; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--secondary); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.tabsRow .customerResetBtn:hover { background-color: color-mix(in oklab, var(--secondary) 86%, var(--foreground) 14%); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
 .tabsRow .customerResetBtn:active { transform: scale(0.98); }
-.noSearchMatchBox { display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: 24px; border: 1px dashed var(--border); padding: 48px 16px; text-align: center; }
+.noSearchMatchBox { display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: var(--radiusCard); border: 1px dashed var(--border); padding: 48px 16px; text-align: center; }
 .noSearchMatchBox .noMatchTitle { font-family: var(--font-heading); font-size: 20px; line-height: 28px; }
 .noSearchMatchBox .noMatchSub { max-width: 384px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .noSearchMatchBox .noMatchActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.noMatchActions .allTimeBtn { display: inline-flex; height: 40px; align-items: center; justify-content: center; border-radius: 9999px; background-color: var(--primary); padding: 0 20px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--primary-foreground); transition: opacity 150ms ease; }
-.noMatchActions .allTimeBtn:hover { opacity: 0.9; }
-.noMatchActions .clearSearchBtn { display: inline-flex; height: 40px; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 0 20px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--foreground); transition: background-color 150ms ease; }
-.noMatchActions .clearSearchBtn:hover { background-color: var(--muted); }
+.noMatchActions .allTimeBtn { display: inline-flex; height: var(--controlHMd); align-items: center; justify-content: center; border-radius: var(--radiusControl); background-color: var(--primary); padding: 0 18px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--primary-foreground); transition: background-color 180ms ease, transform 160ms ease; }
+.noMatchActions .allTimeBtn:hover { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); }
+.noMatchActions .allTimeBtn:active { transform: scale(0.98); }
+.noMatchActions .clearSearchBtn { display: inline-flex; height: var(--controlHMd); align-items: center; justify-content: center; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 18px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.noMatchActions .clearSearchBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
+.noMatchActions .clearSearchBtn:active { transform: scale(0.98); }
 .customerOrdersList { display: flex; flex-direction: column; gap: 12px; list-style: none; padding: 0; margin: 0; }
 /* Admin Order View */
-.orderCard { overflow: hidden; border-radius: 12px; border: 1px solid var(--border); }
+.orderCard { overflow: clip; border-radius: 12px; border: 1px solid var(--border); }
 .orderCard .orderCardHeader { border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding: 12px 16px; }
 .orderCardHeader .orderCardTitle { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: -0.3px; }
 .orderCard .orderCardBody { padding: 16px; }
@@ -147,10 +153,10 @@
 .statusBadgeSm { font-size: 14px; line-height: 20px; }
 .headerMainGroup .placedText { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }
 .orderHeaderCard .headerRightGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.headerRightGroup .autoCancelBadge { border-radius: 9999px; background-color: #fef3c7; padding: 4px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #78350f; }
-:global(.dark) .headerRightGroup .autoCancelBadge { background-color: rgba(120, 53, 15, 0.4); color: #fde68a; }
-.headerRightGroup .invoiceBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
-.headerRightGroup .invoiceBtn:hover { background-color: var(--muted); }
+.headerRightGroup .autoCancelBadge { border-radius: 9999px; background-color: var(--tone-warning-pill-bg); padding: 4px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-warning-pill-fg); }
+.headerRightGroup .invoiceBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; text-align: center; gap: 8px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.headerRightGroup .invoiceBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
+.headerRightGroup .invoiceBtn:active { transform: scale(0.98); }
 .orderDetailGrid { display: grid; gap: 24px; }
 .orderDetailGrid .mainWorkCol { min-width: 0; display: flex; flex-direction: column; gap: 24px; }
 .fulfilmentGrid { display: grid; gap: 32px; }
@@ -163,11 +169,14 @@
 .customerPhoneText { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .customerAccountType { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .contactBtnRow { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
-.contactBtnRow .whatsappContactBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; background-color: var(--whatsapp-solid); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; }
-.contactBtnRow .callContactBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; border: 1px solid var(--border); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.contactBtnRow .whatsappContactBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControl); background-color: var(--whatsapp-solid); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--on-solid); transition: background-color 180ms ease, transform 160ms ease, box-shadow 180ms ease; }
+.contactBtnRow .whatsappContactBtn:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--whatsapp) 40%, transparent); }
+.contactBtnRow .whatsappContactBtn:active { transform: scale(0.98); }
+.contactBtnRow .callContactBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.contactBtnRow .callContactBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
+.contactBtnRow .callContactBtn:active { transform: scale(0.98); }
 .addressLine { font-size: 14px; line-height: 20px; }
-.deliveryUpdatedBadge { margin-top: 12px; display: inline-block; border-radius: 9999px; background-color: #fef3c7; padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #78350f; }
-:global(.dark) .deliveryUpdatedBadge { background-color: rgba(120, 53, 15, 0.4); color: #fde68a; }
+.deliveryUpdatedBadge { margin-top: 12px; display: inline-block; border-radius: 9999px; background-color: var(--tone-warning-pill-bg); padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-warning-pill-fg); }
 .customerNoteBox { margin-top: 12px; border-radius: 12px; background-color: color-mix(in oklab, var(--secondary) 70%, transparent); padding: 12px; font-size: 14px; line-height: 20px; }
 .customerNoteBox .noteLabel { font-weight: 600; }
 /* Order Controls */
@@ -177,47 +186,39 @@
 .lockedBlock .lockedBanner { display: flex; align-items: center; gap: 8px; border-radius: 12px; background-color: var(--muted); padding: 10px 12px; font-size: 14px; line-height: 20px; font-weight: 500; }
 .lockedBlock .lockedSub { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .statusForm .selectBlock { display: flex; flex-direction: column; gap: 8px; }
-.selectBlock .nextStepBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 12px; border: 1px solid rgba(167, 243, 208, 0.8); background-color: rgba(236, 253, 245, 0.5); padding: 8px 12px; font-size: 12px; line-height: 16px; }
-:global(.dark) .selectBlock .nextStepBanner { border-color: rgba(6, 78, 59, 0.5); background-color: rgba(2, 44, 34, 0.2); }
-.nextStepBanner .nextStepLabel { display: flex; align-items: center; gap: 6px; color: #022c22; }
-:global(.dark) .nextStepBanner .nextStepLabel { color: #a7f3d0; }
-.nextStepLabel .nextStepIcon { width: 14px; height: 14px; flex-shrink: 0; color: #059669; }
-:global(.dark) .nextStepLabel .nextStepIcon { color: #34d399; }
+.selectBlock .nextStepBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 12px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg); padding: 8px 12px; font-size: 12px; line-height: 16px; }
+.nextStepBanner .nextStepLabel { display: flex; align-items: center; gap: 6px; color: var(--tone-success-fg); }
+.nextStepLabel .nextStepIcon { width: 14px; height: 14px; flex-shrink: 0; color: var(--tone-success-icon); }
 .nextStepLabel .nextStepStrong { font-weight: 600; }
-.nextStepBanner .nextStepQuickBtn { border-radius: 9999px; background-color: #059669; padding: 2px 10px; font-size: 11px; line-height: 16px; font-weight: 600; color: #ffffff; transition: opacity 150ms ease; }
-.nextStepBanner .nextStepQuickBtn:hover { opacity: 0.9; }
-.statusForm .shippingBox { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 12px; border: 1px solid #ddd6fe; background-color: rgba(245, 243, 255, 0.5); padding: 12px; font-size: 14px; line-height: 20px; }
-:global(.dark) .statusForm .shippingBox { border-color: rgba(76, 29, 149, 0.5); background-color: rgba(46, 16, 101, 0.2); }
+.nextStepBanner .nextStepQuickBtn { height: var(--controlHXs); border-radius: var(--radiusControlSm); background-color: var(--tone-success-solid); padding: 0 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-success-solid-fg); transition: background-color 180ms ease, transform 160ms ease; }
+.nextStepBanner .nextStepQuickBtn:hover { background-color: var(--tone-success-solid-hover); transform: translateY(-1px); }
+.nextStepBanner .nextStepQuickBtn:active { transform: scale(0.98); }
+.statusForm .shippingBox { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: var(--radiusCard); border: 1px solid var(--tone-shipping-border); background-color: var(--tone-shipping-bg); padding: 12px; font-size: 14px; line-height: 20px; }
 .shippingBox .shippingText { min-width: 0; overflow-wrap: anywhere; }
 .shippingText .shippingMuted { color: var(--muted-foreground); }
 .shippingText .shippingCarrier { font-weight: 500; }
 .shippingText .shippingTracking { font-family: var(--font-mono); }
-.shippingBox .shippingEditBtn { flex-shrink: 0; border-radius: 9999px; }
-.revertWarnBanner { display: flex; align-items: center; gap: 8px; border-radius: 12px; border: 1px solid rgba(252, 211, 77, 0.8); background-color: rgba(255, 251, 235, 0.7); padding: 8px 12px; font-size: 12px; line-height: 16px; font-weight: 500; color: #451a03; }
-:global(.dark) .revertWarnBanner { border-color: rgba(146, 64, 14, 0.6); background-color: rgba(69, 26, 3, 0.3); color: #fde68a; }
-.revertWarnBanner .revertWarnIcon { width: 14px; height: 14px; flex-shrink: 0; color: #d97706; }
-:global(.dark) .revertWarnBanner .revertWarnIcon { color: #fbbf24; }
-.revertSubmitBtn { width: 100%; gap: 6px; border-radius: 9999px; border-color: #fbbf24; background-color: rgba(245, 158, 11, 0.15); font-weight: 600; color: #451a03; }
-:global(.dark) .revertSubmitBtn { border-color: #b45309; background-color: rgba(69, 26, 3, 0.4); color: #fef3c7; }
-.revertSubmitBtn:hover { background-color: rgba(245, 158, 11, 0.25); }
-:global(.dark) .revertSubmitBtn:hover { background-color: rgba(120, 53, 15, 0.5); }
-.statusForm .whatsappSendBtn { display: flex; height: 40px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; background-color: var(--whatsapp-solid); font-size: 14px; line-height: 20px; font-weight: 600; color: #ffffff; transition: opacity 150ms ease; }
-.statusForm .whatsappSendBtn:hover { opacity: 0.9; }
-.cancelTriggerBtn { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--destructive); transition: background-color 150ms ease; }
-.cancelTriggerBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+.shippingBox .shippingEditBtn { flex-shrink: 0; border-radius: var(--radiusControl); }
+.revertWarnBanner { display: flex; align-items: center; gap: 8px; border-radius: var(--radiusCard); border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 8px 12px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--tone-warning-fg-strong); }
+.revertWarnBanner .revertWarnIcon { width: 14px; height: 14px; flex-shrink: 0; color: var(--tone-warning-icon); }
+.revertSubmitBtn { width: 100%; gap: 6px; border-radius: var(--radiusControl); border-color: var(--tone-warning-border); background-color: color-mix(in oklab, var(--tone-warning-solid) 15%, transparent); font-weight: 600; color: var(--tone-warning-fg-strong); }
+.revertSubmitBtn:hover { background-color: color-mix(in oklab, var(--tone-warning-solid) 25%, transparent); }
+.statusForm .whatsappSendBtn { display: flex; height: var(--controlHMd); align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--whatsapp-solid); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--on-solid); transition: background-color 180ms ease, transform 160ms ease, box-shadow 180ms ease; }
+.statusForm .whatsappSendBtn:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--whatsapp) 40%, transparent); }
+.statusForm .whatsappSendBtn:active { transform: scale(0.98); }
+.cancelTriggerBtn { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; border-radius: var(--radiusControl); border: 1px solid color-mix(in oklab, var(--destructive) 42%, transparent); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--destructive); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.cancelTriggerBtn:hover { border-color: color-mix(in oklab, var(--destructive) 65%, transparent); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); transform: translateY(-1px); }
+.cancelTriggerBtn:active { transform: scale(0.98); }
 .noteFormRoot { display: flex; flex-direction: column; gap: 16px; }
 .noteFormRoot .noteForm { display: flex; flex-direction: column; gap: 8px; }
 .noteFormRoot .auditSection { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 .auditSection .auditHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--muted-foreground); }
 .auditHeader .auditTitle { display: flex; align-items: center; gap: 6px; }
-.auditTitle .auditIcon { width: 14px; height: 14px; color: #d97706; }
-:global(.dark) .auditTitle .auditIcon { color: #fbbf24; }
+.auditTitle .auditIcon { width: 14px; height: 14px; color: var(--tone-warning-icon); }
 .auditHeader .lockedPill { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; background-color: var(--muted); padding: 2px 8px; font-size: 10px; line-height: 14px; font-weight: 500; }
 .auditSection .auditList { display: flex; flex-direction: column; gap: 8px; list-style: none; padding: 0; margin: 0; }
-.auditList .auditEntry { border-radius: 12px; border: 1px solid rgba(252, 211, 77, 0.6); background-color: rgba(255, 251, 235, 0.5); padding: 10px; font-size: 12px; line-height: 16px; }
-:global(.dark) .auditList .auditEntry { border-color: rgba(146, 64, 14, 0.5); background-color: rgba(69, 26, 3, 0.2); }
-.auditEntry .auditEntryHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; font-weight: 600; color: #451a03; }
-:global(.dark) .auditEntry .auditEntryHeader { color: #fde68a; }
+.auditList .auditEntry { border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 10px; font-size: 12px; line-height: 16px; }
+.auditEntry .auditEntryHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; font-weight: 600; color: var(--tone-warning-fg-strong); }
 .auditEntryHeader .auditTime { font-size: 11px; line-height: 16px; font-weight: 400; color: var(--muted-foreground); }
 .auditEntry .auditReason { margin-top: 4px; color: color-mix(in oklab, var(--foreground) 90%, transparent); }
 /* Payment Control */
@@ -227,58 +228,67 @@
 .paymentRoot .paymentHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .paymentHeader .paymentHeading { font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
 .paymentRoot .factsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 12px; }
-.paymentRoot .owedRefundBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid #fed7aa; background-color: rgba(255, 247, 237, 0.7); padding: 16px; font-size: 14px; line-height: 20px; }
-:global(.dark) .paymentRoot .owedRefundBox { border-color: rgba(124, 45, 18, 0.5); background-color: rgba(67, 20, 7, 0.2); }
+.paymentRoot .owedRefundBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--tone-refund-border); background-color: var(--tone-refund-bg); padding: 16px; font-size: 14px; line-height: 20px; }
 .refundHelperCard { display: flex; flex-direction: column; gap: 8px; border-radius: 10px; border: 1px solid var(--border); background-color: var(--card); padding: 12px; font-size: 12.5px; line-height: 18px; color: var(--foreground); }
 .refundHelperCard .refundHelperTitle { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--foreground); }
 .refundHelperCard .refundUpiHighlight { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 8px; background-color: color-mix(in oklab, var(--primary) 8%, transparent); padding: 8px 10px; }
-.refundUpiHighlight .payRefundUpiBtn { display: inline-flex; height: 30px; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: 9999px; background-color: var(--primary); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary-foreground); transition: opacity 150ms ease; }
-.refundUpiHighlight .payRefundUpiBtn:hover { opacity: 0.9; }
+.refundUpiHighlight .payRefundUpiBtn { display: inline-flex; height: var(--controlHXs); align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControlSm); background-color: var(--primary); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary-foreground); transition: background-color 180ms ease, transform 160ms ease; }
+.refundUpiHighlight .payRefundUpiBtn:hover { background-color: color-mix(in oklab, var(--primary) 88%, black); transform: translateY(-1px); }
 .refundHelperCard .refundHelperStep { margin: 0; color: var(--muted-foreground); }
 .returnRefundActionStack { display: flex; flex-direction: column; gap: 10px; }
-.paymentRoot .verifyNoteBox { border-radius: 12px; border: 1px solid #bae6fd; background-color: rgba(240, 249, 255, 0.7); padding: 12px; font-size: 14px; line-height: 20px; }
-:global(.dark) .paymentRoot .verifyNoteBox { border-color: rgba(12, 74, 110, 0.5); background-color: rgba(8, 47, 73, 0.2); }
+.paymentRoot .verifyNoteBox { border-radius: var(--radiusCard); border: 1px solid var(--tone-info-border); background-color: var(--tone-info-bg); padding: 12px; font-size: 14px; line-height: 20px; }
 .paymentRoot .verifyActionRow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
-.verifyActionRow .verifyBtn { border-radius: 9999px; background-color: var(--success-solid); color: #ffffff; }
-.verifyActionRow .verifyBtn:hover { background-color: color-mix(in oklab, var(--success-solid) 90%, transparent); }
-.paymentRoot .rejectBox { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
+.verifyActionRow .verifyBtn { border-radius: var(--radiusControl); background-color: var(--success-solid); color: var(--on-solid); }
+.verifyActionRow .verifyBtn:hover { background-color: color-mix(in oklab, var(--success-solid) 88%, black); }
+.paymentRoot .rejectBox { display: flex; flex-direction: column; gap: 8px; border-radius: var(--radiusCard); border: 1px solid var(--border); padding: 16px; }
 .rejectBox .rejectBtnRow { display: flex; gap: 8px; }
-.paymentRoot .manualEditBtn { width: 100%; border-radius: 9999px; }
-.editPaymentNote { border-radius: 12px; background-color: var(--muted); padding: 8px 12px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.paymentRoot .manualEditBtn { width: 100%; border-radius: var(--radiusControl); }
+.editPaymentNote { border-radius: var(--radiusCard); background-color: var(--muted); padding: 8px 12px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
+.uppercaseInput { text-transform: uppercase; }
+.uppercaseInput::placeholder { text-transform: none; }
+.refundAmountRow { display: flex; align-items: flex-start; gap: 8px; }
+.refundAmountRow .refundAmountField { min-width: 0; flex: 1 1 0%; }
+.refundAmountRow .fullRefundBtn { margin-top: 22px; display: inline-flex; height: var(--controlHMd); flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--tone-success-solid); background-color: var(--tone-success-solid); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; white-space: nowrap; color: var(--tone-success-solid-fg); cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease, opacity 150ms ease; }
+.refundAmountRow .fullRefundBtn:hover:not(:disabled) { background-color: var(--tone-success-solid-hover); border-color: var(--tone-success-solid-hover); transform: translateY(-1px); }
+.refundAmountRow .fullRefundBtn:active:not(:disabled) { transform: scale(0.98); }
+.refundAmountRow .fullRefundBtn:focus-visible { box-shadow: var(--focusRing); }
+.refundAmountRow .fullRefundBtn:disabled { cursor: not-allowed; opacity: 0.5; }
+.refundAmountRow .fullRefundBtnSelected { background-color: var(--tone-success-solid-hover); border-color: var(--tone-success-solid-hover); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--on-solid) 25%, transparent); }
 /* Courier Dialog */
-.courierEditSmallBtn { height: 24px; gap: 4px; border-radius: 9999px; padding-left: 10px; padding-right: 10px; font-size: 12px; line-height: 16px; }
+.courierEditSmallBtn { height: var(--controlHXs); gap: 4px; border-radius: var(--radiusControlSm); padding-left: 10px; padding-right: 10px; font-size: 12px; line-height: 16px; }
 /* Create Return Request & Return Order */
-.createReturnTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); transition: background-color 150ms ease; }
-.createReturnTrigger:hover { background-color: color-mix(in oklab, var(--primary) 10%, transparent); }
+.createReturnTrigger { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid color-mix(in oklab, var(--primary) 40%, transparent); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.createReturnTrigger:hover { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 10%, transparent); transform: translateY(-1px); }
+.createReturnTrigger:active { transform: scale(0.98); }
 .returnItemsList { display: flex; flex-direction: column; gap: 12px; list-style: none; padding: 0; margin: 0; }
-.returnItemsList .returnItemCard { display: flex; flex-direction: column; gap: 4px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
+.returnItemsList .returnItemCard { display: flex; flex-direction: column; gap: 4px; border-radius: var(--radiusCard); border: 1px solid var(--border); padding: 12px; }
 .returnItemCard .returnItemName { font-size: 14px; line-height: 20px; font-weight: 500; }
-.exchangeBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 30%, transparent); padding: 14px; }
+.exchangeBox { display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 30%, transparent); padding: 14px; }
 .allReturnedNote { font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
-.recordReturnTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; border: 1px solid var(--border); font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease; }
-.recordReturnTrigger:hover { background-color: var(--muted); }
+.recordReturnTrigger { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.recordReturnTrigger:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
+.recordReturnTrigger:active { transform: scale(0.98); }
 .recordReturnList { display: flex; flex-direction: column; gap: 16px; list-style: none; padding: 0; margin: 0; }
-.recordReturnList .recordReturnItem { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; border: 1px solid var(--border); padding: 12px; }
+.recordReturnList .recordReturnItem { display: flex; flex-direction: column; gap: 8px; border-radius: var(--radiusCard); border: 1px solid var(--border); padding: 12px; }
 .recordReturnItem .recordItemTitle { font-size: 14px; line-height: 20px; font-weight: 500; }
 .recordReturnItem .recordItemGrid { display: grid; align-items: start; column-gap: 16px; row-gap: 4px; }
 /* Return Requests & Return Status Control */
-.decideTrigger { display: inline-flex; height: 36px; width: 100%; align-items: center; justify-content: center; text-align: center; border-radius: 9999px; padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; transition: background-color 150ms ease, opacity 150ms ease; }
+.decideTrigger { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; text-align: center; gap: 6px; border-radius: var(--radiusControl); padding: 0 16px; font-size: 14px; line-height: 20px; font-weight: 600; cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.decideTrigger:active { transform: scale(0.98); }
 .decideTriggerApprove { background-color: var(--primary); color: var(--primary-foreground); }
-.decideTriggerApprove:hover { opacity: 0.9; }
-.decideTriggerReject { border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); color: var(--destructive); }
-.decideTriggerReject:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
-.exchangeRequestAlert { border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.25); background-color: rgba(99, 102, 241, 0.08); padding: 12px; font-size: 12px; line-height: 16px; color: #312e81; }
-:global(.dark) .exchangeRequestAlert { color: #c7d2fe; }
+.decideTriggerApprove:hover { background-color: color-mix(in oklab, var(--primary) 88%, black); transform: translateY(-1px); }
+.decideTriggerReject { border: 1px solid color-mix(in oklab, var(--destructive) 42%, transparent); color: var(--destructive); }
+.decideTriggerReject:hover { border-color: color-mix(in oklab, var(--destructive) 65%, transparent); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); transform: translateY(-1px); }
+.dispatchTriggerBtn { width: 100%; gap: 8px; border-radius: var(--radiusControl); }
+.exchangeRequestAlert { border-radius: 12px; border: 1px solid var(--tone-exchange-border); background-color: var(--tone-exchange-bg); padding: 12px; font-size: 12px; line-height: 16px; color: var(--tone-exchange-fg); }
 .exchangeRequestAlert .alertTitle { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-.exchangeRequestAlert .exchangePrefText { margin-top: 4px; color: #3730a3; }
-:global(.dark) .exchangeRequestAlert .exchangePrefText { color: #a5b4fc; }
-.altPickupAlert { border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3); background-color: rgba(245, 158, 11, 0.1); padding: 12px; font-size: 12px; line-height: 16px; color: #451a03; }
-:global(.dark) .altPickupAlert { color: #fde68a; }
+.exchangeRequestAlert .exchangePrefText { margin-top: 4px; color: var(--tone-exchange-fg-muted); }
+.altPickupAlert { border-radius: 12px; border: 1px solid color-mix(in oklab, var(--tone-warning-solid) 30%, transparent); background-color: color-mix(in oklab, var(--tone-warning-solid) 10%, transparent); padding: 12px; font-size: 12px; line-height: 16px; color: var(--tone-warning-fg-strong); }
 .altPickupAlert .alertTitle { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .altPickupAlert .altPickupText { margin-top: 4px; }
-.pickupSuccessBtn { border-radius: 9999px; border-color: color-mix(in oklab, var(--primary) 40%, transparent); color: var(--primary); }
+.pickupSuccessBtn { border-radius: var(--radiusControl); border-color: color-mix(in oklab, var(--primary) 40%, transparent); color: var(--primary); }
 .pickupSuccessBtn:hover { background-color: color-mix(in oklab, var(--primary) 10%, transparent); }
-.returnsSection { scroll-margin-top: 96px; display: flex; flex-direction: column; gap: 16px; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 20px; }
+.returnsSection { scroll-margin-top: 96px; display: flex; flex-direction: column; gap: 16px; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); padding: 20px; }
 .returnsSection .returnsHeader { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 4px; }
 .returnsHeader .returnsHeading { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
 .returnsHeading .returnsIcon { width: 20px; height: 20px; color: var(--primary); }
@@ -290,19 +300,32 @@
 .requestTopRow .requestBadges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .requestBadges .requestStatusPill { border-radius: 9999px; padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; }
 .requestBadges .resolutionPill { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; }
-.requestBadges .resolutionExchange { background-color: rgba(99, 102, 241, 0.12); color: #4338ca; }
-:global(.dark) .requestBadges .resolutionExchange { color: #a5b4fc; }
+.requestBadges .resolutionExchange { background-color: var(--tone-exchange-pill-bg); color: var(--tone-exchange-pill-fg); }
 .requestBadges .resolutionRefund { background-color: var(--muted); color: var(--muted-foreground); }
+.requestBadges .doorstepPill { display: inline-flex; align-items: center; border-radius: 9999px; background-color: var(--tone-success-bg-soft); padding: 4px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-success-fg-strong); }
+.exchangeModeGroup { display: flex; flex-direction: column; gap: 6px; }
+.exchangeModeGroup .exchangeModeLabel { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--foreground); }
+.exchangeModeGroup .exchangeModeGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.exchangeModeGrid .exchangeModeBtn { display: flex; min-height: 44px; flex-direction: column; align-items: flex-start; gap: 2px; border-radius: 10px; border: 1px solid var(--border); background-color: var(--card); padding: 10px 12px; text-align: left; cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease; }
+.exchangeModeGrid .exchangeModeBtn:hover { border-color: color-mix(in oklab, var(--primary) 50%, transparent); }
+.exchangeModeGrid .exchangeModeBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.exchangeModeGrid .exchangeModeBtnActive { border-color: var(--tone-success-icon); background-color: var(--tone-success-bg-soft); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone-success-icon) 30%, transparent); }
+.exchangeModeBtn .exchangeModeTitle { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); }
+.exchangeModeBtn .exchangeModeDesc { font-size: 11px; line-height: 15px; color: var(--muted-foreground); }
+.addDoorstepCourierBtn { display: inline-flex; height: var(--controlHMd); width: 100%; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px dashed var(--border); background-color: transparent; padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--primary); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
+.addDoorstepCourierBtn:hover { border-color: color-mix(in oklab, var(--primary) 50%, transparent); background-color: color-mix(in oklab, var(--primary) 6%, transparent); }
+.doorstepCourierBox { display: flex; flex-direction: column; gap: 6px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 35%, transparent); padding: 12px; }
+.doorstepCourierBox .doorstepCourierHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.doorstepCourierHeader .doorstepCourierHeading { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--foreground); }
+.doorstepCourierHeader .removeDoorstepCourierBtn { display: inline-flex; height: 24px; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background: transparent; padding: 0 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.doorstepCourierHeader .removeDoorstepCourierBtn:hover { background-color: var(--muted); color: var(--destructive); }
 .requestTopRow .requestDate { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .requestCard .requestItems { display: flex; flex-direction: column; gap: 2px; font-size: 14px; line-height: 20px; font-weight: 500; list-style: none; padding: 0; margin: 0; }
-.requestCard .exchangeDetailPill { border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2); background-color: rgba(99, 102, 241, 0.08); padding: 8px 12px; font-size: 12px; line-height: 16px; color: #312e81; }
-:global(.dark) .requestCard .exchangeDetailPill { color: #c7d2fe; }
+.requestCard .exchangeDetailPill { border-radius: 8px; border: 1px solid var(--tone-exchange-border); background-color: var(--tone-exchange-bg); padding: 8px 12px; font-size: 12px; line-height: 16px; color: var(--tone-exchange-fg); }
 .requestCard .reasonLine { font-size: 14px; line-height: 20px; }
 .reasonLine .mutedSpan { color: var(--muted-foreground); }
-.requestCard .pickupAddrBanner { display: flex; align-items: flex-start; gap: 6px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3); background-color: rgba(245, 158, 11, 0.1); padding: 8px 12px; font-size: 12px; line-height: 16px; color: #451a03; }
-:global(.dark) .requestCard .pickupAddrBanner { color: #fde68a; }
-.pickupAddrBanner .pickupPinIcon { margin-top: 2px; width: 14px; height: 14px; flex-shrink: 0; color: #b45309; }
-:global(.dark) .pickupAddrBanner .pickupPinIcon { color: #fcd34d; }
+.requestCard .pickupAddrBanner { display: flex; align-items: flex-start; gap: 6px; border-radius: 8px; border: 1px solid color-mix(in oklab, var(--tone-warning-solid) 30%, transparent); background-color: color-mix(in oklab, var(--tone-warning-solid) 10%, transparent); padding: 8px 12px; font-size: 12px; line-height: 16px; color: var(--tone-warning-fg-strong); }
+.pickupAddrBanner .pickupPinIcon { margin-top: 2px; width: 14px; height: 14px; flex-shrink: 0; color: var(--tone-warning-icon); }
 .requestCard .adminNoteBox { border-radius: 8px; background-color: color-mix(in oklab, var(--muted) 60%, transparent); padding: 12px; font-size: 14px; line-height: 20px; }
 .requestCard .withdrawnDate { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .returnControlRoot { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 12px; }

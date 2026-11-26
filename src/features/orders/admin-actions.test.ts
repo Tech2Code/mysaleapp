@@ -12,7 +12,7 @@ vi.mock("@/features/auth/guards", () => ({ assertAdmin: mocks.assertAdmin }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath, updateTag: mocks.updateTag }))
 vi.mock("@/features/products/queries", () => ({ CACHE_TAGS: { products: "products" } }))
 
-import { cancelOrderAsAdmin, decideReturnRequest, recordOrderReturn, updateOrderPayment, updateOrderStatus } from "./admin-actions"
+import { advanceExchangeFulfillment, cancelOrderAsAdmin, decideReturnRequest, recordOrderReturn, updateOrderPayment, updateOrderStatus } from "./admin-actions"
 import { todayIST } from "@/lib/validation/dates"
 
 const ID = "11111111-1111-4111-8111-111111111111"
@@ -291,5 +291,59 @@ describe("recordOrderReturn / decideReturnRequest", () => {
     expect(calls).toHaveLength(0)
     setup(null, { rpc: { error: { message: "NOT_PENDING" } } })
     expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: todayIST() })).toMatchObject({ error: "This request was already decided or withdrawn." })
+  })
+
+  it("passes p_exchange_mode='doorstep' and optional p_shipping when approving a doorstep exchange", async () => {
+    const s1 = setup(null)
+    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: todayIST(), exchangeMode: "doorstep" })).toEqual({ ok: true })
+    expect(rpcCall(s1.calls, "decide_return_request")!.args).toMatchObject({ p_approve: true, p_exchange_mode: "doorstep" })
+    expect(rpcCall(s1.calls, "decide_return_request")!.args).not.toHaveProperty("p_shipping")
+
+    const sWithCourier = setup(null)
+    const shipping = { carrier: "Delhivery", trackingNumber: "DLV123456", trackingUrl: "https://delhivery.com/track/DLV123456", expectedDelivery: todayIST() }
+    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: todayIST(), exchangeMode: "doorstep", shipping })).toEqual({ ok: true })
+    expect(rpcCall(sWithCourier.calls, "decide_return_request")!.args).toMatchObject({ p_approve: true, p_exchange_mode: "doorstep", p_shipping: shipping })
+
+    const s2 = setup(null)
+    expect(await decideReturnRequest({ requestId: ID, approve: true, pickupDate: todayIST(), exchangeMode: "standard" })).toEqual({ ok: true })
+    expect(rpcCall(s2.calls, "decide_return_request")!.args).not.toHaveProperty("p_exchange_mode")
+    expect(rpcCall(s2.calls, "decide_return_request")!.args).not.toHaveProperty("p_shipping")
+
+    // Invalid shipping payload (blank carrier or bad trackingUrl) is rejected before RPC
+    const sBad = setup(null)
+    const badRes = await decideReturnRequest({
+      requestId: ID,
+      approve: true,
+      pickupDate: todayIST(),
+      exchangeMode: "doorstep",
+      shipping: { carrier: "", trackingNumber: "AWB123", trackingUrl: "not-a-url", expectedDelivery: todayIST() },
+    })
+    expect(badRes.ok).toBe(false)
+    expect(sBad.calls).toHaveLength(0)
+  })
+
+  it("passes structured courier shipping details when dispatching an exchange", async () => {
+    const s = setup(null)
+    const shipping = {
+      carrier: "Delhivery",
+      trackingNumber: "AWB12345678",
+      trackingUrl: "https://www.delhivery.com/track/package/AWB12345678",
+      expectedDelivery: todayIST(),
+    }
+    expect(await advanceExchangeFulfillment({ requestId: ID, stage: "dispatched", shipping })).toEqual({ ok: true })
+    expect(rpcCall(s.calls, "advance_exchange_fulfillment")!.args).toEqual({
+      p_request_id: ID,
+      p_stage: "dispatched",
+      p_tracking: "Delhivery · AWB12345678",
+      p_shipping: shipping,
+    })
+
+    const s2 = setup(null)
+    expect(await advanceExchangeFulfillment({ requestId: ID, stage: "set_courier", shipping })).toEqual({ ok: true })
+    expect(rpcCall(s2.calls, "advance_exchange_fulfillment")!.args).toMatchObject({
+      p_request_id: ID,
+      p_stage: "set_courier",
+      p_shipping: shipping,
+    })
   })
 })

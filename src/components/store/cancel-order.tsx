@@ -2,7 +2,7 @@
 
 import { BanIcon, CheckIcon, Loader2Icon, WalletIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useRef, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { normalizeIndianPhone } from "@/lib/format"
@@ -45,6 +45,8 @@ export function CancelOrder({
   const [refundMode, setRefundMode] = useState<"original" | "upi">("original")
   const [refundUpiId, setRefundUpiId] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const markTouched = (field: string) => setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }))
   const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [phone, setPhone] = useState("")
   const formFieldsRef = useRef<HTMLDivElement>(null)
@@ -52,6 +54,20 @@ export function CancelOrder({
   useBlockWhile(pending)
   const later = useToastAfter(pending)
   useRevealOnChange(status)
+
+  useEffect(() => {
+    return () => {
+      setOpen(false)
+      setReason("")
+      setDetail("")
+      setRefundMode("original")
+      setRefundUpiId("")
+      setPhone("")
+      setSubmitted(false)
+      setTouched({})
+      setServerFieldErrors({})
+    }
+  }, [])
 
   if (status === "cancelled" || status === "delivered") return null
 
@@ -95,14 +111,6 @@ export function CancelOrder({
     setSubmitted(true)
     setServerFieldErrors({})
     if (!reason || needsDetail || refundUpiInvalid || phoneMissing) {
-      const msg = !reason
-        ? "Please select why you are cancelling."
-        : needsDetail
-          ? OTHER_DETAIL_MESSAGE
-          : refundUpiInvalid
-            ? (refundUpiError ?? "Please enter a valid UPI ID for your refund.")
-            : (phoneError ?? "Please enter your 10-digit mobile number.")
-      toast.error(msg)
       setTimeout(() => {
         const invalidEl = formFieldsRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")
         if (invalidEl) {
@@ -152,6 +160,7 @@ export function CancelOrder({
       setRefundUpiId("")
       setPhone("")
       setSubmitted(false)
+      setTouched({})
       setServerFieldErrors({})
     }
   }
@@ -198,9 +207,10 @@ export function CancelOrder({
                 setDetail(e.target.value)
                 if (serverFieldErrors.detail) setServerFieldErrors((p) => ({ ...p, detail: "" }))
               }}
+              onBlur={() => markTouched("detail")}
               error={
                 serverFieldErrors.detail ||
-                ((submitted || Boolean(detail.trim())) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
+                ((submitted || touched.detail) && reason === OTHER_REASON && otherNeedsDetail(reason, detail)
                   ? OTHER_DETAIL_MESSAGE
                   : undefined)
               }
@@ -233,7 +243,12 @@ export function CancelOrder({
                     type="button"
                     role="radio"
                     aria-checked={refundMode === "upi"}
-                    onClick={() => setRefundMode("upi")}
+                    onClick={() => {
+                      setRefundMode("upi")
+                      requestAnimationFrame(() => {
+                        formFieldsRef.current?.querySelector<HTMLElement>("input[placeholder*='okicici']")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                      })
+                    }}
                     className={cn(
                       styles.refundModeOptionBtn,
                       refundMode === "upi" && styles.refundModeOptionActive
@@ -260,9 +275,10 @@ export function CancelOrder({
                       setRefundUpiId(e.target.value)
                       if (serverFieldErrors.refundUpiId) setServerFieldErrors((p) => ({ ...p, refundUpiId: "" }))
                     }}
+                    onBlur={() => markTouched("refundUpiId")}
                     error={
                       serverFieldErrors.refundUpiId ||
-                      ((submitted || cleanRefundUpi.length > 0) ? refundUpiError : undefined)
+                      ((submitted || touched.refundUpiId) ? refundUpiError : undefined)
                     }
                   />
                 )}
@@ -280,9 +296,10 @@ export function CancelOrder({
                   setPhone(e.target.value)
                   if (serverFieldErrors.phone) setServerFieldErrors((p) => ({ ...p, phone: "" }))
                 }}
+                onBlur={() => markTouched("phone")}
                 error={
                   serverFieldErrors.phone ||
-                  ((submitted || Boolean(phone.trim())) && phoneMissing
+                  ((submitted || touched.phone) && phoneMissing
                     ? (phoneError ?? "Enter your 10-digit mobile number")
                     : undefined)
                 }

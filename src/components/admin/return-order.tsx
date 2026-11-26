@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
 import { netReturnRefund } from "@/features/orders/refund"
 import { returnableQuantities } from "@/features/orders/returns"
-import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnResolutionType } from "@/features/orders/types"
+import type { ExchangeMode, OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnResolutionType } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { LIMITS } from "@/lib/validation"
@@ -37,7 +37,7 @@ export function AdminReturnOrder({
   triggerLabel = "Record a return",
 }: {
   /** From an approved customer request: its items are filled in and the request is closed when saved. */
-  prefill?: { requestId: string; resolutionType?: ReturnResolutionType; items: { productId: string; quantity: number }[] }
+  prefill?: { requestId: string; resolutionType?: ReturnResolutionType; exchangeMode?: ExchangeMode; items: { productId: string; quantity: number }[] }
   triggerLabel?: string
   orderId: string
   orderCode: string
@@ -50,6 +50,7 @@ export function AdminReturnOrder({
   returns: OrderReturn[]
 }) {
   const router = useRouter()
+  const isDoorstepExchange = prefill?.resolutionType === "exchange" && prefill?.exchangeMode === "doorstep"
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<Record<string, Row>>(() =>
     Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
@@ -57,6 +58,7 @@ export function AdminReturnOrder({
   const [reason, setReason] = useState("")
   const [refund, setRefund] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [reasonTouched, setReasonTouched] = useState(false)
   const [reasonError, setReasonError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -122,8 +124,9 @@ export function AdminReturnOrder({
         setReason("")
         setRefund(false)
         setSubmitted(false)
+        setReasonTouched(false)
         setReasonError(null)
-        toast.success(`Return recorded.${stockNote}${refundNote}`)
+        toast.success(isDoorstepExchange ? `Doorstep exchange completed.${stockNote}` : `Return recorded.${stockNote}${refundNote}`)
       })
       router.refresh()
     })
@@ -142,6 +145,7 @@ export function AdminReturnOrder({
       setReason("")
       setRefund(false)
       setSubmitted(false)
+      setReasonTouched(false)
       setReasonError(null)
     }
   }
@@ -156,8 +160,12 @@ export function AdminReturnOrder({
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.dialogLgMax}>
         <DialogHeader showCloseButton={!pending}>
-          <DialogTitle>Return for {orderCode}</DialogTitle>
-          <DialogDescription>{prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off &ldquo;Back into stock&rdquo; for anything damaged.</DialogDescription>
+          <DialogTitle>{isDoorstepExchange ? `Complete doorstep exchange — ${orderCode}` : `Return for ${orderCode}`}</DialogTitle>
+          <DialogDescription>
+            {isDoorstepExchange
+              ? "Confirm the old item(s) collected during the doorstep swap. Turn off “Back into stock” if damaged — saving deducts replacement stock and marks the exchange complete."
+              : `${prefill ? "Only the items the customer asked to return are listed. " : ""}Enter how many came back. Turn off “Back into stock” for anything damaged.`}
+          </DialogDescription>
         </DialogHeader>
 
         <DialogBody className={styles.dialogBodyStack4}>
@@ -210,10 +218,11 @@ export function AdminReturnOrder({
               setReason(e.target.value)
               if (reasonError) setReasonError(null)
             }}
+            onBlur={() => setReasonTouched(true)}
             placeholder={prefill ? "Optional note about the returned items" : "Why did these items come back?"}
             error={
               reasonError ??
-              ((submitted || reason.trim().length > 0) && reasonMissing
+              ((submitted || reasonTouched) && reasonMissing
                 ? "Enter the reason for the return (at least 3 characters)"
                 : undefined)
             }
@@ -239,7 +248,8 @@ export function AdminReturnOrder({
             <XIcon className={styles.iconMd} /> Cancel
           </Button>
           <Button type="button" onClick={submit} disabled={pending} className={styles.pillBtnGap}>
-            {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />} Save return
+            {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />}{" "}
+            {isDoorstepExchange ? "Confirm doorstep handover" : "Save return"}
           </Button>
         </DialogFooter>
       </DialogContent>

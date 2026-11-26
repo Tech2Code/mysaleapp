@@ -6,7 +6,7 @@ import { CreateReturnRequest } from "@/components/admin/create-return-request"
 import { RevertOrderStatusDialog } from "@/components/admin/order-controls"
 import { AdminReturnOrder } from "@/components/admin/return-order"
 import { RefundReturnButton } from "@/components/admin/refund-return-button"
-import { DecideDialog, PickedUpButton, UndoStepButton } from "@/components/admin/return-requests"
+import { DecideDialog, ExchangeFulfillmentControl, PickedUpButton, UndoStepButton } from "@/components/admin/return-requests"
 import { SelectField, type SelectOption } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { netReturnRefund } from "@/features/orders/refund"
@@ -14,7 +14,20 @@ import { isOpenRequest, returnableQuantities, splitReturnDetails, type ReturnSta
 import type { OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnRequest } from "@/features/orders/types"
 import styles from "./admin-orders.module.css"
 
-type Choice = "current" | "approve" | "reject" | "picked_up" | "received" | "refund" | "undo" | "create" | "revert_shipped"
+type Choice =
+  | "current"
+  | "approve"
+  | "reject"
+  | "picked_up"
+  | "received"
+  | "exchange_dispatch"
+  | "exchange_deliver"
+  | "exchange_undo_dispatch"
+  | "exchange_undo_deliver"
+  | "refund"
+  | "undo"
+  | "create"
+  | "revert_shipped"
 
 /** Item value of one return, priced from the order's lines (what the database refunds for it). */
 function returnValue(
@@ -67,7 +80,7 @@ export function ReturnStatusControl({
 }) {
   const [choice, setChoice] = useState<Choice>("current")
   const [revertOpen, setRevertOpen] = useState(false)
-  const stateKey = `${requests.map((r) => `${r.id}:${r.status}:${r.pickedUpAt ?? ""}`).join(",")}|${returns.map((r) => `${r.id}:${r.refunded}`).join(",")}|${paymentStatus}`
+  const stateKey = `${requests.map((r) => `${r.id}:${r.status}:${r.pickedUpAt ?? ""}:${r.exchangeMode ?? ""}:${r.exchangeStatus ?? ""}:${r.exchangeShipping?.carrier ?? ""}:${r.exchangeShipping?.trackingNumber ?? ""}`).join(",")}|${returns.map((r) => `${r.id}:${r.refunded}`).join(",")}|${paymentStatus}`
   const [prevStateKey, setPrevStateKey] = useState(stateKey)
   if (stateKey !== prevStateKey) {
     setPrevStateKey(stateKey)
@@ -85,19 +98,62 @@ export function ReturnStatusControl({
       { value: "reject", label: isExchange ? "Reject exchange" : "Reject return" }
     )
   }
-  if (open?.status === "approved" && !open.pickedUpAt) options.push({ value: "picked_up", label: "Pickup successful", tone: "next", badge: "Next step" })
+  const isDoorstepApproved = open?.status === "approved" && open.resolutionType === "exchange" && open.exchangeMode === "doorstep"
+  if (open?.status === "approved" && !open.pickedUpAt && !isDoorstepApproved) {
+    options.push({ value: "picked_up", label: "Pickup successful", tone: "next", badge: "Next step" })
+  }
   // Only while something can still come back: not once everything was returned or the payment is fully refunded.
   // A request still waiting for a decision is approved or rejected first (the database refuses to close it otherwise).
   // Every return starts from an approved customer request (no "received" without one; the database refuses it too).
-  // Pickup must be completed before items can be marked received at warehouse or refunded.
-  const canReceive = open?.status === "approved" && Boolean(open.pickedUpAt) && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
-  if (canReceive) options.push({ value: "received", label: "Return received (record items)", tone: "next", badge: "Next step" })
+  // Standard returns require pickup first; doorstep exchanges complete handover in 1 click.
+  const canReceive =
+    open?.status === "approved" &&
+    (Boolean(open.pickedUpAt) || isDoorstepApproved) &&
+    paymentStatus !== "refunded" &&
+    stage?.key !== "refunded" &&
+    [...returnableQuantities(items, returns).values()].some((q) => q > 0)
+  if (canReceive) {
+    options.push({
+      value: "received",
+      label: isDoorstepApproved ? "Complete doorstep exchange" : "Return received (record items)",
+      tone: "next",
+      badge: "Next step",
+    })
+  }
   if (unrefunded.length > 0 && paymentStatus === "paid") options.push({ value: "refund", label: "Refund the returned items", tone: "next", badge: "Next step" })
   // The customer asked outside the app: open the request for them (return window ignored), then approve it as usual.
   const canCreateRequest = !open && paymentStatus !== "refunded" && stage?.key !== "refunded" && [...returnableQuantities(items, returns).values()].some((q) => q > 0)
   if (canCreateRequest) options.push({ value: "create", label: "Create return request (customer asked outside the app)" })
-  // Mis-click safety net: take back the last request step (pickup / approval / rejection). Received and refunds stay.
   const lastRequest = requests.length > 0 ? requests[requests.length - 1] : null
+  // Outbound exchange/replacement fulfillment after old items are received
+  const activeExchangeReq =
+    !open && lastRequest?.status === "received" && lastRequest.resolutionType === "exchange" ? lastRequest : null
+  const isRepReq = Boolean(activeExchangeReq && /^replacement\s*:/i.test(activeExchangeReq.exchangePreference ?? ""))
+  if (activeExchangeReq) {
+    if (!activeExchangeReq.exchangeStatus && !activeExchangeReq.exchangeShippedAt) {
+      options.push({
+        value: "exchange_dispatch",
+        label: isRepReq ? "Dispatch replacement" : "Dispatch exchange item",
+        tone: "next",
+        badge: "Next step",
+      })
+    } else if (activeExchangeReq.exchangeStatus === "dispatched" || (activeExchangeReq.exchangeShippedAt && !activeExchangeReq.exchangeDeliveredAt)) {
+      options.push(
+        {
+          value: "exchange_deliver",
+          label: isRepReq ? "Mark replacement delivered" : "Mark exchange delivered (Complete)",
+          tone: "next",
+          badge: "Next step",
+        },
+        { value: "exchange_undo_dispatch", label: "Undo dispatch", tone: "revert" }
+      )
+    } else if (activeExchangeReq.exchangeStatus === "delivered" || activeExchangeReq.exchangeDeliveredAt) {
+      if (activeExchangeReq.exchangeMode !== "doorstep") {
+        options.push({ value: "exchange_undo_deliver", label: "Undo delivered", tone: "revert" })
+      }
+    }
+  }
+  // Mis-click safety net: take back the last request step (pickup / approval / rejection). Received and refunds stay.
   const undoTarget = open?.status === "approved" ? open : !open && lastRequest?.status === "rejected" ? lastRequest : null
   const undoText = !undoTarget
     ? null
@@ -121,6 +177,18 @@ export function ReturnStatusControl({
       {picked === "approve" && open && <DecideDialog request={open} approve orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "reject" && open && <DecideDialog request={open} approve={false} orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "picked_up" && open && <PickedUpButton requestId={open.id} />}
+      {picked === "exchange_dispatch" && activeExchangeReq && (
+        <ExchangeFulfillmentControl request={activeExchangeReq} mode="dispatched" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
+      )}
+      {picked === "exchange_deliver" && activeExchangeReq && (
+        <ExchangeFulfillmentControl request={activeExchangeReq} mode="delivered" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
+      )}
+      {picked === "exchange_undo_dispatch" && activeExchangeReq && (
+        <ExchangeFulfillmentControl request={activeExchangeReq} mode="undo_dispatched" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
+      )}
+      {picked === "exchange_undo_deliver" && activeExchangeReq && (
+        <ExchangeFulfillmentControl request={activeExchangeReq} mode="undo_delivered" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
+      )}
       {picked === "create" && <CreateReturnRequest orderId={orderId} orderCode={orderCode} items={items} returns={returns} />}
       {picked === "undo" && undoTarget && undoText && <UndoStepButton requestId={undoTarget.id} title={undoText.title} description={undoText.description} />}
       {picked === "revert_shipped" && canRevertDelivered && (
@@ -161,9 +229,10 @@ export function ReturnStatusControl({
           prefill={{
             requestId: open.id,
             resolutionType: open.resolutionType,
+            exchangeMode: open.exchangeMode,
             items: open.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
           }}
-          triggerLabel="Record the items that came back"
+          triggerLabel={isDoorstepApproved ? "Complete doorstep handover" : "Record the items that came back"}
         />
       )}
       {picked === "refund" && (

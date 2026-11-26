@@ -1,18 +1,31 @@
-/* Kalakriti service worker — offline support for the installable app.
+/* Kalakriti service worker — fast launch & offline support for the installable app.
  * Strategy:
+ *  - Pre-cache: /, /?source=pwa, /offline, and app icons on install for instant PWA launch.
  *  - Static build assets (/_next/static, fonts, icons): cache-first (they are content-hashed).
  *  - Product images (/_next/image): stale-while-revalidate.
- *  - Page navigations: network-first, fall back to the cached page, then /offline.
+ *  - Public catalogue navigations (/, /products, /category, /about, /contact): stale-while-revalidate
+ *    so the installed mobile app opens instantaneously from cache while updating in the background.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v3"
+const VERSION = "v4"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
 const OFFLINE_URL = "/offline"
+const PRECACHE_PAGES = ["/", "/?source=pwa", OFFLINE_URL]
+const PRECACHE_ICONS = ["/icons/192", "/icons/512", "/icon", "/apple-icon"]
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(PAGES_CACHE).then((cache) => cache.add(OFFLINE_URL)))
+  event.waitUntil(
+    Promise.all([
+      caches.open(PAGES_CACHE).then((cache) =>
+        Promise.all(PRECACHE_PAGES.map((url) => cache.add(url).catch(() => {})))
+      ),
+      caches.open(STATIC_CACHE).then((cache) =>
+        Promise.all(PRECACHE_ICONS.map((url) => cache.add(url).catch(() => {})))
+      ),
+    ])
+  )
   self.skipWaiting()
 })
 
@@ -69,7 +82,12 @@ self.addEventListener("fetch", (event) => {
   // React Server Component payloads are handled by Next.js itself.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return
 
-  if (url.pathname.startsWith("/_next/static") && !url.pathname.startsWith("/_next/static/development/")) {
+  if (
+    (url.pathname.startsWith("/_next/static") && !url.pathname.startsWith("/_next/static/development/")) ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname === "/icon" ||
+    url.pathname === "/apple-icon"
+  ) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
@@ -107,19 +125,32 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((res) => {
-          if (res.ok && CACHEABLE_PAGE.test(url.pathname) && !/no-store|private/.test(res.headers.get("Cache-Control") || "")) {
-            const copy = res.clone()
-            caches.open(PAGES_CACHE).then((c) => {
-              c.put(request, copy)
-              trimCache(PAGES_CACHE, 40)
+    if (CACHEABLE_PAGE.test(url.pathname)) {
+      // Stale-while-revalidate for public catalogue pages so installed PWA launches instantaneously
+      event.respondWith(
+        caches.open(PAGES_CACHE).then(async (cache) => {
+          const hit = await cache.match(request)
+          const networkPromise = fetch(request)
+            .then((res) => {
+              if (res.ok && !/no-store|private/.test(res.headers.get("Cache-Control") || "")) {
+                cache.put(request, res.clone())
+                trimCache(PAGES_CACHE, 40)
+              }
+              return res
             })
+            .catch(() => null)
+          if (hit) {
+            event.waitUntil(networkPromise)
+            return hit
           }
-          return res
+          const networkRes = await networkPromise
+          return networkRes || (await caches.match(OFFLINE_URL))
         })
-        .catch(async () => (await caches.match(request)) || caches.match(OFFLINE_URL))
+      )
+      return
+    }
+    event.respondWith(
+      fetch(request).catch(async () => (await caches.match(request)) || caches.match(OFFLINE_URL))
     )
   }
 })

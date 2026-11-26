@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { returnStage } from "./returns"
 import { buildUpiUrl } from "./upi"
-import { buildStatusUpdateMessage, whatsappLink } from "./whatsapp"
+import { buildReturnDecisionMessage, buildStatusUpdateMessage, whatsappLink } from "./whatsapp"
 import { ORDER_VIEWS } from "./views"
 
 const shop = { shopName: "Test Shop", whatsappNumber: "919999999999" }
@@ -34,6 +34,31 @@ describe("status WhatsApp message with a return stage", () => {
   it("keeps the normal message without a stage or for other statuses", () => {
     expect(buildStatusUpdateMessage(shop, base)).toContain("is now *Delivered*")
     expect(buildStatusUpdateMessage(shop, { ...base, status: "shipped", returnStage: stage("approved") })).toContain("is now *Shipped*")
+  })
+
+  it("tailors WhatsApp approval copy for doorstep exchange vs standard exchange", () => {
+    const doorstep = buildReturnDecisionMessage(shop, {
+      orderCode: "KK-ABC123",
+      customerName: "Asha Rao",
+      approved: true,
+      pickupDate: "2026-11-28",
+      resolutionType: "exchange",
+      exchangePreference: "Replacement: Same item, same size & colour",
+      exchangeMode: "doorstep",
+    })
+    expect(doorstep).toContain("Doorstep exchange approved")
+    expect(doorstep).toContain("same visit")
+    const standard = buildReturnDecisionMessage(shop, {
+      orderCode: "KK-ABC123",
+      customerName: "Asha Rao",
+      approved: true,
+      pickupDate: "2026-11-28",
+      resolutionType: "exchange",
+      exchangePreference: "Exchange: Size L",
+      exchangeMode: "standard",
+    })
+    expect(standard).toContain("Once our courier picks up the old item")
+    expect(standard).not.toContain("same visit")
   })
 })
 
