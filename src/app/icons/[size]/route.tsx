@@ -1,11 +1,12 @@
 import { ImageResponse } from "next/og"
-import { BrandMark } from "@/lib/brand-image"
+import { BrandMark, type BrandMarkVariant } from "@/lib/brand-image"
 
-const VARIANTS: Record<string, { size: number; padding: number }> = {
-  "192": { size: 192, padding: 0 },
-  "512": { size: 512, padding: 0 },
-  // Maskable icons need a safe zone: Android may crop them into a circle.
-  "maskable-512": { size: 512, padding: 64 },
+const VARIANTS: Record<string, { size: number; padding: number; variant: BrandMarkVariant }> = {
+  // Inset rounded-square badge so Android's native PWA splash screen & shortcuts stay crisp and proportional.
+  "192": { size: 192, padding: 26, variant: "badge" },
+  "512": { size: 512, padding: 72, variant: "badge" },
+  // Full-bleed gradient with glyph inside the 80% safe zone so Android adaptive masks never clip or show cream corners.
+  "maskable-512": { size: 512, padding: 0, variant: "maskable" },
 }
 
 export function generateStaticParams() {
@@ -17,9 +18,9 @@ export async function GET(_req: Request, { params }: RouteContext<"/icons/[size]
   const { size } = await params
   if (!Object.hasOwn(VARIANTS, size)) return new Response("Not found", { status: 404 })
   const v = VARIANTS[size]
-  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} />, {
+  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} variant={v.variant} />, {
     width: v.size,
     height: v.size,
-    headers: { "Cache-Control": "public, max-age=86400, must-revalidate" },
+    headers: { "Cache-Control": "public, max-age=3600, must-revalidate" },
   })
 }

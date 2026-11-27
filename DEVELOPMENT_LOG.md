@@ -373,3 +373,139 @@ Chronological log of all features, UI redesigns, bug fixes, root-cause analyses,
 - **Files Modified**:
   - `src/app/(store)/layout.tsx`
   - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 16:45 IST — Fix Mobile PWA Icon Proportions, Auto-Updating Logo Versioning & Remove Post-Hydration Flash Splash
+
+- **User Prompt**:
+  1. Mobile installed PWA showed an oversized/mismatched logo on open, and logo/favicon changes should auto-update everywhere.
+  2. Opening the app showed the home page first and then suddenly flashed a logo + tagline loading screen on top.
+- **Problem / Root Cause**:
+  1. `BrandMark` in `src/lib/brand-image.tsx` rendered `maskable-512` as a near-circle (`borderRadius: 0.46`) inside a cream (`#fbf7f2`) frame instead of a full-bleed brand gradient, and rendered `512`/`192` with `padding: 0`, making Android's native splash icon appear oversized and mismatched. Additionally, `manifest.ts` hardcoded `?v=2` and `public/sw.js` served `/icons/*`, `/icon`, and `/apple-icon` cache-first, blocking automatic icon updates when the logo changed.
+  2. `AppSplash` (`src/components/shared/app-splash.tsx`) initialized with `phase = "idle"` (returning `null` during SSR and SW-cached paint) and switched to `"open"` inside `useEffect` after React hydration, causing the home page to render first and then abruptly get covered by a 1.1s JS splash overlay.
+- **Solution / Fix**:
+  - Exported an auto-computed deterministic `BRAND_ICON_VERSION` hash from `src/components/shared/brand-glyph.tsx` (derived from `BRAND_PALETTE` + `BrandGlyph`) and wired it into `src/app/manifest.ts` so any logo/color change automatically busts browser, CDN, and Android WebAPK icon caches.
+  - Updated `BrandMark` (`src/lib/brand-image.tsx`), `src/app/icons/[size]/route.tsx`, and `src/app/apple-icon.tsx` so `maskable-512` and `apple-icon` use a full-bleed brand gradient with safe-zone glyph centering, while `192`/`512` use an inset rounded-square badge matching the header `LogoMark` proportions.
+  - Updated `public/sw.js` (`v6`): removed hardcoded `?v=2` icon precaching, explicitly bypassed `/manifest.webmanifest`, and switched `/icons/*`, `/icon`, and `/apple-icon` to network-first with cache fallback.
+  - Removed `<AppSplash />` from `src/components/shared/providers.tsx` and deleted the unused `app-splash.tsx` and `app-splash.module.css` so installed PWAs transition directly from the native OS splash to the Home Page with zero flash or artificial delay.
+- **Files Modified**:
+  - `src/components/shared/brand-glyph.tsx`
+  - `src/lib/brand-image.tsx`
+  - `src/app/icons/[size]/route.tsx`
+  - `src/app/apple-icon.tsx`
+  - `src/app/manifest.ts`
+  - `public/sw.js`
+  - `src/components/shared/providers.tsx`
+  - `src/components/shared/app-splash.tsx` (deleted)
+  - `src/components/shared/app-splash.module.css` (deleted)
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 16:50 IST — Gmail App Password SMTP Settings & End-to-End Forgot/Reset Password Flow
+
+- **User Prompt**:
+  1. Build a Gmail App Password SMTP configuration flow inside Admin Settings so the shop owner can configure email sending directly from the admin panel.
+  2. Design and wire up email sending, forgot password, and reset password (for both customers and admin) to use the configured Gmail App Password SMTP flow.
+  3. Test the full flow end-to-end (email sending, forgot password, reset password).
+- **Problem / Root Cause**:
+  - Password reset emails previously relied solely on Supabase's built-in free mail sender (~3 emails/hour rate limit) with no way for the shop owner to configure their own Gmail SMTP credentials from Admin Settings or send branded HTML reset/security emails.
+- **Solution / Fix**:
+  - **Database Migration (`0070_email_settings.sql`)**:
+    - Added singleton admin-only `public.email_settings` table (RLS restricted strictly to `public.is_admin()`; never exposed via public `store_settings`) storing AES-256-GCM encrypted Gmail App Password, Gmail address, sender display name, reply-to, and last test status/timestamp.
+    - Added `public.password_reset_tokens` table (SHA-256 hashed 32-byte tokens, 30-minute TTL, single-use, zero direct PostgREST access) with `SECURITY DEFINER` RPCs: `create_password_reset_token`, `verify_password_reset_token`, and `consume_password_reset_token` (bcrypt password update via `pgcrypto`, same-password rejection, admin PIN lock clear, customer reactivation).
+  - **Email & Gmail SMTP Service (`src/features/email/`)**:
+    - Added `crypto.ts` (AES-256-GCM encrypt/decrypt, SHA-256 token hashing, App Password normalization), `templates.ts` (table-based, inline-CSS HTML + plain-text templates for password reset, password changed, and SMTP test emails), `mailer.ts` (Nodemailer `smtp.gmail.com:465` TLS sender with actionable error mapping), `schema.ts`, `queries.ts` (graceful unpushed-migration fallback, never returns raw/encrypted password to client), and `actions.ts` (`saveEmailSettings`, `sendTestEmail`, `clearEmailAppPassword`).
+  - **Admin Settings UI (`src/components/admin/email-settings-card.tsx` + `.module.css`)**:
+    - Added **Email & Gmail SMTP** card to `/admin/settings` with enable/disable toggle, Gmail address, masked App Password input with remove-password confirmation dialog, sender display name, Reply-To, 4-step Google App Password guide, and live **Send test email** panel with status indicator.
+  - **Customer & Admin Forgot/Reset Password Wiring**:
+    - Updated `requestCustomerPasswordReset`, `resetCustomerPassword`, `requestPasswordReset`, `resetAdminPassword`, `/login` (`LoginPage` + `GoogleSignIn`), and `/admin/reset-password` (`AdminResetPasswordPage` + `ResetPasswordForm`) to use the Gmail SMTP one-time token flow when enabled, automatically sign the user in after reset, send a security confirmation email, strip `?token=` from the address bar, and seamlessly fall back to Supabase Auth when Gmail SMTP is disabled.
+  - **Verification**:
+    - Added 17 unit & end-to-end flow tests (`src/features/email/email.test.ts`, `src/features/email/password-reset-flow.test.ts`); all **32 test files / 857 tests** pass, `npm run lint` and `npx tsc --noEmit` pass with zero errors, and `npm run build` compiles cleanly.
+- **Files Modified**:
+  - `package.json`, `package-lock.json` (added `nodemailer`, `@types/nodemailer`)
+  - `supabase/migrations/0070_email_settings.sql`
+  - `src/features/email/crypto.ts`, `src/features/email/schema.ts`, `src/features/email/templates.ts`, `src/features/email/mailer.ts`, `src/features/email/queries.ts`, `src/features/email/actions.ts`
+  - `src/features/email/email.test.ts`, `src/features/email/password-reset-flow.test.ts`
+  - `src/components/admin/email-settings-card.tsx`, `src/components/admin/email-settings-card.module.css`
+  - `src/components/admin/page-views.tsx`, `src/app/admin/(panel)/settings/page.tsx`, `src/app/admin/(panel)/settings/loading.tsx`
+  - `src/features/auth/actions.ts`, `src/features/auth/account-actions.ts`
+  - `src/app/(store)/login/page.tsx`, `src/components/store/page-views.tsx`, `src/components/store/google-sign-in.tsx`
+  - `src/app/admin/reset-password/page.tsx`, `src/components/admin/password-reset-forms.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 16:56 IST — Extend Gmail App Password SMTP to Customer Signup Welcome & Email Verification Flows
+
+- **User Prompt**: Confirmed whether the same Gmail App Password SMTP flow also works for Signup and Login, and requested full testing.
+- **Problem / Root Cause**:
+  - `signUpCustomer` previously did not send a welcome or email verification email through the configured Gmail SMTP service, relying only on Supabase's built-in sender when email confirmation was enabled.
+- **Solution / Fix**:
+  - Extended [0070_email_settings.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0070_email_settings.sql) with `signup_verify` scope on `public.password_reset_tokens` and two `SECURITY DEFINER` RPCs: `prepare_signup_email` and `consume_signup_verify_token`.
+  - Added table-based, inline-CSS `buildWelcomeEmail` and `buildSignupVerifyEmail` templates in [templates.ts](file:///d:/nextApps/mysaleapp/src/features/email/templates.ts).
+  - Updated `signUpCustomer` in [actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/actions.ts) to send a branded Welcome Email via Gmail SMTP on immediate signup and a branded 24-hour verification link (`/login?mode=verify-email&token=...`) when email confirmation is enabled.
+  - Wired `/login?mode=verify-email&token=...` handling in [login/page.tsx](file:///d:/nextApps/mysaleapp/src/app/(store)/login/page.tsx) and `?verified=1` / `?error=verify-expired` user feedback in [google-sign-in.tsx](file:///d:/nextApps/mysaleapp/src/components/store/google-sign-in.tsx).
+  - Added unit & flow tests in [email.test.ts](file:///d:/nextApps/mysaleapp/src/features/email/email.test.ts) and [password-reset-flow.test.ts](file:///d:/nextApps/mysaleapp/src/features/email/password-reset-flow.test.ts) covering signup welcome, signup email verification, and login (**32 test files / 859 tests passing**).
+- **Files Modified**:
+  - `supabase/migrations/0070_email_settings.sql`
+  - `src/features/email/templates.ts`
+  - `src/features/auth/actions.ts`
+  - `src/app/(store)/login/page.tsx`
+  - `src/components/store/google-sign-in.tsx`
+  - `src/features/email/email.test.ts`
+  - `src/features/email/password-reset-flow.test.ts`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 17:00 IST — Redesign Admin Store Settings into an Organised App-Like Settings Hub (Desktop Sidebar + Mobile Drill-Down)
+
+- **User Prompt**: `"store settings me sa ui ek saath cluster ho rakha h , isko ek managable way me design karo , best ui hona chaiye, web and mobile me app jesa"`
+- **Problem / Root Cause**:
+  - `/admin/settings` stacked `<EmailSettingsCard>`, `<PromoCodeManager>`, and 8 cards inside `<StoreSettingsForm>` (via a 2-column CSS masonry layout) all on one overwhelming scroll, making it cluttered on both desktop and mobile.
+- **Solution / Fix**:
+  - Built `StoreSettingsWorkspace` in `src/components/admin/store-settings-form.tsx` (wired through `SettingsView` in `src/components/admin/page-views.tsx`) organizing all 10 settings blocks into 7 focused categories across 2 logical groups (**Storefront**: Shop & Brand, Contact & Location, Google & SEO; **Commerce & Operations**: Payments & Tax, Delivery & Orders, Promo Codes, Email & SMTP).
+  - **Desktop (`>= 960px`)**: Sticky left settings sidebar with live summaries (shop name, city, payment/GST mode, delivery fee, active promo count, SMTP live status dot, and amber unsaved-changes dot) paired with a clean single-column focused right pane (`max-width: 860px`).
+  - **Mobile (`< 960px`)**: Native app-style grouped Settings Hub list (`>= 64px` rows with rounded icon tiles, live subtitles, badges, and chevrons) that drills down into the selected section with a sticky frosted-glass `← Settings` app top bar and sticky bottom save bar.
+  - Kept all 5 Store Settings form panels mounted inside one `<form>` (toggled via `hidden`, with `<PromoCodeManager>` and `<EmailSettingsCard>` rendered cleanly outside the `<form>` to avoid nested forms) so switching tabs never loses unsaved edits, and added automatic jump-to-error section switching on validation failure plus an unsaved-changes reminder banner when viewing Promo Codes or Email.
+- **Files Modified**:
+  - `src/components/admin/store-settings-form.tsx`
+  - `src/components/admin/admin-views.module.css`
+  - `src/components/admin/page-views.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 17:18 IST — Deep Security, Authority & UI Audit of Gmail SMTP Email & Password Reset System
+
+- **User Prompt**: Requested a deep audit of all email-related UI, security/authority, and delivery functionality to verify everything is solid.
+- **Problem / Root Cause**:
+  1. **Critical Security Gap (Direct PostgREST RPC Exposure)**: The 5 `SECURITY DEFINER` RPCs in migration `0070` (`create_password_reset_token`, `verify_password_reset_token`, `consume_password_reset_token`, `prepare_signup_email`, `consume_signup_verify_token`) were executable by `anon` without server authentication, meaning a browser client using the public anon key could forge a reset token hash or probe accounts directly.
+  2. **Production Secret Fallback**: `src/features/email/crypto.ts` fell back to a hardcoded dev key even when `NODE_ENV === "production"` if no server secret env var was set.
+  3. **Token Consumption Rate Limit**: `resetCustomerPassword` and `resetAdminPassword` did not rate-limit token consumption attempts.
+  4. **Test-Email UX Bug**: Clicking **Send test email** in `EmailSettingsCard` triggered `router.refresh()` which called `form.reset(...)`, wiping unsaved Gmail address / App Password input if the admin tested credentials before saving.
+  5. **Mobile Tap Target**: `Remove saved password` button had `min-height: 32px` on mobile instead of `>= 44px`.
+- **Solution / Fix**:
+  - Created & pushed migration [0071_harden_email_rpcs.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0071_harden_email_rpcs.sql): added `server_rpc_secret_hash` to `public.email_settings`, dropped old unauthenticated function signatures, and enforced SHA-256 `p_server_secret` verification (`42501 FORBIDDEN` on mismatch) inside all 5 RPCs.
+  - Updated [crypto.ts](file:///d:/nextApps/mysaleapp/src/features/email/crypto.ts) to derive `getServerRpcSecret()` / `hashServerRpcSecret()` and fail loudly in production if no server secret env var is configured.
+  - Updated [email/actions.ts](file:///d:/nextApps/mysaleapp/src/features/email/actions.ts), [auth/actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/actions.ts), [auth/account-actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/account-actions.ts), [login/page.tsx](file:///d:/nextApps/mysaleapp/src/app/(store)/login/page.tsx), and [admin/reset-password/page.tsx](file:///d:/nextApps/mysaleapp/src/app/admin/reset-password/page.tsx) to pass `p_server_secret` and rate-limit token consumption.
+  - Fixed `EmailSettingsCard` ([email-settings-card.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/email-settings-card.tsx) & [email-settings-card.module.css](file:///d:/nextApps/mysaleapp/src/components/admin/email-settings-card.module.css)) so testing credentials before saving preserves unsaved form values, and ensured `44px` mobile tap target on `Remove saved password`.
+- **Files Modified**:
+  - `supabase/migrations/0071_harden_email_rpcs.sql`
+  - `src/features/email/crypto.ts`
+  - `src/features/email/actions.ts`
+  - `src/features/auth/actions.ts`
+  - `src/features/auth/account-actions.ts`
+  - `src/app/(store)/login/page.tsx`
+  - `src/app/admin/reset-password/page.tsx`
+  - `src/components/admin/email-settings-card.tsx`
+  - `src/components/admin/email-settings-card.module.css`
+  - `src/features/email/password-reset-flow.test.ts`
+  - `DEVELOPMENT_LOG.md`

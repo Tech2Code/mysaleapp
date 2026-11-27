@@ -5,9 +5,10 @@ import { AdminPageHeader } from "@/components/admin/admin-page-header"
 import { CategoryManager } from "@/components/admin/category-manager"
 import { LaunchPanel } from "@/components/admin/launch-panel"
 import { ProductForm } from "@/components/admin/product-form"
-import { PromoCodeManager, StoreSettingsForm } from "@/components/admin/store-settings-form"
+import { StoreSettingsWorkspace } from "@/components/admin/store-settings-form"
 import { buttonVariants } from "@/components/ui/button"
 import type { AdminPinStatus } from "@/features/auth/account-schema"
+import { DEFAULT_EMAIL_SETTINGS, type EmailSettingsPublic } from "@/features/email/schema"
 import type { PaymentGatewayProvider } from "@/features/orders/types"
 import type { Category, Product } from "@/features/products/types"
 import type { LaunchCounts } from "@/features/settings/launch"
@@ -81,20 +82,29 @@ export function SettingsView({
   settings,
   promoCodes = [],
   configuredGateways = [],
+  emailSettings = DEFAULT_EMAIL_SETTINGS,
+  adminEmail,
 }: {
   settings: StoreSettings
   promoCodes?: PromoCode[]
   configuredGateways?: PaymentGatewayProvider[]
+  emailSettings?: EmailSettingsPublic
+  adminEmail?: string | null
 }) {
   return (
     <>
       <AdminPageHeader
         eyebrow="Store"
         title="Settings"
-        description="Your shop's name, promo codes, contact details, payment, delivery and SEO. Changes go live on the website as soon as you save."
+        description="Manage your shop profile, contact details, SEO, payments, delivery, promo codes, and email setup from one organised workspace."
       />
-      <PromoCodeManager promoCodes={promoCodes} />
-      <StoreSettingsForm settings={settings} configuredGateways={configuredGateways} />
+      <StoreSettingsWorkspace
+        settings={settings}
+        promoCodes={promoCodes}
+        configuredGateways={configuredGateways}
+        emailSettings={emailSettings}
+        adminEmail={adminEmail}
+      />
     </>
   )
 }

@@ -85,8 +85,8 @@ export function ForgotPasswordForm() {
   )
 }
 
-/** Step 2: the link signed the admin in; choose a new password. */
-export function ResetPasswordForm() {
+/** Step 2: the reset link was verified; choose a new password. */
+export function ResetPasswordForm({ resetToken = null }: { resetToken?: string | null }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
@@ -96,6 +96,9 @@ export function ResetPasswordForm() {
   const { errors } = form.formState
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("token=")) {
+      window.history.replaceState(null, "", window.location.pathname)
+    }
     return () => {
       form.reset({ next: "", confirm: "" })
     }
@@ -108,7 +111,10 @@ export function ResetPasswordForm() {
       className={styles.authFormStack}
       onSubmit={form.handleSubmit((values) =>
         startTransition(async () => {
-          const res = await resetAdminPassword(values)
+          const res = await resetAdminPassword({
+            ...values,
+            ...(resetToken ? { token: resetToken } : {}),
+          })
           if (!res.ok) {
             for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {
               if (msgs?.[0] && (field === "next" || field === "confirm")) {

@@ -1,30 +1,27 @@
 /* Kalakriti service worker — fast launch & offline support for the installable app.
  * Strategy:
- *  - Pre-cache: /, /?source=pwa, /offline, and app icons on install for instant PWA launch.
- *  - Static build assets (/_next/static, fonts, icons): cache-first (they are content-hashed).
+ *  - Pre-cache: /, /?source=pwa, and /offline on install for instant PWA launch.
+ *  - Static build assets (/_next/static): cache-first (they are content-hashed).
+ *  - Brand icons (/icons/*, /icon, /apple-icon): network-first with cache fallback so
+ *    logo/favicon updates always propagate immediately without manual SW version bumps.
+ *  - Manifest (/manifest.webmanifest): never cached by SW so OS WebAPK update checks stay fresh.
  *  - Product images (/_next/image): stale-while-revalidate.
  *  - Public catalogue navigations (/, /products, /category, /about, /contact): stale-while-revalidate
  *    so the installed mobile app opens instantaneously from cache while updating in the background.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v5"
+const VERSION = "v6"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
 const OFFLINE_URL = "/offline"
 const PRECACHE_PAGES = ["/", "/?source=pwa", OFFLINE_URL]
-const PRECACHE_ICONS = ["/icons/192?v=2", "/icons/512?v=2", "/icons/maskable-512?v=2", "/icon", "/apple-icon"]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    Promise.all([
-      caches.open(PAGES_CACHE).then((cache) =>
-        Promise.all(PRECACHE_PAGES.map((url) => cache.add(url).catch(() => {})))
-      ),
-      caches.open(STATIC_CACHE).then((cache) =>
-        Promise.all(PRECACHE_ICONS.map((url) => cache.add(url).catch(() => {})))
-      ),
-    ])
+    caches.open(PAGES_CACHE).then((cache) =>
+      Promise.all(PRECACHE_PAGES.map((url) => cache.add(url).catch(() => {})))
+    )
   )
   self.skipWaiting()
 })
@@ -82,12 +79,10 @@ self.addEventListener("fetch", (event) => {
   // React Server Component payloads are handled by Next.js itself.
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return
 
-  if (
-    (url.pathname.startsWith("/_next/static") && !url.pathname.startsWith("/_next/static/development/")) ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/icon" ||
-    url.pathname === "/apple-icon"
-  ) {
+  // Never intercept manifest so Chrome/Android WebAPK update checks always read fresh icon versions.
+  if (url.pathname === "/manifest.webmanifest") return
+
+  if (url.pathname.startsWith("/_next/static") && !url.pathname.startsWith("/_next/static/development/")) {
     event.respondWith(
       caches.match(request).then(
         (hit) =>
@@ -100,6 +95,22 @@ self.addEventListener("fetch", (event) => {
             return res
           })
       )
+    )
+    return
+  }
+
+  // Brand icons & favicons: network-first with cache fallback so logo updates propagate automatically.
+  if (url.pathname.startsWith("/icons/") || url.pathname === "/icon" || url.pathname === "/apple-icon") {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(STATIC_CACHE).then((c) => c.put(request, copy))
+          }
+          return res
+        })
+        .catch(async () => (await caches.match(request)) || Response.error())
     )
     return
   }

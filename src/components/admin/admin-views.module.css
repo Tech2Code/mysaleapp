@@ -109,7 +109,7 @@
 /* Section & Settings Card */
 .sectionCard { overflow: hidden; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 80%, transparent); transition: border-color 150ms ease, box-shadow 150ms ease; }
 .sectionCardDirty { border-color: color-mix(in oklab, var(--tone-warning-solid) 60%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); }
-.settingsCard { margin-bottom: 16px; break-inside: avoid; }
+.settingsCard { margin-bottom: 0; break-inside: avoid; }
 .sectionCard .sectionHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); background-color: color-mix(in oklab, var(--muted) 20%, transparent); padding: 14px 16px; transition: background-color 150ms ease, border-color 150ms ease; }
 .sectionCard .sectionHeaderDirty { border-bottom-color: color-mix(in oklab, var(--tone-warning-solid) 30%, transparent); background-color: color-mix(in oklab, var(--tone-warning-solid) 8%, transparent); }
 .sectionHeader .sectionHeaderLeft { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
@@ -210,7 +210,43 @@
 .uploadDropzone .uploadIcon { width: 24px; height: 24px; }
 .uploadDropzone .uploadLabel { font-size: 12px; line-height: 16px; font-weight: 500; }
 .uploaderRoot .uploaderHint { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
-/* Store Settings Form & Promo Codes */
+/* Store Settings Workspace (Desktop SaaS Sidebar + Mobile App Drill-Down) */
+@keyframes settingsFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.settingsWorkspace { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.settingsWorkspace .settingsNavCol { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.settingsWorkspaceMobileDetail .settingsNavCol { display: none; }
+.settingsNavCol .settingsNavGroup { display: flex; flex-direction: column; gap: 8px; }
+.settingsNavGroup .settingsGroupLabel { margin: 0; padding: 0 4px; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted-foreground); }
+.settingsNavGroup .settingsNavList { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); }
+.settingsNavList .settingsNavBtn { position: relative; display: flex; width: 100%; min-height: 64px; cursor: pointer; align-items: center; gap: 12px; border: 0; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); background-color: transparent; padding: 12px 14px; text-align: left; transition: background-color 150ms ease, color 150ms ease; }
+.settingsNavList .settingsNavBtn:first-child { border-top: 0; }
+.settingsNavList .settingsNavBtn:hover { background-color: color-mix(in oklab, var(--muted) 45%, transparent); }
+.settingsNavList .settingsNavBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.settingsNavList .settingsNavBtnActive { background-color: color-mix(in oklab, var(--primary) 8%, var(--card)); }
+.settingsNavBtn .settingsNavIcon { display: grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: 10px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); transition: background-color 150ms ease, color 150ms ease; }
+.settingsNavBtnActive .settingsNavIcon { background-color: var(--primary); color: var(--primary-foreground); }
+.settingsNavBtn .settingsNavText { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
+.settingsNavText .settingsNavTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.settingsNavText .settingsNavMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.settingsNavBtn .settingsNavEnd { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
+.settingsNavEnd .settingsNavDirtyDot { width: 8px; height: 8px; border-radius: 9999px; background-color: var(--tone-warning-solid); box-shadow: 0 0 0 3px color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); }
+.settingsNavEnd .settingsNavLiveDot { width: 8px; height: 8px; border-radius: 9999px; background-color: var(--tone-success-solid); box-shadow: 0 0 0 3px color-mix(in oklab, var(--tone-success-solid) 20%, transparent); }
+.settingsNavEnd .settingsNavCountPill { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 2px 8px; font-size: 11px; line-height: 16px; font-weight: 700; color: var(--primary); }
+.settingsNavEnd .settingsNavChevron { width: 16px; height: 16px; color: var(--muted-foreground); }
+.settingsWorkspace .settingsPaneCol { display: none; min-width: 0; flex-direction: column; gap: 16px; }
+.settingsWorkspaceMobileDetail .settingsPaneCol { display: flex; animation: settingsFadeIn 180ms ease; }
+.settingsPaneCol .settingsMobileBar { position: sticky; top: var(--admin-topbar-h); z-index: 20; margin: -4px -16px 4px -16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, transparent); background-color: color-mix(in oklab, var(--background) 92%, transparent); padding: 8px 16px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.settingsMobileBar .settingsBackBtn { display: inline-flex; min-height: 44px; cursor: pointer; align-items: center; gap: 6px; border: 0; border-radius: 10px; background-color: transparent; padding: 0 8px 0 2px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); }
+.settingsMobileBar .settingsBackBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.settingsMobileBar .settingsMobileTitle { margin: 0; min-width: 0; flex: 1 1 0%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.settingsPaneCol .settingsUnsavedBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; }
+.settingsUnsavedBanner .settingsUnsavedText { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tone-warning-fg-strong); }
+.settingsUnsavedBanner .settingsUnsavedBtn { min-height: 36px; border-radius: var(--radiusControl); }
+.settingsPaneCol .settingsSectionStack { display: flex; flex-direction: column; gap: 16px; animation: settingsFadeIn 180ms ease; }
+.settingsPaneCol .settingsSectionStack[hidden], .settingsPaneCol .settingsPanelHidden { display: none; }
+.settingsNavCol .settingsHubUnsavedBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; }
+.settingsHubUnsavedBar .settingsUnsavedText { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tone-warning-fg-strong); }
+.settingsHubUnsavedBar .settingsUnsavedBtn { min-height: 40px; border-radius: var(--radiusControl); }
 .settingsColumns { width: 100%; }
 .contentsGroup { display: contents; }
 .twoColFields { display: grid; column-gap: 20px; row-gap: 4px; }
@@ -326,6 +362,17 @@
   .cellCategory { display: table-cell; }
   .promoSection .promoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (min-width: 960px) {
+  .settingsWorkspace { display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .settingsWorkspace .settingsNavCol, .settingsWorkspaceMobileDetail .settingsNavCol { position: sticky; top: calc(var(--admin-topbar-h) + 20px); display: flex; }
+  .settingsNavCol .settingsHubUnsavedBar { display: none; }
+  .settingsNavList .settingsNavBtn { min-height: 54px; padding: 10px 12px; }
+  .settingsNavBtn .settingsNavIcon { width: 34px; height: 34px; border-radius: 9px; }
+  .settingsNavEnd .settingsNavChevron { display: none; }
+  .settingsWorkspace .settingsPaneCol { display: flex; max-width: 860px; }
+  .settingsPaneCol .settingsMobileBar { display: none; }
+  .settingsPaneCol .settingsSectionStack { gap: 20px; }
+}
 @media (min-width: 1024px) {
   .ordersFieldsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ordersFieldsGrid .returnWindowCol { grid-column: span 1 / span 1; }
@@ -333,6 +380,5 @@
 @media (min-width: 1280px) {
   .tilesGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .productFormGrid { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
-  .settingsColumns { column-count: 2; column-gap: 20px; }
   .launchGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 }

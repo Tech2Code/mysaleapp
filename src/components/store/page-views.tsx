@@ -288,11 +288,11 @@ export function ContactView({ shop }: { shop: StoreSettings }) {
 
 // ---------------------------------------------------------------- login
 
-export function LoginView({ shop }: { shop: StoreSettings }) {
+export function LoginView({ shop, resetToken }: { shop: StoreSettings; resetToken?: string | null }) {
   return (
     <section className={styles.heroBackdropSection}>
       <div className={styles.loginContainer}>
-        <GoogleSignIn shopName={shop.shopName} />
+        <GoogleSignIn shopName={shop.shopName} resetToken={resetToken} />
       </div>
     </section>
   )

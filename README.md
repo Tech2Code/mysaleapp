@@ -5,7 +5,7 @@ A fast, installable (PWA with branded animated splash) niche-agnostic online sto
 | | |
 |---|---|
 | Framework | Next.js 16 (App Router, Cache Components) + TypeScript |
-| UI & Styling | Plain CSS Modules (`*.module.css`, 35 modules), Base UI (`@base-ui/react`), Motion animations |
+| UI & Styling | Plain CSS Modules (`*.module.css`, 36 modules), Base UI (`@base-ui/react`), Motion animations |
 | Design System | Dual CSS Variable Themes (`src/styles/theme-store.css` for Storefront Sky/Ocean/Coral & `src/styles/theme-admin.css` for Admin Slate/Terracotta, independent Light & Dark) |
 | Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage, `pg_cron`) |
 | Hosting | Vercel (free Hobby plan) |
@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0069_product_variants.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0071_harden_email_rpcs.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -64,13 +64,14 @@ Run `npx supabase migration repair --remote --status applied 0001` once (and the
 
 After that, everything about your login is in the app: **Admin → My account** (name, email, password) and **Forgot password** on the sign-in page. No database access needed.
 
-### Admin account emails (set up before launch)
+### Admin & Customer Emails (Gmail App Password SMTP in Admin Settings)
 
-Change-email and reset-password links are sent by Supabase Auth. Before going live:
+You can send forgot-password, reset-password, password-changed security alerts, and signup welcome/verification emails directly from your own Gmail account with **no Supabase 3-emails/hour limit**:
 
-1. Supabase → **Authentication → URL Configuration**: set **Site URL** to your live address and add `https://YOUR-DOMAIN/auth/callback` (and `http://localhost:3000/auth/callback` for testing) under **Redirect URLs**.
-2. Supabase → **Authentication → SMTP Settings**: add your own SMTP (the built-in sender is limited to a few emails per hour). Brevo and Resend both have free plans.
-3. Optional: edit the "Reset password" and "Change email" templates under **Authentication → Email Templates**.
+1. Open **Admin → Settings → Email & Gmail SMTP**.
+2. Turn on **Enable Gmail SMTP**, enter your Gmail address and a **16-character Google App Password** (from https://myaccount.google.com/apppasswords with 2-Step Verification enabled), and click **Save email settings**.
+3. Click **Send test email** to verify live delivery to your inbox. App Passwords are AES-256-GCM encrypted in an admin-only table and never returned to the browser.
+4. Optional (for Supabase Auth fallback / OAuth redirects): in Supabase → **Authentication → URL Configuration**, set **Site URL** to your live address and add `https://YOUR-DOMAIN/auth/callback` (and `http://localhost:3000/auth/callback` for testing) under **Redirect URLs**.
 
 ### Enable "Continue with Google" for customers
 
@@ -159,7 +160,7 @@ src/
   features/           Business logic per feature (no UI)
     products/         queries (cached), admin-queries, actions, schema, types
     orders/           actions, queries, admin-*, pricing, payment-gateway, gateway-client, returns, refund, transitions, deadline, whatsapp
-    auth/ account/ addresses/ settings/ security/ wishlist/ location/
+    auth/ account/ addresses/ email/ settings/ security/ wishlist/ location/
   components/
     ui/               Base UI primitives (Button, Checkbox, Dialog, Sheet, Select, DropdownMenu, Tabs, Table, Sonner…) + ui.module.css
     form/             Shared form inputs (TextField, TextAreaField, SelectField, FormSelectField, SearchField, SwitchField, CheckboxField, DateField) + form.module.css
@@ -171,7 +172,7 @@ src/
   store/              Client state (cart, wishlist, auth) with Zustand
   styles/             Independent Light & Dark CSS variable theme files (`theme-store.css`, `theme-admin.css`)
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0069) + seed
+supabase/             SQL migrations (0001..0071) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -185,7 +186,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (30 test files, 840 tests) |
+| `npm test` | Run the Vitest unit test suite (32 test files, 859 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

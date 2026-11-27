@@ -130,11 +130,19 @@ function SearchParamsSync({
   useEffect(() => {
     const nextPath = safeNextPath(params.get("next"), "/")
     let errorParam = params.get("error")
+    const verifiedParam = params.get("verified")
     const rawMode = params.get("mode")
     let initialMode: AuthMode | null =
       rawMode === "signup" || rawMode === "forgot" || rawMode === "reset-password"
         ? rawMode
         : null
+
+    if (verifiedParam === "1") {
+      toast.success("Email verified! You can now sign in with your email and password.")
+    }
+    if (errorParam === "verify-expired") {
+      errorParam = "That verification link has expired or was already used. Sign in or request a new link."
+    }
 
     if (typeof window !== "undefined") {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
@@ -154,11 +162,13 @@ function SearchParamsSync({
 
     onParams(nextPath, errorParam, initialMode)
 
-    // Strip transient error/mode/hash parameters from the browser address bar so the URL stays clean
+    // Strip transient error/mode/token/verified/hash parameters from the browser address bar so the URL stays clean
     if (
       typeof window !== "undefined" &&
       (errorParam ||
+        verifiedParam ||
         rawMode ||
+        params.has("token") ||
         params.has("error_code") ||
         params.has("error_description") ||
         window.location.hash)
@@ -173,10 +183,25 @@ function SearchParamsSync({
   return null
 }
 
-export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) {
+export function GoogleSignIn({
+  shopName = "our store",
+  resetToken = null,
+}: {
+  shopName?: string
+  resetToken?: string | null
+}) {
   const router = useRouter()
   const { user, ready } = useAuth()
-  const [mode, setMode] = useState<AuthMode>("signin")
+  const [mode, setMode] = useState<AuthMode>(resetToken ? "reset-password" : "signin")
+  const [activeResetToken, setActiveResetToken] = useState<string | null>(resetToken)
+  const [prevResetToken, setPrevResetToken] = useState<string | null>(resetToken)
+  if (resetToken !== prevResetToken) {
+    setPrevResetToken(resetToken)
+    if (resetToken) {
+      setActiveResetToken(resetToken)
+      setMode("reset-password")
+    }
+  }
   const [next, setNext] = useState("/")
   const [problem, setProblem] = useState<string | null>(null)
   const [loadingGoogle, setLoadingGoogle] = useState(false)
@@ -189,7 +214,13 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const [legalModalOpen, setLegalModalOpen] = useState(false)
   const [legalModalTab, setLegalModalTab] = useState<LegalDocTab>("terms")
   const submittingRef = useRef(false)
-  const recoveryLockRef = useRef(false)
+  const recoveryLockRef = useRef(Boolean(resetToken))
+
+  useEffect(() => {
+    if (resetToken) {
+      recoveryLockRef.current = true
+    }
+  }, [resetToken])
 
   const signInForm = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
@@ -259,6 +290,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
       resetForm.reset({ next: "", confirm: "" })
       setConfirmationEmail(null)
       setResetLinkSentTo(null)
+      setActiveResetToken(null)
       setProblem(null)
       setLoadingGoogle(false)
       setMode("signin")
@@ -268,6 +300,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
   const switchMode = (nextMode: AuthMode) => {
     if (nextMode !== "reset-password") {
       recoveryLockRef.current = false
+      setActiveResetToken(null)
     }
     if (nextMode === "forgot") {
       const currentEmail = signInForm.getValues("email").trim()
@@ -380,7 +413,10 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
     void resetForm.handleSubmit((values) => {
       submittingRef.current = true
       startTransition(async () => {
-        const res = await resetCustomerPassword(values)
+        const res = await resetCustomerPassword({
+          ...values,
+          ...(activeResetToken ? { token: activeResetToken } : {}),
+        })
         if (!res.ok) {
           submittingRef.current = false
           for (const [field, msgs] of Object.entries(res.fieldErrors ?? {})) {

@@ -1,0 +1,60 @@
+/* Section: Email & Gmail SMTP Settings Card */
+.emailSection { margin-bottom: 24px; display: flex; flex-direction: column; gap: 18px; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); padding: 18px; }
+.emailSection .emailHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.emailHeader .headerLeft { display: flex; min-width: 0; flex: 1 1 260px; align-items: flex-start; gap: 12px; }
+.headerLeft .iconBox { margin-top: 2px; display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 12px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); }
+.iconBox .iconMd { width: 18px; height: 18px; }
+.headerLeft .titleGroup { min-width: 0; }
+.titleGroup .sectionTitle { margin: 0; font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.titleGroup .sectionDesc { margin: 2px 0 0 0; font-size: 13px; line-height: 19px; color: var(--muted-foreground); }
+.emailHeader .statusBadge { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 12px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.emailHeader .statusActive { background-color: var(--tone-success-bg-soft); color: var(--tone-success-fg-strong); }
+.emailHeader .statusInactive { background-color: var(--muted); color: var(--muted-foreground); }
+.emailHeader .statusWarn { background-color: var(--tone-warning-bg-soft); color: var(--tone-warning-fg-strong); }
+.statusBadge .statusDot { width: 7px; height: 7px; border-radius: 9999px; background-color: currentColor; }
+/* Alerts & Notices */
+.emailSection .migrationBanner { display: flex; align-items: flex-start; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; font-size: 13px; line-height: 19px; color: var(--tone-warning-fg-strong); }
+.migrationBanner .bannerIcon { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; }
+.migrationBanner .inlineCode { font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+/* Form Layout */
+.emailSection .emailForm { display: flex; flex-direction: column; gap: 16px; }
+.emailForm .fieldsGrid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); column-gap: 18px; row-gap: 4px; }
+.fieldsGrid .passwordFieldCol { display: flex; flex-direction: column; gap: 4px; }
+.passwordFieldCol .savedMetaRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: -6px; margin-bottom: 6px; }
+.savedMetaRow .savedPill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-success-fg-strong); }
+.savedPill .iconSm { width: 14px; height: 14px; flex-shrink: 0; }
+.savedMetaRow .clearPwdBtn { border: 0; background: transparent; padding: 6px 8px; min-height: 44px; border-radius: 6px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--destructive); cursor: pointer; transition: background-color 150ms ease; }
+.savedMetaRow .clearPwdBtn:hover:not(:disabled) { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+.savedMetaRow .clearPwdBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Guide Details */
+.emailForm .guideDetails { border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 25%, var(--card)); padding: 12px 14px; }
+.guideDetails .guideSummary { display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); list-style: none; }
+.guideDetails .guideSummary::-webkit-details-marker { display: none; }
+.guideSummary .guideIcon { width: 15px; height: 15px; color: var(--primary); flex-shrink: 0; }
+.guideDetails .guideSteps { margin: 10px 0 0 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; line-height: 19px; color: var(--muted-foreground); }
+.guideSteps .guideLink { color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+/* Form Actions */
+.emailForm .actionRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 14px; }
+.actionRow .primaryBtn { min-height: 44px; border-radius: var(--radiusControl); padding: 0 18px; gap: 8px; }
+.actionRow .secondaryBtn { min-height: 44px; border-radius: var(--radiusControl); padding: 0 16px; }
+/* Test Email Panel */
+.emailSection .testPanel { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 55%, var(--card)); padding: 14px; }
+.testPanel .testHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.testHeader .testTitle { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.testHeader .testStatusOk { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--tone-success-fg-strong); }
+.testHeader .testStatusErr { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--destructive); }
+.testPanel .testRow { display: flex; flex-direction: column; gap: 10px; }
+.testRow .testInputWrap { flex: 1 1 240px; min-width: 0; }
+.testRow .testBtn { min-height: 44px; border-radius: var(--radiusControl); padding: 0 16px; gap: 8px; flex-shrink: 0; }
+.testPanel .testErrorBox { margin: 0; font-size: 12px; line-height: 18px; color: var(--destructive); }
+.spinIcon { width: 16px; height: 16px; animation: emailSpin 1s linear infinite; }
+.icon16 { width: 16px; height: 16px; flex-shrink: 0; }
+@keyframes emailSpin { to { transform: rotate(360deg); } }
+/* Responsive Media Queries */
+@media (min-width: 640px) {
+  .emailSection { padding: 24px; gap: 20px; }
+  .emailForm .fieldsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .testPanel .testRow { flex-direction: row; align-items: flex-end; }
+  .actionRow .primaryBtn, .actionRow .secondaryBtn, .testRow .testBtn { min-height: 40px; }
+  .savedMetaRow .clearPwdBtn { min-height: 32px; padding: 4px 6px; }
+}

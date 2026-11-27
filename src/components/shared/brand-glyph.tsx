@@ -13,6 +13,15 @@ export const BRAND_PALETTE = {
   borderColor: "rgba(255, 238, 214, 0.32)",
 } as const
 
+function hashString(input: string): string {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
+}
+
 /**
  * The brand symbol: a sculpted boutique gift box with a satin gold ribbon bow, heart knot,
  * and artisan sparkle star. Uses explicit hex colors (never currentColor) so next/og ImageResponse
@@ -93,3 +102,10 @@ export function BrandGlyph({
     </svg>
   )
 }
+
+/**
+ * Auto-derived version token for manifest & PWA icon URLs.
+ * Changes automatically whenever BRAND_PALETTE or BrandGlyph SVG geometry/colors change,
+ * busting browser, CDN, and Android WebAPK icon caches with zero manual version bumps.
+ */
+export const BRAND_ICON_VERSION = hashString(`${JSON.stringify(BRAND_PALETTE)}|${BrandGlyph.toString()}`)

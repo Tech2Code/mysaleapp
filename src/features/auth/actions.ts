@@ -6,6 +6,15 @@ import { cookies, headers } from "next/headers"
 import { z } from "zod"
 import { siteConfig } from "@/config/site"
 import { hasValidPasswordResetCookie, signAdminPinCookie } from "@/features/auth/guards"
+import { generateResetToken, getServerRpcSecret, hashResetToken } from "@/features/email/crypto"
+import { resolveMailerPayload, sendEmailWithGmailSmtp, type EncryptedMailerPayload } from "@/features/email/mailer"
+import {
+  buildPasswordChangedEmail,
+  buildPasswordResetEmail,
+  buildSignupVerifyEmail,
+  buildWelcomeEmail,
+} from "@/features/email/templates"
+import { getStoreSettings } from "@/features/settings/queries"
 import { syncWishlistForUser } from "@/features/wishlist/actions"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
@@ -188,6 +197,45 @@ export async function signUpCustomer(
     })
     const wishRes = await syncWishlistForUser(data.user.id, parsed.data.wishlistIds)
     const wishlistIds = wishRes.ok ? wishRes.data : (parsed.data.wishlistIds ?? [])
+
+    // Best-effort Welcome email via Gmail SMTP when enabled in Admin → Settings
+    try {
+      const { data: mailData, error: mailErr } = await supabase.rpc("prepare_signup_email", {
+        p_user_id: data.user.id,
+        p_server_secret: getServerRpcSecret(),
+        p_create_verify_token: false,
+      })
+      const mailRes = (!mailErr && mailData ? mailData : null) as {
+        smtpEnabled?: boolean
+        email?: string
+        mailer?: EncryptedMailerPayload | null
+      } | null
+      const smtp = mailRes?.smtpEnabled ? resolveMailerPayload(mailRes.mailer) : null
+      if (smtp && mailRes?.email) {
+        const shop = await getStoreSettings()
+        const welcomeDoc = buildWelcomeEmail({
+          shopName: shop.shopName,
+          recipientName: parsed.data.fullName,
+          shopUrl: origin ?? siteConfig.url,
+        })
+        await sendEmailWithGmailSmtp(
+          {
+            ...smtp,
+            senderName: smtp.senderName || shop.shopName,
+            replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+          },
+          {
+            to: mailRes.email,
+            subject: welcomeDoc.subject,
+            html: welcomeDoc.html,
+            text: welcomeDoc.text,
+          }
+        )
+      }
+    } catch {
+      // Non-blocking: account is already created and signed in.
+    }
+
     revalidatePath("/", "layout")
     return {
       ok: true,
@@ -196,6 +244,52 @@ export async function signUpCustomer(
         user: buildSessionUser(data.user, parsed.data.fullName),
         wishlistIds,
       },
+    }
+  }
+
+  // When email confirmation is required, also send a branded verification email via Gmail SMTP if enabled
+  if (data.user) {
+    try {
+      const rawVerifyToken = generateResetToken()
+      const { data: mailData, error: mailErr } = await supabase.rpc("prepare_signup_email", {
+        p_user_id: data.user.id,
+        p_server_secret: getServerRpcSecret(),
+        p_create_verify_token: true,
+        p_token_hash: hashResetToken(rawVerifyToken),
+        p_ttl_minutes: 1440,
+      })
+      const mailRes = (!mailErr && mailData ? mailData : null) as {
+        smtpEnabled?: boolean
+        email?: string
+        mailer?: EncryptedMailerPayload | null
+      } | null
+      const smtp = mailRes?.smtpEnabled ? resolveMailerPayload(mailRes.mailer) : null
+      if (smtp && mailRes?.email) {
+        const shop = await getStoreSettings()
+        const baseUrl = origin ?? siteConfig.url
+        const verifyUrl = `${baseUrl}/login?mode=verify-email&token=${encodeURIComponent(rawVerifyToken)}${nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""}`
+        const verifyDoc = buildSignupVerifyEmail({
+          shopName: shop.shopName,
+          recipientName: parsed.data.fullName,
+          verifyUrl,
+          expiresHours: 24,
+        })
+        await sendEmailWithGmailSmtp(
+          {
+            ...smtp,
+            senderName: smtp.senderName || shop.shopName,
+            replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+          },
+          {
+            to: mailRes.email,
+            subject: verifyDoc.subject,
+            html: verifyDoc.html,
+            text: verifyDoc.text,
+          }
+        )
+      }
+    } catch {
+      // Non-blocking fallback to Supabase confirmation email.
     }
   }
 
@@ -226,13 +320,31 @@ const customerResetSchema = z
   .object({
     next: v.newPassword(),
     confirm: z.string(),
+    token: z.string().trim().min(32).max(128).optional(),
   })
   .refine((d) => d.next === d.confirm, {
     message: "Passwords don't match",
     path: ["confirm"],
   })
 
-/** Customer "Forgot password?": sends a one-time password recovery email link. */
+type CreateResetTokenRpc = {
+  smtpEnabled?: boolean
+  found?: boolean
+  email?: string
+  recipientName?: string | null
+  mailer?: EncryptedMailerPayload | null
+}
+
+type ConsumeResetTokenRpc = {
+  ok?: boolean
+  code?: string
+  email?: string
+  recipientName?: string | null
+  reactivated?: boolean
+  mailer?: EncryptedMailerPayload | null
+}
+
+/** Customer "Forgot password?": sends a one-time password recovery email link via Gmail SMTP (if enabled) or Supabase Auth. */
 export async function requestCustomerPasswordReset(input: unknown): Promise<ActionResult> {
   if (!isSupabaseConfigured) return fail("Password reset is unavailable in demo mode. Connect Supabase first (see README).")
   const parsed = customerForgotSchema.safeParse(input)
@@ -246,6 +358,58 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
     getServerSupabase(),
   ])
   const nextPath = safeNextPath(parsed.data.next ?? null, "/")
+  const baseUrl = origin ?? siteConfig.url
+
+  // Try Gmail SMTP token flow first (active when Admin → Settings → Gmail SMTP is enabled)
+  const rawToken = generateResetToken()
+  const tokenHash = hashResetToken(rawToken)
+  const { data: rpcData, error: rpcErr } = await supabase.rpc("create_password_reset_token", {
+    p_email: parsed.data.email,
+    p_scope: "customer",
+    p_token_hash: tokenHash,
+    p_server_secret: getServerRpcSecret(),
+    p_ttl_minutes: 30,
+  })
+  const tokenRes = (!rpcErr && rpcData ? rpcData : null) as CreateResetTokenRpc | null
+
+  if (tokenRes?.smtpEnabled) {
+    if (!tokenRes.found || !tokenRes.email) {
+      // Never reveal whether an email is registered
+      return { ok: true }
+    }
+    const smtp = resolveMailerPayload(tokenRes.mailer)
+    if (!smtp) {
+      return fail("Email service is misconfigured. Please contact support.")
+    }
+    const shop = await getStoreSettings()
+    const resetUrl = `${baseUrl}/login?mode=reset-password&token=${encodeURIComponent(rawToken)}${nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""}`
+    const emailDoc = buildPasswordResetEmail({
+      shopName: shop.shopName,
+      recipientName: tokenRes.recipientName,
+      resetUrl,
+      scope: "customer",
+      expiresMinutes: 30,
+    })
+    const sendRes = await sendEmailWithGmailSmtp(
+      {
+        ...smtp,
+        senderName: smtp.senderName || shop.shopName,
+        replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+      },
+      {
+        to: tokenRes.email,
+        subject: emailDoc.subject,
+        html: emailDoc.html,
+        text: emailDoc.text,
+      }
+    )
+    if (!sendRes.ok) {
+      return fail("Could not send the password reset email right now. Please try again later.")
+    }
+    return { ok: true }
+  }
+
+  // Fallback: Supabase built-in recovery email when Gmail SMTP is disabled
   cookieStore.set("kk_recovery_intent", "customer", {
     httpOnly: true,
     sameSite: "lax",
@@ -263,7 +427,7 @@ export async function requestCustomerPasswordReset(input: unknown): Promise<Acti
     const msg = error.message.toLowerCase()
     if (msg.includes("rate limit") || error.code === "over_email_send_rate_limit") {
       return fail(
-        "Email limit reached on Supabase's free mail sender. Please wait a few minutes and try again."
+        "Email limit reached on Supabase's free mail sender. Enable Gmail SMTP in Admin → Settings or try again in a few minutes."
       )
     }
   }
@@ -281,6 +445,87 @@ export async function resetCustomerPassword(
   }
 
   const [cookieStore, supabase] = await Promise.all([cookies(), getServerSupabase()])
+
+  // Gmail SMTP one-time token flow
+  if (parsed.data.token) {
+    const tokenHash = hashResetToken(parsed.data.token)
+    if (await limited("password-reset", `consume:${tokenHash.slice(0, 16)}`)) return fail(RATE_LIMIT_MESSAGE)
+    const { data: consumeData, error: consumeErr } = await supabase.rpc("consume_password_reset_token", {
+      p_token_hash: tokenHash,
+      p_scope: "customer",
+      p_new_password: parsed.data.next,
+      p_server_secret: getServerRpcSecret(),
+    })
+    const res = (!consumeErr && consumeData ? consumeData : null) as ConsumeResetTokenRpc | null
+    if (!res?.ok || !res.email) {
+      if (res?.code === "same_password") {
+        return fail("Use a new password, not your current one.", {
+          next: ["Use a new password, not your current one"],
+        })
+      }
+      return fail("This reset link has expired. Please request a new one.")
+    }
+
+    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+      email: res.email,
+      password: parsed.data.next,
+    })
+    if (signInErr || !signInData.user) {
+      return fail("Password updated, but automatic sign-in failed. Please sign in with your new password.")
+    }
+
+    const signedUser = signInData.user
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", signedUser.id)
+      .maybeSingle<{ full_name: string | null; avatar_url: string | null }>()
+
+    // Best-effort security confirmation email via Gmail SMTP
+    const smtp = resolveMailerPayload(res.mailer)
+    if (smtp) {
+      try {
+        const [shop, origin] = await Promise.all([getStoreSettings(), customerOrigin()])
+        const loginUrl = `${origin ?? siteConfig.url}/login`
+        const confirmDoc = buildPasswordChangedEmail({
+          shopName: shop.shopName,
+          recipientName: res.recipientName ?? existing?.full_name,
+          scope: "customer",
+          loginUrl,
+        })
+        await sendEmailWithGmailSmtp(
+          {
+            ...smtp,
+            senderName: smtp.senderName || shop.shopName,
+            replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+          },
+          {
+            to: res.email,
+            subject: confirmDoc.subject,
+            html: confirmDoc.html,
+            text: confirmDoc.text,
+          }
+        )
+      } catch {
+        // Non-blocking: password is already updated and session established.
+      }
+    }
+
+    cookieStore.delete("kk_cust_pw_reset")
+    cookieStore.delete("kk_recovery_intent")
+    cookieStore.delete("kk_acct_reactivated")
+    revalidatePath("/account", "layout")
+    revalidatePath("/", "layout")
+    return {
+      ok: true,
+      data: {
+        user: buildSessionUser(signedUser, existing?.full_name, existing?.avatar_url),
+        ...(res.reactivated ? { reactivated: true } : {}),
+      },
+    }
+  }
+
+  // Legacy Supabase Auth recovery cookie flow
   const {
     data: { user },
   } = await supabase.auth.getUser()

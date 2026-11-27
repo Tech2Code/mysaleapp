@@ -13,6 +13,10 @@ import {
   signAdminPinCookie,
 } from "@/features/auth/guards"
 import { siteConfig } from "@/config/site"
+import { generateResetToken, getServerRpcSecret, hashResetToken } from "@/features/email/crypto"
+import { resolveMailerPayload, sendEmailWithGmailSmtp, type EncryptedMailerPayload } from "@/features/email/mailer"
+import { buildPasswordChangedEmail, buildPasswordResetEmail } from "@/features/email/templates"
+import { getStoreSettings } from "@/features/settings/queries"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { isSupabaseConfigured } from "@/lib/supabase/config"
@@ -151,6 +155,27 @@ export async function changeAdminPassword(
   return { ok: true, data: { unlockedAt: now } }
 }
 
+type AdminResetTokenRpc = {
+  smtpEnabled?: boolean
+  found?: boolean
+  email?: string
+  recipientName?: string | null
+  mailer?: EncryptedMailerPayload | null
+}
+
+type AdminConsumeTokenRpc = {
+  ok?: boolean
+  code?: string
+  userId?: string
+  email?: string
+  recipientName?: string | null
+  mailer?: EncryptedMailerPayload | null
+}
+
+const adminResetWithTokenSchema = resetSchema.safeExtend({
+  token: z.string().trim().min(32).max(128).optional(),
+})
+
 /** Public: sends a reset link only if the email belongs to an admin. Always answers the same so it can't be used to enumerate admin emails. */
 export async function requestPasswordReset(input: unknown): Promise<ActionResult> {
   if (!isSupabaseConfigured) return fail("Connect Supabase first (see README).")
@@ -165,7 +190,57 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
     cookies(),
     getServerSupabase(),
   ])
+  const baseUrl = origin ?? siteConfig.url
 
+  // Try Gmail SMTP one-time token flow first (active when Admin → Settings → Gmail SMTP is enabled)
+  const rawToken = generateResetToken()
+  const tokenHash = hashResetToken(rawToken)
+  const { data: rpcData, error: rpcErr } = await supabase.rpc("create_password_reset_token", {
+    p_email: parsed.data.email,
+    p_scope: "admin",
+    p_token_hash: tokenHash,
+    p_server_secret: getServerRpcSecret(),
+    p_ttl_minutes: 30,
+  })
+  const tokenRes = (!rpcErr && rpcData ? rpcData : null) as AdminResetTokenRpc | null
+
+  if (tokenRes?.smtpEnabled) {
+    if (!tokenRes.found || !tokenRes.email) {
+      return { ok: true }
+    }
+    const smtp = resolveMailerPayload(tokenRes.mailer)
+    if (!smtp) {
+      return fail("Email service is misconfigured. Please check Gmail SMTP settings.")
+    }
+    const shop = await getStoreSettings()
+    const resetUrl = `${baseUrl}/admin/reset-password?token=${encodeURIComponent(rawToken)}`
+    const emailDoc = buildPasswordResetEmail({
+      shopName: shop.shopName,
+      recipientName: tokenRes.recipientName,
+      resetUrl,
+      scope: "admin",
+      expiresMinutes: 30,
+    })
+    const sendRes = await sendEmailWithGmailSmtp(
+      {
+        ...smtp,
+        senderName: smtp.senderName || shop.shopName,
+        replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+      },
+      {
+        to: tokenRes.email,
+        subject: emailDoc.subject,
+        html: emailDoc.html,
+        text: emailDoc.text,
+      }
+    )
+    if (!sendRes.ok) {
+      return fail("Could not send the reset email via Gmail SMTP. Please verify your Gmail App Password.")
+    }
+    return { ok: true }
+  }
+
+  // Fallback: Supabase Auth recovery email when Gmail SMTP is disabled
   cookieStore.set("kk_recovery_intent", "admin", {
     httpOnly: true,
     sameSite: "lax",
@@ -175,10 +250,10 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   })
 
   // Only send the admin recovery email if this address actually belongs to an admin account.
-  const { data: isAdminEmail, error: rpcErr } = await supabase.rpc("is_admin_email", {
+  const { data: isAdminEmail, error: isAdminErr } = await supabase.rpc("is_admin_email", {
     p_email: parsed.data.email,
   })
-  if (!rpcErr && isAdminEmail !== true) {
+  if (!isAdminErr && isAdminEmail !== true) {
     return { ok: true }
   }
 
@@ -188,24 +263,93 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
   return { ok: true }
 }
 
-/** Step 2 of "forgot password": the reset link signed the person in; they now choose a new password. */
+/** Step 2 of "forgot password": sets the new admin password via one-time token (Gmail SMTP) or verified recovery session. */
 export async function resetAdminPassword(
   input: unknown
 ): Promise<ActionResult<{ unlockedAt: number }>> {
-  const [cookieStore, user, admin] = await Promise.all([
-    cookies(),
-    getCurrentUser(),
-    isAdminUser(),
-  ])
+  const parsed = adminResetWithTokenSchema.safeParse(input)
+  if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
+
+  const [cookieStore, supabase] = await Promise.all([cookies(), getServerSupabase()])
+
+  // Gmail SMTP one-time token flow
+  if (parsed.data.token) {
+    const tokenHash = hashResetToken(parsed.data.token)
+    if (await limited("password-reset", `consume-admin:${tokenHash.slice(0, 16)}`)) return fail(RATE_LIMIT_MESSAGE)
+    const { data: consumeData, error: consumeErr } = await supabase.rpc("consume_password_reset_token", {
+      p_token_hash: tokenHash,
+      p_scope: "admin",
+      p_new_password: parsed.data.next,
+      p_server_secret: getServerRpcSecret(),
+    })
+    const res = (!consumeErr && consumeData ? consumeData : null) as AdminConsumeTokenRpc | null
+    if (!res?.ok || !res.email) {
+      if (res?.code === "same_password") {
+        return fail("Use a new password, not your current one.", {
+          next: ["Use a new password, not your current one"],
+        })
+      }
+      if (res?.code === "not_admin") {
+        return fail("Not authorised")
+      }
+      return fail("This reset link has expired. Please request a new one.")
+    }
+
+    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+      email: res.email,
+      password: parsed.data.next,
+    })
+    if (signInErr || !signInData.user) {
+      return fail("Password updated, but automatic sign-in failed. Please sign in at /admin/login.")
+    }
+
+    // Best-effort security alert email via Gmail SMTP
+    const smtp = resolveMailerPayload(res.mailer)
+    if (smtp) {
+      try {
+        const [shop, origin] = await Promise.all([getStoreSettings(), trustedOrigin()])
+        const loginUrl = `${origin ?? siteConfig.url}/admin/login`
+        const confirmDoc = buildPasswordChangedEmail({
+          shopName: shop.shopName,
+          recipientName: res.recipientName,
+          scope: "admin",
+          loginUrl,
+        })
+        await sendEmailWithGmailSmtp(
+          {
+            ...smtp,
+            senderName: smtp.senderName || shop.shopName,
+            replyTo: smtp.replyTo || shop.email || smtp.gmailUser,
+          },
+          {
+            to: res.email,
+            subject: confirmDoc.subject,
+            html: confirmDoc.html,
+            text: confirmDoc.text,
+          }
+        )
+      } catch {
+        // Non-blocking
+      }
+    }
+
+    cookieStore.delete("kk_pw_reset")
+    cookieStore.delete("kk_recovery_intent")
+    const now = Date.now()
+    await stampAdminPinUnlock(signInData.user.id, now)
+    revalidatePath("/admin", "layout")
+    revalidatePath("/", "layout")
+    return { ok: true, data: { unlockedAt: now } }
+  }
+
+  // Legacy Supabase Auth recovery cookie flow
+  const [user, admin] = await Promise.all([getCurrentUser(), isAdminUser()])
   if (!user) return fail("This reset link has expired. Please request a new one.")
   if (!admin) return fail("Not authorised")
   if (!hasValidPasswordResetCookie(cookieStore.get("kk_pw_reset")?.value, "admin", user.id)) {
     return fail("This reset link has expired. Please request a new one.")
   }
-  const parsed = resetSchema.safeParse(input)
-  if (!parsed.success) return fail("Please check the highlighted fields.", z.flattenError(parsed.error).fieldErrors)
 
-  const supabase = await getServerSupabase()
   const { error } = await supabase.auth.updateUser({ password: parsed.data.next })
   if (error) {
     const msg = error.message.toLowerCase()

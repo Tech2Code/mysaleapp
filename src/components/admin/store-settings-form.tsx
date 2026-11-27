@@ -2,11 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
+  ArrowLeftIcon,
   BadgePercentIcon,
+  ChevronRightIcon,
   CopyIcon,
   GlobeIcon,
   IndianRupeeIcon,
   Loader2Icon,
+  MailIcon,
   PhoneIcon,
   PlusIcon,
   ReceiptIcon,
@@ -35,6 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { siteConfig } from "@/config/site"
+import { DEFAULT_EMAIL_SETTINGS, type EmailSettingsPublic } from "@/features/email/schema"
 import { matchState, STATE_OPTIONS } from "@/features/location/states"
 import { createPromoCode, deletePromoCode, saveStoreSettings, togglePromoCode } from "@/features/settings/actions"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
@@ -51,6 +55,7 @@ import { PAYMENT_GATEWAY_LABEL, PAYMENT_GATEWAY_PROVIDERS, type PaymentGatewayPr
 import { formatWeightGrams } from "@/features/orders/pricing"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { EmailSettingsCard } from "./email-settings-card"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
@@ -171,16 +176,71 @@ const PAYMENT_GATEWAY_OPTIONS = PAYMENT_GATEWAY_PROVIDERS.map((p) => ({
   label: PAYMENT_GATEWAY_LABEL[p],
 }))
 
+type StoreFormSectionId = "store" | "contact" | "seo" | "payments" | "shipping"
+type SettingsSectionId = StoreFormSectionId | "promos" | "email"
+
+const FIELD_TO_SECTION: Record<keyof StoreSettingsInput, StoreFormSectionId> = {
+  shopName: "store",
+  tagline: "store",
+  description: "store",
+  announcement: "store",
+  highlightLine: "store",
+  heroBadge: "store",
+  instagramUrl: "store",
+  facebookUrl: "store",
+  keywords: "seo",
+  whatsappNumber: "contact",
+  phoneSameAsWhatsapp: "contact",
+  phone: "contact",
+  email: "contact",
+  city: "contact",
+  region: "contact",
+  paymentMode: "payments",
+  paymentGateway: "payments",
+  upiId: "payments",
+  upiPayeeName: "payments",
+  gstRegistered: "payments",
+  gstRate: "payments",
+  gstin: "payments",
+  priceNote: "payments",
+  legalName: "payments",
+  businessAddress: "payments",
+  deliveryFee: "shipping",
+  freeDeliveryAbove: "shipping",
+  fragileFee: "shipping",
+  oversizedFee: "shipping",
+  freeWeightGrams: "shipping",
+  extraWeightFeePerKg: "shipping",
+  orderCodePrefix: "shipping",
+  unpaidOrderExpiryHours: "shipping",
+  returnWindowDays: "shipping",
+}
+
+const STORE_FORM_SECTIONS: ReadonlySet<SettingsSectionId> = new Set([
+  "store",
+  "contact",
+  "seo",
+  "payments",
+  "shipping",
+])
+
 /**
- * Everything the owner can change without touching code.
- * Two columns on wide screens so no side is left empty; one save bar covers the whole page.
+ * Organised Settings Hub: sticky left navigation on desktop (Shopify/Stripe style)
+ * and native drill-down Settings list on mobile, keeping all Store Settings tabs
+ * inside one mounted form so switching sections never loses unsaved edits.
  */
-export function StoreSettingsForm({
+export function StoreSettingsWorkspace({
   settings,
+  promoCodes = [],
   configuredGateways = [],
+  emailSettings = DEFAULT_EMAIL_SETTINGS,
+  adminEmail,
 }: {
   settings: StoreSettings
+  promoCodes?: PromoCode[]
   configuredGateways?: PaymentGatewayProvider[]
+  emailSettings?: EmailSettingsPublic
+  adminEmail?: string | null
 }) {
   const [visitKey, setVisitKey] = useState(0)
   const [baseline, setBaseline] = useState<StoreSettingsInput>(() => toFormValues(settings))
@@ -197,19 +257,50 @@ export function StoreSettingsForm({
     }
   }, [])
 
-  return <StoreSettingsFormInner key={visitKey} baseline={baseline} onSaved={setBaseline} configuredGateways={configuredGateways} />
+  return (
+    <StoreSettingsFormInner
+      key={visitKey}
+      baseline={baseline}
+      onSaved={setBaseline}
+      configuredGateways={configuredGateways}
+      settings={settings}
+      promoCodes={promoCodes}
+      emailSettings={emailSettings}
+      adminEmail={adminEmail}
+    />
+  )
+}
+
+export function StoreSettingsForm({
+  settings,
+  configuredGateways = [],
+}: {
+  settings: StoreSettings
+  configuredGateways?: PaymentGatewayProvider[]
+}) {
+  return <StoreSettingsWorkspace settings={settings} configuredGateways={configuredGateways} />
 }
 
 function StoreSettingsFormInner({
   baseline,
   onSaved,
   configuredGateways,
+  settings,
+  promoCodes,
+  emailSettings,
+  adminEmail,
 }: {
   baseline: StoreSettingsInput
   onSaved: (next: StoreSettingsInput) => void
   configuredGateways: PaymentGatewayProvider[]
+  settings: StoreSettings
+  promoCodes: PromoCode[]
+  emailSettings: EmailSettingsPublic
+  adminEmail?: string | null
 }) {
   const router = useRouter()
+  const [activeSection, setActiveSection] = useState<SettingsSectionId>("store")
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
   const later = useToastAfter(pending)
@@ -227,6 +318,41 @@ function StoreSettingsFormInner({
   const taxDirty = hasDirty(df, "gstRegistered", "gstRate", "gstin", "priceNote", "legalName", "businessAddress")
   const deliveryDirty = hasDirty(df, "deliveryFee", "freeDeliveryAbove", "fragileFee", "oversizedFee", "freeWeightGrams", "extraWeightFeePerKg")
   const ordersDirty = hasDirty(df, "orderCodePrefix", "unpaidOrderExpiryHours", "returnWindowDays")
+
+  const sectionDirty: Record<SettingsSectionId, boolean> = {
+    store: shopDirty || socialDirty,
+    contact: contactDirty,
+    seo: seoDirty,
+    payments: paymentDirty || taxDirty,
+    shipping: deliveryDirty || ordersDirty,
+    promos: false,
+    email: false,
+  }
+  const firstDirtySection = (["store", "contact", "seo", "payments", "shipping"] as StoreFormSectionId[]).find(
+    (id) => sectionDirty[id]
+  )
+  const isStoreFormSection = STORE_FORM_SECTIONS.has(activeSection)
+  const activePromoCount = promoCodes.filter((p) => p.isActive).length
+  const emailActive =
+    emailSettings.migrationReady &&
+    emailSettings.enabled &&
+    Boolean(emailSettings.gmailUser) &&
+    emailSettings.hasAppPassword
+
+  const selectSection = (id: SettingsSectionId) => {
+    setActiveSection(id)
+    setMobileDetailOpen(true)
+    if (typeof window !== "undefined" && window.innerWidth < 960) {
+      window.scrollTo({ top: 0, behavior: "instant" })
+    }
+  }
+
+  const backToMobileHub = () => {
+    setMobileDetailOpen(false)
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" })
+    }
+  }
   const [pincode, setPincode] = useState("")
   const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, paymentModeNow, paymentGatewayNow] = useWatch({
     control: form.control,
@@ -285,445 +411,648 @@ function StoreSettingsFormInner({
         ].join(" ")
       : null
 
+  const jumpToFirstError = (fieldKeys: string[]) => {
+    for (const key of fieldKeys) {
+      if (key in FIELD_TO_SECTION) {
+        const target = FIELD_TO_SECTION[key as keyof StoreSettingsInput]
+        setActiveSection(target)
+        setMobileDetailOpen(true)
+        break
+      }
+    }
+  }
+
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) =>
-    void form.handleSubmit((values) =>
-      startTransition(async () => {
-        const res = await saveStoreSettings(values)
-        if (!res.ok) {
-          toast.error(res.error)
-          for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
-            if (messages?.[0] && field in values) form.setError(field as keyof StoreSettingsInput, { message: messages[0] })
+    void form.handleSubmit(
+      (values) =>
+        startTransition(async () => {
+          const res = await saveStoreSettings(values)
+          if (!res.ok) {
+            toast.error(res.error)
+            const errorKeys = Object.keys(res.fieldErrors ?? {})
+            for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
+              if (messages?.[0] && field in values) form.setError(field as keyof StoreSettingsInput, { message: messages[0] })
+            }
+            if (errorKeys.length > 0) jumpToFirstError(errorKeys)
+            return
           }
-          return
-        }
-        later(() => toast.success("Settings saved. Your website is updated."))
-        // keep exactly what was saved (normalised phone number, upper-case prefix…) as the new baseline
-        const nextBaseline: StoreSettingsInput = {
-          shopName: values.shopName,
-          tagline: values.tagline,
-          description: values.description,
-          keywords: values.keywords,
-          announcement: values.announcement ?? "",
-          highlightLine: values.highlightLine ?? DEFAULT_SETTINGS.highlightLine,
-          heroBadge: values.heroBadge ?? DEFAULT_SETTINGS.heroBadge,
-          priceNote: values.priceNote ?? "",
-          gstRegistered: values.gstRegistered,
-          gstin: values.gstin ?? "",
-          gstRate: values.gstRate,
-          legalName: values.legalName ?? "",
-          businessAddress: values.businessAddress ?? "",
-          whatsappNumber: values.whatsappNumber,
-          phoneSameAsWhatsapp: values.phoneSameAsWhatsapp,
-          email: values.email ?? "",
-          phone: values.phoneSameAsWhatsapp ? "" : (values.phone ?? ""),
-          city: values.city ?? "",
-          region: values.region ?? "",
-          instagramUrl: values.instagramUrl ?? "",
-          facebookUrl: values.facebookUrl ?? "",
-          orderCodePrefix: values.orderCodePrefix,
-          unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
-          returnWindowDays: values.returnWindowDays,
-          deliveryFee: values.deliveryFee,
-          freeDeliveryAbove: values.freeDeliveryAbove,
-          fragileFee: values.fragileFee,
-          oversizedFee: values.oversizedFee,
-          freeWeightGrams: values.freeWeightGrams,
-          extraWeightFeePerKg: values.extraWeightFeePerKg,
-          paymentMode: values.paymentMode,
-          paymentGateway: values.paymentGateway,
-          upiId: values.upiId ?? "",
-          upiPayeeName: values.upiPayeeName ?? "",
-        }
-        onSaved(nextBaseline)
-        setPincode("")
-        form.reset(nextBaseline)
-        router.refresh()
-      })
+          later(() => toast.success("Settings saved. Your website is updated."))
+          // keep exactly what was saved (normalised phone number, upper-case prefix…) as the new baseline
+          const nextBaseline: StoreSettingsInput = {
+            shopName: values.shopName,
+            tagline: values.tagline,
+            description: values.description,
+            keywords: values.keywords,
+            announcement: values.announcement ?? "",
+            highlightLine: values.highlightLine ?? DEFAULT_SETTINGS.highlightLine,
+            heroBadge: values.heroBadge ?? DEFAULT_SETTINGS.heroBadge,
+            priceNote: values.priceNote ?? "",
+            gstRegistered: values.gstRegistered,
+            gstin: values.gstin ?? "",
+            gstRate: values.gstRate,
+            legalName: values.legalName ?? "",
+            businessAddress: values.businessAddress ?? "",
+            whatsappNumber: values.whatsappNumber,
+            phoneSameAsWhatsapp: values.phoneSameAsWhatsapp,
+            email: values.email ?? "",
+            phone: values.phoneSameAsWhatsapp ? "" : (values.phone ?? ""),
+            city: values.city ?? "",
+            region: values.region ?? "",
+            instagramUrl: values.instagramUrl ?? "",
+            facebookUrl: values.facebookUrl ?? "",
+            orderCodePrefix: values.orderCodePrefix,
+            unpaidOrderExpiryHours: values.unpaidOrderExpiryHours,
+            returnWindowDays: values.returnWindowDays,
+            deliveryFee: values.deliveryFee,
+            freeDeliveryAbove: values.freeDeliveryAbove,
+            fragileFee: values.fragileFee,
+            oversizedFee: values.oversizedFee,
+            freeWeightGrams: values.freeWeightGrams,
+            extraWeightFeePerKg: values.extraWeightFeePerKg,
+            paymentMode: values.paymentMode,
+            paymentGateway: values.paymentGateway,
+            upiId: values.upiId ?? "",
+            upiPayeeName: values.upiPayeeName ?? "",
+          }
+          onSaved(nextBaseline)
+          setPincode("")
+          form.reset(nextBaseline)
+          router.refresh()
+        }),
+      (invalidErrors) => {
+        jumpToFirstError(Object.keys(invalidErrors))
+        toast.error("Please fix the highlighted fields before saving.")
+      }
     )(e)
 
+  const navGroups: {
+    label: string
+    items: {
+      id: SettingsSectionId
+      title: string
+      meta: string
+      icon: LucideIcon
+      dirty?: boolean
+      liveDot?: boolean
+      countPill?: number
+    }[]
+  }[] = [
+    {
+      label: "Storefront",
+      items: [
+        {
+          id: "store",
+          title: "Shop & Brand",
+          meta: String(name || settings.shopName || "Name, tagline & socials"),
+          icon: StoreIcon,
+          dirty: sectionDirty.store,
+        },
+        {
+          id: "contact",
+          title: "Contact & Location",
+          meta: settings.city
+            ? `${settings.city}${settings.region ? `, ${settings.region}` : ""}`
+            : settings.whatsappNumber || "WhatsApp, email & address",
+          icon: PhoneIcon,
+          dirty: sectionDirty.contact,
+        },
+        {
+          id: "seo",
+          title: "Google & SEO",
+          meta: settings.keywords.length > 0 ? `${settings.keywords.length} search keywords` : "Keywords & Google preview",
+          icon: BadgePercentIcon,
+          dirty: sectionDirty.seo,
+        },
+      ],
+    },
+    {
+      label: "Commerce & Operations",
+      items: [
+        {
+          id: "payments",
+          title: "Payments & Tax",
+          meta: `${paymentModeNow === "gateway" ? PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider] : "Direct UPI"} · ${gstOn ? "GST On" : "No GST"}`,
+          icon: IndianRupeeIcon,
+          dirty: sectionDirty.payments,
+        },
+        {
+          id: "shipping",
+          title: "Delivery & Orders",
+          meta: `${Number(fee) === 0 ? "Free delivery" : `${formatPrice(Number(fee) || 0)} delivery`} · ${settings.returnWindowDays > 0 ? `${settings.returnWindowDays}d returns` : "No returns"}`,
+          icon: TruckIcon,
+          dirty: sectionDirty.shipping,
+        },
+        {
+          id: "promos",
+          title: "Promo Codes",
+          meta: activePromoCount > 0 ? `${activePromoCount} active coupon${activePromoCount === 1 ? "" : "s"}` : promoCodes.length > 0 ? `${promoCodes.length} saved` : "No coupons yet",
+          icon: TicketPercentIcon,
+          countPill: activePromoCount > 0 ? activePromoCount : undefined,
+        },
+        {
+          id: "email",
+          title: "Email & SMTP",
+          meta: emailActive ? "Gmail SMTP connected" : "Not configured",
+          icon: MailIcon,
+          liveDot: emailActive,
+        },
+      ],
+    },
+  ]
+
+  const activeNavItem = navGroups.flatMap((g) => g.items).find((item) => item.id === activeSection) ?? navGroups[0].items[0]
+
   return (
-    <form onSubmit={onSubmit} noValidate className={styles.formStack}>
-      <div className={styles.settingsColumns}>
-        {/* ----------------------------------------------- column 1: your shop */}
-        <div className={styles.contentsGroup}>
-          <Card
-            title="Shop profile"
-            description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
-            icon={StoreIcon}
-            dirty={shopDirty}
-          >
-            <div className={styles.twoColFields}>
-              <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
-              <TextField label="Tagline" maxLength={LIMITS.tagline.max} fieldSize="md" error={errors.tagline?.message} {...form.register("tagline")} />
+    <div className={cn(styles.settingsWorkspace, mobileDetailOpen && styles.settingsWorkspaceMobileDetail)}>
+      <nav aria-label="Settings sections" className={styles.settingsNavCol}>
+        {isDirty && firstDirtySection && (
+          <div className={styles.settingsHubUnsavedBar} role="status">
+            <p className={styles.settingsUnsavedText}>
+              <span className={styles.editedDot} aria-hidden />
+              You have unsaved store settings changes
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => selectSection(firstDirtySection)}
+              className={styles.settingsUnsavedBtn}
+            >
+              Review &amp; save
+            </Button>
+          </div>
+        )}
+        {navGroups.map((group) => (
+          <div key={group.label} className={styles.settingsNavGroup}>
+            <p className={styles.settingsGroupLabel}>{group.label}</p>
+            <div className={styles.settingsNavList} role="tablist" aria-orientation="vertical">
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = activeSection === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => selectSection(item.id)}
+                    className={cn(styles.settingsNavBtn, active && styles.settingsNavBtnActive)}
+                  >
+                    <span className={styles.settingsNavIcon} aria-hidden>
+                      <Icon className={styles.iconMd} />
+                    </span>
+                    <span className={styles.settingsNavText}>
+                      <span className={styles.settingsNavTitle}>{item.title}</span>
+                      <span className={styles.settingsNavMeta}>{item.meta}</span>
+                    </span>
+                    <span className={styles.settingsNavEnd}>
+                      {item.dirty && <span className={styles.settingsNavDirtyDot} title="Unsaved changes" />}
+                      {item.liveDot && <span className={styles.settingsNavLiveDot} title="Connected" />}
+                      {item.countPill !== undefined && (
+                        <span className={styles.settingsNavCountPill}>{item.countPill}</span>
+                      )}
+                      <ChevronRightIcon className={styles.settingsNavChevron} aria-hidden />
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            <TextAreaField
-              label="Description" maxLength={LIMITS.shopDescription.max}
-              rows={3}
-              hint={`${String(description ?? "").length}/300. Shown on Google and in the footer. Aim for about 150 characters.`}
-              error={errors.description?.message}
-              {...form.register("description")}
-            />
-            <TextAreaField
-              label="Announcement banner" maxLength={LIMITS.announcement.max}
-              rows={2}
-              hint="Optional. One line shown at the top of every page, e.g. “Diwali sale: free delivery on all orders”. Leave empty to hide it."
-              error={errors.announcement?.message}
-              {...form.register("announcement")}
-            />
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Product page highlight" maxLength={LIMITS.highlightText.max} fieldSize="md"
-                hint="Short line with an icon on every product page. Leave empty for the default."
-                error={errors.highlightLine?.message}
-                {...form.register("highlightLine")}
-              />
-              <TextField
-                label="Home page badge" maxLength={LIMITS.highlightText.max} fieldSize="md"
-                hint="Small badge above the home headline. Leave empty for the default."
-                error={errors.heroBadge?.message}
-                {...form.register("heroBadge")}
-              />
-            </div>
-          </Card>
+          </div>
+        ))}
+      </nav>
 
-          <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link." icon={GlobeIcon} dirty={socialDirty}>
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Instagram" kind="url"
-                fieldSize="md"
-                type="url"
-                placeholder="https://instagram.com/yourshop"
-                error={errors.instagramUrl?.message}
-                {...form.register("instagramUrl")}
-              />
-              <TextField
-                label="Facebook" kind="url"
-                fieldSize="md"
-                type="url"
-                placeholder="https://facebook.com/yourshop"
-                error={errors.facebookUrl?.message}
-                {...form.register("facebookUrl")}
-              />
-            </div>
-          </Card>
-
-          <Card
-            title="Google & SEO"
-            description="Helps people find your shop by name or by what you sell. Your website address comes from the deployment settings, not from here."
-            icon={BadgePercentIcon}
-            dirty={seoDirty}
-          >
-            <TextAreaField
-              label="Search keywords" maxLength={LIMITS.keywords.max}
-              rows={2}
-              hint="Separate with commas, e.g. handmade gifts, home decor, scented candles."
-              error={errors.keywords?.message}
-              {...form.register("keywords")}
-            />
-            <div className={styles.seoCardPreview}>
-              <p className={styles.seoUrl}>{siteConfig.url.replace(/^https?:\/\//, "")}</p>
-              <p className={styles.seoTitle}>{String(name ?? "")}</p>
-              <p className={styles.seoDesc}>{String(description ?? "")}</p>
-            </div>
-          </Card>
+      <div className={styles.settingsPaneCol}>
+        <div className={styles.settingsMobileBar}>
+          <button type="button" onClick={backToMobileHub} className={styles.settingsBackBtn}>
+            <ArrowLeftIcon className={styles.iconMd} aria-hidden />
+            Settings
+          </button>
+          <p className={styles.settingsMobileTitle}>{activeNavItem.title}</p>
+          {sectionDirty[activeSection] && (
+            <span className={styles.editedPill}>
+              <span className={styles.editedDot} aria-hidden />
+              Edited
+            </span>
+          )}
         </div>
 
-        {/* ----------------------------------------------- column 2: contact, money, orders */}
-        <div className={styles.contentsGroup}>
-          <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message." icon={PhoneIcon} dirty={contactDirty}>
-            <TextField
-              label="WhatsApp number" kind="intlPhone"
-              fieldSize="md"
-              type="tel"
-              inputMode="tel"
-              leading="+"
-              hint="Your 10-digit number is fine (91 is added for you). All “chat on WhatsApp” links open this number."
-              error={errors.whatsappNumber?.message}
-              {...form.register("whatsappNumber")}
-            />
-            <Controller
-              control={form.control}
-              name="phoneSameAsWhatsapp"
-              render={({ field }) => (
-                <SwitchField
-                  label="Customers can call me on the same number"
-                  description="Turn off if your calling number is different from your WhatsApp number."
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
+        {!isStoreFormSection && isDirty && firstDirtySection && (
+          <div className={styles.settingsUnsavedBanner} role="status">
+            <p className={styles.settingsUnsavedText}>
+              <span className={styles.editedDot} aria-hidden />
+              You have unsaved changes in Store Settings
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => selectSection(firstDirtySection)}
+              className={styles.settingsUnsavedBtn}
+            >
+              Review &amp; save
+            </Button>
+          </div>
+        )}
+
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          className={cn(styles.formStack, !isStoreFormSection && styles.settingsPanelHidden)}
+        >
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "store"}>
+            <Card
+              title="Shop profile"
+              description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
+              icon={StoreIcon}
+              dirty={shopDirty}
+            >
+              <div className={styles.twoColFields}>
+                <TextField label="Shop name" maxLength={LIMITS.shopName.max} fieldSize="md" error={errors.shopName?.message} {...form.register("shopName")} />
+                <TextField label="Tagline" maxLength={LIMITS.tagline.max} fieldSize="md" error={errors.tagline?.message} {...form.register("tagline")} />
+              </div>
+              <TextAreaField
+                label="Description" maxLength={LIMITS.shopDescription.max}
+                rows={3}
+                hint={`${String(description ?? "").length}/300. Shown on Google and in the footer. Aim for about 150 characters.`}
+                error={errors.description?.message}
+                {...form.register("description")}
+              />
+              <TextAreaField
+                label="Announcement banner" maxLength={LIMITS.announcement.max}
+                rows={2}
+                hint="Optional. One line shown at the top of every page, e.g. “Diwali sale: free delivery on all orders”. Leave empty to hide it."
+                error={errors.announcement?.message}
+                {...form.register("announcement")}
+              />
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Product page highlight" maxLength={LIMITS.highlightText.max} fieldSize="md"
+                  hint="Short line with an icon on every product page. Leave empty for the default."
+                  error={errors.highlightLine?.message}
+                  {...form.register("highlightLine")}
                 />
-              )}
-            />
-            {!phoneSame && (
+                <TextField
+                  label="Home page badge" maxLength={LIMITS.highlightText.max} fieldSize="md"
+                  hint="Small badge above the home headline. Leave empty for the default."
+                  error={errors.heroBadge?.message}
+                  {...form.register("heroBadge")}
+                />
+              </div>
+            </Card>
+
+            <Card title="Social links" description="Shown in the footer and on the Contact page. Paste the full link." icon={GlobeIcon} dirty={socialDirty}>
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Instagram" kind="url"
+                  fieldSize="md"
+                  type="url"
+                  placeholder="https://instagram.com/yourshop"
+                  error={errors.instagramUrl?.message}
+                  {...form.register("instagramUrl")}
+                />
+                <TextField
+                  label="Facebook" kind="url"
+                  fieldSize="md"
+                  type="url"
+                  placeholder="https://facebook.com/yourshop"
+                  error={errors.facebookUrl?.message}
+                  {...form.register("facebookUrl")}
+                />
+              </div>
+            </Card>
+          </div>
+
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "contact"}>
+            <Card title="Contact & WhatsApp" description="Used on the Contact page, the footer, the WhatsApp button and every WhatsApp message." icon={PhoneIcon} dirty={contactDirty}>
               <TextField
-                label="Calling number" kind="displayPhone"
+                label="WhatsApp number" kind="intlPhone"
                 fieldSize="md"
                 type="tel"
                 inputMode="tel"
-                placeholder="+91 98765 43210"
-                hint="Shown on the Contact page with a “Call now” button."
-                error={errors.phone?.message}
-                {...form.register("phone")}
+                leading="+"
+                hint="Your 10-digit number is fine (91 is added for you). All “chat on WhatsApp” links open this number."
+                error={errors.whatsappNumber?.message}
+                {...form.register("whatsappNumber")}
               />
-            )}
-            <div className={styles.twoColFields}>
-              <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
-              <TextField
-                label="Pincode"
-                kind="pincode"
-                fieldSize="md"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="e.g. 302001"
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                hint={area.hint}
-                error={area.error}
-              />
-              <TextField label="City / District" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
-              <FormSelectField
+              <Controller
                 control={form.control}
-                name="region"
-                label="State"
-                fieldSize="md"
-                placeholder="Select state"
-                options={stateOptions}
+                name="phoneSameAsWhatsapp"
+                render={({ field }) => (
+                  <SwitchField
+                    label="Customers can call me on the same number"
+                    description="Turn off if your calling number is different from your WhatsApp number."
+                    checked={Boolean(field.value)}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
               />
-            </div>
-            <p className={styles.mutedHintText}>Anything you leave empty is simply hidden on the website.</p>
-          </Card>
-
-          <Card
-            title="Payment (UPI)"
-            description="Direct UPI keeps fees at ₹0 with manual UTR verification. Switch to Payment Gateway anytime once your gateway API keys are configured in environment variables."
-            icon={IndianRupeeIcon}
-            dirty={paymentDirty}
-          >
-            <div className={styles.twoColFields}>
-              <FormSelectField
-                control={form.control}
-                name="paymentMode"
-                label="Checkout payment mode"
-                fieldSize="md"
-                options={PAYMENT_MODE_OPTIONS}
-                error={errors.paymentMode?.message}
-              />
-              {paymentModeNow === "gateway" && (
+              {!phoneSame && (
+                <TextField
+                  label="Calling number" kind="displayPhone"
+                  fieldSize="md"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+91 98765 43210"
+                  hint="Shown on the Contact page with a “Call now” button."
+                  error={errors.phone?.message}
+                  {...form.register("phone")}
+                />
+              )}
+              <div className={styles.twoColFields}>
+                <TextField label="Email" kind="email" fieldSize="md" type="email" error={errors.email?.message} {...form.register("email")} />
+                <TextField
+                  label="Pincode"
+                  kind="pincode"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="e.g. 302001"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  hint={area.hint}
+                  error={area.error}
+                />
+                <TextField label="City / District" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
                 <FormSelectField
                   control={form.control}
-                  name="paymentGateway"
-                  label="Gateway provider"
+                  name="region"
+                  label="State"
                   fieldSize="md"
-                  options={PAYMENT_GATEWAY_OPTIONS}
-                  error={errors.paymentGateway?.message}
-                />
-              )}
-            </div>
-            {paymentModeNow === "gateway" && (
-              <p className={styles.deliveryPreviewBox}>
-                {configuredGateways.includes((paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider)
-                  ? `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are configured and ready for auto-verified online payments.`
-                  : `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are not configured in environment variables yet. See payment-gateway-setup.md before enabling Gateway mode.`}
-              </p>
-            )}
-            <div className={styles.twoColFields}>
-              <TextField
-                label="UPI ID" kind="upiId"
-                fieldSize="md"
-                placeholder="yourshop@okhdfcbank"
-                autoCapitalize="none"
-                autoComplete="off"
-                hint={paymentModeNow === "gateway" ? "Optional fallback / refund reference UPI ID." : "Shown on the payment screen and used in the QR code."}
-                error={errors.upiId?.message}
-                {...form.register("upiId")}
-              />
-              <TextField
-                label="Name shown in the UPI app" maxLength={LIMITS.payeeName.max}
-                fieldSize="md"
-                placeholder="e.g. Kalakriti"
-                hint="Should match your UPI account name."
-                error={errors.upiPayeeName?.message}
-                {...form.register("upiPayeeName")}
-              />
-            </div>
-          </Card>
-
-          <Card
-            title="Tax & invoices"
-            description="Not registered for GST? Leave this off: invoices are a Bill of Supply and no tax is shown. After you get a GSTIN, turn it on to switch to Tax Invoices."
-            icon={ReceiptIcon}
-            dirty={taxDirty}
-          >
-            <Controller
-              control={form.control}
-              name="gstRegistered"
-              render={({ field }) => (
-                <SwitchField
-                  label="I am registered under GST"
-                  description="Prices you enter are treated as already including GST."
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-            {gstOn && (
-              <div className={styles.twoColFields}>
-                <TextField
-                  label="GSTIN" kind="gstin" fieldSize="md"
-                  placeholder="22AAAAA0000A1Z5"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  error={errors.gstin?.message}
-                  {...form.register("gstin")}
-                />
-                <TextField
-                  label="GST rate included in prices (%)" fieldSize="md"
-                  kind="money"
-                  maxLength={5}
-                  placeholder="12"
-                  hint="One rate for every product, e.g. 5, 12 or 18. Ask your CA which applies."
-                  error={errors.gstRate?.message}
-                  {...form.register("gstRate")}
+                  placeholder="Select state"
+                  options={stateOptions}
                 />
               </div>
-            )}
-            <TextField
-              label="Price note" maxLength={LIMITS.priceNote.max} fieldSize="md"
-              placeholder={gstOn ? "Inclusive of all taxes" : "Optional"}
-              hint={gstOn ? "Shown under the price. Leave empty to use “Inclusive of all taxes”." : "Shown under the price on product pages. Leave empty to show nothing."}
-              error={errors.priceNote?.message}
-              {...form.register("priceNote")}
-            />
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Name on invoices" maxLength={LIMITS.legalName.max} fieldSize="md"
-                hint="Leave empty to use your shop name."
-                error={errors.legalName?.message}
-                {...form.register("legalName")}
-              />
+              <p className={styles.mutedHintText}>Anything you leave empty is simply hidden on the website.</p>
+            </Card>
+          </div>
+
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "seo"}>
+            <Card
+              title="Google & SEO"
+              description="Helps people find your shop by name or by what you sell. Your website address comes from the deployment settings, not from here."
+              icon={BadgePercentIcon}
+              dirty={seoDirty}
+            >
               <TextAreaField
-                label="Address on invoices" maxLength={LIMITS.businessAddress.max}
+                label="Search keywords" maxLength={LIMITS.keywords.max}
                 rows={2}
-                hint="Leave empty to use your city and state."
-                error={errors.businessAddress?.message}
-                {...form.register("businessAddress")}
+                hint="Separate with commas, e.g. handmade gifts, home decor, scented candles."
+                error={errors.keywords?.message}
+                {...form.register("keywords")}
               />
-            </div>
-          </Card>
+              <div className={styles.seoCardPreview}>
+                <p className={styles.seoUrl}>{siteConfig.url.replace(/^https?:\/\//, "")}</p>
+                <p className={styles.seoTitle}>{String(name ?? "")}</p>
+                <p className={styles.seoDesc}>{String(description ?? "")}</p>
+              </div>
+            </Card>
+          </div>
 
-          <Card
-            title="Delivery & handling charges"
-            description="Centralised courier & packaging rules. Products only declare their weight and handling class — rates apply automatically per order."
-            icon={TruckIcon}
-            dirty={deliveryDirty}
-          >
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Standard delivery charge" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Flat fee on every order. Use 0 for always-free delivery."
-                error={errors.deliveryFee?.message}
-                {...form.register("deliveryFee")}
-              />
-              <TextField
-                label="Free delivery on orders above" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Waives standard delivery. Use 0 to never offer free delivery."
-                error={errors.freeDeliveryAbove?.message}
-                {...form.register("freeDeliveryAbove")}
-              />
-            </div>
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Fragile packaging fee" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Added once per order when any item is Fragile. 0 = free."
-                error={errors.fragileFee?.message}
-                {...form.register("fragileFee")}
-              />
-              <TextField
-                label="Large / bulky handling fee" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Added once per order for Large / bulky items (replaces fragile fee if higher). 0 = free."
-                error={errors.oversizedFee?.message}
-                {...form.register("oversizedFee")}
-              />
-            </div>
-            <div className={styles.twoColFields}>
-              <TextField
-                label="Included parcel weight (grams)" kind="digits"
-                fieldSize="md"
-                inputMode="numeric"
-                maxLength={String(LIMITS.weightGrams.max).length}
-                hint="Total order weight covered by base delivery (e.g. 1000 = 1 kg)."
-                error={errors.freeWeightGrams?.message}
-                {...form.register("freeWeightGrams")}
-              />
-              <TextField
-                label="Heavy parcel rate (per extra kg)" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Charged per started 1 kg above included weight. 0 = off."
-                error={errors.extraWeightFeePerKg?.message}
-                {...form.register("extraWeightFeePerKg")}
-              />
-            </div>
-            {deliveryPreview && <p className={styles.deliveryPreviewBox}>{deliveryPreview}</p>}
-          </Card>
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "payments"}>
+            <Card
+              title="Payment (UPI)"
+              description="Direct UPI keeps fees at ₹0 with manual UTR verification. Switch to Payment Gateway anytime once your gateway API keys are configured in environment variables."
+              icon={IndianRupeeIcon}
+              dirty={paymentDirty}
+            >
+              <div className={styles.twoColFields}>
+                <FormSelectField
+                  control={form.control}
+                  name="paymentMode"
+                  label="Checkout payment mode"
+                  fieldSize="md"
+                  options={PAYMENT_MODE_OPTIONS}
+                  error={errors.paymentMode?.message}
+                />
+                {paymentModeNow === "gateway" && (
+                  <FormSelectField
+                    control={form.control}
+                    name="paymentGateway"
+                    label="Gateway provider"
+                    fieldSize="md"
+                    options={PAYMENT_GATEWAY_OPTIONS}
+                    error={errors.paymentGateway?.message}
+                  />
+                )}
+              </div>
+              {paymentModeNow === "gateway" && (
+                <p className={styles.deliveryPreviewBox}>
+                  {configuredGateways.includes((paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider)
+                    ? `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are configured and ready for auto-verified online payments.`
+                    : `${PAYMENT_GATEWAY_LABEL[(paymentGatewayNow ?? "razorpay") as PaymentGatewayProvider]} server keys are not configured in environment variables yet. See payment-gateway-setup.md before enabling Gateway mode.`}
+                </p>
+              )}
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="UPI ID" kind="upiId"
+                  fieldSize="md"
+                  placeholder="yourshop@okhdfcbank"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  hint={paymentModeNow === "gateway" ? "Optional fallback / refund reference UPI ID." : "Shown on the payment screen and used in the QR code."}
+                  error={errors.upiId?.message}
+                  {...form.register("upiId")}
+                />
+                <TextField
+                  label="Name shown in the UPI app" maxLength={LIMITS.payeeName.max}
+                  fieldSize="md"
+                  placeholder="e.g. Kalakriti"
+                  hint="Should match your UPI account name."
+                  error={errors.upiPayeeName?.message}
+                  {...form.register("upiPayeeName")}
+                />
+              </div>
+            </Card>
 
-          <Card title="Orders" description="Order code format, rejected-UTR expiry, and the return window." icon={ShoppingCartIcon} dirty={ordersDirty}>
-            <div className={styles.ordersFieldsGrid}>
-              <TextField
-                label="Order code prefix" kind="orderPrefix"
-                fieldSize="md"
-                className={styles.monoUpperInput}
-                maxLength={5}
-                hint={`Preview: ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
-                error={errors.orderCodePrefix?.message}
-                {...form.register("orderCodePrefix")}
+            <Card
+              title="Tax & invoices"
+              description="Not registered for GST? Leave this off: invoices are a Bill of Supply and no tax is shown. After you get a GSTIN, turn it on to switch to Tax Invoices."
+              icon={ReceiptIcon}
+              dirty={taxDirty}
+            >
+              <Controller
+                control={form.control}
+                name="gstRegistered"
+                render={({ field }) => (
+                  <SwitchField
+                    label="I am registered under GST"
+                    description="Prices you enter are treated as already including GST."
+                    checked={Boolean(field.value)}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
               />
+              {gstOn && (
+                <div className={styles.twoColFields}>
+                  <TextField
+                    label="GSTIN" kind="gstin" fieldSize="md"
+                    placeholder="22AAAAA0000A1Z5"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    error={errors.gstin?.message}
+                    {...form.register("gstin")}
+                  />
+                  <TextField
+                    label="GST rate included in prices (%)" fieldSize="md"
+                    kind="money"
+                    maxLength={5}
+                    placeholder="12"
+                    hint="One rate for every product, e.g. 5, 12 or 18. Ask your CA which applies."
+                    error={errors.gstRate?.message}
+                    {...form.register("gstRate")}
+                  />
+                </div>
+              )}
               <TextField
-                label="Auto-cancel rejected UTR (hours)" kind="digits"
-                fieldSize="md"
-                inputMode="numeric"
-                maxLength={3}
-                hint="Time before an un-updated rejected UTR is cancelled and stock is released. 0 = never."
-                error={errors.unpaidOrderExpiryHours?.message}
-                {...form.register("unpaidOrderExpiryHours")}
+                label="Price note" maxLength={LIMITS.priceNote.max} fieldSize="md"
+                placeholder={gstOn ? "Inclusive of all taxes" : "Optional"}
+                hint={gstOn ? "Shown under the price. Leave empty to use “Inclusive of all taxes”." : "Shown under the price on product pages. Leave empty to show nothing."}
+                error={errors.priceNote?.message}
+                {...form.register("priceNote")}
               />
-              <TextField
-                label="Return & exchange window (days)" kind="digits"
-                fieldSize="md"
-                inputMode="numeric"
-                maxLength={2}
-                containerClassName={styles.returnWindowCol}
-                hint="Days after delivery to request a return or exchange (max 90). 0 = off."
-                error={errors.returnWindowDays?.message}
-                {...form.register("returnWindowDays")}
-              />
-            </div>
-          </Card>
-        </div>
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Name on invoices" maxLength={LIMITS.legalName.max} fieldSize="md"
+                  hint="Leave empty to use your shop name."
+                  error={errors.legalName?.message}
+                  {...form.register("legalName")}
+                />
+                <TextAreaField
+                  label="Address on invoices" maxLength={LIMITS.businessAddress.max}
+                  rows={2}
+                  hint="Leave empty to use your city and state."
+                  error={errors.businessAddress?.message}
+                  {...form.register("businessAddress")}
+                />
+              </div>
+            </Card>
+          </div>
+
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "shipping"}>
+            <Card
+              title="Delivery & handling charges"
+              description="Centralised courier & packaging rules. Products only declare their weight and handling class — rates apply automatically per order."
+              icon={TruckIcon}
+              dirty={deliveryDirty}
+            >
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Standard delivery charge" kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  hint="Flat fee on every order. Use 0 for always-free delivery."
+                  error={errors.deliveryFee?.message}
+                  {...form.register("deliveryFee")}
+                />
+                <TextField
+                  label="Free delivery on orders above" kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  hint="Waives standard delivery. Use 0 to never offer free delivery."
+                  error={errors.freeDeliveryAbove?.message}
+                  {...form.register("freeDeliveryAbove")}
+                />
+              </div>
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Fragile packaging fee" kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  hint="Added once per order when any item is Fragile. 0 = free."
+                  error={errors.fragileFee?.message}
+                  {...form.register("fragileFee")}
+                />
+                <TextField
+                  label="Large / bulky handling fee" kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  hint="Added once per order for Large / bulky items (replaces fragile fee if higher). 0 = free."
+                  error={errors.oversizedFee?.message}
+                  {...form.register("oversizedFee")}
+                />
+              </div>
+              <div className={styles.twoColFields}>
+                <TextField
+                  label="Included parcel weight (grams)" kind="digits"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  maxLength={String(LIMITS.weightGrams.max).length}
+                  hint="Total order weight covered by base delivery (e.g. 1000 = 1 kg)."
+                  error={errors.freeWeightGrams?.message}
+                  {...form.register("freeWeightGrams")}
+                />
+                <TextField
+                  label="Heavy parcel rate (per extra kg)" kind="money"
+                  fieldSize="md"
+                  inputMode="decimal"
+                  leading="₹"
+                  hint="Charged per started 1 kg above included weight. 0 = off."
+                  error={errors.extraWeightFeePerKg?.message}
+                  {...form.register("extraWeightFeePerKg")}
+                />
+              </div>
+              {deliveryPreview && <p className={styles.deliveryPreviewBox}>{deliveryPreview}</p>}
+            </Card>
+
+            <Card title="Orders" description="Order code format, rejected-UTR expiry, and the return window." icon={ShoppingCartIcon} dirty={ordersDirty}>
+              <div className={styles.ordersFieldsGrid}>
+                <TextField
+                  label="Order code prefix" kind="orderPrefix"
+                  fieldSize="md"
+                  className={styles.monoUpperInput}
+                  maxLength={5}
+                  hint={`Preview: ${String(prefix || "KK").toUpperCase()}-7F3K9Q. Existing orders keep their code.`}
+                  error={errors.orderCodePrefix?.message}
+                  {...form.register("orderCodePrefix")}
+                />
+                <TextField
+                  label="Auto-cancel rejected UTR (hours)" kind="digits"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  maxLength={3}
+                  hint="Time before an un-updated rejected UTR is cancelled and stock is released. 0 = never."
+                  error={errors.unpaidOrderExpiryHours?.message}
+                  {...form.register("unpaidOrderExpiryHours")}
+                />
+                <TextField
+                  label="Return & exchange window (days)" kind="digits"
+                  fieldSize="md"
+                  inputMode="numeric"
+                  maxLength={2}
+                  containerClassName={styles.returnWindowCol}
+                  hint="Days after delivery to request a return or exchange (max 90). 0 = off."
+                  error={errors.returnWindowDays?.message}
+                  {...form.register("returnWindowDays")}
+                />
+              </div>
+            </Card>
+          </div>
+
+          <StickySaveBar
+            dirty={isDirty}
+            pending={pending}
+            saveLabel="Save settings"
+            onCancel={() => {
+              form.reset(baseline)
+              setPincode("")
+            }}
+          />
+        </form>
+
+        {activeSection === "promos" && <PromoCodeManager promoCodes={promoCodes} />}
+        {activeSection === "email" && (
+          <EmailSettingsCard
+            initialSettings={emailSettings}
+            shopName={settings.shopName}
+            defaultRecipient={adminEmail ?? settings.email}
+          />
+        )}
       </div>
-
-      <StickySaveBar
-        dirty={isDirty}
-        pending={pending}
-        saveLabel="Save settings"
-        onCancel={() => {
-          form.reset(baseline)
-          setPincode("")
-        }}
-      />
-    </form>
+    </div>
   )
 }
 
