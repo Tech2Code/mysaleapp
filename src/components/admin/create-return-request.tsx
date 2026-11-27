@@ -28,7 +28,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { netReturnRefund } from "@/features/orders/refund"
-import { composeReturnDetails, returnableQuantities } from "@/features/orders/returns"
+import { composeReturnDetails, returnableQuantities, returnLineKey } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, ReturnResolutionType } from "@/features/orders/types"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { formatPrice } from "@/lib/format"
@@ -124,20 +124,28 @@ export function CreateReturnRequest({
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const lines = useMemo(() => {
     const seen = new Set<string>()
-    return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
+    return items.filter((i) => {
+      const key = returnLineKey(i)
+      return !seen.has(key) && seen.add(key) && (left.get(key) ?? 0) > 0
+    })
   }, [items, left])
 
-  const qtyOf = (id: string) => {
-    if (qty[id] !== undefined) return qty[id]
-    if (lines[0]?.productId === id) return "1"
+  const qtyOf = (key: string) => {
+    if (qty[key] !== undefined) return qty[key]
+    if (lines[0] && returnLineKey(lines[0]) === key) return "1"
     return ""
   }
 
   const payload = lines
-    .map((i) => ({ productId: i.productId, name: i.name, quantity: Number(qtyOf(i.productId)) || 0 }))
+    .map((i) => ({
+      productId: i.productId,
+      ...(i.variantId ? { variantId: i.variantId } : {}),
+      name: i.name,
+      quantity: Number(qtyOf(returnLineKey(i))) || 0,
+    }))
     .filter((i) => i.quantity > 0)
 
-  const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
+  const tooMany = payload.some((p) => p.quantity > (left.get(returnLineKey(p)) ?? 0))
   const detailsMissing = !reason || otherNeedsDetail(reason, details)
   const exchangeKindMissing = resolutionType === "exchange" && !exchangeKind
   const cleanExchangePref = exchangePreference.replace(/^(Replacement|Exchange)\s*:\s*/i, "").trim()
@@ -376,16 +384,17 @@ export function CreateReturnRequest({
                 )}
                 <ul className={cn(styles.wizardItemsList, step1Attempted && payload.length === 0 && styles.wizardItemsListError)}>
                   {lines.map((i) => {
-                    const max = left.get(i.productId) ?? 0
-                    const currentQty = Math.min(max, Math.max(0, Number(qtyOf(i.productId)) || 0))
+                    const key = returnLineKey(i)
+                    const max = left.get(key) ?? 0
+                    const currentQty = Math.min(max, Math.max(0, Number(qtyOf(key)) || 0))
                     const isChecked = currentQty > 0
                     const setItemQty = (nextNum: number) => {
                       const clamped = Math.min(max, Math.max(0, nextNum))
-                      setQty((q) => ({ ...q, [i.productId]: clamped > 0 ? String(clamped) : "0" }))
+                      setQty((q) => ({ ...q, [key]: clamped > 0 ? String(clamped) : "0" }))
                     }
-                    const itemCheckId = `admin-return-item-${i.productId}`
+                    const itemCheckId = `admin-return-item-${key}`
                     return (
-                      <li key={i.productId} className={cn(styles.wizardItemCard, isChecked && styles.wizardItemCardSelected)}>
+                      <li key={key} className={cn(styles.wizardItemCard, isChecked && styles.wizardItemCardSelected)}>
                         <div className={styles.itemClickRow}>
                           <Checkbox
                             id={itemCheckId}

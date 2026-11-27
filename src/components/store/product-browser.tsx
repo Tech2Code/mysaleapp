@@ -275,7 +275,7 @@ export function ProductBrowser({
                   <m.span
                     layoutId="chip-active"
                     className={styles.activeChipBg}
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    transition={{ type: "spring", stiffness: 540, damping: 34 }}
                   />
                 )}
                 <span className={styles.chipLabel}>{c.name}</span>

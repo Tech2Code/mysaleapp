@@ -1,12 +1,12 @@
 "use client"
 
-import { PlusIcon, SparklesIcon, StarIcon } from "lucide-react"
+import { CheckIcon, PlusIcon, SparklesIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
-import { memo, useEffect, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 import { isBackInStock, type ProductCardData } from "@/features/products/types"
 import { discountPercent, formatPrice, formatRating } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { useCart } from "@/store/cart"
+import { triggerFlyToCart, useCart } from "@/store/cart"
 import styles from "./product-card.module.css"
 import { ProductImage } from "./product-image"
 import { WishlistButton } from "./wishlist-button"
@@ -16,8 +16,13 @@ export type { ProductCardData }
 export const ProductCard = memo(function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
   const add = useCart((s) => s.add)
   const [clientNow, setClientNow] = useState<number | undefined>(undefined)
+  const [justAdded, setJustAdded] = useState(false)
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     setClientNow(Date.now())
+    return () => {
+      if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+    }
   }, [])
   const off = discountPercent(product.price, product.compareAtPrice)
   const soldOut = product.stock <= 0
@@ -78,7 +83,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
           </div>
         )}
 
-        <WishlistButton productId={product.id} productName={product.name} className={styles.cardWishlistPos} />
+        <WishlistButton productId={product.id} productName={product.name} productImage={product.images[0] ?? null} className={styles.cardWishlistPos} />
 
         {soldOut ? (
           <button
@@ -101,20 +106,29 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
         ) : (
           <button
             type="button"
-            onClick={() => {
-              add({
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                price: product.price,
-                image: product.images[0] ?? null,
-                maxQuantity: product.stock,
-              })
+            onClick={(e) => {
+              const btn = e.currentTarget
+              add(
+                {
+                  productId: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  price: product.price,
+                  image: product.images[0] ?? null,
+                  maxQuantity: product.stock,
+                },
+                1,
+                { openDrawer: false }
+              )
+              triggerFlyToCart(btn, product.images[0] ?? null, () => useCart.getState().setOpen(true))
+              setJustAdded(true)
+              if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+              addedTimerRef.current = setTimeout(() => setJustAdded(false), 1100)
             }}
-            aria-label={`Add ${product.name} to cart`}
-            className={styles.quickAddBtn}
+            aria-label={justAdded ? `${product.name} added to cart` : `Add ${product.name} to cart`}
+            className={cn(styles.quickAddBtn, justAdded && styles.quickAddSuccess)}
           >
-            <PlusIcon className={styles.plusIcon} />
+            {justAdded ? <CheckIcon className={styles.plusIcon} /> : <PlusIcon className={styles.plusIcon} />}
           </button>
         )}
       </div>

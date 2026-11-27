@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0071_harden_email_rpcs.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0075_return_variants_and_security_hardening.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -172,7 +172,7 @@ src/
   store/              Client state (cart, wishlist, auth) with Zustand
   styles/             Independent Light & Dark CSS variable theme files (`theme-store.css`, `theme-admin.css`)
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0071) + seed
+supabase/             SQL migrations (0001..0075) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -186,7 +186,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (32 test files, 859 tests) |
+| `npm test` | Run the Vitest unit test suite (33 test files, 880 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

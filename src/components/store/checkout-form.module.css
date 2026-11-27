@@ -134,7 +134,7 @@
 .orderLineLink .lineThumbWrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; overflow: hidden; border-radius: 10px; background-color: var(--muted); container-type: inline-size; }
 .lineThumbWrap .lineThumbImg { transition: transform 300ms ease-out; }
 .orderLineLink:hover .lineThumbImg { transform: scale(1.05); }
-.lineThumbWrap .qtyBubble { position: absolute; top: -4px; right: -4px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10.5px; font-weight: 700; color: var(--background); }
+.lineThumbWrap .qtyBubble { position: absolute; top: 2px; right: 2px; z-index: 2; display: inline-grid; min-width: 20px; height: 20px; padding: 0 5px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10.5px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--background); box-shadow: 0 0 0 1.5px var(--card); }
 .orderLineLink .lineTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; align-items: flex-start; font-size: 14px; font-weight: 500; }
 .lineTextCol .lineNameText { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--foreground); transition: color 150ms ease; }
 .orderLineLink:hover .lineNameText { color: var(--primary); }
@@ -234,7 +234,7 @@
 .miniItemsList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .miniItemsList .miniItemRow { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
 .miniItemRow .miniThumbWrap { position: relative; width: 40px; height: 40px; flex-shrink: 0; overflow: hidden; border-radius: 8px; background-color: var(--muted); container-type: inline-size; }
-.miniThumbWrap .miniQtyBubble { position: absolute; top: -3px; right: -3px; display: grid; width: 17px; height: 17px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10px; font-weight: 700; color: var(--background); }
+.miniThumbWrap .miniQtyBubble { position: absolute; top: 2px; right: 2px; z-index: 2; display: inline-grid; min-width: 18px; height: 18px; padding: 0 4px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--background); box-shadow: 0 0 0 1.5px var(--card); }
 .miniItemRow .miniItemTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
 .miniItemTextCol .miniItemName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--foreground); }
 .miniItemTextCol .miniItemVariant { align-self: flex-start; border-radius: 5px; background-color: var(--muted); padding: 1px 6px; font-size: 10.5px; line-height: 15px; font-weight: 600; color: var(--muted-foreground); }

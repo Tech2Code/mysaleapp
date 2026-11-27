@@ -18,12 +18,11 @@ export function useWishlistToggle(productId: string, productName: string) {
   const toggle = () => {
     if (pending) return
     const next = !active
+    const toastId = `wishlist-${productId}`
     setOn(productId, next)
+    toast.success(next ? `Saved “${productName}” to your wishlist` : "Removed from wishlist", { id: toastId })
 
-    if (!user) {
-      toast.success(next ? `Saved “${productName}” to your wishlist` : "Removed from wishlist")
-      return
-    }
+    if (!user) return
     const actingUserId = user.id
     startTransition(async () => {
       try {
@@ -32,15 +31,13 @@ export function useWishlistToggle(productId: string, productName: string) {
           if (useAuth.getState().user?.id === actingUserId) {
             setOn(productId, !next)
           }
-          toast.error("Couldn't update your wishlist. Please try again.")
-          return
+          toast.error("Couldn't update your wishlist. Please try again.", { id: toastId })
         }
-        toast.success(next ? `Saved “${productName}” to your wishlist` : "Removed from wishlist")
       } catch {
         if (useAuth.getState().user?.id === actingUserId) {
           setOn(productId, !next)
         }
-        toast.error("Couldn't update your wishlist. Please try again.")
+        toast.error("Couldn't update your wishlist. Please try again.", { id: toastId })
       }
     })
   }

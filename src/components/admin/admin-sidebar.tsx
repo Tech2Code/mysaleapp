@@ -108,7 +108,6 @@ const ROUTE_TITLES: { match: (p: string) => boolean; label: string; group: strin
 ]
 
 function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const router = useRouter()
   const [query, setQuery] = useState("")
 
   useEffect(() => {
@@ -147,6 +146,7 @@ function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Jump to orders, products, settings…"
+            aria-label="Jump to admin section"
             autoFocus
             className={styles.quickJumpInput}
           />
@@ -161,12 +161,11 @@ function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
                 const Icon = item.icon
                 return (
                   <li key={item.href}>
-                    <button
-                      type="button"
+                    <Link
+                      href={item.href}
                       onClick={() => {
                         onOpenChange(false)
                         setQuery("")
-                        router.push(item.href)
                       }}
                       className={styles.quickJumpItemBtn}
                     >
@@ -175,7 +174,7 @@ function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
                         <p className={styles.quickJumpItemLabel}>{item.label}</p>
                         <p className={styles.quickJumpItemHint}>{item.hint}</p>
                       </div>
-                    </button>
+                    </Link>
                   </li>
                 )
               })}

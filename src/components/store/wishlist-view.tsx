@@ -11,7 +11,7 @@ import { useMounted } from "@/hooks/use-mounted"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
-import { useCart } from "@/store/cart"
+import { triggerFlyToCart, useCart } from "@/store/cart"
 import { useWishlist } from "@/store/wishlist"
 import styles from "./page-views.module.css"
 import { ProductCard, type ProductCardData } from "./product-card"
@@ -123,23 +123,35 @@ export function WishlistView({ products, preview = false }: { products: ProductC
                     <span className={styles.wishlistRestockPrice}>{formatPrice(p.price)} · {p.stock} left</span>
                   </span>
                 </Link>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() =>
-                    add({
-                      productId: p.id,
-                      slug: p.slug,
-                      name: p.name,
-                      price: p.price,
-                      image: p.images[0] ?? null,
-                      maxQuantity: p.stock,
-                    })
-                  }
-                  className={styles.wishlistRestockAddBtn}
-                >
-                  <ShoppingBagIcon className={styles.restockIcon14} /> Add to cart
-                </Button>
+                {p.variants && p.variants.length > 0 ? (
+                  <Link href={`/products/${p.slug}`} className={cn(buttonVariants({ size: "sm" }), styles.wishlistRestockAddBtn)}>
+                    <ShoppingBagIcon className={styles.restockIcon14} /> Select option
+                  </Link>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={(e) => {
+                      const btn = e.currentTarget
+                      add(
+                        {
+                          productId: p.id,
+                          slug: p.slug,
+                          name: p.name,
+                          price: p.price,
+                          image: p.images[0] ?? null,
+                          maxQuantity: p.stock,
+                        },
+                        1,
+                        { openDrawer: false }
+                      )
+                      triggerFlyToCart(btn, p.images[0] ?? null, () => useCart.getState().setOpen(true))
+                    }}
+                    className={styles.wishlistRestockAddBtn}
+                  >
+                    <ShoppingBagIcon className={styles.restockIcon14} /> Add to cart
+                  </Button>
+                )}
               </li>
             ))}
           </ul>

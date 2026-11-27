@@ -28,6 +28,7 @@ function resolveLiveLine(live: LiveProduct | undefined, item: CartItem) {
     return {
       price: matched.price,
       stock: matched.stock,
+      variantId: matched.id,
       variantLabel: matched.label,
       variantSku: matched.sku ?? null,
     }
@@ -36,8 +37,9 @@ function resolveLiveLine(live: LiveProduct | undefined, item: CartItem) {
   return {
     price: live.price,
     stock: live.stock,
-    variantLabel: item.variantLabel,
-    variantSku: item.variantSku ?? null,
+    variantId: undefined,
+    variantLabel: undefined,
+    variantSku: null,
   }
 }
 
@@ -77,6 +79,7 @@ export function useLiveCart(products: LiveProduct[]) {
         nextQty !== item.quantity ||
         resolved.stock !== item.maxQuantity ||
         resolved.price !== item.price ||
+        resolved.variantId !== item.variantId ||
         resolved.variantLabel !== item.variantLabel ||
         resolved.variantSku !== (item.variantSku ?? null) ||
         live.name !== item.name ||
@@ -89,6 +92,7 @@ export function useLiveCart(products: LiveProduct[]) {
           name: live.name,
           slug: live.slug,
           price: resolved.price,
+          variantId: resolved.variantId,
           variantLabel: resolved.variantLabel,
           variantSku: resolved.variantSku,
           image: nextImg,

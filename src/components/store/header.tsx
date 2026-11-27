@@ -103,7 +103,7 @@ function DesktopCollectionsDropdown({
           <m.span
             layoutId="nav-pill"
             className={styles.activeNavBeam}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            transition={{ type: "spring", stiffness: 520, damping: 34 }}
           />
         )}
       </button>
@@ -114,7 +114,7 @@ function DesktopCollectionsDropdown({
             initial={{ opacity: 0, y: 6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.14, ease: [0.2, 0, 0, 1] }}
             className={styles.collectionsDropdownBridge}
           >
             <div role="menu" aria-label="Product collections" className={styles.collectionsPopoverCard}>
@@ -183,7 +183,7 @@ function DesktopNavItems({
           <m.span
             layoutId="nav-pill"
             className={styles.activeNavBeam}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            transition={{ type: "spring", stiffness: 520, damping: 34 }}
           />
         )}
       </ScrollLink>
@@ -270,11 +270,15 @@ function MobileHeaderShortcuts({
   mounted,
   wishCount,
   itemCount,
+  cartBump,
+  wishlistBump,
   onOpenCart,
 }: {
   mounted: boolean
   wishCount: number
   itemCount: number
+  cartBump: boolean
+  wishlistBump: boolean
   onOpenCart: () => void
 }) {
   const pathname = usePathname()
@@ -287,7 +291,8 @@ function MobileHeaderShortcuts({
       <Link
 
         href="/wishlist"
-        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn)}
+        data-wishlist-target="true"
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn, wishlistBump && styles.cartBumpActive)}
         aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
       >
         <HeartIcon className={styles.actionIcon} />
@@ -296,8 +301,9 @@ function MobileHeaderShortcuts({
       <button
 
         type="button"
+        data-cart-target="true"
         onClick={onOpenCart}
-        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn)}
+        className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.shortcutBtn, cartBump && styles.cartBumpActive)}
         aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
       >
         <ShoppingBagIcon className={styles.actionIcon} />
@@ -315,6 +321,31 @@ export function Header({ categories }: { categories: NavCategory[] }) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [cartBump, setCartBump] = useState(false)
+  const [wishlistBump, setWishlistBump] = useState(false)
+  const bumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wishBumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const onCartLanded = () => {
+      setCartBump(true)
+      if (bumpTimerRef.current) clearTimeout(bumpTimerRef.current)
+      bumpTimerRef.current = setTimeout(() => setCartBump(false), 420)
+    }
+    const onWishlistLanded = () => {
+      setWishlistBump(true)
+      if (wishBumpTimerRef.current) clearTimeout(wishBumpTimerRef.current)
+      wishBumpTimerRef.current = setTimeout(() => setWishlistBump(false), 420)
+    }
+    window.addEventListener("kk-cart-arc-landed", onCartLanded)
+    window.addEventListener("kk-wishlist-arc-landed", onWishlistLanded)
+    return () => {
+      window.removeEventListener("kk-cart-arc-landed", onCartLanded)
+      window.removeEventListener("kk-wishlist-arc-landed", onWishlistLanded)
+      if (bumpTimerRef.current) clearTimeout(bumpTimerRef.current)
+      if (wishBumpTimerRef.current) clearTimeout(wishBumpTimerRef.current)
+    }
+  }, [])
 
   const { scrollY } = useScroll()
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12))
@@ -382,12 +413,15 @@ export function Header({ categories }: { categories: NavCategory[] }) {
               mounted={mounted}
               wishCount={wishCount}
               itemCount={itemCount}
+              cartBump={cartBump}
+              wishlistBump={wishlistBump}
               onOpenCart={() => openCart(true)}
             />
           </Suspense>
           <Link
             href="/wishlist"
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn)}
+            data-wishlist-target="true"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn, wishlistBump && styles.cartBumpActive)}
             aria-label={`Wishlist${mounted && wishCount ? `, ${wishCount} ${wishCount === 1 ? "item" : "items"}` : ""}`}
           >
             <HeartIcon className={styles.actionIcon} />
@@ -395,8 +429,9 @@ export function Header({ categories }: { categories: NavCategory[] }) {
           </Link>
           <button
             type="button"
+            data-cart-target="true"
             onClick={() => openCart(true)}
-            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn)}
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.desktopActionBtn, cartBump && styles.cartBumpActive)}
             aria-label={`Open cart${mounted ? `, ${itemCount} ${itemCount === 1 ? "item" : "items"}` : ""}`}
           >
             <ShoppingBagIcon className={styles.actionIcon} />

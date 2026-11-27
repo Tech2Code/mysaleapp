@@ -142,10 +142,19 @@ export const requestReturnSchema = z
     /** Full mobile number required for guests (migration 0050); signed-in owners are recognised by their session. */
     phone: v.phoneIN().optional(),
     items: z
-      .array(z.object({ productId: z.uuid(), quantity: v.quantity(LIMITS.returnQuantity.max) }))
+      .array(
+        z.object({
+          productId: z.uuid(),
+          variantId: z.string().trim().min(1).max(80).optional(),
+          quantity: v.quantity(LIMITS.returnQuantity.max),
+        })
+      )
       .min(1, "Choose at least one item to return")
       .max(LIMITS.returnLines.max)
-      .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
+      .refine(
+        (items) => new Set(items.map((i) => (i.variantId ? `${i.productId}::${i.variantId}` : i.productId))).size === items.length,
+        "Each item can only be listed once"
+      ),
     reason: v.reason(),
     details: v.note(LIMITS.returnDetail.max).optional(),
     resolutionType: z.enum(["refund", "exchange"]).default("refund"),

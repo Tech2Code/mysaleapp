@@ -27,13 +27,13 @@
 .newPickupForm .twoColFields { display: grid; column-gap: 12px; row-gap: 6px; }
 .newPickupForm .saveAddrBox { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 35%, transparent); padding: 12px; }
 .saveAddrBox .labelPillsRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-left: 24px; }
-.labelPillsRow .labelChipBtn { border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 2px 10px; font-size: 11px; font-weight: 600; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
+.labelPillsRow .labelChipBtn { display: inline-flex; min-height: 36px; align-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 2px 12px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
 .labelPillsRow .labelChipBtn:hover { color: var(--foreground); }
 .labelPillsRow .labelChipBtnActive { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); }
 /* Section: Separated 3-Step Segmented Progress Bar */
 .wizardStepperStrip { flex-shrink: 0; border-bottom: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 25%, var(--card)); padding: 10px 16px; }
 .wizardStepperStrip .wizardStepsBar { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; border-radius: 14px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 55%, transparent); padding: 4px; }
-.wizardStepsBar .wizardStepPill { display: inline-flex; height: 34px; min-width: 0; align-items: center; justify-content: center; gap: 6px; border-radius: 10px; border: 1px solid transparent; background: transparent; padding: 0 8px; font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); white-space: nowrap; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.wizardStepsBar .wizardStepPill { display: inline-flex; min-height: 44px; min-width: 0; align-items: center; justify-content: center; gap: 6px; border-radius: 10px; border: 1px solid transparent; background: transparent; padding: 0 8px; font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); white-space: nowrap; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .wizardStepsBar .wizardStepPill:disabled { cursor: default; }
 .wizardStepsBar .wizardStepPillCurrent { border-color: color-mix(in oklab, var(--primary) 24%, var(--border)); background-color: var(--card); font-weight: 600; color: var(--foreground); box-shadow: 0 2px 6px -1px var(--shadow-color-soft); }
 .wizardStepsBar .wizardStepPillDone { cursor: pointer; background-color: color-mix(in oklab, var(--success) 8%, var(--card)); font-weight: 600; color: var(--foreground); }
@@ -68,7 +68,7 @@
 .itemControlsBottom .itemQtyLabel { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
 .returnItemCardSelected .itemQtyLabel { font-weight: 600; color: var(--primary); }
 .itemControlsBottom .compactStepper { display: inline-flex; align-items: center; gap: 8px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 2px 4px; }
-.compactStepper .stepperCircleBtn { display: inline-grid; width: 26px; height: 26px; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--foreground); transition: background-color 150ms ease, opacity 150ms ease; }
+.compactStepper .stepperCircleBtn { display: inline-grid; width: 44px; height: 44px; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--foreground); transition: background-color 150ms ease, opacity 150ms ease; }
 .compactStepper .stepperCircleBtn:hover:not(:disabled) { background-color: var(--muted); }
 .compactStepper .stepperCircleBtn:disabled { cursor: not-allowed; opacity: 0.35; }
 .stepperCircleBtn .stepperSvg { width: 14px; height: 14px; }
@@ -102,7 +102,7 @@
 .exchangePromiseBanner .promiseHeading { margin: 0; font-size: 13px; font-weight: 600; color: var(--primary); }
 .exchangePromiseBanner .promiseList { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; color: var(--muted-foreground); }
 .exchangeBox .variantChipsRow { display: flex; flex-wrap: wrap; gap: 6px; }
-.variantChipsRow .variantChipBtn { border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.variantChipsRow .variantChipBtn { display: inline-flex; min-height: 44px; align-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 5px 14px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
 .variantChipsRow .variantChipBtn:hover { border-color: var(--primary); color: var(--primary); }
 .variantChipsRow .variantChipBtnActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 12%, var(--card)); color: var(--primary); font-weight: 600; }
 .estimateBox { display: flex; flex-direction: column; gap: 4px; border-radius: 14px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 12px 14px; font-size: 14px; }
@@ -126,10 +126,10 @@
 .pickupSummaryTop .pickupSummaryHeading { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--foreground); }
 .pickupSummaryHeading .pinSvg { width: 16px; height: 16px; color: var(--primary); }
 .pickupSummaryTop .pickupActionBtns { display: flex; align-items: center; gap: 8px; }
-.pickupActionBtns .editPickupBtn { display: inline-flex; height: var(--controlHXs); align-items: center; gap: 4px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); padding: 0 10px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: background-color 160ms ease, border-color 160ms ease; }
+.pickupActionBtns .editPickupBtn { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: background-color 160ms ease, border-color 160ms ease; }
 .pickupActionBtns .editPickupBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
 .editPickupBtn .pencilSvg { width: 12px; height: 12px; }
-.pickupActionBtns .changePickupBtn { display: inline-flex; height: var(--controlHXs); align-items: center; gap: 4px; border-radius: var(--radiusControlSm); border: 1px solid color-mix(in oklab, var(--primary) 26%, transparent); background-color: color-mix(in oklab, var(--primary) 10%, transparent); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary); transition: background-color 160ms ease, border-color 160ms ease; }
+.pickupActionBtns .changePickupBtn { display: inline-flex; min-height: 44px; align-items: center; gap: 4px; border-radius: var(--radiusControlSm); border: 1px solid color-mix(in oklab, var(--primary) 26%, transparent); background-color: color-mix(in oklab, var(--primary) 10%, transparent); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--primary); transition: background-color 160ms ease, border-color 160ms ease; }
 .pickupActionBtns .changePickupBtn:hover { background-color: color-mix(in oklab, var(--primary) 18%, transparent); border-color: color-mix(in oklab, var(--primary) 40%, transparent); }
 .pickupSummarySection .pickupSummaryInnerCard { border-radius: 12px; border: 1px solid var(--border); background-color: var(--card); padding: 12px; font-size: 12px; }
 .pickupSummaryInnerCard .badgeFlexRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -176,7 +176,13 @@
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
   .returnDialog { max-width: 576px; }
+  .labelPillsRow .labelChipBtn { min-height: 24px; padding: 2px 10px; font-size: 11px; }
   .wizardStepperStrip { padding: 12px 20px; }
+  .wizardStepsBar .wizardStepPill { height: 34px; min-height: 34px; }
+  .compactStepper .stepperCircleBtn { width: 26px; height: 26px; }
+  .variantChipsRow .variantChipBtn { min-height: 30px; padding: 5px 12px; }
+  .pickupActionBtns .editPickupBtn { height: var(--controlHXs); min-height: 0; padding: 0 10px; }
+  .pickupActionBtns .changePickupBtn { height: var(--controlHXs); min-height: 0; }
   .newPickupForm .twoColFields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .reasonCardsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .requestsPanel { padding: 20px; }

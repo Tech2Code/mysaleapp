@@ -190,11 +190,19 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
 
   // Optional message the customer can send to the shop with their order details.
   const products = await getActiveProducts()
-  const mergedQty = new Map<string, number>()
-  for (const line of items) mergedQty.set(line.productId, (mergedQty.get(line.productId) ?? 0) + line.quantity)
-  const lines = Array.from(mergedQty.entries()).flatMap(([productId, quantity]) => {
+  const mergedLines = new Map<string, { productId: string; variantId?: string; quantity: number }>()
+  for (const line of items) {
+    const key = `${line.productId}::${line.variantId ?? ""}`
+    const prev = mergedLines.get(key)
+    mergedLines.set(key, { productId: line.productId, variantId: line.variantId, quantity: (prev?.quantity ?? 0) + line.quantity })
+  }
+  const lines = Array.from(mergedLines.values()).flatMap(({ productId, variantId, quantity }) => {
     const p = products.find((x) => x.id === productId)
-    return p ? [{ name: p.name, price: p.price, quantity }] : []
+    if (!p) return []
+    const matchedVar = variantId ? p.variants?.find((v) => v.id === variantId) : undefined
+    const name = matchedVar?.label ? `${p.name} — ${matchedVar.label}` : p.name
+    const price = matchedVar ? matchedVar.price : p.price
+    return [{ name, price, quantity }]
   })
   const message = buildOrderMessage(shop, {
     orderCode: data.order_code,
@@ -517,11 +525,19 @@ export async function createGatewayCheckoutSession(
   }
 
   const products = await getActiveProducts()
-  const mergedQty = new Map<string, number>()
-  for (const line of items) mergedQty.set(line.productId, (mergedQty.get(line.productId) ?? 0) + line.quantity)
-  const lines = Array.from(mergedQty.entries()).flatMap(([productId, quantity]) => {
+  const mergedLines = new Map<string, { productId: string; variantId?: string; quantity: number }>()
+  for (const line of items) {
+    const key = `${line.productId}::${line.variantId ?? ""}`
+    const prev = mergedLines.get(key)
+    mergedLines.set(key, { productId: line.productId, variantId: line.variantId, quantity: (prev?.quantity ?? 0) + line.quantity })
+  }
+  const lines = Array.from(mergedLines.values()).flatMap(({ productId, variantId, quantity }) => {
     const p = products.find((x) => x.id === productId)
-    return p ? [{ name: p.name, price: p.price, quantity }] : []
+    if (!p) return []
+    const matchedVar = variantId ? p.variants?.find((v) => v.id === variantId) : undefined
+    const name = matchedVar?.label ? `${p.name} — ${matchedVar.label}` : p.name
+    const price = matchedVar ? matchedVar.price : p.price
+    return [{ name, price, quantity }]
   })
   const message = buildOrderMessage(shop, {
     orderCode: data.order_code,
@@ -551,7 +567,7 @@ export async function createGatewayRetrySession(input: unknown): Promise<ActionR
   const parsed = createGatewayRetrySchema.safeParse(input)
   if (!parsed.success) return fail("Invalid order details.")
   if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
-  if (await limited("gateway-payment")) return fail(RATE_LIMIT_MESSAGE)
+  if (await limited("gateway-payment", parsed.data.code)) return fail(RATE_LIMIT_MESSAGE)
 
   const shop = await getStoreSettings()
   if (shop.paymentMode !== "gateway") {
@@ -576,17 +592,18 @@ export async function createGatewayRetrySession(input: unknown): Promise<ActionR
   const soft = softRpcError(data)
   if (soft) return fail(soft)
 
-  const row = data as { ok?: boolean; orderCode?: string; total?: number | string; customerName?: string; phone?: string } | null
+  const row = data as { ok?: boolean; isOwner?: boolean; orderCode?: string; total?: number | string; customerName?: string; phone?: string } | null
   if (!row?.ok || !row.orderCode) return fail("Could not find that order.")
 
+  const isOrderOwner = Boolean(user && row.isOwner === true)
   try {
     const adapter = getGatewayAdapter(shop.paymentGateway)
     const session = await adapter.createOrderSession({
       orderCode: row.orderCode,
       amountInr: Number(row.total ?? 0),
       shopName: shop.shopName,
-      customerName: row.customerName ?? "Customer",
-      customerPhone: row.phone ?? "",
+      customerName: isOrderOwner ? (row.customerName ?? "Customer") : "Customer",
+      customerPhone: isOrderOwner ? (row.phone ?? "") : "",
     })
     const { error: sessErr } = await serviceSupabase.rpc("record_gateway_session", {
       p_code: row.orderCode,
@@ -594,7 +611,12 @@ export async function createGatewayRetrySession(input: unknown): Promise<ActionR
       p_gateway_order_id: session.gatewayOrderId,
     })
     if (sessErr) throw sessErr
-    return { ok: true, data: { session } }
+    return {
+      ok: true,
+      data: {
+        session: isOrderOwner ? session : { ...session, customerName: "", customerPhone: "" },
+      },
+    }
   } catch {
     return fail("Online payment gateway is temporarily unavailable. Please try again.")
   }

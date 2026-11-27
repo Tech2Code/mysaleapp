@@ -110,7 +110,7 @@ export function ProductsPageView({ items, categories }: { items: ProductListItem
   )
 }
 
-export function TrackPageView() {
+export function TrackPageView({ preview }: { preview?: boolean } = {}) {
   return (
     <>
       <PageHeader
@@ -119,9 +119,13 @@ export function TrackPageView() {
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Track order" }]}
       />
       <Body>
-        <Suspense>
-          <TrackOrder />
-        </Suspense>
+        {preview ? (
+          <TrackOrder preview />
+        ) : (
+          <Suspense fallback={<TrackOrder preview />}>
+            <TrackOrder />
+          </Suspense>
+        )}
       </Body>
     </>
   )
@@ -131,9 +135,13 @@ export function OrderPlacedPageView({ preview }: { preview?: boolean }) {
   return (
     <section className={styles.heroBackdropSection}>
       <div className={styles.orderPlacedContainer}>
-        <Suspense>
-          <OrderPlaced preview={preview} />
-        </Suspense>
+        {preview ? (
+          <OrderPlaced preview />
+        ) : (
+          <Suspense fallback={<OrderPlaced preview />}>
+            <OrderPlaced />
+          </Suspense>
+        )}
       </div>
     </section>
   )

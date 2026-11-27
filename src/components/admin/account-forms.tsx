@@ -211,6 +211,14 @@ function EmailForm({ email }: { email: string }) {
     }
   }, [router])
 
+  useEffect(() => {
+    return () => {
+      form.reset({ email: "" })
+      setSentTo(null)
+      setCallbackBanner(null)
+    }
+  }, [form])
+
   return (
     <form
 
@@ -270,6 +278,12 @@ function PasswordForm() {
     defaultValues: { current: "", next: "", confirm: "" },
   })
   const { errors } = form.formState
+  useEffect(() => {
+    return () => {
+      form.reset({ current: "", next: "", confirm: "" })
+      setResetCount((c) => c + 1)
+    }
+  }, [form])
   const [currentVal, nextVal, confirmVal] = useWatch({ control: form.control, name: ["current", "next", "confirm"] })
   const { pending, run, later } = useSubmit<{ current: string; next: string; confirm: string }>((n, m) => form.setError(n, { message: m }))
   const canSubmitPassword = Boolean(currentVal && nextVal && confirmVal)
@@ -408,8 +422,17 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
     return () => {
       window.removeEventListener("kk-admin-pin-changed", onPinSync)
       window.removeEventListener("storage", onStorage)
+      setForm.reset({ pin: "", confirm: "" })
+      setVerifySecret("")
+      setNextPin("")
+      setConfirmNextPin("")
+      setVerifyError(null)
+      setNextPinError(null)
+      setConfirmPinError(null)
+      setShowDisableConfirm(false)
+      setPinResetCount((c) => c + 1)
     }
-  }, [])
+  }, [setForm])
 
   const isEnabled = status.mode === "enabled" && status.hasPin
 

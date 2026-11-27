@@ -31,7 +31,7 @@ import { ADDRESS_LABELS, type Address } from "@/features/addresses/types"
 import { joinCityState, STATE_OPTIONS, type IndianState } from "@/features/location/states"
 import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
-import { isOpenRequest, itemReturnWindow, requestStatusMeta, returnableQuantities, splitReturnDetails } from "@/features/orders/returns"
+import { isOpenRequest, itemReturnWindow, requestStatusMeta, returnableQuantities, returnLineKey, splitReturnDetails } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
 import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType, StatusHistoryEntry } from "@/features/orders/types"
@@ -247,32 +247,40 @@ export function RequestReturn({
   const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const allLines = useMemo(() => {
     const seen = new Set<string>()
-    return items.filter((i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0)
+    return items.filter((i) => {
+      const key = returnLineKey(i)
+      return !seen.has(key) && seen.add(key) && (left.get(key) ?? 0) > 0
+    })
   }, [items, left])
 
   const windowByProduct = useMemo(() => {
     const map = new Map<string, { until: Date | null; open: boolean; days: number }>()
     for (const i of allLines) {
+      const key = returnLineKey(i)
       if (history.length > 0) {
         const itemWin = itemReturnWindow(history, i.returnWindowDays, win.days, clientNow)
-        map.set(i.productId, { ...itemWin, open: win.open && itemWin.open })
+        map.set(key, { ...itemWin, open: win.open && itemWin.open })
       } else {
         const d = i.returnWindowDays == null ? win.days : Math.max(0, Math.trunc(Number(i.returnWindowDays)))
-        map.set(i.productId, { until: win.until ? new Date(win.until) : null, open: d > 0 && win.open, days: d })
+        map.set(key, { until: win.until ? new Date(win.until) : null, open: d > 0 && win.open, days: d })
       }
     }
     return map
   }, [allLines, history, win.days, win.open, win.until, clientNow])
 
   const lines = useMemo(
-    () => allLines.filter((i) => (windowByProduct.get(i.productId)?.open ?? win.open) && (windowByProduct.get(i.productId)?.days ?? win.days) > 0),
+    () =>
+      allLines.filter((i) => {
+        const key = returnLineKey(i)
+        return (windowByProduct.get(key)?.open ?? win.open) && (windowByProduct.get(key)?.days ?? win.days) > 0
+      }),
     [allLines, windowByProduct, win.open, win.days]
   )
 
   // Default the first returnable item to "1" until the customer explicitly edits or clears it.
-  const qtyOf = (id: string) => {
-    if (qty[id] !== undefined) return qty[id]
-    if (lines[0]?.productId === id) return "1"
+  const qtyOf = (key: string) => {
+    if (qty[key] !== undefined) return qty[key]
+    if (lines[0] && returnLineKey(lines[0]) === key) return "1"
     return ""
   }
 
@@ -304,9 +312,22 @@ export function RequestReturn({
   }
 
   const payload = lines
-    .map((i) => ({ productId: i.productId, quantity: Number(qtyOf(i.productId)) || 0 }))
+    .map((i) => ({
+      productId: i.productId,
+      ...(i.variantId ? { variantId: i.variantId } : {}),
+      quantity: Number(qtyOf(returnLineKey(i))) || 0,
+    }))
     .filter((i) => i.quantity > 0)
-  const estimate = refundLines(items, payload.map((p) => ({ ...p, name: items.find((o) => o.productId === p.productId)?.name ?? "" })))
+  const estimate = refundLines(
+    items,
+    payload.map((p) => ({
+      ...p,
+      name:
+        items.find((o) => returnLineKey(o) === returnLineKey(p))?.name ??
+        items.find((o) => o.productId === p.productId)?.name ??
+        "",
+    }))
+  )
   const refundEstimateTotal = netReturnRefund(items, payload, {
     discountAmount: charges?.discountAmount ?? 0,
     paidAmount: charges?.paidAmount,
@@ -936,14 +957,15 @@ export function RequestReturn({
                       )}
                     >
                       {allLines.map((i) => {
-                        const max = left.get(i.productId) ?? 0
-                        const itemWin = windowByProduct.get(i.productId)
+                        const key = returnLineKey(i)
+                        const max = left.get(key) ?? 0
+                        const itemWin = windowByProduct.get(key)
                         const eligible = (itemWin?.open ?? win.open) && (itemWin?.days ?? win.days) > 0
-                        const currentQty = Math.min(max, Math.max(0, Number(qtyOf(i.productId)) || 0))
+                        const currentQty = Math.min(max, Math.max(0, Number(qtyOf(key)) || 0))
                         const isChecked = eligible && currentQty > 0
                         const setItemQty = (nextNum: number) => {
                           const clamped = Math.min(max, Math.max(0, nextNum))
-                          setQty((q) => ({ ...q, [i.productId]: clamped > 0 ? String(clamped) : "0" }))
+                          setQty((q) => ({ ...q, [key]: clamped > 0 ? String(clamped) : "0" }))
                         }
                         const windowText =
                           itemWin && itemWin.days <= 0
@@ -953,10 +975,10 @@ export function RequestReturn({
                               : itemWin
                                 ? `${itemWin.days}-day return & exchange window`
                                 : `${win.days}-day return & exchange window`
-                        const itemCheckId = `return-item-${i.productId}`
+                        const itemCheckId = `return-item-${key}`
                         return (
                           <li
-                            key={i.productId}
+                            key={key}
                             className={cn(
                               styles.returnItemCard,
                               isChecked && styles.returnItemCardSelected,

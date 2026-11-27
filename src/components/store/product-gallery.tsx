@@ -93,10 +93,10 @@ export function ProductGallery({ images, name }: { images: string[]; name: strin
           <m.div
             key={safeIndex}
             custom={direction}
-            initial={{ opacity: 0, x: direction >= 0 ? 24 : -24, scale: 1.01 }}
+            initial={{ opacity: 0, x: direction >= 0 ? 28 : -28, scale: 0.96 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: direction >= 0 ? -24 : 24 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, x: direction >= 0 ? -20 : 20, scale: 0.97 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             className={styles.slideLayer}
           >
             <ProductImage

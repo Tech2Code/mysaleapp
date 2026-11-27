@@ -25,7 +25,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
-import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
@@ -65,6 +65,7 @@ import { ProductImage } from "./product-image"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { LegalQuickModal, type LegalDocTab } from "@/components/shared/cookie-banner"
+import { useStepHistory } from "@/hooks/use-step-history"
 import styles from "./checkout-form.module.css"
 
 export const LAST_ORDER_KEY = "kk-last-order"
@@ -249,6 +250,22 @@ export function CheckoutForm({
   const showBusySuccess = useBusySuccess()
   const [step, setStep] = useState<CheckoutStep>(1)
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
+  const applyStep = useCallback((next: CheckoutStep) => {
+    setStep(next)
+    setMobileSummaryOpen(false)
+    requestAnimationFrame(() => {
+      stepperTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      stepHeadingRef.current?.focus({ preventScroll: true })
+    })
+  }, [])
+  const { goToStep: moveToStep, resetHistoryDepth } = useStepHistory<CheckoutStep>({
+    pathname: "/checkout",
+    stateKey: "checkoutStep",
+    step,
+    minStep: 1,
+    maxStep: 3,
+    onStepChange: applyStep,
+  })
   const [promoOpen, setPromoOpen] = useState(false)
   const [trackedOwnerId, setTrackedOwnerId] = useState<string | null>(initialUserId)
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
@@ -316,6 +333,7 @@ export function CheckoutForm({
 
   useLayoutEffect(() => {
     return () => {
+      resetHistoryDepth()
       setStep(1)
       setMobileSummaryOpen(false)
       setPromoOpen(false)
@@ -327,7 +345,7 @@ export function CheckoutForm({
       setRedirecting(false)
       setFrozenAvailable(null)
     }
-  }, [])
+  }, [resetHistoryDepth])
 
   const form = useForm<CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -539,6 +557,7 @@ export function CheckoutForm({
     primeArea("", "", NO_STATE)
     form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     queueMicrotask(() => {
+      resetHistoryDepth()
       setStep(1)
       setMobileSummaryOpen(false)
       setPromoOpen(false)
@@ -552,7 +571,7 @@ export function CheckoutForm({
       setAppliedPromo(null)
       setPromoError(null)
     })
-  }, [authReady, signedIn, form, primeArea])
+  }, [authReady, signedIn, form, primeArea, resetHistoryDepth])
 
   // Signed-in customers: fallback if server did not preload addresses (or after sign-out/account switch)
   useEffect(() => {
@@ -621,15 +640,6 @@ export function CheckoutForm({
           note: values.note,
         }
       : values
-  }
-
-  const moveToStep = (next: CheckoutStep) => {
-    setStep(next)
-    setMobileSummaryOpen(false)
-    requestAnimationFrame(() => {
-      stepperTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-      stepHeadingRef.current?.focus({ preventScroll: true })
-    })
   }
 
   const handleContinueFromStep1 = async () => {

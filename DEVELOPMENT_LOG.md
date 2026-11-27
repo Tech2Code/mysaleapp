@@ -509,3 +509,332 @@ Chronological log of all features, UI redesigns, bug fixes, root-cause analyses,
   - `src/components/admin/email-settings-card.module.css`
   - `src/features/email/password-reset-flow.test.ts`
   - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 19:50 IST — Non-Resizable Textareas, Checkout Step-by-Step Mobile Back & Signed-In Owner UTR Update Fix
+
+- **User Prompt**:
+  1. Keep standard login redirect flow (return to the page where sign-in started, or Home `/`).
+  2. Disable manual resize handles on all multiline textboxes across the app.
+  3. Fix mobile/browser Back inside multi-step Checkout so it moves step-by-step (`3 → 2 → 1 → exit`) instead of jumping straight back to `/cart`.
+  4. Fix `"A payment reference was already submitted for this order. Sign in to your account to update it."` error appearing even for signed-in order owners.
+- **Problem / Root Cause**:
+  1. `MobileBottomNav` gated `showSignIn` on `ready`, so tapping Account before hydration routed guests to `/account/orders` → `/login?next=/account/orders`.
+  2. `:where(.textareaField)` in `src/components/ui/ui.module.css` omitted `resize: none;`, leaving browsers' default resize handle visible.
+  3. `CheckoutForm` tracked `step` purely in local React state (`useState`) without pushing browser history states or handling `popstate`, so mobile Back exited `/checkout` immediately.
+  4. Migration `0061` added an unconditional `if v_order.payment_status = 'submitted' then raise exception 'ALREADY_SUBMITTED'` check in `public.submit_payment`, blocking even the signed-in account owner from correcting a submitted UTR.
+- **Solution / Fix**:
+  - Updated `MobileBottomNav` (`src/components/store/mobile-bottom-nav.tsx`) to compute `showSignIn` without waiting on `ready` so guests always use `loginHref` (standard flow).
+  - Added `resize: none;` to `:where(.textareaField)` in `src/components/ui/ui.module.css`.
+  - Wired `window.history.pushState` + `popstate` + `window.history.go(delta)` in `CheckoutForm` (`src/components/store/checkout-form.tsx`) so mobile hardware/swipe Back and in-app Back buttons step cleanly `3 → 2 → 1 → previous page`.
+  - Created and pushed migration `0072_allow_owner_update_submitted_utr.sql` updating `public.submit_payment` so the signed-in owner (`v_order.user_id is not null and auth.uid() = v_order.user_id`) can update a `submitted` UTR before verification while guests remain blocked with `ALREADY_SUBMITTED`.
+- **Files Modified**:
+  - `src/components/store/mobile-bottom-nav.tsx`
+  - `src/components/ui/ui.module.css`
+  - `src/components/store/checkout-form.tsx`
+  - `supabase/migrations/0072_allow_owner_update_submitted_utr.sql`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 20:06 IST — Option A Out-of-Stock Variant Matrix UX & Reusable `useStepHistory` Mobile Back Hook
+
+- **User Prompt**:
+  1. Implement Option A (Myntra/Nike/Shopify gold standard) for out-of-stock and non-existent product variant combinations (`Size × Color`).
+  2. Standardize step-by-step mobile hardware/swipe Back across the app and persist it as a permanent global rule for all future modules.
+- **Problem / Root Cause**:
+  1. In `ProductActions`, non-existent variant combinations (e.g., `M / Black` not created while `S / Black` is in stock) appeared identical to in-stock pills and silently jumped `Size` without explanation, while selected out-of-stock pills (`stock === 0`) looked faded (`opacity: 0.6`) with no header "Out of stock" badge.
+  2. Multi-step modals already used `<Dialog onBackStep={...}>`, whereas full-page multi-step flows needed a shared reusable history hook and a permanent global engineering rule.
+- **Solution / Fix**:
+  - Updated [product-actions.tsx](file:///d:/nextApps/mysaleapp/src/components/store/product-actions.tsx) & [product-actions.module.css](file:///d:/nextApps/mysaleapp/src/components/store/product-actions.module.css) with 3 crisp variant pill states: In Stock, Out of Stock (clickable + dashed strikethrough + full-opacity `variantPillSelectedOos` + red header `Out of stock` badge + WhatsApp **Notify Me**), and Non-Existent Combo (upfront muted dashed `variantPillUnavailable` + smooth switch to nearest available option with clear info toast).
+  - Extracted reusable [use-step-history.ts](file:///d:/nextApps/mysaleapp/src/hooks/use-step-history.ts) hook and wired [checkout-form.tsx](file:///d:/nextApps/mysaleapp/src/components/store/checkout-form.tsx) to use it.
+  - Persisted the mandatory step-by-step Mobile Back rule in global `C:\Users\User\.gemini\config\GEMINI.md` and project [CLAUDE.md](file:///d:/nextApps/mysaleapp/CLAUDE.md).
+  - Extended [ux-flows-audit.test.ts](file:///d:/nextApps/mysaleapp/src/features/orders/ux-flows-audit.test.ts) to verify `useStepHistory` and Option A variant matrix states.
+- **Files Modified**:
+  - `src/components/store/product-actions.tsx`
+  - `src/components/store/product-actions.module.css`
+  - `src/hooks/use-step-history.ts`
+  - `src/components/store/checkout-form.tsx`
+  - `src/features/orders/ux-flows-audit.test.ts`
+  - `CLAUDE.md`
+  - `DEVELOPMENT_LOG.md`
+  - `C:\Users\User\.gemini\config\GEMINI.md` (global rule)
+
+
+---
+
+### 2026-11-27 20:12 IST — Final Deep Audit of Today's Changes & Variant-Level Back-in-Stock Alert Fix (`0073`)
+
+- **User Prompt**: Deep audit of all work completed today to catch and fix any remaining bugs before sign-off.
+- **Problem / Root Cause**:
+  1. **Critical Variant Notify-Me Bug**: `subscribe_stock_alert` (`0068_back_in_stock.sql`) checked `products.stock > 0` instead of the selected variant's stock. When a customer clicked an out-of-stock variant (e.g. `M / Black`, `stock = 0`) on a product where another variant (`S / Black`, `stock = 5`) was in stock and submitted **Notify me on WhatsApp**, the RPC falsely rejected it with `ALREADY_IN_STOCK`. Additionally, localStorage saved only `product.id`, conflating alerts across different variants of the same product.
+  2. **Flat Variant OOS Styling**: The single-axis variant picker fallback in `product-actions.tsx` still applied `variantPillOos` over `variantPillSelected` instead of `variantPillSelectedOos`.
+  3. **Checkout Unmount Cleanup**: `CheckoutForm`'s `useLayoutEffect` cleanup reset `step` to `1` without resetting `useStepHistory`'s `pushedStepsRef`.
+- **Solution / Fix**:
+  - Created and pushed migration [0073_variant_stock_alerts.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0073_variant_stock_alerts.sql) adding `variant_id` & `variant_label` to `public.stock_alerts` and updating `subscribe_stock_alert` to validate variant stock when `p_variant_id` is provided.
+  - Updated `stockAlertSchema` ([schema.ts](file:///d:/nextApps/mysaleapp/src/features/products/schema.ts)), `subscribeStockAlert` ([actions.ts](file:///d:/nextApps/mysaleapp/src/features/products/actions.ts)), and `ProductActions` ([product-actions.tsx](file:///d:/nextApps/mysaleapp/src/components/store/product-actions.tsx)) to pass `variantId`, key local alert state per `productId:variantId`, and apply `variantPillSelectedOos` on flat variants too.
+  - Added `resetHistoryDepth()` to `CheckoutForm`'s unmount cleanup ([checkout-form.tsx](file:///d:/nextApps/mysaleapp/src/components/store/checkout-form.tsx)).
+  - Added migration `0073` test coverage in [ux-flows-audit.test.ts](file:///d:/nextApps/mysaleapp/src/features/orders/ux-flows-audit.test.ts).
+- **Files Modified**:
+  - `supabase/migrations/0073_variant_stock_alerts.sql`
+  - `src/features/products/schema.ts`
+  - `src/features/products/actions.ts`
+  - `src/components/store/product-actions.tsx`
+  - `src/components/store/checkout-form.tsx`
+  - `src/features/orders/ux-flows-audit.test.ts`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 20:19 IST — Full-Day Audit Fix: Admin Variant Back-in-Stock Stock Resolution & Display
+
+- **User Prompt**: Deep audit across all commits from today (`4b26ba3`, `349debd`) and current uncommitted changes.
+- **Problem / Root Cause**:
+  - `listStockAlerts()` in `src/features/products/admin-queries.ts` only read parent `products.stock`, ignoring `stock_alerts.variant_id` / `variant_label` added in migration `0073`. As a result, Admin → Products falsely marked an out-of-stock variant alert (e.g. `M / Black`, `stock = 0`) as *"Ready to notify"* whenever another variant of the same product had stock, and omitted the variant label from both the admin card and the WhatsApp notification message.
+- **Solution / Fix**:
+  - Added `variantId` and `variantLabel` to `StockAlert` ([types.ts](file:///d:/nextApps/mysaleapp/src/features/products/types.ts)).
+  - Updated `listStockAlerts()` ([admin-queries.ts](file:///d:/nextApps/mysaleapp/src/features/products/admin-queries.ts)) to select `variant_id`, `variant_label`, and `product.variants`, resolving `productStock` against the specific variant when `variant_id` is set.
+  - Updated `ProductsView` ([products-view.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/products-view.tsx)) to display the variant badge next to the product name and include `(${a.variantLabel})` in the WhatsApp restock message.
+- **Files Modified**:
+  - `src/features/products/types.ts`
+  - `src/features/products/admin-queries.ts`
+  - `src/components/admin/products-view.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 20:40 IST — Full-Repository Deep Audit Hardening (Option 2: Fixes #1–#14 + Migration 0074)
+
+- **User Prompt**: `"kaya ek baar abhi tak ke sabhi commits ke uper deep audit chala kar dekha sakte ho."` → `"option 2"` (fix all Critical + High + Medium findings #1–#14).
+- **Problems / Root Causes**:
+  1. **Per-variant JSONB stock desync**: `restock_cancelled_order()`, `admin_reset_data()`, and `record_order_return()` only updated aggregate `products.stock` and never restored/deducted per-variant stock in `products.variants`.
+  2. **Non-variant `variantId` bypass**: `create_order()` allowed a non-null `variantId` on single-SKU products to pass `line_ok`.
+  3. **Admin PIN `updated_at` bypass**: `set_admin_pin()`, `disable_admin_pin()`, and `clear_admin_pin_lock()` accepted `auth.users.updated_at > now() - 120s` as fresh auth instead of requiring `last_sign_in_at`.
+  4. **Multi-variant return overpayment**: `record_order_return()`, `return_items_value()`, and `refund.ts` priced returns via `MAX(price)` per `productId` instead of matching `variantId`.
+  5. **Stale storefront catalog cache**: `deleteProduct`, `toggleProductFlag`, `saveCategory`, and `deleteCategory` called `refreshReviews()` instead of `refreshCatalogue()`.
+  6. **Gateway retry guest throttling & PII**: `get_order_for_gateway()` skipped `find_order_for_guest()` 5-strike lockout, and `createGatewayRetrySession()` returned customer PII to unauthenticated guests and rate-limited without order code keying.
+  7. **Blank `/track` & `/order-placed` skeletons + a11y + iOS zoom**: `useSearchParams()` suspended inside bare `<Suspense>` on preview loading; per-row inputs in `variant-matrix-modal.tsx` and quick-jump search in `admin-sidebar.tsx` lacked explicit labels; mobile inputs `< 16px` triggered iOS Safari zoom.
+  8. **`subscribe_stock_alert` hardening**: Lacked DB-level rate limit and allowed overwriting a guest row's `user_id`/`customer_name`.
+  9. **`is_admin_email` anon enumeration**: Callable directly by `anon` without `p_server_secret`.
+  10. **`record_order_return` return value**: Returned single-return `v_this_refund` instead of cumulative `v_new_ref`.
+  11. **Variant WhatsApp summary**: `placeOrder` and `createGatewayCheckoutSession` merged cart lines by `productId` only, dropping variant labels and variant prices.
+  12. **Variant `restocked_at` badge**: `updateProduct` only stamped `restocked_at` when aggregate `products.stock` moved from `0 -> >0`, missing per-variant restocks.
+  13. **Next.js 16 `<Activity>` state persistence**: Password/PIN/Email forms kept typed secrets across route hides, and `TrackOrderBody` did not re-sync `codeSuffix` on `<Activity>` restore.
+  14. **Mobile touch targets `< 44px`**: Return wizard steppers/chips, search dialog chips/back button, PWA dismiss button, and variant matrix controls were under `44px` on small screens.
+- **Solution / Fix**:
+  - Created and pushed migration [0074_full_audit_hardening.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0074_full_audit_hardening.sql) fixing #1, #2, #3, #4, #6, #8, #9, and #10 atomically in PostgreSQL.
+  - Updated [products/actions.ts](file:///d:/nextApps/mysaleapp/src/features/products/actions.ts) (#5, #12), [orders/actions.ts](file:///d:/nextApps/mysaleapp/src/features/orders/actions.ts) (#6, #11), [auth/account-actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/account-actions.ts) (#9), and [orders/refund.ts](file:///d:/nextApps/mysaleapp/src/features/orders/refund.ts) (#4).
+  - Updated [page-views.tsx](file:///d:/nextApps/mysaleapp/src/components/store/page-views.tsx), [track-order.tsx](file:///d:/nextApps/mysaleapp/src/components/store/track-order.tsx), [order-placed.tsx](file:///d:/nextApps/mysaleapp/src/components/store/order-placed.tsx), [track/loading.tsx](file:///d:/nextApps/mysaleapp/src/app/(store)/track/loading.tsx), [variant-matrix-modal.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/variant-matrix-modal.tsx), [admin-sidebar.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/admin-sidebar.tsx), [profile-form.tsx](file:///d:/nextApps/mysaleapp/src/components/account/profile-form.tsx), [account-forms.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/account-forms.tsx), and the 4 mobile CSS modules (#7a, #7b, #13, #14).
+  - Added 6 regression tests in [ux-flows-audit.test.ts](file:///d:/nextApps/mysaleapp/src/features/orders/ux-flows-audit.test.ts) and synced [CLAUDE.md](file:///d:/nextApps/mysaleapp/CLAUDE.md) and [README.md](file:///d:/nextApps/mysaleapp/README.md).
+- **Files Modified**:
+  - `supabase/migrations/0074_full_audit_hardening.sql`
+  - `src/features/products/actions.ts`, `src/features/orders/actions.ts`, `src/features/orders/refund.ts`, `src/features/auth/account-actions.ts`
+  - `src/components/store/page-views.tsx`, `src/components/store/track-order.tsx`, `src/components/store/order-placed.tsx`, `src/app/(store)/track/loading.tsx`
+  - `src/components/admin/variant-matrix-modal.tsx`, `src/components/admin/variant-matrix-modal.module.css`, `src/components/admin/admin-sidebar.tsx`, `src/components/admin/account-forms.tsx`
+  - `src/components/account/profile-form.tsx`
+  - `src/components/store/request-return.module.css`, `src/components/store/search-dialog.module.css`, `src/components/store/store-widgets.module.css`
+  - `src/features/orders/ux-flows-audit.test.ts`, `CLAUDE.md`, `README.md`, `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 20:58 IST — Full-Repo Commit-1-to-Today Verification Audit Fixes (Option A: #1–#12 + Migration 0075)
+
+- **User Prompt**: `"abhi tak ke commit se mera matlab tha app ke first commit se leke, aaj ke last commit and abhi ke changes ko bhi deep audit karna h, abhi ke 1-14 fixes me bhi check kar lena koe bug ya gap reh to nahi gaya h?"` → `"option A"`
+- **Problems / Root Causes**:
+  1. **Return/Exchange `variantId` drop**: Upstream UI (`request-return.tsx`, `create-return-request.tsx`, `return-order.tsx`, `return-status-control.tsx`), `returnableQuantities`, Zod schemas (`requestReturnSchema`, `returnSchema`, `createRequestSchema`), and SQL RPCs (`request_return`, `admin_create_return_request`, `record_order_return` `NOT_IN_REQUEST` check) dropped `variantId` and deduplicated by `productId` only.
+  2. **`is_admin_email` fail-open**: When `server_rpc_secret_hash` was `NULL`, `0074` accepted any 16+ char string, and `account-actions.ts` failed open on `isAdminErr`.
+  3. **Password reset session revocation**: `consume_password_reset_token()` updated `auth.users.encrypted_password` without revoking `auth.sessions` / `auth.refresh_tokens`.
+  4. **Missing table-level `REVOKE`s**: Post-0061 tables (`password_reset_tokens`, `email_settings`, `stock_alerts`) lacked explicit `REVOKE` statements.
+  5. **Gateway retry PII gate**: `createGatewayRetrySession()` gated `customerName`/`customerPhone` on `Boolean(user)` instead of `row.isOwner === true`.
+  6. **Variant-less cart adds**: Wishlist restock banner (`wishlist-view.tsx`) and Product Reviews page (`product-actions.tsx`) added variant-enabled products without a `variantId`.
+  7. **Admin Quick Jump navigation race**: `<button>` + `router.push()` raced with `useOverlayHistory` `window.history.back()` in `dialog.tsx`.
+  8. **Legacy admin reset PIN unlock**: `resetAdminPassword()` legacy recovery branch called `clear_admin_pin_lock()` without refreshing `last_sign_in_at`.
+  9. **Stale `variantId` in `useLiveCart`**: `resolveLiveLine` retained `item.variantId` when admin removed all variants from a product.
+  10. **Razorpay verification**: Accepted uncaptured `"authorized"` payments as paid and omitted webhook `currency === "INR"` check.
+  11. **`subscribeStockAlert`**: Did not map `TOO_MANY_ATTEMPTS` to `RATE_LIMIT_MESSAGE`.
+  12. **Sign-out cookie cleanup**: `signOutCustomer`, `signOutAdmin`, and `deactivateMyAccount` did not clear all 5 app auth cookies (`kk_recovery_intent`, cross-scope reset/PIN cookies).
+- **Solution / Fix**:
+  - Created and pushed migration [0075_return_variants_and_security_hardening.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0075_return_variants_and_security_hardening.sql).
+  - Wired `returnLineKey` and `variantId` end-to-end across [returns.ts](file:///d:/nextApps/mysaleapp/src/features/orders/returns.ts), [types.ts](file:///d:/nextApps/mysaleapp/src/features/orders/types.ts), [schema.ts](file:///d:/nextApps/mysaleapp/src/features/orders/schema.ts), [refund.ts](file:///d:/nextApps/mysaleapp/src/features/orders/refund.ts), [admin-actions.ts](file:///d:/nextApps/mysaleapp/src/features/orders/admin-actions.ts), [request-return.tsx](file:///d:/nextApps/mysaleapp/src/components/store/request-return.tsx), [create-return-request.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/create-return-request.tsx), [return-order.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/return-order.tsx), and [return-status-control.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/return-status-control.tsx).
+  - Fixed [account-actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/account-actions.ts), [orders/actions.ts](file:///d:/nextApps/mysaleapp/src/features/orders/actions.ts), [wishlist-view.tsx](file:///d:/nextApps/mysaleapp/src/components/store/wishlist-view.tsx), [product-actions.tsx](file:///d:/nextApps/mysaleapp/src/components/store/product-actions.tsx), [admin-sidebar.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/admin-sidebar.tsx), [live-cart.ts](file:///d:/nextApps/mysaleapp/src/components/store/live-cart.ts), [payment-gateway.ts](file:///d:/nextApps/mysaleapp/src/features/orders/payment-gateway.ts), [products/actions.ts](file:///d:/nextApps/mysaleapp/src/features/products/actions.ts), [auth/actions.ts](file:///d:/nextApps/mysaleapp/src/features/auth/actions.ts), and [account/actions.ts](file:///d:/nextApps/mysaleapp/src/features/account/actions.ts).
+  - Added 4 new regression tests in [ux-flows-audit.test.ts](file:///d:/nextApps/mysaleapp/src/features/orders/ux-flows-audit.test.ts) and synced [CLAUDE.md](file:///d:/nextApps/mysaleapp/CLAUDE.md) & [README.md](file:///d:/nextApps/mysaleapp/README.md).
+- **Files Modified**:
+  - `supabase/migrations/0075_return_variants_and_security_hardening.sql`
+  - `src/features/orders/{types.ts,returns.ts,schema.ts,refund.ts,actions.ts,admin-actions.ts,payment-gateway.ts,ux-flows-audit.test.ts}`
+  - `src/components/store/{request-return.tsx,wishlist-view.tsx,product-actions.tsx,live-cart.ts}`
+  - `src/components/admin/{create-return-request.tsx,return-order.tsx,return-status-control.tsx,admin-sidebar.tsx}`
+  - `src/features/auth/{account-actions.ts,actions.ts}`, `src/features/account/actions.ts`, `src/features/products/actions.ts`
+  - `CLAUDE.md`, `README.md`, `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:08 IST — Apply All 10 Premium UI Animation Principles (Squash & Stretch, Anticipation, Focus Staging, Pose-to-Pose, Follow-Through, Slow In/Out, Arcs, Secondary Action, Snappy Timing & Exaggerated Feedback)
+
+- **User Prompt**: `"is video ke hisab se jo jo ui me chizee bata raki h vo proper tarike se apply kar ke ui me test bhi kar le na , then batana"` (Instagram Reel showcasing 10 Disney-inspired premium UI animation principles).
+- **Problem / Root Cause**:
+  - Storefront micro-interactions used basic linear/standard transitions without expressive physical feedback on Add-to-Cart, Wishlist toggles, Cart Drawer item reveals, Product Grid focus, CTA arrows, or Carousel paging.
+- **Solution / Changes Made**:
+  1. **Motion & Physics Tokens (`src/styles/theme-store.css`)**: Added `--ease-smooth`, `--ease-snappy`, `--ease-spring-fallback`, and `linear()` physics-based `--ease-spring-physics` tokens (light & dark storefront themes).
+  2. **Squash & Stretch (#1)**: Added `addToCartSquash` / `quickAddSquash` keyframes and temporary `"Added to cart"` / checkmark morph states on `ProductActions` (desktop + mobile sticky buy bar) and `ProductCard` quick-add buttons.
+  3. **Anticipation / Wind-Up (#2)**: Added `arrowAnticipate` / `ctaArrowAnticipate` pull-back-before-launch arrow hover animations on `Hero` primary CTA, `CartDrawer` Checkout CTA, and `CartView` Proceed CTA, plus subtle tactile press squash on `.btnBase:active`.
+  4. **Staging the Focus (#3)**: Added desktop pointer-only (`@media (hover: hover) and (pointer: fine)`) `:has()` focus staging on `.productGrid`, `.browserGrid`, and product carousels so hovered cards elevate while sibling cards subtly recede.
+  5. **Pose-to-Pose (#4)**: Refined `ProductGallery` slide transitions to deliberate 3-pose keyframes (`scale` + directional `x`) and upgraded `uiDialogZoomIn` to a 3-pose settled modal entrance.
+  6. **Follow-Through (#5)**: Added staggered spring follow-through on `CartDrawer` `DrawerItem` rows (`index * 0.045s` delay) and delayed spring entrance on `drawerFooter`.
+  7. **Slow In, Slow Out (#6)**: Upgraded `Carousel` arrow & pagination-dot scrolling to a `requestAnimationFrame` cubic ease-in-out glide (auto-cancels on manual wheel/touch and respects `prefers-reduced-motion`).
+  8. **Moving in Arcs (#7)**: Implemented `triggerFlyToCart()` in `src/store/cart.ts` using Web Animations API with a 12-step quadratic Bezier parabolic arc from the clicked Add-to-Cart / quick-add button to the visible `[data-cart-target="true"]` icon (Header desktop/mobile shortcut or Mobile Bottom Nav).
+  9. **Secondary Action (#8)**: Wired `kk-cart-arc-landed` listener in `Header` and `MobileBottomNav` to trigger a spring icon bump (`cartBumpPop` / `navCartBump`) when items land in the cart, plus `qtyReadoutPop` micro-bounce on `QuantityStepper` value changes.
+  10. **Snappy Timing (#9)**: Tightened `Tabs` (`uiTabPanelSnap`, 140ms triggers), `Header` dropdown & nav beam (`stiffness: 520`), and `ProductBrowser` category chips (`stiffness: 540`) & sort pills (`140ms`) to crisp, responsive timing.
+  11. **Exaggerated Feedback (#10)**: Upgraded `WishlistButton` with a multi-keyframe spring heart overshoot + expanding ring burst (`.heartBurstRing`) + 6 radiating sparkle particles (`.heartSparkleDot`).
+  - **Verification**: `npx tsc --noEmit` (0 errors), `npm run lint` (0 errors), `npm test` (33 files / 880 tests passed), and live headless Chrome CDP verification across Desktop (`1440×900`) and Mobile (`390×844`) confirming 0 console/runtime errors and live execution of all animations.
+- **Files Modified**:
+  - `src/styles/theme-store.css`
+  - `src/store/cart.ts`
+  - `src/components/ui/ui.module.css`
+  - `src/components/store/wishlist-button.tsx`
+  - `src/components/store/product-card.tsx`, `src/components/store/product-card.module.css`
+  - `src/components/store/product-actions.tsx`, `src/components/store/product-actions.module.css`
+  - `src/components/store/product-browser.tsx`, `src/components/store/product-browser.module.css`
+  - `src/components/store/product-gallery.tsx`
+  - `src/components/store/cart-drawer.tsx`, `src/components/store/cart.module.css`
+  - `src/components/store/hero.module.css`
+  - `src/components/shared/carousel.tsx`
+  - `src/components/store/header.tsx`, `src/components/store/header.module.css`
+  - `src/components/store/mobile-bottom-nav.tsx`, `src/components/store/mobile-bottom-nav.module.css`
+  - `src/components/store/quantity-stepper.tsx`, `src/components/store/store-widgets.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:16 IST — Re-Audit Fixes for UI Animations (Wishlist Double-Pop, Sparkle Clipping, Desktop Quick-Add Specificity & Stepper `aria-live`)
+
+- **User Prompt**: `"reaudit kar ke deh lo, sab sahi kaam kar raha h na."`
+- **Problem / Root Cause**:
+  1. `WishlistButton` reset `burstKey` to `0` after 650ms while `<m.span>` used `key={on-${burstKey}}`, causing the heart spring pop to replay a second time 650ms after clicking (and play on initial mount for already-wishlisted items).
+  2. `heartSparkleFly` (`-22px`) and `heartRingBurst` (`scale(1.85)`) could clip against `.mediaFrame { overflow: hidden }` at the top-right corner of product cards.
+  3. On desktop (`>= 768px and pointer: fine`), `.productCard:hover .quickAddBtn` came after `.mediaFrame .quickAddBtn:hover` with equal specificity, overriding the hover `scale(1.1)` and `:active` squash.
+  4. `QuantityStepper` placed `key={value}` directly on the `aria-live="polite"` readout span, which remounted the live region on every click and animated on initial page load.
+- **Solution / Fix**:
+  - Split `showBurst` and monotonic `popCount` in `src/components/store/wishlist-button.tsx` with `initial={popCount > 0 && active ? ... : false}` so the heart pops once per user click and never replays on timeout or mount.
+  - Tuned `heartSparkleFly` (`-18px`) and `heartRingBurst` (`scale(1.55)`) in `src/components/store/product-card.module.css` so all 6 sparkles stay unclipped inside `mediaFrame`, and added explicit `.productCard:hover .quickAddBtn:hover` / `:active` rules inside the desktop pointer media query.
+  - Kept the `aria-live="polite"` span stable in `src/components/store/quantity-stepper.tsx` and applied `qtyValuePop` to an inner span only after user interaction (`popTick > 0`).
+  - Re-verified with `tsc --noEmit`, `npm run lint`, `npm test` (880/880 passed), and live headless Chrome audit (0 console/runtime errors across Desktop & Mobile).
+- **Files Modified**:
+  - `src/components/store/wishlist-button.tsx`
+  - `src/components/store/product-card.module.css`
+  - `src/components/store/quantity-stepper.tsx`
+  - `src/components/store/store-widgets.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:20 IST — Add Diagonal Cross-Line on Out-of-Stock & Unavailable Variant Pills
+
+- **User Prompt**: `"jo varient ya size etc stock me nahi h usme ek beech se cross jesa kuch laga do taki usual ui me rahe ki ha ye stock me nahi h."`
+- **Problem / Root Cause**: Out-of-stock variant pills only used a dashed border and text strikethrough, which was subtler than the standard e-commerce diagonal slash across the chip.
+- **Solution / Fix**: Added a responsive corner-to-corner diagonal slash (`linear-gradient(to top right, ...)`) across `.variantPillOos`, `.variantPillUnavailable`, and `.variantPillSelectedOos` in [product-actions.module.css](file:///d:/nextApps/mysaleapp/src/components/store/product-actions.module.css) (adapts to any pill width/height, works cleanly in light & dark mode, and keeps pills clickable for Option A Notify Me).
+- **Files Modified**:
+  - `src/components/store/product-actions.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:22 IST — Second Forensic Re-Audit Fixes (Carousel Snap Restore, Carousel Top-Edge Clip Prevention, Physics `linear()` Spring Activation & Arc Image Fallback)
+
+- **User Prompt**: `"dubara reaudit karo"`
+- **Problem / Root Cause**:
+  1. In `Carousel`, cancelling a smooth scroll mid-flight via wheel/touch (`cancelScrollAnim`) stopped `requestAnimationFrame` without clearing the temporary inline `scrollSnapType = "none"` and `scrollBehavior = "auto"` styles, leaving scroll-snap disabled until another arrow click completed.
+  2. Hover focus staging lifted product cards by `translateY(-6px) scale(1.016)` (~`8.5px` upward), slightly exceeding `.carouselTrack`'s `8px` top padding and clipping the top card edge inside horizontal carousels.
+  3. `--ease-spring-physics` (`linear(...)`) was defined in `theme-store.css` but not wired via `@supports (transition-timing-function: linear(0, 1))`.
+  4. `triggerFlyToCart` did not attach an `onerror` handler to the temporary flying thumbnail `<img>`.
+- **Solution / Fix**:
+  - Updated `cancelScrollAnim` in `src/components/shared/carousel.tsx` to always reset `scrollSnapType` and `scrollBehavior` inline styles.
+  - Tuned hover focus lift to `translateY(-4px) scale(1.012)` in `src/components/store/product-card.module.css` and `src/components/store/product-browser.module.css` so hovered cards stay inside `.carouselTrack` padding with zero clipping.
+  - Wired `@supports (transition-timing-function: linear(0, 1))` using `--ease-spring-physics` with `--ease-spring-fallback` on `.wishlistTrigger` in `src/components/store/product-card.module.css`.
+  - Added `img.onerror = () => img.remove()` in `triggerFlyToCart` (`src/store/cart.ts`).
+  - Re-verified with `tsc --noEmit` (0 errors), `npm run lint` (0 errors), `npm test` (33/33 files, 880/880 passed), and live headless Chrome audit (0 console/runtime errors across Desktop & Mobile).
+- **Files Modified**:
+  - `src/components/shared/carousel.tsx`
+  - `src/components/store/product-card.module.css`
+  - `src/components/store/product-browser.module.css`
+  - `src/store/cart.ts`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:26 IST — Fix Delayed Wishlist Add/Remove Toast for Signed-In Users
+
+- **User Prompt**: `"whishlist me ad karne pe or remove karne pe toast bhot late aata h ? sa kue ye to sahi kaam kar raha tha?"`
+- **Problem / Root Cause**:
+  - In `src/hooks/use-wishlist-toggle.ts`, guest users received an instant `toast.success(...)`, whereas signed-in users updated the heart optimistically (`setOn`) but waited for `await setWishlisted(productId, next)` (Supabase auth + DB upsert/delete + `revalidatePath("/wishlist")`) before showing `toast.success(...)` — causing a 600ms–1.5s delay after the heart animation finished.
+  - Additionally, `WishlistButton` could trigger burst animation while `pending === true`.
+- **Solution / Fix**:
+  - Fired `toast.success(...)` optimistically right alongside `setOn(productId, next)` using a stable `id: wishlist-${productId}` so rapid toggles replace cleanly instead of stacking; if the background `setWishlisted` server action fails, state rolls back and the same toast ID updates to `toast.error(...)`.
+  - Guarded `WishlistButton`'s `onClick` with `if (pending) return` so burst animations never fire while a request is in flight.
+- **Files Modified**:
+  - `src/hooks/use-wishlist-toggle.ts`
+  - `src/components/store/wishlist-button.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:29 IST — Fix Clipped Checkout Quantity Bubbles (`.miniQtyBubble` & `.qtyBubble`)
+
+- **User Prompt**: `"class=\"checkout-form-module__4OxTVq__miniQtyBubble\" text to kat hi raha h?"`
+- **Problem / Root Cause**:
+  - `.miniThumbWrap` and `.lineThumbWrap` in `src/components/store/checkout-form.module.css` use `overflow: hidden` to clip product images to rounded corners, while `.miniQtyBubble` (`top: -3px; right: -3px; width: 17px`) and `.qtyBubble` (`top: -4px; right: -4px; width: 20px`) were positioned outside the clipped box with fixed width and no `line-height: 1`, slicing off the badge corner and text.
+- **Solution / Fix**:
+  - Repositioned both `.miniQtyBubble` and `.qtyBubble` cleanly inside the thumbnail frame (`top: 2px; right: 2px; z-index: 2`), switched to `min-width` + horizontal padding (`padding: 0 4px` / `0 5px`), added `line-height: 1`, `font-variant-numeric: tabular-nums`, and a crisp `1.5px` card ring shadow so 1-digit and 2-digit quantities render fully unclipped.
+- **Files Modified**:
+  - `src/components/store/checkout-form.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:33 IST — Remove Sibling Product Card Dimming on Hover
+
+- **User Prompt**: `"ek cheez annowing lag rahi h, ki ek card pe hover kar ta hu to baaki thodi dull si ho jati h esa kue?"`
+- **Problem / Root Cause**:
+  - Video animation #3 ("Staging the focus") applied `opacity: 0.76; transform: scale(0.988)` to non-hovered sibling product cards in `.productGrid`, `.browserGrid`, and carousels, which felt distracting while scanning products.
+- **Solution / Fix**:
+  - Removed the `:has(...:hover) ...:not(:hover)` sibling-dimming rules from `src/components/store/product-card.module.css` and `src/components/store/product-browser.module.css` while preserving the clean individual card hover lift, shadow elevation, image zoom, and quick-add reveal.
+- **Files Modified**:
+  - `src/components/store/product-card.module.css`
+  - `src/components/store/product-browser.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-27 21:46 IST — Delay Cart Drawer Until Arc Lands + Add Wishlist Parabolic Fly-In / Reverse Fly-Out Arcs
+
+- **User Prompt**: `"ek kaam karo to turant na khalo, jisse ki Moving in Arcs fly karta dikhe, or yasi same animation fly vala wishlist vale me la do or remove karne pe bhi."`
+- **Problem / Root Cause**:
+  - Calling `useCart.add(...)` opened the Cart Drawer immediately at `t = 0ms`, obscuring the header/bottom-nav cart icon while the product thumbnail was still flying along its parabolic arc.
+  - Wishlist add/remove did not have the matching parabolic arc animation to/from the Header / Mobile Bottom Nav Wishlist icon, and `--ease-smooth` in `theme-store.css` was unused after removing sibling dimming.
+- **Solution / Changes Made**:
+  1. Added optional `{ openDrawer?: boolean }` parameter (default `true`) to `useCart.add` in `src/store/cart.ts`, and refactored the parabolic Bezier flyer into a shared `flyParabolicArc` helper powering both `triggerFlyToCart(el, img, onLand)` and `triggerFlyWishlist(el, "add" | "remove", img)`.
+  2. Updated `ProductCard`, `ProductActions`, and `WishlistView` to add items immediately with `{ openDrawer: false }`, fly the thumbnail along the unobstructed parabolic arc (`480ms`), bump the Cart icon (`kk-cart-arc-landed`), and open the Cart Drawer right after landing (`+90ms` beat; instant under `prefers-reduced-motion`).
+  3. Wired `triggerFlyWishlist` into `WishlistButton` (passing `productImage` from `ProductCard` and `ProductActions`) so adding flies the product thumbnail up into `[data-wishlist-target="true"]` and bumps the Wishlist icon (`kk-wishlist-arc-landed`), while removing triggers a reverse parabolic arc flying back out from the Wishlist icon to the clicked heart button.
+  4. Added `data-wishlist-target="true"` and `kk-wishlist-arc-landed` bump feedback in `Header` (desktop + mobile shortcuts) and `MobileBottomNav`.
+  5. Cleaned up unused `--ease-smooth` token from `src/styles/theme-store.css` and unused `opacity` transition from `.productCard`.
+- **Files Modified**:
+  - `src/store/cart.ts`
+  - `src/components/store/wishlist-button.tsx`, `src/components/store/wishlist-view.tsx`
+  - `src/components/store/product-card.tsx`, `src/components/store/product-card.module.css`
+  - `src/components/store/product-actions.tsx`
+  - `src/components/store/header.tsx`, `src/components/store/mobile-bottom-nav.tsx`
+  - `src/styles/theme-store.css`
+  - `DEVELOPMENT_LOG.md`

@@ -1,8 +1,11 @@
 /* Section: Product Buy & Add-to-Cart Actions */
+@keyframes addToCartSquash { 0% { transform: scale(1, 1); } 22% { transform: scale(1.06, 0.87); } 52% { transform: scale(0.96, 1.05); } 78% { transform: scale(1.02, 0.99); } 100% { transform: scale(1, 1); } }
 .actionsStack { display: flex; flex-direction: column; gap: 12px; }
 .actionsStack .variantPickerBlock { display: flex; flex-direction: column; gap: 12px; border-radius: 14px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 35%, var(--card)); padding: 14px; }
 .variantPickerBlock .variantPriceTopRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-bottom: 10px; }
-.variantPriceTopRow .variantSelectedSummaryPill { border-radius: 9999px; background-color: var(--card); border: 1px solid var(--border); padding: 2px 10px; font-size: 11.5px; font-weight: 600; color: var(--foreground); }
+.variantPriceTopRow .variantSummaryPills { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.variantSummaryPills .variantSelectedSummaryPill { border-radius: 9999px; background-color: var(--card); border: 1px solid var(--border); padding: 2px 10px; font-size: 11.5px; font-weight: 600; color: var(--foreground); }
+.variantSummaryPills .variantHeaderOosBadge { border-radius: 9999px; background-color: color-mix(in oklab, var(--destructive) 12%, transparent); border: 1px solid color-mix(in oklab, var(--destructive) 30%, transparent); padding: 2px 9px; font-size: 11px; font-weight: 700; color: var(--destructive); }
 .variantPickerBlock .variantAxisGroup { display: flex; flex-direction: column; gap: 8px; }
 .variantPickerBlock .variantPickerHeader { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .variantPickerLabel { font-size: 13px; color: var(--muted-foreground); }
@@ -11,13 +14,15 @@
 .variantSelectedPriceWrap .variantSelectedPrice { font-size: 16px; font-weight: 700; color: var(--foreground); }
 .variantSelectedPriceWrap .variantSelectedCompare { font-size: 12px; color: var(--muted-foreground); text-decoration: line-through; }
 .variantPillsRow { display: flex; flex-wrap: wrap; gap: 8px; }
-.variantPillsRow .variantPillBtn { display: inline-flex; min-height: 40px; cursor: pointer; align-items: center; gap: 7px; border-radius: 10px; border: 1.5px solid var(--border); background-color: var(--card); padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 120ms ease; }
+.variantPillsRow .variantPillBtn { position: relative; overflow: hidden; display: inline-flex; min-height: 40px; cursor: pointer; align-items: center; gap: 7px; border-radius: 10px; border: 1.5px solid var(--border); background-color: var(--card); padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 120ms ease; }
 .variantPillsRow .variantPillBtn:hover { border-color: color-mix(in oklab, var(--primary) 55%, var(--border)); }
 .variantPillsRow .variantPillBtn:active { transform: scale(0.97); }
 .variantPillsRow .variantPillSelected { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 10%, var(--card)); color: var(--primary); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 24%, transparent); }
-.variantPillsRow .variantPillOos { opacity: 0.6; border-style: dashed; }
+.variantPillsRow .variantPillSelectedOos { opacity: 1; border-style: dashed; border-color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 8%, var(--card)); background-image: linear-gradient(to top right, transparent calc(50% - 1px), color-mix(in oklab, var(--destructive) 42%, transparent) 50%, transparent calc(50% + 1px)); color: var(--destructive); box-shadow: 0 0 0 1px color-mix(in oklab, var(--destructive) 20%, transparent); }
+.variantPillsRow .variantPillOos { opacity: 0.72; border-style: dashed; background-image: linear-gradient(to top right, transparent calc(50% - 1px), color-mix(in oklab, var(--muted-foreground) 48%, transparent) 50%, transparent calc(50% + 1px)); color: var(--muted-foreground); }
+.variantPillsRow .variantPillUnavailable { opacity: 0.56; border-style: dashed; background-color: color-mix(in oklab, var(--muted) 45%, transparent); background-image: linear-gradient(to top right, transparent calc(50% - 1px), color-mix(in oklab, var(--muted-foreground) 42%, transparent) 50%, transparent calc(50% + 1px)); color: var(--muted-foreground); }
 .variantPillBtn .variantColorDot { width: 14px; height: 14px; flex-shrink: 0; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent); }
-.variantPillBtn .variantOosStrike { text-decoration: line-through; }
+.variantPillBtn .variantOosStrike { opacity: 0.88; }
 .variantPillBtn .variantOosTag { font-size: 10px; font-weight: 600; color: var(--destructive); }
 .actionsStack .soldOutBanner { margin: 0; display: flex; align-items: flex-start; gap: 8px; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--destructive) 30%, transparent); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); padding: 16px; font-size: 14px; font-weight: 500; color: var(--destructive); }
 .soldOutBanner .pkgXSvg { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
@@ -40,6 +45,10 @@
 .stepperAndCartGrid .stepperControl { height: var(--controlHXl); width: 100%; justify-content: space-between; }
 .stepperAndCartGrid .mobileWishlistBtn { width: var(--controlHXl); height: var(--controlHXl); flex-shrink: 0; }
 .stepperAndCartGrid .desktopAddToCartBtn { display: none; height: var(--controlHXl); min-width: 0; border-radius: var(--radiusControl); padding-left: 16px; padding-right: 16px; font-size: 15px; }
+.addToCartAdded { border-color: var(--tone-success-border) !important; background-color: var(--tone-success-bg-soft) !important; color: var(--tone-success-fg-strong) !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .addToCartAdded { animation: addToCartSquash 420ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+}
 .bagSvg20 { width: 20px; height: 20px; }
 .bagSvg18 { width: 18px; height: 18px; }
 .actionsStack .desktopBuyNowRow { display: none; gap: 8px; }

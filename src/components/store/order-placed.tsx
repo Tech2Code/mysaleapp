@@ -42,12 +42,21 @@ const HEADLINE: Record<string, { title: string; text: string }> = {
  * Shown right after checkout, and again if the page is reloaded. The payment state always
  * comes from the server, so a refresh never shows the "pay now" screen to someone who already paid.
  */
+function OrderPlacedWithParams() {
+  const urlCode = (useSearchParams().get("code") ?? "").toUpperCase()
+  return <OrderPlacedBody preview={false} urlCode={urlCode} />
+}
+
 /** `preview`: render a placeholder order and read nothing (loading.tsx wraps it in <Skeletonize>). */
 export function OrderPlaced({ preview = false }: { preview?: boolean }) {
+  if (preview) return <OrderPlacedBody preview urlCode="" />
+  return <OrderPlacedWithParams />
+}
+
+function OrderPlacedBody({ preview, urlCode }: { preview: boolean; urlCode: string }) {
   const shop = useStoreSettings()
   const user = useAuth((s) => s.user)
   const signedIn = Boolean(user)
-  const urlCode = (useSearchParams().get("code") ?? "").toUpperCase()
   // sessionStorage is read as an external store: null on the server, real value on the client.
   const raw = useSyncExternalStore(noopSubscribe, () => readSession(LAST_ORDER_KEY), () => null)
 

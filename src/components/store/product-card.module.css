@@ -1,8 +1,11 @@
 /* Section: Storefront Product Grid & Carousel Slide */
+@keyframes quickAddSquash { 0% { transform: scale(1, 1); } 24% { transform: scale(1.18, 0.82); } 54% { transform: scale(0.9, 1.14); } 78% { transform: scale(1.04, 0.97); } 100% { transform: scale(1, 1); } }
+@keyframes heartRingBurst { 0% { transform: scale(0.55); opacity: 0.9; } 100% { transform: scale(1.55); opacity: 0; } }
+@keyframes heartSparkleFly { 0% { transform: rotate(var(--spark-angle, 0deg)) translateY(0) scale(0.4); opacity: 1; } 70% { opacity: 0.95; } 100% { transform: rotate(var(--spark-angle, 0deg)) translateY(-18px) scale(0); opacity: 0; } }
 .productGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 32px; }
 .productCarouselSlide { width: 45%; flex-shrink: 0; scroll-snap-align: start; list-style: none; }
 /* Section: Product Card Container (Borderless Tonal Elevation + Spring Hover Lift) */
-.productCard { position: relative; display: flex; height: 100%; flex-direction: column; border-radius: 18px; border: 0; background-color: var(--card); padding: 8px; box-shadow: var(--store-elevation-sm); transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+.productCard { position: relative; display: flex; height: 100%; flex-direction: column; border-radius: 18px; border: 0; background-color: var(--card); padding: 8px; box-shadow: var(--store-elevation-sm); transition: box-shadow 260ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)), transform 260ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
 .productCard:hover { transform: translateY(-4px); box-shadow: var(--store-elevation-md); }
 .productCard .mediaFrame { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 14px; background-color: var(--muted); box-shadow: var(--store-elevation-sm); container-type: inline-size; transition: box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1); }
 .productCard:hover .mediaFrame { box-shadow: var(--store-elevation-md); }
@@ -22,10 +25,28 @@
 .ratingPill .pillStar { width: 12px; height: 12px; fill: var(--tone-star); color: var(--tone-star); }
 .ratingPill .pillDivider { color: color-mix(in oklab, var(--muted-foreground) 50%, transparent); }
 .ratingPill .pillCount { font-weight: 500; color: var(--muted-foreground); }
-/* Section: Wishlist & Quick Add CTA (10% Accent Button) */
-.wishlistTrigger { display: grid; place-items: center; border-radius: 9999px; border: 0; background-color: color-mix(in oklab, var(--card) 86%, transparent); box-shadow: 0 4px 12px var(--shadow-color-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* Section: Wishlist & Quick Add CTA (10% Accent Button + Exaggerated Heart Feedback + Squash-Stretch Quick Add) */
+.wishlistTrigger { position: relative; display: grid; place-items: center; border-radius: 9999px; border: 0; background-color: color-mix(in oklab, var(--card) 86%, transparent); box-shadow: 0 4px 12px var(--shadow-color-soft); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); transition: background-color 180ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), transform 320ms var(--ease-spring-fallback, cubic-bezier(0.34, 1.56, 0.64, 1)), box-shadow 200ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+@supports (transition-timing-function: linear(0, 1)) {
+  .wishlistTrigger { transition: background-color 180ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), transform 420ms var(--ease-spring-physics, cubic-bezier(0.34, 1.56, 0.64, 1)), box-shadow 200ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+}
 .wishlistTrigger:hover { background-color: var(--card); transform: scale(1.08); box-shadow: var(--store-elevation-md); }
-.wishlistTrigger:active { transform: scale(0.92); }
+.wishlistTrigger:active { transform: scale(0.88); }
+.wishlistTriggerActive { background-color: var(--card); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 34%, transparent); }
+.wishlistTrigger .heartMotionWrap { position: relative; z-index: 1; display: grid; place-items: center; }
+.wishlistTrigger .heartBurstLayer { pointer-events: none; position: absolute; inset: 0; z-index: 0; display: grid; place-items: center; }
+.heartBurstLayer .heartBurstRing { position: absolute; inset: 0; border-radius: 9999px; border: 2px solid var(--primary); opacity: 0; }
+.heartBurstLayer .heartSparkleDot { position: absolute; width: 5px; height: 5px; border-radius: 9999px; background-color: var(--primary); opacity: 0; }
+.heartBurstLayer .heartSparkle1 { --spark-angle: 0deg; }
+.heartBurstLayer .heartSparkle2 { --spark-angle: 60deg; }
+.heartBurstLayer .heartSparkle3 { --spark-angle: 120deg; }
+.heartBurstLayer .heartSparkle4 { --spark-angle: 180deg; }
+.heartBurstLayer .heartSparkle5 { --spark-angle: 240deg; }
+.heartBurstLayer .heartSparkle6 { --spark-angle: 300deg; }
+@media (prefers-reduced-motion: no-preference) {
+  .heartBurstLayer .heartBurstRing { animation: heartRingBurst 480ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) forwards; }
+  .heartBurstLayer .heartSparkleDot { animation: heartSparkleFly 500ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) forwards; }
+}
 .wishlistSizeMd { width: 36px; height: 36px; }
 .wishlistSizeLg { width: 44px; height: 44px; }
 .wishlistTrigger .heartIconMd { width: 16px; height: 16px; }
@@ -34,10 +55,14 @@
 .wishlistTrigger .heartActive { fill: var(--primary); color: var(--primary); }
 .mediaFrame .cardWishlistPos { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; }
 .mediaFrame .quickAddDisabled { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; cursor: not-allowed; place-items: center; border-radius: 9999px; background-color: var(--muted); color: var(--muted-foreground); box-shadow: 0 1px 3px var(--shadow-color-soft); border: 0; }
-.mediaFrame .quickAddBtn { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 8px 16px -4px color-mix(in oklab, var(--primary) 45%, transparent); border: 0; transition: transform 200ms ease, opacity 200ms ease, background-color 150ms ease; }
+.mediaFrame .quickAddBtn { position: absolute; right: 8px; bottom: 8px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 8px 16px -4px color-mix(in oklab, var(--primary) 45%, transparent); border: 0; transition: transform 200ms var(--ease-spring-fallback, cubic-bezier(0.34, 1.56, 0.64, 1)), opacity 180ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), background-color 150ms ease; }
 .mediaFrame .quickAddBtn:hover { background-color: var(--store-accent-hover, var(--primary)); transform: scale(1.1); }
-.mediaFrame .quickAddBtn:active { transform: scale(0.9); }
+.mediaFrame .quickAddBtn:active { transform: scale(0.86, 0.94); }
 .mediaFrame .quickAddBtn:focus-visible { transform: translateY(0); opacity: 1; }
+.mediaFrame .quickAddSuccess { background-color: var(--tone-success-solid); color: var(--tone-success-solid-fg); box-shadow: 0 8px 18px -4px color-mix(in oklab, var(--tone-success-solid) 48%, transparent); opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: no-preference) {
+  .mediaFrame .quickAddSuccess { animation: quickAddSquash 420ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+}
 .plusIcon { width: 16px; height: 16px; }
 /* Section: Card Details & Pricing */
 .productCard .cardBody { margin-top: 8px; display: flex; flex: 1 1 0%; flex-direction: column; gap: 2px; padding: 0 2px; }
@@ -84,7 +109,10 @@
 @media (min-width: 768px) and (pointer: fine) {
   .mediaFrame .quickAddBtn { transform: translateY(8px); opacity: 0; }
   .productCard:hover .quickAddBtn { transform: translateY(0); opacity: 1; }
+  .productCard:hover .quickAddBtn:hover { transform: translateY(0) scale(1.1); }
+  .productCard:hover .quickAddBtn:active { transform: translateY(0) scale(0.86, 0.94); }
   .mediaFrame .quickAddBtn:focus-visible { transform: translateY(0); opacity: 1; }
+  .mediaFrame .quickAddSuccess { transform: translateY(0); opacity: 1; }
 }
 @media (min-width: 1024px) {
   .productCarouselSlide { width: calc((100% - 48px) / 4); }

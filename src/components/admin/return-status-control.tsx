@@ -240,7 +240,11 @@ export function ReturnStatusControl({
             requestId: open.id,
             resolutionType: open.resolutionType,
             exchangeMode: open.exchangeMode,
-            items: open.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+            items: open.items.map((i) => ({
+              productId: i.productId,
+              ...(i.variantId ? { variantId: i.variantId } : {}),
+              quantity: i.quantity,
+            })),
           }}
           triggerLabel={isDoorstepApproved ? "Complete doorstep handover" : "Record the items that came back"}
         />

@@ -249,11 +249,12 @@ export async function requestPasswordReset(input: unknown): Promise<ActionResult
     path: "/",
   })
 
-  // Only send the admin recovery email if this address actually belongs to an admin account.
+  // Only send the admin recovery email if this address actually belongs to an admin account (fail closed on RPC error).
   const { data: isAdminEmail, error: isAdminErr } = await supabase.rpc("is_admin_email", {
     p_email: parsed.data.email,
+    p_server_secret: getServerRpcSecret(),
   })
-  if (!isAdminErr && isAdminEmail !== true) {
+  if (isAdminErr || isAdminEmail !== true) {
     return { ok: true }
   }
 
@@ -359,6 +360,9 @@ export async function resetAdminPassword(
       })
     }
     return fail("Could not set the new password. Please request a new reset link.")
+  }
+  if (user.email) {
+    await supabase.auth.signInWithPassword({ email: user.email, password: parsed.data.next })
   }
   await supabase.rpc("clear_admin_pin_lock")
   cookieStore.delete("kk_pw_reset")

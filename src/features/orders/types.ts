@@ -258,7 +258,7 @@ export type Cancellation = {
 export type OrderReturn = {
   id: string
   /** `restock` is only meaningful to the admin (was it put back on sale?). */
-  items: { productId: string; name: string; quantity: number; restock?: boolean }[]
+  items: { productId: string; variantId?: string | null; name: string; quantity: number; restock?: boolean }[]
   reason: string | null
   refunded: boolean
   /** Item value refunded for THIS return (admin only: guests don't get it). null = no refund recorded. */
@@ -281,7 +281,7 @@ export type ReturnRequestActor = "customer" | "admin"
 /** A customer's request to send items back. The admin approves or rejects it. */
 export type ReturnRequest = {
   id: string
-  items: { productId: string; name: string; quantity: number }[]
+  items: { productId: string; variantId?: string | null; name: string; quantity: number }[]
   reason: string
   details: string | null
   status: ReturnRequestStatus

@@ -2,6 +2,7 @@
 @keyframes heroBlobFloat { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 33% { transform: translate3d(30px, -40px, 0) scale(1.08); } 66% { transform: translate3d(-25px, 20px, 0) scale(0.95); } }
 @keyframes heroCardFloat { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -10px, 0); } }
 @keyframes heroPulseRing { 0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.45; } 50% { transform: translate(-50%, -50%) scale(1.04); opacity: 0.75; } }
+@keyframes ctaArrowAnticipate { 0% { transform: translateX(0); } 30% { transform: translateX(-3px); } 100% { transform: translateX(5px); } }
 .heroSection { position: relative; isolation: isolate; overflow: hidden; border: 0; background: radial-gradient(55% 65% at 75% 45%, var(--hero-c), transparent 70%), radial-gradient(45% 55% at 15% 20%, var(--hero-a), transparent 65%), linear-gradient(180deg, var(--store-sky-surface) 0%, var(--store-section-tint) 62%, var(--background) 100%); }
 /* Section: Ambient Background Blobs & Fading Architectural Dot-Grid Matrix */
 .heroSection .ambientBackdrop { pointer-events: none; position: absolute; inset: 0; z-index: -10; overflow: hidden; contain: paint; }
@@ -22,8 +23,11 @@
 .heroContent .ctaRow { margin-top: 24px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 10px; }
 .ctaRow .primaryCta { display: inline-flex; height: 48px; align-items: center; justify-content: center; gap: 10px; border-radius: 9999px; background-color: var(--primary); padding: 0 22px 0 28px; font-size: 16px; line-height: 16px; font-weight: 700; color: var(--primary-foreground); box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--on-solid) 35%, transparent), 0 16px 32px -8px color-mix(in oklab, var(--primary) 48%, transparent), 0 4px 10px -2px var(--shadow-color-soft); transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease; }
 .ctaRow .primaryCta:hover { background-color: var(--store-accent-hover, var(--primary)); transform: translateY(-2px); box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--on-solid) 45%, transparent), 0 20px 36px -8px color-mix(in oklab, var(--primary) 58%, transparent); }
-.primaryCta .ctaArrow { width: 18px; height: 18px; transition: transform 150ms ease; }
-.ctaRow .primaryCta:hover .ctaArrow { transform: translateX(4px); }
+.primaryCta .ctaArrow { width: 18px; height: 18px; transition: transform 180ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+.ctaRow .primaryCta:hover .ctaArrow { transform: translateX(5px); }
+@media (prefers-reduced-motion: no-preference) {
+  .ctaRow .primaryCta:hover .ctaArrow { animation: ctaArrowAnticipate 320ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)) forwards; }
+}
 /* Section: Studio Spotlight Stage & Floating Product Collage */
 .heroContainer .collageStage { position: relative; margin: 0 auto; aspect-ratio: 1 / 1; width: 100%; max-width: 448px; }
 .collageStage .studioHaloOuter { pointer-events: none; position: absolute; top: 50%; left: 50%; width: 92%; height: 92%; border-radius: 9999px; background: radial-gradient(circle, color-mix(in oklab, var(--card) 65%, transparent) 0%, var(--hero-a) 45%, transparent 72%); box-shadow: inset 0 0 0 1px var(--border); animation: heroPulseRing 8s ease-in-out infinite; }

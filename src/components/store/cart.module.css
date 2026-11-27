@@ -1,4 +1,5 @@
 /* Section: Free Shipping Progress Bar */
+@keyframes arrowAnticipate { 0% { transform: translateX(0); } 30% { transform: translateX(-3px); } 100% { transform: translateX(5px); } }
 .shippingBanner { border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 55%, transparent); padding: 8px 12px; font-size: 12px; transition: background-color 200ms ease, border-color 200ms ease; }
 .shippingBannerUnlocked { border-color: var(--tone-success-border); background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
 .shippingBanner .bannerTopRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -57,8 +58,11 @@
 .drawerFooter .deliveryHint { margin: 0; font-size: 12px; color: var(--muted-foreground); }
 .drawerFooter .checkoutBtn { height: var(--controlHXl); width: 100%; border-radius: var(--radiusControl); font-size: 15px; box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent); }
 .drawerFooter .checkoutBtnDisabled { pointer-events: none; opacity: 0.5; }
-.checkoutBtn .checkoutArrow { width: 16px; height: 16px; transition: transform 150ms ease; }
-.drawerFooter .checkoutBtn:hover .checkoutArrow { transform: translateX(4px); }
+.checkoutBtn .checkoutArrow { width: 16px; height: 16px; transition: transform 180ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+.drawerFooter .checkoutBtn:hover .checkoutArrow { transform: translateX(5px); }
+@media (prefers-reduced-motion: no-preference) {
+  .drawerFooter .checkoutBtn:hover .checkoutArrow { animation: arrowAnticipate 320ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)) forwards; }
+}
 .drawerFooter .viewFullCartLink { display: block; text-align: center; font-size: 14px; font-weight: 500; color: var(--muted-foreground); text-underline-offset: 4px; transition: color 150ms ease; }
 .drawerFooter .viewFullCartLink:hover { color: var(--foreground); text-decoration: underline; }
 /* Section: Full Cart Page View */
@@ -101,8 +105,11 @@
 .upiNoteBox .upiNoteStrong { font-weight: 600; color: var(--foreground); }
 .summarySidebar .proceedCheckoutBtn { height: var(--controlHXl); width: 100%; border-radius: var(--radiusControl); font-size: 15px; box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent); }
 .summarySidebar .proceedCheckoutDisabled { pointer-events: none; opacity: 0.5; }
-.proceedCheckoutBtn .proceedArrow { width: 16px; height: 16px; transition: transform 150ms ease; }
-.summarySidebar .proceedCheckoutBtn:hover .proceedArrow { transform: translateX(4px); }
+.proceedCheckoutBtn .proceedArrow { width: 16px; height: 16px; transition: transform 180ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
+.summarySidebar .proceedCheckoutBtn:hover .proceedArrow { transform: translateX(5px); }
+@media (prefers-reduced-motion: no-preference) {
+  .summarySidebar .proceedCheckoutBtn:hover .proceedArrow { animation: arrowAnticipate 320ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)) forwards; }
+}
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
   .drawerSheetDesktop { max-width: 448px; }

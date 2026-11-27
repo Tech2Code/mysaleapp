@@ -305,10 +305,15 @@ function TrackResult({
   )
 }
 
-export function TrackOrder() {
+function TrackOrderWithParams() {
   const params = useSearchParams()
   const urlCode = params.get("code") ?? ""
   return <TrackOrderBody key={urlCode} urlCode={urlCode} />
+}
+
+export function TrackOrder({ preview = false }: { preview?: boolean }) {
+  if (preview) return <TrackOrderBody urlCode="" />
+  return <TrackOrderWithParams />
 }
 
 function TrackOrderBody({ urlCode }: { urlCode: string }) {
@@ -330,9 +335,14 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
   const [codeSuffix, setCodeSuffix] = useState(initialSuffix)
 
   useEffect(() => {
+    let active = true
     const nextSuffix = stripOrderPrefix(urlCode, orderPrefix)
     form.reset({ code: nextSuffix ? composeOrderCode(nextSuffix, orderPrefix) : "", phoneLast4: "" })
+    queueMicrotask(() => {
+      if (active) setCodeSuffix(nextSuffix)
+    })
     return () => {
+      active = false
       setCodeSuffix("")
       form.reset({ code: "", phoneLast4: "" })
       setResult(null)

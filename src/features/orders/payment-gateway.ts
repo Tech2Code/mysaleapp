@@ -177,7 +177,7 @@ const razorpayAdapter: PaymentGatewayAdapter = {
       payment.order_id !== input.expectedGatewayOrderId ||
       payment.currency !== "INR" ||
       Number(payment.amount) !== expectedPaise ||
-      (payment.status !== "captured" && payment.status !== "authorized")
+      payment.status !== "captured"
     ) {
       return { ok: false, error: "Payment is not captured for this order." }
     }
@@ -208,6 +208,7 @@ const razorpayAdapter: PaymentGatewayAdapter = {
             id?: string
             order_id?: string
             amount?: number
+            currency?: string
             method?: string
             status?: string
             error_description?: string
@@ -238,6 +239,9 @@ const razorpayAdapter: PaymentGatewayAdapter = {
       const gatewayOrderId = payEntity?.order_id || orderEntity?.id || ""
       const paymentReference = payEntity?.id || ""
       const amountPaise = Number(payEntity?.amount ?? 0)
+      if (payEntity?.currency && payEntity.currency !== "INR") {
+        return { ok: false, error: "Unsupported payment currency." }
+      }
       if (!gatewayOrderId || !paymentReference || !Number.isFinite(amountPaise) || amountPaise <= 0) {
         return { ok: false, error: "Incomplete payment payload." }
       }

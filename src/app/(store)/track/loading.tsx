@@ -4,7 +4,7 @@ import { TrackPageView } from "@/components/store/page-views"
 export default function Loading() {
   return (
     <Skeletonize>
-      <TrackPageView />
+      <TrackPageView preview />
     </Skeletonize>
   )
 }

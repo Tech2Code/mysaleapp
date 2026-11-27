@@ -30,7 +30,7 @@ import { discountPercent, formatDate, formatPrice, formatRating, normalizeIndian
 import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
-import { cartLineKey, MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
+import { cartLineKey, MAX_QTY_PER_ITEM, triggerFlyToCart, useCart } from "@/store/cart"
 import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
 import { WishlistButton } from "./wishlist-button"
@@ -152,6 +152,8 @@ export function ProductActions({
   const activeLineKey = cartLineKey({ productId: product.id, variantId: activeVariant?.id })
   const inCart = useCart((s) => s.items.find((i) => cartLineKey(i) === activeLineKey)?.quantity ?? 0)
   const [chosen, setChosen] = useState(1)
+  const [justAdded, setJustAdded] = useState(false)
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [clientNow, setClientNow] = useState<number | undefined>(undefined)
   const [notifyOpen, setNotifyOpen] = useState(false)
   const [alreadyNotified, setAlreadyNotified] = useState(false)
@@ -161,17 +163,18 @@ export function ProductActions({
   const [notifyPending, startNotifyTransition] = useTransition()
   useBlockWhile(notifyPending)
   const soldOut = activeStock <= 0
+  const alertStorageKey = activeVariant ? `${product.id}:${activeVariant.id}` : product.id
   const backInStock = clientNow !== undefined && isBackInStock({ stock: activeStock, restockedAt: product.restockedAt }, clientNow)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate client clock & local notify state after mount
     setClientNow(Date.now())
     if (soldOut) {
-      setAlreadyNotified(readSavedStockAlerts().includes(product.id))
+      setAlreadyNotified(readSavedStockAlerts().includes(alertStorageKey))
     } else {
       setAlreadyNotified(false)
     }
-  }, [product.id, soldOut])
+  }, [alertStorageKey, soldOut])
 
   const openNotifyDialog = () => {
     setNotifyName((prev) => prev || user?.name?.trim() || "")
@@ -190,6 +193,7 @@ export function ProductActions({
     startNotifyTransition(async () => {
       const res = await subscribeStockAlert({
         productId: product.id,
+        ...(activeVariant ? { variantId: activeVariant.id } : {}),
         name: notifyName.trim(),
         phone: cleanPhone,
       })
@@ -198,7 +202,7 @@ export function ProductActions({
         toast.error(res.error)
         return
       }
-      saveStockAlertId(product.id)
+      saveStockAlertId(alertStorageKey)
       setAlreadyNotified(true)
       setNotifyOpen(false)
       setNotifyPhone("")
@@ -211,10 +215,21 @@ export function ProductActions({
     })
   }
 
+  useEffect(() => {
+    let active = true
+    queueMicrotask(() => {
+      if (active) setJustAdded(false)
+    })
+    return () => {
+      active = false
+      if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+    }
+  }, [activeLineKey])
+
   const max = Math.min(activeStock, MAX_QTY_PER_ITEM)
   // stock can drop while the page is open: never show or add more than can be bought
   const qty = Math.max(1, Math.min(chosen, max))
-  const addToCart = () => {
+  const addToCart = (sourceEl?: HTMLElement | null) => {
     const unit = max === 1 ? "item" : "items"
     if (inCart > 0 && inCart + qty > max) {
       toast.info(
@@ -223,11 +238,15 @@ export function ProductActions({
           : `Only ${max} ${unit} available (${inCart} already in cart), so your cart is set to ${max}.`
       )
     }
-    add(line, qty)
+    add(line, qty, { openDrawer: false })
+    triggerFlyToCart(sourceEl ?? null, product.images[0] ?? null, () => setOpen(true))
+    setJustAdded(true)
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current)
+    addedTimerRef.current = setTimeout(() => setJustAdded(false), 1200)
   }
 
   const buyNow = () => {
-    add(line, qty)
+    add(line, qty, { openDrawer: false })
     setOpen(false)
     router.push("/checkout")
   }
@@ -285,7 +304,7 @@ function swatchHexForOption(groupName: string, value: string): string | null {
 
   const selectAttributeValue = (groupName: string, value: string) => {
     const desired = { ...selectedOptions, [groupName]: value }
-    // 1. Exact match for all currently selected attributes
+    // 1. Exact match for all currently selected attributes (even if stock === 0, so customer can subscribe to Notify Me)
     const exact = variants.find((v) =>
       v.options && Object.entries(desired).every(([k, val]) => v.options?.[k] === val)
     )
@@ -294,12 +313,19 @@ function swatchHexForOption(groupName: string, value: string): string | null {
       setChosen(1)
       return
     }
-    // 2. Fallback: first in-stock variant with the newly clicked attribute value (or first matching variant)
+    // 2. Non-existent combination: switch smoothly to the nearest in-stock variant with the clicked value + explain via toast
     const candidates = variants.filter((v) => v.options?.[groupName] === value)
     const best = candidates.find((v) => v.stock > 0) ?? candidates[0]
     if (best) {
+      const otherSelected = Object.entries(selectedOptions)
+        .filter(([k]) => k !== groupName)
+        .map(([, val]) => val)
+        .join(" / ")
       setSelectedVariantId(best.id)
       setChosen(1)
+      if (otherSelected) {
+        toast.info(`${value} isn't available in ${otherSelected} — switched to ${best.label}.`)
+      }
     }
   }
 
@@ -314,7 +340,10 @@ function swatchHexForOption(groupName: string, value: string): string | null {
                 <span className={styles.variantSelectedCompare}>{formatPrice(activeCompareAt)}</span>
               )}
             </span>
-            <span className={styles.variantSelectedSummaryPill}>{activeVariant?.label}</span>
+            <span className={styles.variantSummaryPills}>
+              <span className={styles.variantSelectedSummaryPill}>{activeVariant?.label}</span>
+              {soldOut && <span className={styles.variantHeaderOosBadge}>Out of stock</span>}
+            </span>
           </div>
           {optionGroups.map((group) => {
             const currentVal = selectedOptions[group.name] ?? ""
@@ -332,23 +361,39 @@ function swatchHexForOption(groupName: string, value: string): string | null {
                       v.options[group.name] === val &&
                       Object.entries(selectedOptions).every(([k, sVal]) => k === group.name || v.options?.[k] === sVal)
                     )
-                    const anyStockForVal = variants.some((v) => v.options?.[group.name] === val && v.stock > 0)
-                    const isOos = matchingExact ? matchingExact.stock <= 0 : !anyStockForVal
+                    const isExactOos = Boolean(matchingExact && matchingExact.stock <= 0)
+                    const isUnavailableCombo = !matchingExact
                     return (
                       <button
                         key={val}
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
+                        aria-label={
+                          isExactOos
+                            ? `${val} (Out of stock — select to get notified)`
+                            : isUnavailableCombo
+                              ? `${val} (Not available in current selection)`
+                              : val
+                        }
+                        title={
+                          isExactOos
+                            ? "Out of stock — select to get notified when back"
+                            : isUnavailableCombo
+                              ? "Not available in current selection — switches to an available option"
+                              : undefined
+                        }
                         onClick={() => selectAttributeValue(group.name, val)}
                         className={cn(
                           styles.variantPillBtn,
-                          isSelected && styles.variantPillSelected,
-                          isOos && styles.variantPillOos
+                          isSelected && !isExactOos && styles.variantPillSelected,
+                          isSelected && isExactOos && styles.variantPillSelectedOos,
+                          !isSelected && isExactOos && styles.variantPillOos,
+                          !isSelected && isUnavailableCombo && styles.variantPillUnavailable
                         )}
                       >
                         {swatch && <span className={styles.variantColorDot} style={{ backgroundColor: swatch }} aria-hidden />}
-                        <span className={cn(isOos && styles.variantOosStrike)}>{val}</span>
+                        <span className={cn(isExactOos && styles.variantOosStrike)}>{val}</span>
                       </button>
                     )
                   })}
@@ -386,8 +431,9 @@ function swatchHexForOption(groupName: string, value: string): string | null {
                   }}
                   className={cn(
                     styles.variantPillBtn,
-                    isSelected && styles.variantPillSelected,
-                    isOos && styles.variantPillOos
+                    isSelected && !isOos && styles.variantPillSelected,
+                    isSelected && isOos && styles.variantPillSelectedOos,
+                    !isSelected && isOos && styles.variantPillOos
                   )}
                 >
                   <span className={cn(isOos && styles.variantOosStrike)}>{v.label}</span>
@@ -421,7 +467,7 @@ function swatchHexForOption(groupName: string, value: string): string | null {
               <BellRingIcon className={styles.bagSvg18} /> Notify me when back in stock
             </Button>
           )}
-          <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn52} />
+          <WishlistButton productId={product.id} productName={product.name} productImage={product.images[0] ?? null} size="lg" className={styles.wishlistBtn52} />
         </div>
 
         {/* Native mobile sticky bottom notify bar when sold out */}
@@ -435,7 +481,7 @@ function swatchHexForOption(groupName: string, value: string): string | null {
               <BellRingIcon className={styles.bagSvg18} /> Notify me when back
             </Button>
           )}
-          <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn52} />
+          <WishlistButton productId={product.id} productName={product.name} productImage={product.images[0] ?? null} size="lg" className={styles.wishlistBtn52} />
         </div>
 
         <Dialog
@@ -526,14 +572,15 @@ function swatchHexForOption(groupName: string, value: string): string | null {
       {/* Row 1: quantity | add to cart, 50 / 50. Row 2: buy now (the rest of the row) + wishlist. Every control is h-13. */}
       <div className={styles.stepperAndCartGrid}>
         <QuantityStepper label={product.name} value={qty} max={max} onChange={setChosen} size="lg" className={styles.stepperControl} />
-        <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.mobileWishlistBtn} />
+        <WishlistButton productId={product.id} productName={product.name} productImage={product.images[0] ?? null} size="lg" className={styles.mobileWishlistBtn} />
         <Button
           size="lg"
           variant="outline"
-          className={styles.desktopAddToCartBtn}
-          onClick={addToCart}
+          className={cn(styles.desktopAddToCartBtn, justAdded && styles.addToCartAdded)}
+          onClick={(e) => addToCart(e.currentTarget)}
         >
-          <ShoppingBagIcon className={styles.bagSvg20} /> Add to cart
+          {justAdded ? <CheckIcon className={styles.bagSvg20} /> : <ShoppingBagIcon className={styles.bagSvg20} />}
+          {justAdded ? "Added to cart" : "Add to cart"}
         </Button>
       </div>
       <div className={styles.desktopBuyNowRow}>
@@ -545,7 +592,7 @@ function swatchHexForOption(groupName: string, value: string): string | null {
           <span className={styles.buyBtnTopText}>Buy now</span>
           <span className={styles.buyBtnPriceLg}>{formatPrice(activePrice * qty)}</span>
         </Button>
-        <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn56} />
+        <WishlistButton productId={product.id} productName={product.name} productImage={product.images[0] ?? null} size="lg" className={styles.wishlistBtn56} />
       </div>
 
       {/* Native Android e-commerce sticky bottom buy bar on phones */}
@@ -558,10 +605,11 @@ function swatchHexForOption(groupName: string, value: string): string | null {
 
           size="lg"
           variant="outline"
-          className={styles.mobileCartBtn}
-          onClick={addToCart}
+          className={cn(styles.mobileCartBtn, justAdded && styles.addToCartAdded)}
+          onClick={(e) => addToCart(e.currentTarget)}
         >
-          <ShoppingBagIcon className={styles.bagSvg18} /> Add to cart
+          {justAdded ? <CheckIcon className={styles.bagSvg18} /> : <ShoppingBagIcon className={styles.bagSvg18} />}
+          {justAdded ? "Added" : "Add to cart"}
         </Button>
         <Button
 
@@ -1984,6 +2032,10 @@ export function ProductReviewsPageView({
   }
 
   const quickAddToCart = () => {
+    if (product.variants && product.variants.length > 0) {
+      router.push(`/products/${product.slug}`)
+      return
+    }
     const max = Math.min(product.stock, MAX_QTY_PER_ITEM)
     if (product.stock <= 0) return
     const unit = max === 1 ? "item" : "items"

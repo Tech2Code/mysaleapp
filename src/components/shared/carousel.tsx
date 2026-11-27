@@ -12,8 +12,60 @@ import styles from "./shared.module.css"
  */
 export function Carousel({ children, label, className }: { children: ReactNode; label: string; className?: string }) {
   const track = useRef<HTMLUListElement>(null)
+  const animFrameRef = useRef<number | null>(null)
   const [edge, setEdge] = useState({ start: true, end: true })
   const [pager, setPager] = useState({ count: 1, active: 0 })
+
+  const cancelScrollAnim = useCallback(() => {
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+    const el = track.current
+    if (el) {
+      el.style.scrollSnapType = ""
+      el.style.scrollBehavior = ""
+    }
+  }, [])
+
+  /** Principle #6 (Slow in, slow out): smooth cubic ease-in-out horizontal glide for carousel navigation. */
+  const smoothScrollTo = useCallback(
+    (targetLeft: number) => {
+      const el = track.current
+      if (!el) return
+      cancelScrollAnim()
+      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+      const clamped = Math.max(0, Math.min(targetLeft, maxScroll))
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        el.scrollLeft = clamped
+        return
+      }
+      const startLeft = el.scrollLeft
+      const delta = clamped - startLeft
+      if (Math.abs(delta) < 2) return
+      const duration = 420
+      const startTime = performance.now()
+      el.style.scrollSnapType = "none"
+      el.style.scrollBehavior = "auto"
+
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - startTime) / duration)
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        el.scrollLeft = startLeft + delta * eased
+        if (t < 1) {
+          animFrameRef.current = requestAnimationFrame(tick)
+        } else {
+          el.style.scrollSnapType = ""
+          el.style.scrollBehavior = ""
+          animFrameRef.current = null
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(tick)
+    },
+    [cancelScrollAnim]
+  )
+
+  useEffect(() => cancelScrollAnim, [cancelScrollAnim])
 
   const measure = useCallback(() => {
     const el = track.current
@@ -42,14 +94,14 @@ export function Carousel({ children, label, className }: { children: ReactNode; 
 
   const page = (dir: 1 | -1) => {
     const el = track.current
-    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.82, behavior: "smooth" })
+    if (el) smoothScrollTo(el.scrollLeft + dir * el.clientWidth * 0.82)
   }
 
   const jumpToPage = (idx: number) => {
     const el = track.current
     if (!el || pager.count <= 1) return
     const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
-    el.scrollTo({ left: (idx / (pager.count - 1)) * maxScroll, behavior: "smooth" })
+    smoothScrollTo((idx / (pager.count - 1)) * maxScroll)
   }
 
   const overflowing = !(edge.start && edge.end)
@@ -74,6 +126,8 @@ export function Carousel({ children, label, className }: { children: ReactNode; 
         <ul
           ref={track}
           onScroll={measure}
+          onWheel={cancelScrollAnim}
+          onTouchStart={cancelScrollAnim}
           className={styles.carouselTrack}
         >
           {children}

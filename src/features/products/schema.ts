@@ -184,6 +184,7 @@ export type ProductReviewValues = z.output<typeof productReviewSchema>
 
 export const stockAlertSchema = z.object({
   productId: z.uuid("Invalid product"),
+  variantId: z.string().trim().min(1).max(80).optional(),
   name: z
     .string()
     .trim()

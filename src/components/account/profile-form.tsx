@@ -257,6 +257,12 @@ function CustomerPasswordForm({
     },
   })
   const { errors } = form.formState
+  useEffect(() => {
+    return () => {
+      form.reset({ hasPassword, current: "", next: "", confirm: "" })
+      setResetCount((c) => c + 1)
+    }
+  }, [form, hasPassword])
   const [currentVal, nextVal, confirmVal] = useWatch({
     control: form.control,
     name: ["current", "next", "confirm"],

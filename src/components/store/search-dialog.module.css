@@ -20,7 +20,7 @@
 .dialogBackdrop { position: fixed; inset: 0; z-index: 50; display: none; background-color: var(--backdrop-scrim); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: searchBackdropFade 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .dialogModal { position: fixed; inset: 0; z-index: 60; display: flex; height: 100dvh; width: 100vw; flex-direction: column; overflow: hidden; background-color: var(--store-section-tint, var(--background)); padding: 14px; animation: searchModalMobileIn 240ms cubic-bezier(0.22, 1, 0.36, 1); }
 .dialogModal .topBar { display: flex; flex-shrink: 0; align-items: center; gap: 8px; border: 0; padding-bottom: 10px; margin-bottom: 6px; }
-.topBar .mobileBackBtn { display: flex; width: 40px; height: 40px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--radiusPill); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); color: var(--foreground); transition: background-color 180ms ease, color 180ms ease, transform 180ms ease; }
+.topBar .mobileBackBtn { display: flex; width: 44px; height: 44px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--radiusPill); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); color: var(--foreground); transition: background-color 180ms ease, color 180ms ease, transform 180ms ease; }
 .topBar .mobileBackBtn:hover { background-color: var(--card); color: var(--primary); transform: translateY(-1px); }
 .mobileBackBtn .backSvg { width: 20px; height: 20px; }
 .topBar .searchForm { flex: 1 1 0%; }
@@ -39,21 +39,21 @@
 .discoverySection .sectionLabel { margin: 0; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted-foreground); text-transform: uppercase; }
 .sectionLabel .labelIcon { width: 12px; height: 12px; }
 .sectionLabel .labelAccentIcon { width: 12px; height: 12px; color: var(--primary); }
-.sectionHeaderRow .clearAllBtn { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background: transparent; padding: 2px 6px; font-size: 11px; font-weight: 500; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.sectionHeaderRow .clearAllBtn { display: inline-flex; min-height: 36px; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background: transparent; padding: 2px 8px; font-size: 11px; font-weight: 500; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
 .sectionHeaderRow .clearAllBtn:hover { background-color: var(--muted); color: var(--foreground); }
 .clearAllBtn .trashSvg { width: 12px; height: 12px; }
 .discoverySection .chipsList { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .chipsList .recentChipItem { display: inline-flex; align-items: center; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); font-size: 12px; font-weight: 500; transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .chipsList .recentChipItem:hover { transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
-.recentChipItem .recentTermBtn { display: inline-flex; height: 28px; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0 4px 0 10px; color: var(--foreground); }
+.recentChipItem .recentTermBtn { display: inline-flex; min-height: 40px; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0 4px 0 12px; color: var(--foreground); }
 .recentTermBtn .clockSvg { width: 12px; height: 12px; color: var(--muted-foreground); }
-.recentChipItem .removeTermBtn { display: inline-flex; width: 20px; height: 20px; margin-right: 2px; align-items: center; justify-content: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.recentChipItem .removeTermBtn { display: inline-flex; width: 32px; height: 32px; margin-right: 4px; align-items: center; justify-content: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
 .recentChipItem .removeTermBtn:hover { background-color: var(--muted); color: var(--foreground); }
 .removeTermBtn .xMiniSvg { width: 12px; height: 12px; }
-.chipsList .trendingChipBtn { display: inline-flex; height: 28px; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
+.chipsList .trendingChipBtn { display: inline-flex; min-height: 40px; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
 .chipsList .trendingChipBtn:hover { color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
 .trendingChipBtn .flameSvg { width: 12px; height: 12px; color: var(--primary); }
-.chipsList .categoryPillLink { display: inline-flex; height: 28px; align-items: center; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
+.chipsList .categoryPillLink { display: inline-flex; min-height: 40px; align-items: center; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
 .chipsList .categoryPillLink:hover { color: var(--primary); transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
 .sectionHeaderRow .viewAllLink { font-size: 12px; font-weight: 600; color: var(--primary); }
 .sectionHeaderRow .viewAllLink:hover { text-decoration: underline; }
@@ -94,6 +94,11 @@
   .topBar .mobileBackBtn { display: none; }
   .searchForm .desktopInputSurface { background-color: var(--card); box-shadow: var(--store-elevation-sm); }
   .topBar .desktopCloseBtn { display: flex; }
+  .sectionHeaderRow .clearAllBtn { min-height: 0; padding: 2px 6px; }
+  .recentChipItem .recentTermBtn { height: 28px; min-height: 28px; padding: 0 4px 0 10px; }
+  .recentChipItem .removeTermBtn { width: 20px; height: 20px; margin-right: 2px; }
+  .chipsList .trendingChipBtn { height: 28px; min-height: 28px; padding: 0 10px; }
+  .chipsList .categoryPillLink { height: 28px; min-height: 28px; padding: 0 10px; }
   .discoverySection .recommendedGrid { gap: 8px; }
   .resultsScrollArea .noResultsBox { padding: 24px 0; }
   .hitItem .hitRowLink { padding: 8px 10px; }

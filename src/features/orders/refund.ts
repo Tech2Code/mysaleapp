@@ -6,23 +6,39 @@ import type { OrderFee, OrderItem, OrderReturn, ReturnRequest } from "./types"
  * the ITEMS only, price x quantity. Delivery and other charges are never refunded.
  */
 
-export type RefundLine = { productId: string; name: string; quantity: number; unitPrice: number; amount: number }
+export type RefundLine = { productId: string; variantId?: string | null; name: string; quantity: number; unitPrice: number; amount: number }
 export type NotRefunded = { label: string; amount: number }
 
 const round2 = (n: number) => Math.round((n + (n >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
 
-/** The price of a product on the order (the highest line price, like the database does). */
-const unitPriceOf = (items: OrderItem[], productId: string): number =>
-  Math.max(0, ...items.filter((o) => o.productId === productId).map((o) => o.price))
+/** The price of a product (or specific variant) on the order, matching the database `return_items_value` rule. */
+const unitPriceOf = (items: OrderItem[], productId: string, variantId?: string | null): number => {
+  const matched = variantId
+    ? items.filter((o) => o.productId === productId && o.variantId === variantId)
+    : items.filter((o) => o.productId === productId)
+  const pool = matched.length > 0 ? matched : items.filter((o) => o.productId === productId)
+  return Math.max(0, ...pool.map((o) => o.price))
+}
 
 /** Price the given lines from the order's items. */
-export function refundLines(items: OrderItem[], lines: { productId: string; name: string; quantity: number }[]): RefundLine[] {
+export function refundLines(
+  items: OrderItem[],
+  lines: { productId: string; variantId?: string | null; name: string; quantity: number }[]
+): RefundLine[] {
   const merged = new Map<string, RefundLine>()
   for (const l of lines) {
     if (l.quantity < 1) continue
-    const unit = unitPriceOf(items, l.productId)
-    const quantity = (merged.get(l.productId)?.quantity ?? 0) + l.quantity
-    merged.set(l.productId, { productId: l.productId, name: l.name, quantity, unitPrice: unit, amount: round2(quantity * unit) })
+    const key = l.variantId ? `${l.productId}::${l.variantId}` : l.productId
+    const unit = unitPriceOf(items, l.productId, l.variantId)
+    const quantity = (merged.get(key)?.quantity ?? 0) + l.quantity
+    merged.set(key, {
+      productId: l.productId,
+      ...(l.variantId ? { variantId: l.variantId } : {}),
+      name: l.name,
+      quantity,
+      unitPrice: unit,
+      amount: round2(quantity * unit),
+    })
   }
   return [...merged.values()]
 }
@@ -33,12 +49,12 @@ export function refundLines(items: OrderItem[], lines: { productId: string; name
  */
 export function netReturnRefund(
   items: OrderItem[],
-  targetLines: { productId: string; quantity: number }[],
+  targetLines: { productId: string; variantId?: string | null; quantity: number }[],
   opts: {
     discountAmount?: number
     paidAmount?: number
     alreadyRefunded?: number
-    priorReturnedLines?: { productId: string; quantity: number }[]
+    priorReturnedLines?: { productId: string; variantId?: string | null; quantity: number }[]
   } = {}
 ): number {
   const itemsAll = round2(items.reduce((n, i) => n + i.price * i.quantity, 0))
@@ -48,13 +64,13 @@ export function netReturnRefund(
   const itemsNet = opts.paidAmount !== undefined ? Math.min(netItemsMax, Math.max(0, opts.paidAmount)) : netItemsMax
 
   const rawValue = round2(
-    targetLines.reduce((n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId) : n), 0)
+    targetLines.reduce((n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId, l.variantId) : n), 0)
   )
   if (rawValue <= 0) return 0
 
   const rawPrev = round2(
     (opts.priorReturnedLines ?? []).reduce(
-      (n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId) : n),
+      (n, l) => (l.quantity > 0 ? n + l.quantity * unitPriceOf(items, l.productId, l.variantId) : n),
       0
     )
   )

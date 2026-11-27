@@ -87,8 +87,9 @@ export function ProductsView({
 
   const buildRestockWaHref = (a: StockAlert) => {
     const greeting = a.customerName.trim() ? `Hi ${a.customerName.trim()}!` : "Hi!"
+    const itemTitle = a.variantLabel ? `${a.productName} (${a.variantLabel})` : a.productName
     const productUrl = a.productSlug ? ` ${siteConfig.url}/products/${a.productSlug}` : ""
-    const msg = `${greeting} Good news from ${shopName} — "${a.productName}" is back in stock! Order yours before it sells out:${productUrl}`
+    const msg = `${greeting} Good news from ${shopName} — "${itemTitle}" is back in stock! Order yours before it sells out:${productUrl}`
     return whatsappLink(`91${a.phone}`, msg)
   }
 
@@ -224,6 +225,9 @@ export function ProductsView({
                         <Link href={`/admin/products/${encodeURIComponent(a.productSlug)}`} className={styles.restockAlertProductName}>
                           {a.productName}
                         </Link>
+                        {a.variantLabel && (
+                          <span className={styles.waitingCountPill}>{a.variantLabel}</span>
+                        )}
                         <span className={cn(styles.restockStockPill, isReady ? styles.restockStockIn : styles.restockStockOut)}>
                           {isReady ? `${a.productStock} in stock` : "Sold out"}
                         </span>

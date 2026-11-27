@@ -687,11 +687,13 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
                   </div>
                   <div className={styles.comboInputsGrid}>
                     <div className={styles.comboInputCell}>
-                      <label className={styles.comboCellLabel}>Price (₹) *</label>
+                      <label htmlFor={`variant-price-${row.id}`} className={styles.comboCellLabel}>Price (₹) *</label>
                       <input
+                        id={`variant-price-${row.id}`}
                         type="number"
                         inputMode="decimal"
                         min={1}
+                        aria-label={`${row.label} price in rupees`}
                         value={row.price}
                         onChange={(e) =>
                           setRows((prev) => prev.map((x, i) => (i === idx ? { ...x, price: e.target.value } : x)))
@@ -700,12 +702,14 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
                       />
                     </div>
                     <div className={styles.comboInputCell}>
-                      <label className={styles.comboCellLabel}>MRP (₹)</label>
+                      <label htmlFor={`variant-mrp-${row.id}`} className={styles.comboCellLabel}>MRP (₹)</label>
                       <input
+                        id={`variant-mrp-${row.id}`}
                         type="number"
                         inputMode="decimal"
                         min={1}
                         placeholder="Optional"
+                        aria-label={`${row.label} MRP in rupees`}
                         value={row.compareAtPrice ?? ""}
                         onChange={(e) =>
                           setRows((prev) => prev.map((x, i) => (i === idx ? { ...x, compareAtPrice: e.target.value } : x)))
@@ -714,11 +718,13 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
                       />
                     </div>
                     <div className={styles.comboInputCell}>
-                      <label className={styles.comboCellLabel}>Stock *</label>
+                      <label htmlFor={`variant-stock-${row.id}`} className={styles.comboCellLabel}>Stock *</label>
                       <input
+                        id={`variant-stock-${row.id}`}
                         type="number"
                         inputMode="numeric"
                         min={0}
+                        aria-label={`${row.label} stock quantity`}
                         value={row.stock}
                         onChange={(e) =>
                           setRows((prev) => prev.map((x, i) => (i === idx ? { ...x, stock: e.target.value } : x)))
@@ -727,11 +733,13 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
                       />
                     </div>
                     <div className={styles.comboInputCell}>
-                      <label className={styles.comboCellLabel}>SKU</label>
+                      <label htmlFor={`variant-sku-${row.id}`} className={styles.comboCellLabel}>SKU</label>
                       <input
+                        id={`variant-sku-${row.id}`}
                         type="text"
                         maxLength={40}
                         placeholder="Optional"
+                        aria-label={`${row.label} SKU`}
                         value={row.sku ?? ""}
                         onChange={(e) =>
                           setRows((prev) => prev.map((x, i) => (i === idx ? { ...x, sku: e.target.value } : x)))

@@ -1,15 +1,16 @@
 /* Section: Button Variants & Sizes */
 @keyframes uiOverlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes uiDialogZoomIn { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes uiDialogZoomIn { 0% { opacity: 0; transform: scale(0.94) translateY(10px); } 72% { opacity: 1; transform: scale(1.008) translateY(-1px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes uiDialogSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes uiPopoverPopIn { from { opacity: 0; transform: scale(0.95) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes uiPopoverPopIn { from { opacity: 0; transform: scale(0.96) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes uiTabPanelSnap { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes uiSheetInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes uiSheetInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes uiSheetInBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes uiSheetInTop { from { transform: translateY(-100%); } to { transform: translateY(0); } }
-:where(.btnBase) { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--radiusControl, 10px); border: 1px solid transparent; background-clip: padding-box; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; outline: none; user-select: none; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.btnBase) { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--radiusControl, 10px); border: 1px solid transparent; background-clip: padding-box; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; outline: none; user-select: none; transition: background-color 150ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), color 150ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), border-color 150ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), box-shadow 180ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)), transform 140ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); }
 .btnBase:focus-visible { border-color: var(--ring); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 32%, transparent)); }
-.btnBase:active:not(:disabled):not([aria-haspopup]) { transform: scale(0.98); }
+.btnBase:active:not(:disabled):not([aria-haspopup]) { transform: scale(0.97, 0.94); }
 .btnBase:disabled, .btnBase[data-disabled] { pointer-events: none; opacity: 0.5; }
 :where(.btnBase) svg { pointer-events: none; flex-shrink: 0; width: 16px; height: 16px; }
 :where(.btnPrimary) { background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px -4px color-mix(in oklab, var(--primary) 38%, transparent); }
@@ -67,7 +68,7 @@
 .inputField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .inputField:disabled { pointer-events: none; cursor: not-allowed; background-color: var(--muted); opacity: 0.5; }
 .inputField[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
-:where(.textareaField) { display: flex; field-sizing: content; min-height: 76px; width: 100%; min-width: 0; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 10px 12px; font-size: 16px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+:where(.textareaField) { display: flex; field-sizing: content; min-height: 76px; width: 100%; min-width: 0; resize: none; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 10px 12px; font-size: 16px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.textareaField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
 .textareaField::placeholder { font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
 .textareaField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
@@ -218,10 +219,14 @@
 :where(.tabsList) { display: inline-flex; width: fit-content; align-items: center; justify-content: center; border-radius: 8px; padding: 3px; color: var(--muted-foreground); height: 32px; }
 :where(.tabsListDefault) { background-color: var(--muted); }
 :where(.tabsListLine) { gap: 4px; border-radius: 0; background-color: transparent; }
-:where(.tabsTrigger) { position: relative; display: inline-flex; height: calc(100% - 1px); flex: 1 1 0%; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; border: 1px solid transparent; background: transparent; padding: 2px 6px; font-size: 14px; font-weight: 500; white-space: nowrap; color: color-mix(in oklab, var(--foreground) 65%, transparent); transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+:where(.tabsTrigger) { position: relative; display: inline-flex; height: calc(100% - 1px); flex: 1 1 0%; align-items: center; justify-content: center; gap: 6px; border-radius: 6px; border: 1px solid transparent; background: transparent; padding: 2px 6px; font-size: 14px; font-weight: 500; white-space: nowrap; color: color-mix(in oklab, var(--foreground) 65%, transparent); transition: background-color 140ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), color 140ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), box-shadow 140ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)), transform 120ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)); }
 :where(.tabsTrigger):hover { color: var(--foreground); }
+:where(.tabsTrigger):active { transform: scale(0.97); }
 :where(.tabsTrigger)[data-active] { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .tabsContent { flex: 1 1 0%; font-size: 14px; outline: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .tabsContent:not([hidden]) { animation: uiTabPanelSnap 160ms var(--ease-snappy, cubic-bezier(0.2, 0, 0, 1)); }
+}
 /* Section: Sonner Toast Icons & Classes */
 @keyframes toastTickSpring { 0% { transform: scale(0.3) rotate(-10deg); opacity: 0; } 60% { transform: scale(1.14) rotate(2deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
 @keyframes toastCheckDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }

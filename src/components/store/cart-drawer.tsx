@@ -63,6 +63,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
 
 function DrawerItem({
   item,
+  index,
   available = true,
   highlighted,
   onNavigate,
@@ -70,6 +71,7 @@ function DrawerItem({
   onRemove,
 }: {
   item: CartItem
+  index: number
   available?: boolean
   highlighted: boolean
   onNavigate: () => void
@@ -79,10 +81,10 @@ function DrawerItem({
   return (
     <m.li
       layout
-      initial={{ opacity: 0, y: 14, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 48, transition: { duration: 0.2 } }}
-      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+      initial={{ opacity: 0, x: 24, scale: 0.97 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 48, transition: { duration: 0.18 } }}
+      transition={{ type: "spring", stiffness: 360, damping: 28, delay: Math.min(index * 0.045, 0.22) }}
       className={cn(styles.drawerItemCard, highlighted && styles.drawerItemHighlighted, !available && styles.drawerItemUnavailable)}
     >
       {highlighted && (
@@ -198,13 +200,14 @@ export function CartDrawer({ products }: { products?: LiveProduct[] }) {
                 </p>
               )}
               <ul className={styles.drawerItemList}>
-                <AnimatePresence initial={false} mode="popLayout">
-                  {displayLines.map((item) => {
+                <AnimatePresence mode="popLayout">
+                  {displayLines.map((item, index) => {
                     const lineKey = cartLineKey(item)
                     return (
                       <DrawerItem
                         key={lineKey}
                         item={item}
+                        index={index}
                         available={item.available}
                         highlighted={lineKey === lastAddedId}
                         onNavigate={close}
@@ -217,7 +220,12 @@ export function CartDrawer({ products }: { products?: LiveProduct[] }) {
               </ul>
             </div>
 
-            <div className={styles.drawerFooter}>
+            <m.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 340, damping: 28, delay: 0.1 }}
+              className={styles.drawerFooter}
+            >
               <div className={styles.subtotalRow}>
                 <span className={styles.subtotalLabel}>Subtotal</span>
                 <span className={styles.subtotalValue}>{formatPrice(subtotal)}</span>
@@ -249,7 +257,7 @@ export function CartDrawer({ products }: { products?: LiveProduct[] }) {
               >
                 View full cart
               </Link>
-            </div>
+            </m.div>
           </>
         )}
       </SheetContent>

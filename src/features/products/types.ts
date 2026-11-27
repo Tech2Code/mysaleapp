@@ -128,6 +128,8 @@ export function isBackInStock(
 export type StockAlert = {
   id: string
   productId: string
+  variantId?: string | null
+  variantLabel?: string | null
   productName: string
   productSlug: string
   productImage: string | null

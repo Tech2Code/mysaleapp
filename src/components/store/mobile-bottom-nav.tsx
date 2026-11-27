@@ -3,7 +3,7 @@
 import { HeartIcon, HomeIcon, LayoutGridIcon, ShoppingBagIcon, UserRoundIcon } from "lucide-react"
 import * as m from "motion/react-m"
 import { usePathname } from "next/navigation"
-import { Suspense, useLayoutEffect } from "react"
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { ScrollLink } from "@/components/shared/scroll-link"
 import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
@@ -26,11 +26,36 @@ function TabBadge({ count }: { count: number }) {
 
 function BottomNavTabs({ pathname }: { pathname: string | null }) {
   const mounted = useMounted()
-  const { user, ready } = useAuth()
+  const { user } = useAuth()
   const itemCount = useCart((s) => cartCount(s.items))
   const isCartOpen = useCart((s) => s.isOpen)
   const openCart = useCart((s) => s.setOpen)
   const wishCount = useWishlist((s) => s.ids.length)
+  const [cartBump, setCartBump] = useState(false)
+  const [wishlistBump, setWishlistBump] = useState(false)
+  const bumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wishBumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const onCartLanded = () => {
+      setCartBump(true)
+      if (bumpTimerRef.current) clearTimeout(bumpTimerRef.current)
+      bumpTimerRef.current = setTimeout(() => setCartBump(false), 420)
+    }
+    const onWishlistLanded = () => {
+      setWishlistBump(true)
+      if (wishBumpTimerRef.current) clearTimeout(wishBumpTimerRef.current)
+      wishBumpTimerRef.current = setTimeout(() => setWishlistBump(false), 420)
+    }
+    window.addEventListener("kk-cart-arc-landed", onCartLanded)
+    window.addEventListener("kk-wishlist-arc-landed", onWishlistLanded)
+    return () => {
+      window.removeEventListener("kk-cart-arc-landed", onCartLanded)
+      window.removeEventListener("kk-wishlist-arc-landed", onWishlistLanded)
+      if (bumpTimerRef.current) clearTimeout(bumpTimerRef.current)
+      if (wishBumpTimerRef.current) clearTimeout(wishBumpTimerRef.current)
+    }
+  }, [])
 
   // On product detail and checkout pages with their own sticky bottom CTA, keep the bottom nav tucked away.
   const isProductDetail = pathname !== null && /^\/products\/[^/]+$/.test(pathname)
@@ -43,7 +68,7 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
   const isWishlist = pathname === "/wishlist"
   const isAccount =
     pathname !== null && (pathname.startsWith("/account") || pathname === "/login" || pathname === "/track")
-  const showSignIn = ready && !user && !pathname?.startsWith("/account")
+  const showSignIn = !user && !pathname?.startsWith("/account")
   const loginHref =
     pathname && pathname !== "/" && pathname !== "/login" && !pathname.startsWith("/login/")
       ? `/login?next=${encodeURIComponent(pathname)}`
@@ -119,8 +144,9 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
                 <ScrollLink
 
                   href={tab.href}
+                  data-wishlist-target={tab.key === "wishlist" ? "true" : undefined}
                   aria-current={tab.active ? "page" : undefined}
-                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive)}
+                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive, tab.key === "wishlist" && wishlistBump && styles.cartBumpActive)}
                 >
                   {content}
                 </ScrollLink>
@@ -128,9 +154,10 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
                 <button
 
                   type="button"
+                  data-cart-target={tab.key === "cart" ? "true" : undefined}
                   onClick={tab.onClick}
                   aria-pressed={tab.active}
-                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive)}
+                  className={cn(styles.tabInteractive, tab.active && styles.tabInteractiveActive, tab.key === "cart" && cartBump && styles.cartBumpActive)}
                 >
                   {content}
                 </button>

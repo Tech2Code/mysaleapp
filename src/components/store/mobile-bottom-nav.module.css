@@ -1,4 +1,5 @@
 /* Section: Mobile Bottom Navigation Bar (Exact .glass Transparency + 10% Accent Active Pill) */
+@keyframes navCartBump { 0% { transform: scale(1) rotate(0deg); } 28% { transform: scale(1.22) rotate(-10deg); } 60% { transform: scale(0.92) rotate(6deg); } 100% { transform: scale(1) rotate(0deg); } }
 .bottomNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -6px 28px -10px var(--shadow-color); }
 .bottomNav .tabList { display: grid; height: 62px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 6px; list-style: none; margin: 0; }
 .tabList .tabItem { display: flex; justify-content: center; }
@@ -12,6 +13,9 @@
 .iconPill .iconWrap { position: relative; display: inline-flex; }
 .iconWrap .tabIcon { width: 20px; height: 20px; transition: transform 150ms ease; }
 .iconWrap .tabIconActive { transform: scale(1.05); stroke-width: 2.25; }
+@media (prefers-reduced-motion: no-preference) {
+  .cartBumpActive .tabIcon { animation: navCartBump 420ms var(--ease-spring, cubic-bezier(0.22, 1, 0.36, 1)); color: var(--primary); }
+}
 .iconWrap .tabBadge { position: absolute; top: -4px; right: -8px; display: grid; min-width: 18px; height: 18px; place-items: center; border-radius: 9999px; background-color: var(--primary); padding: 0 4px; font-size: 10px; line-height: 18px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 0 0 2px var(--background); }
 .tabInteractive .tabLabel { font-size: 11px; line-height: 14px; font-weight: 500; letter-spacing: -0.2px; color: var(--muted-foreground); }
 .tabInteractive .tabLabelActive { font-weight: 700; color: var(--primary); }

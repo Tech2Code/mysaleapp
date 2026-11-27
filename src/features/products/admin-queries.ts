@@ -68,12 +68,20 @@ export async function listAllCategories(): Promise<(Category & { productCount: n
 type StockAlertRow = {
   id: string
   product_id: string
+  variant_id?: string | null
+  variant_label?: string | null
   customer_name: string
   phone: string
   status: "waiting" | "notified"
   notified_at: string | null
   created_at: string
-  product: { name: string; slug: string; stock: number; images: string[] | null } | null
+  product: {
+    name: string
+    slug: string
+    stock: number
+    images: string[] | null
+    variants?: Array<{ id?: string; label?: string; stock?: number }> | null
+  } | null
 }
 
 /** Back-in-stock customer alert list for Admin. Returns [] gracefully if migration 0068 is not yet applied. */
@@ -84,7 +92,7 @@ export async function listStockAlerts(): Promise<StockAlert[]> {
     adminCheck,
     supabase
       .from("stock_alerts")
-      .select("id, product_id, customer_name, phone, status, notified_at, created_at, product:products(name, slug, stock, images)")
+      .select("id, product_id, variant_id, variant_label, customer_name, phone, status, notified_at, created_at, product:products(name, slug, stock, images, variants)")
       .order("status", { ascending: true })
       .order("created_at", { ascending: false })
       .limit(200)
@@ -93,17 +101,27 @@ export async function listStockAlerts(): Promise<StockAlert[]> {
   if (error || !data) return []
   return data
     .filter((r) => Boolean(r.product))
-    .map((r) => ({
-      id: r.id,
-      productId: r.product_id,
-      productName: r.product?.name ?? "Product",
-      productSlug: r.product?.slug ?? "",
-      productImage: r.product?.images?.[0] ?? null,
-      productStock: Number(r.product?.stock ?? 0),
-      customerName: r.customer_name ?? "",
-      phone: r.phone,
-      status: r.status === "notified" ? "notified" : "waiting",
-      notifiedAt: r.notified_at ?? null,
-      createdAt: r.created_at,
-    }))
+    .map((r) => {
+      const variants = Array.isArray(r.product?.variants) ? r.product.variants : []
+      const matchedVariant = r.variant_id ? variants.find((v) => v?.id === r.variant_id) : undefined
+      const resolvedStock = r.variant_id
+        ? Number(matchedVariant?.stock ?? 0)
+        : Number(r.product?.stock ?? 0)
+      const resolvedLabel = matchedVariant?.label?.trim() || r.variant_label?.trim() || null
+      return {
+        id: r.id,
+        productId: r.product_id,
+        variantId: r.variant_id ?? null,
+        variantLabel: resolvedLabel,
+        productName: r.product?.name ?? "Product",
+        productSlug: r.product?.slug ?? "",
+        productImage: r.product?.images?.[0] ?? null,
+        productStock: resolvedStock,
+        customerName: r.customer_name ?? "",
+        phone: r.phone,
+        status: r.status === "notified" ? "notified" : "waiting",
+        notifiedAt: r.notified_at ?? null,
+        createdAt: r.created_at,
+      }
+    })
 }

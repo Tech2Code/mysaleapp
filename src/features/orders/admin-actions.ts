@@ -493,6 +493,7 @@ const returnSchema = z.object({
     .array(
       z.object({
         productId: z.uuid(),
+        variantId: z.string().trim().min(1).max(80).optional(),
         name: z.string().trim().max(LIMITS.productName.max),
         quantity: v.quantity(LIMITS.returnQuantity.max),
         restock: z.boolean(),
@@ -500,7 +501,10 @@ const returnSchema = z.object({
     )
     .min(1, "Enter how many came back")
     .max(LIMITS.returnLines.max)
-    .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
+    .refine(
+      (items) => new Set(items.map((i) => (i.variantId ? `${i.productId}::${i.variantId}` : i.productId))).size === items.length,
+      "Each item can only be listed once"
+    ),
   reason: v.note(LIMITS.returnDetail.max).optional(),
   refund: z.boolean(),
   /** The customer's return request this return closes (if it came from one). */
@@ -757,10 +761,20 @@ export async function advanceExchangeFulfillment(input: unknown): Promise<Action
 const createRequestSchema = z.object({
   orderId: z.uuid(),
   items: z
-    .array(z.object({ productId: z.uuid(), name: z.string().max(LIMITS.productName.max), quantity: v.quantity(LIMITS.returnQuantity.max) }))
+    .array(
+      z.object({
+        productId: z.uuid(),
+        variantId: z.string().trim().min(1).max(80).optional(),
+        name: z.string().max(LIMITS.productName.max),
+        quantity: v.quantity(LIMITS.returnQuantity.max),
+      })
+    )
     .min(1, "Choose at least one item")
     .max(LIMITS.returnLines.max)
-    .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, "Each item can only be listed once"),
+    .refine(
+      (items) => new Set(items.map((i) => (i.variantId ? `${i.productId}::${i.variantId}` : i.productId))).size === items.length,
+      "Each item can only be listed once"
+    ),
   reason: v.reason(),
   details: v.note(LIMITS.returnDetail.max).optional(),
   resolutionType: z.enum(["refund", "exchange"]).default("refund"),

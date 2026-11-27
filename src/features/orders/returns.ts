@@ -138,13 +138,35 @@ export function itemReturnWindow(
   return { until, open: now ? now.getTime() <= until.getTime() : true, days }
 }
 
-/** How many of each product can still be sent back: ordered minus goods already received back. */
+/** Stable line key for return/exchange forms & maps: `productId::variantId` when a variant is present, else `productId`. */
+export const returnLineKey = (item: { productId: string; variantId?: string | null }): string =>
+  item.variantId ? `${item.productId}::${item.variantId}` : item.productId
+
+/** How many of each ordered line (product or variant) can still be sent back: ordered minus goods already received back. */
 export function returnableQuantities(items: OrderItem[], returns: OrderReturn[]): Map<string, number> {
   const left = new Map<string, number>()
-  for (const i of items) left.set(i.productId, (left.get(i.productId) ?? 0) + i.quantity)
+  for (const i of items) {
+    const key = returnLineKey(i)
+    left.set(key, (left.get(key) ?? 0) + i.quantity)
+  }
   for (const r of returns) {
     if (r.resolutionType === "exchange") continue
-    for (const i of r.items) left.set(i.productId, (left.get(i.productId) ?? 0) - i.quantity)
+    for (const i of r.items) {
+      const key = returnLineKey(i)
+      if (left.has(key)) {
+        left.set(key, (left.get(key) ?? 0) - i.quantity)
+      } else if (!i.variantId) {
+        // Legacy return row without variantId: decrement matching product line(s)
+        const matchingKey = [...left.keys()].find((k) => k === i.productId || k.startsWith(`${i.productId}::`))
+        if (matchingKey) {
+          left.set(matchingKey, (left.get(matchingKey) ?? 0) - i.quantity)
+        } else {
+          left.set(key, -i.quantity)
+        }
+      } else {
+        left.set(key, (left.get(key) ?? 0) - i.quantity)
+      }
+    }
   }
   return left
 }

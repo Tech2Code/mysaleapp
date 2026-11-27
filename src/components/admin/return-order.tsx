@@ -10,7 +10,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
 import { netReturnRefund } from "@/features/orders/refund"
-import { returnableQuantities } from "@/features/orders/returns"
+import { returnableQuantities, returnLineKey } from "@/features/orders/returns"
 import type { ExchangeMode, OrderItem, OrderReturn, OrderStatus, PaymentStatus, ReturnResolutionType } from "@/features/orders/types"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
@@ -37,7 +37,12 @@ export function AdminReturnOrder({
   triggerLabel = "Record a return",
 }: {
   /** From an approved customer request: its items are filled in and the request is closed when saved. */
-  prefill?: { requestId: string; resolutionType?: ReturnResolutionType; exchangeMode?: ExchangeMode; items: { productId: string; quantity: number }[] }
+  prefill?: {
+    requestId: string
+    resolutionType?: ReturnResolutionType
+    exchangeMode?: ExchangeMode
+    items: { productId: string; variantId?: string | null; quantity: number }[]
+  }
   triggerLabel?: string
   orderId: string
   orderCode: string
@@ -53,7 +58,7 @@ export function AdminReturnOrder({
   const isDoorstepExchange = prefill?.resolutionType === "exchange" && prefill?.exchangeMode === "doorstep"
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<Record<string, Row>>(() =>
-    Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
+    Object.fromEntries((prefill?.items ?? []).map((i) => [returnLineKey(i), { qty: String(i.quantity), restock: true } satisfies Row]))
   )
   const [reason, setReason] = useState("")
   const [refund, setRefund] = useState(false)
@@ -64,18 +69,22 @@ export function AdminReturnOrder({
   useBlockWhile(pending)
   const later = useToastAfter(pending)
 
-  const left = useMemo(() => returnableQuantities(items, returns),[items, returns])
-  // one line per product (an order can list a product once, but be safe)
+  const left = useMemo(() => returnableQuantities(items, returns), [items, returns])
   const lines = useMemo(() => {
     const seen = new Set<string>()
-    return items.filter(
-      (i) => !seen.has(i.productId) && seen.add(i.productId) && (left.get(i.productId) ?? 0) > 0 && (!prefill || prefill.items.some((p) => p.productId === i.productId)),
-    )
+    return items.filter((i) => {
+      const key = returnLineKey(i)
+      if (seen.has(key) || (left.get(key) ?? 0) <= 0) return false
+      seen.add(key)
+      if (!prefill) return true
+      return prefill.items.some((p) => (p.variantId ? returnLineKey(p) === key : p.productId === i.productId))
+    })
   }, [items, left, prefill])
   // From a customer request only the requested items, and no more than the requested quantity, can come back.
-  const maxOf = (productId: string) => {
-    const returnable = left.get(productId) ?? 0
-    const asked = prefill?.items.find((p) => p.productId === productId)?.quantity
+  const maxOf = (line: { productId: string; variantId?: string | null }) => {
+    const key = returnLineKey(line)
+    const returnable = left.get(key) ?? 0
+    const asked = prefill?.items.find((p) => (p.variantId ? returnLineKey(p) === key : p.productId === line.productId))?.quantity
     return asked === undefined ? returnable : Math.min(returnable, asked)
   }
 
@@ -87,11 +96,20 @@ export function AdminReturnOrder({
     ) : null
   }
 
-  const rowOf = (id: string): Row => rows[id] ?? { qty: "", restock: true }
-  const setRow = (id: string, patch: Partial<Row>) => setRows((r) => ({ ...r, [id]: { ...rowOf(id), ...patch } }))
+  const rowOf = (key: string): Row => rows[key] ?? { qty: "", restock: true }
+  const setRow = (key: string, patch: Partial<Row>) => setRows((r) => ({ ...r, [key]: { ...rowOf(key), ...patch } }))
 
   const payload = lines
-    .map((i) => ({ productId: i.productId, name: i.name, quantity: Number(rowOf(i.productId).qty) || 0, restock: rowOf(i.productId).restock }))
+    .map((i) => {
+      const key = returnLineKey(i)
+      return {
+        productId: i.productId,
+        ...(i.variantId ? { variantId: i.variantId } : {}),
+        name: i.name,
+        quantity: Number(rowOf(key).qty) || 0,
+        restock: rowOf(key).restock,
+      }
+    })
     .filter((i) => i.quantity > 0)
 
   const reasonMissing = !prefill && reason.trim().length < 3
@@ -99,7 +117,7 @@ export function AdminReturnOrder({
   const submit = () => {
     setSubmitted(true)
     setReasonError(null)
-    if (payload.length === 0 || payload.some((p) => p.quantity > maxOf(p.productId)) || reasonMissing) {
+    if (payload.length === 0 || payload.some((p) => p.quantity > maxOf(p)) || reasonMissing) {
       if (payload.length === 0 && lines.length > 1) {
         toast.error("Please enter a quantity of at least 1 for the returned item(s).")
       }
@@ -133,7 +151,7 @@ export function AdminReturnOrder({
   }
 
   const defaultRows = () =>
-    Object.fromEntries((prefill?.items ?? []).map((i) => [i.productId, { qty: String(i.quantity), restock: true } satisfies Row]))
+    Object.fromEntries((prefill?.items ?? []).map((i) => [returnLineKey(i), { qty: String(i.quantity), restock: true } satisfies Row]))
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pending) return
@@ -171,11 +189,12 @@ export function AdminReturnOrder({
         <DialogBody className={styles.dialogBodyStack4}>
           <ul className={styles.recordReturnList}>
             {lines.map((i) => {
-              const max = maxOf(i.productId)
-              const row = rowOf(i.productId)
+              const key = returnLineKey(i)
+              const max = maxOf(i)
+              const row = rowOf(key)
               const over = Number(row.qty) > max
               return (
-                <li key={i.productId} className={styles.recordReturnItem}>
+                <li key={key} className={styles.recordReturnItem}>
                   <p className={styles.recordItemTitle}>{i.name}</p>
                   <div className={styles.recordItemGrid}>
                     <TextField
@@ -185,11 +204,11 @@ export function AdminReturnOrder({
                       inputMode="numeric"
                       maxLength={String(LIMITS.returnQuantity.max).length}
                       value={row.qty}
-                      onChange={(e) => setRow(i.productId, { qty: e.target.value })}
+                      onChange={(e) => setRow(key, { qty: e.target.value })}
                       error={
                         over
                           ? `At most ${max}`
-                          : submitted && payload.length === 0 && i.productId === lines[0]?.productId
+                          : submitted && payload.length === 0 && key === returnLineKey(lines[0]!)
                             ? "Enter at least 1"
                             : undefined
                       }
@@ -199,7 +218,7 @@ export function AdminReturnOrder({
                         label="Back into stock"
                         description="Resellable condition"
                         checked={row.restock}
-                        onCheckedChange={(v) => setRow(i.productId, { restock: v })}
+                        onCheckedChange={(v) => setRow(key, { restock: v })}
                       />
                     </div>
                   </div>

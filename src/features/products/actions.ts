@@ -144,9 +144,9 @@ export async function saveProduct(
 
   const { data: before } = await supabase
     .from("products")
-    .select("images")
+    .select("images, variants")
     .eq("id", id)
-    .maybeSingle<{ images: string[] }>()
+    .maybeSingle<{ images: string[]; variants?: { id?: string; stock?: number }[] | null }>()
 
   const updatePayload = toRow(parsed.data)
   let { data, error } = await supabase
@@ -173,13 +173,21 @@ export async function saveProduct(
   let stock = data.stock
   const hasVariants = parsed.data.variants.length > 0
   if (hasVariants) {
+    const prevVariants = Array.isArray(before?.variants) ? before.variants : []
+    const prevStockByVariant = new Map(
+      prevVariants.filter((v): v is { id: string; stock?: number } => typeof v?.id === "string").map((v) => [v.id, Number(v.stock ?? 0)])
+    )
+    const variantRestocked = parsed.data.variants.some((vr) => {
+      const prev = prevStockByVariant.get(vr.id)
+      return prev !== undefined && prev <= 0 && vr.stock > 0
+    })
     const variantTotalStock = parsed.data.variants.reduce((sum, vr) => sum + vr.stock, 0)
     const variantDelta = variantTotalStock - data.stock
     if (variantDelta !== 0) {
       const { data: after, error: stockError } = await supabase.rpc("adjust_product_stock", { p_id: id, p_delta: variantDelta })
       if (!stockError) stock = Number(after)
     }
-    if (data.stock <= 0 && stock > 0) {
+    if ((data.stock <= 0 && stock > 0) || variantRestocked) {
       await supabase.from("products").update({ restocked_at: new Date().toISOString() }).eq("id", id)
     }
   }
@@ -234,7 +242,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     targetType: "product",
     targetId: id,
   })
-  refreshReviews()
+  refreshCatalogue()
   return { ok: true }
 }
 
@@ -268,7 +276,7 @@ export async function toggleProductFlag(
     targetId: id,
     metadata: { flag: parsedFlag.data, value: parsedValue.data },
   })
-  refreshReviews()
+  refreshCatalogue()
   return { ok: true }
 }
 
@@ -303,7 +311,7 @@ export async function saveCategory(id: string | null, input: unknown): Promise<A
     targetId: id ?? parsed.data.slug,
     metadata: { name: parsed.data.name, slug: parsed.data.slug },
   })
-  refreshReviews()
+  refreshCatalogue()
   return { ok: true }
 }
 
@@ -323,7 +331,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     targetType: "category",
     targetId: id,
   })
-  refreshReviews()
+  refreshCatalogue()
   return { ok: true }
 }
 
@@ -563,7 +571,7 @@ export async function subscribeStockAlert(
   if (!parsed.success) {
     return fail("Please enter a valid 10-digit WhatsApp / mobile number.", z.flattenError(parsed.error).fieldErrors)
   }
-  const { productId, name, phone } = parsed.data
+  const { productId, variantId, name, phone } = parsed.data
   if (await limited("place-order", `stock-alert:${phone}`)) return fail(RATE_LIMIT_MESSAGE)
 
   const supabase = await getServerSupabase()
@@ -571,6 +579,7 @@ export async function subscribeStockAlert(
     p_product_id: productId,
     p_name: name ?? "",
     p_phone: phone,
+    p_variant_id: variantId ?? null,
   })
   if (error) {
     if (error.message.includes("ALREADY_IN_STOCK")) {
@@ -579,6 +588,9 @@ export async function subscribeStockAlert(
     }
     if (error.message.includes("PRODUCT_NOT_FOUND")) {
       return fail("This product is no longer available.")
+    }
+    if (error.message.includes("TOO_MANY_ATTEMPTS")) {
+      return fail(RATE_LIMIT_MESSAGE)
     }
     if (error.message.includes("INVALID_PHONE")) {
       return fail("Please enter a valid 10-digit mobile number.", { phone: ["Enter a valid 10-digit mobile number"] })
