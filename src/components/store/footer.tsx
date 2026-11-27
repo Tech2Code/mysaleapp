@@ -99,7 +99,7 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
       <div className={styles.bottomSection}>
         <div className={styles.bottomBar}>
           <p className={styles.copyrightText}>
-            © {shop.shopName}.{shop.city ? ` Handmade in ${shop.city}, India.` : ""}
+            © {shop.shopName}.{shop.city ? ` Based in ${shop.city}, India.` : ""}
           </p>
           <p className={styles.trustText}>Secure UPI checkout · Tracked doorstep delivery</p>
           <BackToTop className={styles.backToTopBtn} />

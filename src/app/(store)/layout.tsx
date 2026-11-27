@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { CookieBanner } from "@/components/shared/cookie-banner"
 import { JsonLd } from "@/components/shared/json-ld"
 import { AnnouncementBar } from "@/components/store/announcement-bar"
@@ -19,7 +20,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
     getStoreSettings(),
   ])
   const nav = categories.map(({ name, slug, count }) => ({ name, slug, count }))
-  const liveProducts = products.map(({ id, price, stock, name, images, slug, weightGrams, shippingClass }) => ({
+  const liveProducts = products.map(({ id, price, stock, name, images, slug, weightGrams, shippingClass, variants }) => ({
     id,
     price,
     stock,
@@ -28,6 +29,7 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
     slug,
     weightGrams,
     shippingClass,
+    variants,
   }))
 
   return (
@@ -47,7 +49,9 @@ export default async function StoreLayout({ children }: LayoutProps<"/">) {
       <MobileBottomNav />
       <CartDrawer products={liveProducts} />
       <WhatsAppFab />
-      <InstallPrompt />
+      <Suspense fallback={null}>
+        <InstallPrompt />
+      </Suspense>
       <CookieBanner />
       <JsonLd data={organizationJsonLd(settings)} />
     </>

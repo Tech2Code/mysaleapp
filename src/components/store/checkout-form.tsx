@@ -1,7 +1,27 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeftIcon, CheckCircle2Icon, CheckIcon, CopyIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, QrCodeIcon, SmartphoneIcon, TicketPercentIcon, XIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckCircle2Icon,
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  CreditCardIcon,
+  Loader2Icon,
+  LockIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  QrCodeIcon,
+  ShieldCheckIcon,
+  ShoppingBagIcon,
+  SmartphoneIcon,
+  TagIcon,
+  TicketPercentIcon,
+  XIcon,
+} from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
@@ -37,7 +57,7 @@ import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { formatPrice, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
-import { useCart } from "@/store/cart"
+import { cartLineKey, useCart } from "@/store/cart"
 import { useStoreSettings } from "./store-settings-provider"
 import { FreeShippingBar } from "./cart-drawer"
 import { useLiveCart, type LiveProduct } from "./live-cart"
@@ -49,6 +69,14 @@ import styles from "./checkout-form.module.css"
 
 export const LAST_ORDER_KEY = "kk-last-order"
 const EMPTY_ADDRESSES: Address[] = []
+
+type CheckoutStep = 1 | 2 | 3
+
+const CHECKOUT_STEPS: { step: CheckoutStep; label: string; shortLabel: string; mobileTitle: string }[] = [
+  { step: 1, label: "Delivery", shortLabel: "Address", mobileTitle: "Delivery address" },
+  { step: 2, label: "Order Summary", shortLabel: "Summary", mobileTitle: "Order summary" },
+  { step: 3, label: "Payment", shortLabel: "Payment", mobileTitle: "Payment" },
+]
 
 type OneTimeAddress = {
   fullName: string
@@ -219,6 +247,9 @@ export function CheckoutForm({
   const signedIn = Boolean(ownerId)
   const [pending, startTransition] = useTransition()
   const showBusySuccess = useBusySuccess()
+  const [step, setStep] = useState<CheckoutStep>(1)
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
+  const [promoOpen, setPromoOpen] = useState(false)
   const [trackedOwnerId, setTrackedOwnerId] = useState<string | null>(initialUserId)
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
   const [, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
@@ -237,9 +268,7 @@ export function CheckoutForm({
   const [addrModalKey, setAddrModalKey] = useState(0)
   const [savingAddr, startSaveAddr] = useTransition()
   const [hasOrderNote, setHasOrderNote] = useState(false)
-  const [payDialogOpen, setPayDialogOpen] = useState(false)
   const [showMobileQr, setShowMobileQr] = useState(false)
-  const [validatedCustomer, setValidatedCustomer] = useState<CheckoutInput | null>(null)
   const [paymentRef, setPaymentRef] = useState("")
   const [paymentRefError, setPaymentRefError] = useState<string | null>(null)
   const [promoInput, setPromoInput] = useState("")
@@ -254,9 +283,15 @@ export function CheckoutForm({
   const fetchedForUser = useRef<string | null>(null)
   const prevUserId = useRef<string | null>(user?.id ?? null)
   const wasSignedIn = useRef(signedIn)
+  const stepperTopRef = useRef<HTMLDivElement>(null)
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null)
+  const utrInputRef = useRef<HTMLDivElement>(null)
 
   if (ownerId !== trackedOwnerId) {
     setTrackedOwnerId(ownerId)
+    setStep(1)
+    setMobileSummaryOpen(false)
+    setPromoOpen(false)
     setClientAddresses(ownerId ? null : [])
     setClientProfile(null)
     setClearedOnSignOut(!ownerId)
@@ -265,9 +300,7 @@ export function CheckoutForm({
     setOneTimeAddress(null)
     setAddressModal(null)
     setHasOrderNote(false)
-    setPayDialogOpen(false)
     setShowMobileQr(false)
-    setValidatedCustomer(null)
     setPaymentRef("")
     setPaymentRefError(null)
     setPromoInput("")
@@ -276,19 +309,20 @@ export function CheckoutForm({
   }
 
   useEffect(() => {
-    if (payDialogOpen) {
+    if (step === 3) {
       router.prefetch("/order-placed")
     }
-  }, [payDialogOpen, router])
+  }, [step, router])
 
   useLayoutEffect(() => {
     return () => {
+      setStep(1)
+      setMobileSummaryOpen(false)
+      setPromoOpen(false)
       setAddressModal(null)
-      setPayDialogOpen(false)
       setShowMobileQr(false)
       setPaymentRef("")
       setPaymentRefError(null)
-      setValidatedCustomer(null)
       setPromoError(null)
       setRedirecting(false)
       setFrozenAvailable(null)
@@ -317,8 +351,9 @@ export function CheckoutForm({
         },
   })
   const { errors } = form.formState
+  const watchedFormValues = useWatch({ control: form.control })
   const area = usePincodeLookup({
-    pincode: useWatch({ control: form.control, name: "pincode" }) ?? "",
+    pincode: watchedFormValues.pincode ?? "",
     getCity: () => form.getValues("city"),
     setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
     getState: () => form.getValues("state"),
@@ -504,12 +539,13 @@ export function CheckoutForm({
     primeArea("", "", NO_STATE)
     form.reset({ name: "", phone: "", address: "", city: "", state: NO_STATE, pincode: "", note: "" })
     queueMicrotask(() => {
+      setStep(1)
+      setMobileSummaryOpen(false)
+      setPromoOpen(false)
       setClearedOnSignOut(true)
       setClientAddresses(null)
       setClientProfile(null)
       setSelected("new")
-      setValidatedCustomer(null)
-      setPayDialogOpen(false)
       setPaymentRef("")
       setPaymentRefError(null)
       setPromoInput("")
@@ -573,13 +609,56 @@ export function CheckoutForm({
     }
   }, [authReady, user, form, initialAddresses.length, clearedOnSignOut])
 
+  const getCustomerPayload = (): CheckoutInput => {
+    const values = form.getValues()
+    return activeSavedAddress
+      ? {
+          name: activeSavedAddress.fullName,
+          phone: activeSavedAddress.phone,
+          address: activeSavedAddress.address,
+          ...splitCityState(activeSavedAddress.city),
+          pincode: activeSavedAddress.pincode,
+          note: values.note,
+        }
+      : values
+  }
+
+  const moveToStep = (next: CheckoutStep) => {
+    setStep(next)
+    setMobileSummaryOpen(false)
+    requestAnimationFrame(() => {
+      stepperTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      stepHeadingRef.current?.focus({ preventScroll: true })
+    })
+  }
+
+  const handleContinueFromStep1 = async () => {
+    if (!activeSavedAddress) {
+      const ok = await form.trigger(["name", "phone", "address", "pincode", "city", "state"], { shouldFocus: true })
+      if (!ok) return
+      if (area.error) {
+        form.setError("pincode", { message: area.error })
+        form.setFocus("pincode")
+        return
+      }
+    }
+    moveToStep(2)
+  }
+
+  const handleContinueFromStep2 = async () => {
+    const noteOk = await form.trigger(["note"], { shouldFocus: true })
+    if (!noteOk) return
+    setPaymentRefError(null)
+    moveToStep(3)
+  }
+
   const runGatewayCheckout = (customerPayload: CheckoutInput) => {
     startTransition(async () => {
       try {
         const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
         const res = await createGatewayCheckoutSession({
           customer: customerPayload,
-          items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          items: available.map((l) => ({ productId: l.productId, ...(l.variantId ? { variantId: l.variantId } : {}), quantity: l.quantity })),
           promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
           expectedTotal: shownCharges.total,
           saveAddress: signedIn && selected === "new" && saveAddress,
@@ -588,6 +667,8 @@ export function CheckoutForm({
           if (res.error.toLowerCase().includes("promo code")) {
             setAppliedPromo(null)
             setPromoError(res.error)
+            setPromoOpen(true)
+            moveToStep(2)
             toast.error(res.error)
             return
           }
@@ -596,19 +677,21 @@ export function CheckoutForm({
             router.refresh()
             return
           }
+          let hadAddressError = false
           for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
             const msg = messages?.[0]
             if (msg && field in customerPayload) {
               form.setError(field as keyof CheckoutInput, { message: msg })
+              if (field !== "note") hadAddressError = true
             }
           }
+          if (hadAddressError) moveToStep(1)
           toast.error(res.error)
           return
         }
 
         const outcome = await openGatewayCheckout(res.data.session)
         if (outcome.status === "dismissed" || outcome.status === "failed" || outcome.status === "unsupported") {
-          // If the customer already completed payment (e.g. via QR) and the webhook confirmed it just before dismiss, do NOT cancel.
           if (outcome.status !== "unsupported") {
             const latest = await trackOrder({ code: res.data.orderCode, phoneLast4: res.data.phoneLast4 })
             if (latest.ok && latest.data.paymentStatus === "paid") {
@@ -632,7 +715,7 @@ export function CheckoutForm({
               } catch {
                 // private mode: the success page falls back to the code in the URL
               }
-              for (const l of available) removeCartItem(l.productId)
+              for (const l of available) removeCartItem(cartLineKey(l))
               router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
               return
             }
@@ -679,7 +762,7 @@ export function CheckoutForm({
         } catch {
           // private mode: the success page falls back to the code in the URL
         }
-        for (const l of available) removeCartItem(l.productId)
+        for (const l of available) removeCartItem(cartLineKey(l))
         if (!verified.ok) {
           toast.info("Confirming your payment…")
         }
@@ -689,30 +772,6 @@ export function CheckoutForm({
       }
     })
   }
-
-  const onSubmit = form.handleSubmit((values) => {
-    if (!activeSavedAddress && area.error) {
-      form.setError("pincode", { message: area.error })
-      return
-    }
-    const customerPayload: CheckoutInput = activeSavedAddress
-      ? {
-          name: activeSavedAddress.fullName,
-          phone: activeSavedAddress.phone,
-          address: activeSavedAddress.address,
-          ...splitCityState(activeSavedAddress.city),
-          pincode: activeSavedAddress.pincode,
-          note: values.note,
-        }
-      : values
-    if (shop.paymentMode === "gateway") {
-      runGatewayCheckout(customerPayload)
-      return
-    }
-    setPaymentRefError(null)
-    setValidatedCustomer(customerPayload)
-    setPayDialogOpen(true)
-  })
 
   const handleApplyPromo = () => {
     const code = promoInput.trim().toUpperCase()
@@ -731,6 +790,7 @@ export function CheckoutForm({
         }
         setAppliedPromo(res.data)
         setPromoInput("")
+        setPromoOpen(false)
         toast.success(`Promo code ${res.data.code} applied! You saved ${formatPrice(res.data.discountAmount)}.`)
       } catch {
         setPromoError("Couldn't validate promo code. Please try again.")
@@ -747,10 +807,16 @@ export function CheckoutForm({
   }
 
   const confirmPaymentAndPlaceOrder = () => {
-    if (!validatedCustomer) return
+    const customerPayload = getCustomerPayload()
+    if (shop.paymentMode === "gateway") {
+      runGatewayCheckout(customerPayload)
+      return
+    }
     const parsedRef = paymentReferenceSchema.safeParse(paymentRef)
     if (!parsedRef.success) {
       setPaymentRefError(parsedRef.error.issues[0]?.message ?? "Please enter your 12-digit UTR / UPI reference number.")
+      utrInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      utrInputRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true })
       return
     }
     setPaymentRefError(null)
@@ -758,12 +824,11 @@ export function CheckoutForm({
       try {
         const activeDiscount = computePromoDiscount(appliedPromo, charges.subtotal)
         const res = await placeOrder({
-          customer: validatedCustomer,
-          items: available.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+          customer: customerPayload,
+          items: available.map((l) => ({ productId: l.productId, ...(l.variantId ? { variantId: l.variantId } : {}), quantity: l.quantity })),
           paymentReference: parsedRef.data,
           promoCode: appliedPromo && activeDiscount > 0 ? appliedPromo.code : undefined,
           expectedTotal: shownCharges.total,
-          // only offer to save when the customer typed a new address
           saveAddress: signedIn && selected === "new" && saveAddress,
         })
         if (!res.ok) {
@@ -775,23 +840,25 @@ export function CheckoutForm({
           if (res.error.toLowerCase().includes("promo code")) {
             setAppliedPromo(null)
             setPromoError(res.error)
-            setPayDialogOpen(false)
+            setPromoOpen(true)
+            moveToStep(2)
             toast.error(res.error)
             return
           }
           if (res.error.toLowerCase().includes("updated")) {
-            setPayDialogOpen(false)
             toast.error(res.error)
             router.refresh()
             return
           }
+          let hadAddressError = false
           for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
             const msg = messages?.[0]
-            if (msg && field in validatedCustomer) {
+            if (msg && field in customerPayload) {
               form.setError(field as keyof CheckoutInput, { message: msg })
-              setPayDialogOpen(false)
+              if (field !== "note") hadAddressError = true
             }
           }
+          if (hadAddressError) moveToStep(1)
           toast.error(res.error)
           return
         }
@@ -811,7 +878,7 @@ export function CheckoutForm({
         } catch {
           // private mode: the success page falls back to the code in the URL
         }
-        for (const l of available) removeCartItem(l.productId)
+        for (const l of available) removeCartItem(cartLineKey(l))
         router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
       } catch {
         toast.error("Couldn't place your order. Please check your connection and try again.")
@@ -819,8 +886,20 @@ export function CheckoutForm({
     })
   }
 
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (pending || placeholder) return
+    if (step === 1) {
+      void handleContinueFromStep1()
+    } else if (step === 2) {
+      void handleContinueFromStep2()
+    } else {
+      confirmPaymentAndPlaceOrder()
+    }
+  }
+
   // The real cart is in localStorage (unknown until hydration): show a placeholder order in the real layout meanwhile.
-  // While redirecting to /order-placed, keep the snapshot of items/charges frozen so the dialog/page never flashes ₹0.
+  // While redirecting to /order-placed, keep the snapshot of items/charges frozen so the page never flashes ₹0.
   const placeholder = !ready || preview
   const activeAvailable = redirecting && frozenAvailable ? frozenAvailable : available
   const shown = placeholder ? placeholderCartLines() : activeAvailable
@@ -852,744 +931,1083 @@ export function CheckoutForm({
   const hasCompactSelectedCard = Boolean(signedIn && addresses.length > 0 && (activeSavedAddress || oneTimeAddress) && !hasAddressFieldError)
   const showAddressInputs = !hasCompactSelectedCard
 
-  const view = (
-    <>
-      <form onSubmit={onSubmit} noValidate className={styles.checkoutFormGrid}>
-      <div className={styles.mainColumn}>
-        {/* Step 1: Delivery details */}
-        <div className={styles.stepCard}>
-          <div className={styles.stepHeaderRow}>
-            <div>
-              <h2 className={styles.stepTitle}>
-                <span className={styles.stepBadge}>
-                  1
-                </span>
-                Delivery details
-              </h2>
-              <p className={styles.stepSubtext}>
-                {signedIn ? (
-                  addresses.length > 0 ? "Confirm where we should deliver this order." : "Enter where we should deliver."
-                ) : authReady ? (
-                  <>
-                    Checking out as a guest.{" "}
-                    <Link href="/login?next=/checkout" className={styles.inlineAccentLink}>
-                      Sign in
-                    </Link>{" "}
-                    to save your address and track orders.
-                  </>
-                ) : (
-                  "Enter where we should deliver."
-                )}
-              </p>
-            </div>
-            {signedIn && addresses.length > 0 && (
-              <Link
-                href="/account/profile?tab=addresses"
-                className={styles.smallActionLink}
-              >
-                Manage addresses
-              </Link>
-            )}
+  const deliveryRecap = activeSavedAddress
+    ? {
+        label: activeSavedAddress.label,
+        name: activeSavedAddress.fullName,
+        phone: activeSavedAddress.phone,
+        line: `${activeSavedAddress.address}, ${activeSavedAddress.city} - ${activeSavedAddress.pincode}`,
+      }
+    : oneTimeAddress
+      ? {
+          label: "One-time",
+          name: oneTimeAddress.fullName,
+          phone: oneTimeAddress.phone,
+          line: `${oneTimeAddress.address}, ${joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - ${oneTimeAddress.pincode}`,
+        }
+      : {
+          label: "Delivery",
+          name: watchedFormValues.name || "",
+          phone: watchedFormValues.phone || "",
+          line: [
+            watchedFormValues.address,
+            watchedFormValues.city && watchedFormValues.state
+              ? joinCityState(watchedFormValues.city, watchedFormValues.state)
+              : watchedFormValues.city,
+          ]
+            .filter(Boolean)
+            .join(", ")
+            .concat(watchedFormValues.pincode ? ` - ${watchedFormValues.pincode}` : ""),
+        }
+
+  const { upiId, upiPayeeName, orderCodePrefix } = shop
+  const upiUrl = upiId
+    ? buildUpiUrl({
+        upiId,
+        payeeName: upiPayeeName,
+        amount: shownCharges.total,
+        orderCode: orderCodePrefix || "Order",
+      })
+    : null
+
+  const currentStepMeta = CHECKOUT_STEPS[step - 1]
+  const mobileCtaLabel =
+    step === 1
+      ? hasCompactSelectedCard
+        ? "Deliver here"
+        : "Continue"
+      : step === 2
+        ? "Proceed to pay"
+        : shop.paymentMode === "gateway"
+          ? `Pay ${formatPrice(shownCharges.total)}`
+          : "Place order"
+
+  const trustAndPolicies = (
+    <div className={styles.trustChecklistBox}>
+      <p className={styles.trustRow}>
+        <CheckCircle2Icon className={styles.checkSvg} />
+        <span>{shop.paymentMode === "gateway" ? "Instant confirmation via secure gateway" : "Order is placed after UPI payment"}</span>
+      </p>
+      <p className={styles.trustRow}>
+        <CheckCircle2Icon className={styles.checkSvg} />
+        <span className={styles.safeText}>100% Safe Checkout</span>
+      </p>
+      <p className={styles.policyNoteLine}>
+        By placing your order, you agree to our{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setLegalModalTab("terms")
+            setLegalModalOpen(true)
+          }}
+          className={styles.policyInlineLink}
+        >
+          Terms
+        </button>
+        ,{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setLegalModalTab("privacy")
+            setLegalModalOpen(true)
+          }}
+          className={styles.policyInlineLink}
+        >
+          Privacy
+        </button>{" "}
+        &amp;{" "}
+        <button
+          type="button"
+          onClick={() => {
+            setLegalModalTab("refund")
+            setLegalModalOpen(true)
+          }}
+          className={styles.policyInlineLink}
+        >
+          Refund Policy
+        </button>
+        .
+      </p>
+    </div>
+  )
+
+  const promoBlock = (
+    <div className={styles.promoSection}>
+      {appliedPromo && !promoBelowMin ? (
+        <div className={styles.appliedPromoCard}>
+          <div className={styles.promoInfoCol}>
+            <p className={styles.promoCodeRow}>
+              <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
+              <span className={styles.monoCode}>{appliedPromo.code}</span>
+              <span>applied</span>
+            </p>
+            <p className={styles.promoSavingsNote}>
+              {appliedPromo.description
+                ? `${appliedPromo.description} · Saving ${formatPrice(shownCharges.discountAmount ?? 0)}`
+                : `Saving ${formatPrice(shownCharges.discountAmount ?? 0)} on this order`}
+            </p>
           </div>
-
-          {hasCompactSelectedCard && (
-            <div className={styles.selectedAddrWrap}>
-              <div className={styles.selectedAddrCard}>
-                {activeSavedAddress ? (
-                  <>
-                    <span className={styles.addrTitleRow}>
-                      <MapPinIcon className={styles.pinSvg} aria-hidden />
-                      <span>{activeSavedAddress.label}</span>
-                      {activeSavedAddress.isDefault && <span className={styles.defaultBadge}>Default</span>}
-                      <span className={styles.deliveringBadge}>
-                        <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
-                      </span>
-                    </span>
-                    <span className={styles.addrPersonLine}>
-                      {activeSavedAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {activeSavedAddress.phone}</span>
-                    </span>
-                    <span className={styles.addrStreetLine}>
-                      {activeSavedAddress.address}, {activeSavedAddress.city} - {activeSavedAddress.pincode}
-                    </span>
-                  </>
-                ) : oneTimeAddress ? (
-                  <>
-                    <span className={styles.addrTitleRow}>
-                      <MapPinIcon className={styles.pinSvg} aria-hidden />
-                      <span className={styles.oneTimeBadge}>One-time address</span>
-                      <span className={styles.deliveringBadge}>
-                        <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
-                      </span>
-                    </span>
-                    <span className={styles.addrPersonLine}>
-                      {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
-                    </span>
-                    <span className={styles.addrStreetLine}>
-                      {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-
-              <div className={styles.addrActionsBar}>
-                {(addresses.length > 1 || Boolean(oneTimeAddress)) && (
-                  <button
-                    type="button"
-                    onClick={() => setAddressModal("list")}
-                    className={styles.addrActionBtn}
-                  >
-                    Change address{addresses.length > 1 ? ` (${addresses.length})` : ""}
-                  </button>
-                )}
-                {!activeSavedAddress && oneTimeAddress && (
-                  <button
-                    type="button"
-                    onClick={() => openNewAddressModal(false, true)}
-                    className={styles.addrActionBtn}
-                  >
-                    <PencilIcon className={styles.actionIcon14} aria-hidden /> Edit
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => openNewAddressModal(false)}
-                  className={cn(styles.addrActionBtn, styles.addrActionBtnPrimary)}
-                >
-                  <PlusIcon className={styles.actionIcon14} aria-hidden /> Add new address
-                </button>
-              </div>
-            </div>
-          )}
-
-          {showAddressInputs && (
-            <div className={styles.addressFieldsGrid}>
-              <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
-              <TextField
-                label="WhatsApp / mobile number" kind="phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="98765 43210"
-                leading="+91"
-                hint="We'll confirm your order on this number"
-                error={errors.phone?.message}
-                {...form.register("phone")}
-              />
-              <TextAreaField
-                label="Full address" maxLength={LIMITS.address.max}
-                autoComplete="street-address"
-                rows={3}
-                placeholder="House no., street, landmark"
-                containerClassName={styles.spanTwoCols}
-                error={errors.address?.message}
-                {...form.register("address")}
-              />
-              <TextField
-                label="Pincode" kind="pincode"
-                inputMode="numeric"
-                autoComplete="postal-code"
-                maxLength={6}
-                hint={area.hint}
-                error={errors.pincode?.message || area.error}
-                {...form.register("pincode")}
-              />
-              <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
-              <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.spanTwoCols} />
-            </div>
-          )}
-
-          {signedIn && showAddressInputs && selected === "new" && (
-            <SwitchField
-              label="Save this address to my account"
-              description="Use it next time in one tap"
-              checked={saveAddress}
-              onCheckedChange={setSaveAddress}
-            />
-          )}
+          <button
+            type="button"
+            aria-label={`Remove promo code ${appliedPromo.code}`}
+            onClick={handleRemovePromo}
+            className={styles.removePromoBtn}
+          >
+            <XIcon className={styles.xSmallSvg} aria-hidden /> Remove
+          </button>
         </div>
-
-        {/* Step 2: Order items & optional note (fills the main column on desktop, sits above Price Summary on mobile) */}
-        <div className={styles.orderStepCard}>
-          <div className={styles.stepHeaderCenterRow}>
-            <h2 className={styles.stepTitle}>
-              <span className={styles.stepBadge}>
-                2
-              </span>
-              Your order
-              <span className={styles.itemCountPill}>
-                {shownCount} item{shownCount === 1 ? "" : "s"}
-              </span>
-            </h2>
-            <Link
-              href="/cart"
-              className={styles.smallActionLink}
-            >
-              Edit cart
-            </Link>
-          </div>
-
-          <ul className={styles.orderItemsUl}>
-            {shown.map((l) => (
-              <li key={l.productId}>
-                <Link
-
-                  href={`/products/${l.slug}`}
-                  className={styles.orderLineLink}
-                >
-                  <div className={styles.lineThumbWrap}>
-                    <ProductImage src={l.image} alt={l.name} sizes="60px" className={styles.lineThumbImg} />
-                    <span className={styles.qtyBubble}>
-                      {l.quantity}
-                    </span>
-                  </div>
-                  <span className={styles.lineTextCol}>
-                    <span className={styles.lineNameText}>{l.name}</span>
-                    <span className={styles.lineMetaText}>
-                      {formatPrice(l.price)} × {l.quantity}
-                      {l.priceChanged && " · Price updated"}
-                      {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
-                        <>
-                          {" · "}
-                          {[
-                            l.shippingClass === "oversized" ? "Large / bulky" : l.shippingClass === "fragile" ? "Fragile" : null,
-                            l.weightGrams > 0 ? formatWeightGrams(l.weightGrams * l.quantity) : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </>
-                      )}
-                    </span>
-                  </span>
-                  <span className={styles.lineTotalPrice}>{formatPrice(l.price * l.quantity)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {!placeholder && hasUnavailable && (
-            <p className={styles.unavailableWarning}>Unavailable items were left out of this order.</p>
-          )}
-
-          <div className={styles.noteFooterSection}>
-            <SwitchField
-              label="Add an order note or gift message"
-              description="Custom name, gift message, preferred colour…"
-              checked={hasOrderNote || Boolean(errors.note)}
-              onCheckedChange={(checked) => {
-                setHasOrderNote(checked)
-                if (!checked) {
-                  form.setValue("note", "", { shouldValidate: true })
+      ) : !promoOpen && !promoError && !promoBelowMin ? (
+        <button
+          type="button"
+          onClick={() => setPromoOpen(true)}
+          className={styles.promoToggleBtn}
+        >
+          <span className={styles.promoToggleLeft}>
+            <TagIcon className={styles.promoTagSvg} aria-hidden />
+            <span>Have a promo code?</span>
+          </span>
+          <span className={styles.promoToggleAction}>Apply</span>
+        </button>
+      ) : (
+        <div className={styles.promoInputStack}>
+          <div className={styles.promoInputRow}>
+            <TextField
+              label="Promo code"
+              fieldSize="md"
+              noErrorSpace
+              containerClassName={styles.promoFieldContainer}
+              value={promoInput}
+              maxLength={24}
+              disabled={promoPending || pending || placeholder}
+              onChange={(e) => {
+                setPromoInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))
+                if (promoError) setPromoError(null)
+                if (promoBelowMin) setAppliedPromo(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  handleApplyPromo()
                 }
               }}
+              placeholder="Enter code (e.g. WELCOME10)"
+              autoCapitalize="characters"
+              autoComplete="off"
+              className={styles.promoCodeInput}
             />
-            {(hasOrderNote || Boolean(errors.note)) && (
-              <TextAreaField
-                label="Order note (optional)" maxLength={LIMITS.note.max}
-                rows={2}
-                placeholder="Write your gift message, custom name, or preferred colour…"
-                error={errors.note?.message}
-                {...form.register("note")}
-              />
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={promoPending || pending || placeholder || !promoInput.trim()}
+              onClick={handleApplyPromo}
+              className={styles.applyPromoBtn}
+            >
+              {promoPending ? <Loader2Icon className={styles.spinSmallSvg} /> : "Apply"}
+            </Button>
           </div>
-        </div>
-      </div>
-
-      {/* Right column (sticky on desktop, bottom summary card on mobile): Price breakdown & Pay CTA */}
-      <aside className={styles.summaryAside}>
-        <h2 className={styles.summaryHeading}>Price summary</h2>
-        <FreeShippingBar subtotal={shownCharges.subtotal} />
-
-        {/* Promo code section */}
-        <div className={styles.promoSection}>
-          {appliedPromo && !promoBelowMin ? (
-            <div className={styles.appliedPromoCard}>
-              <div className={styles.promoInfoCol}>
-                <p className={styles.promoCodeRow}>
-                  <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
-                  <span className={styles.monoCode}>{appliedPromo.code}</span>
-                  <span>applied</span>
-                </p>
-                <p className={styles.promoSavingsNote}>
-                  {appliedPromo.description
-                    ? `${appliedPromo.description} · Saving ${formatPrice(shownCharges.discountAmount ?? 0)}`
-                    : `Saving ${formatPrice(shownCharges.discountAmount ?? 0)} on this order`}
-                </p>
-              </div>
-              <button
-
-                type="button"
-                aria-label={`Remove promo code ${appliedPromo.code}`}
-                onClick={handleRemovePromo}
-                className={styles.removePromoBtn}
-              >
-                <XIcon className={styles.xSmallSvg} aria-hidden /> Remove
+          {promoError && (
+            <p role="alert" className={styles.promoErrorMsg}>
+              {promoError}
+            </p>
+          )}
+          {promoBelowMin && appliedPromo && (
+            <div className={styles.promoBelowMinRow}>
+              <p role="alert" className={styles.promoBelowMinMsg}>
+                Add {formatPrice(promoShortfall)} more to use <span className={styles.monoBold}>{appliedPromo.code}</span>.
+              </p>
+              <button type="button" onClick={handleRemovePromo} className={styles.removeInlineBtn}>
+                Remove
               </button>
             </div>
-          ) : (
-            <div className={styles.promoInputStack}>
-              <div className={styles.promoInputRow}>
-                <TextField
-                  label="Have a promo code?"
-                  fieldSize="md"
-                  noErrorSpace
-                  containerClassName={styles.promoFieldContainer}
-                  value={promoInput}
-                  maxLength={24}
-                  disabled={promoPending || pending || placeholder}
-                  onChange={(e) => {
-                    setPromoInput(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))
-                    if (promoError) setPromoError(null)
-                    if (promoBelowMin) setAppliedPromo(null)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleApplyPromo()
-                    }
-                  }}
-                  placeholder="Enter code (e.g. WELCOME10)"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  className={styles.promoCodeInput}
-                />
-                <Button
+          )}
+        </div>
+      )}
+    </div>
+  )
 
-                  type="button"
-                  variant="outline"
-                  disabled={promoPending || pending || placeholder || !promoInput.trim()}
-                  onClick={handleApplyPromo}
-                  className={styles.applyPromoBtn}
-                >
-                  {promoPending ? <Loader2Icon className={styles.spinSmallSvg} /> : "Apply"}
-                </Button>
-              </div>
-              {promoError && (
-                <p role="alert" className={styles.promoErrorMsg}>
-                  {promoError}
-                </p>
-              )}
-              {promoBelowMin && appliedPromo && (
-                <div className={styles.promoBelowMinRow}>
-                  <p role="alert" className={styles.promoBelowMinMsg}>
-                    Add {formatPrice(promoShortfall)} more to use <span className={styles.monoBold}>{appliedPromo.code}</span>.
+  const view = (
+    <>
+      <div ref={stepperTopRef} className={styles.checkoutFlowWrap}>
+        {/* NATIVE MOBILE FULL-VIEW APP TOP BAR + MODERN STEPS COUNTER (< 900px) */}
+        <div className={styles.mobileAppHeader}>
+          <div className={styles.mobileAppBarRow}>
+            {step === 1 ? (
+              <Link href="/cart" aria-label="Back to cart" className={styles.mobileAppBackBtn}>
+                <ArrowLeftIcon className={styles.icon18} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={pending}
+                aria-label="Previous step"
+                onClick={() => moveToStep((step - 1) as CheckoutStep)}
+                className={styles.mobileAppBackBtn}
+              >
+                <ArrowLeftIcon className={styles.icon18} />
+              </button>
+            )}
+            <div className={styles.mobileAppTitleCol}>
+              <span className={styles.mobileAppStepTitle}>{currentStepMeta.mobileTitle}</span>
+            </div>
+            {step === 3 ? (
+              <span className={styles.mobileLockedPill}>
+                <LockIcon className={styles.lockTinySvg} aria-hidden /> Final
+              </span>
+            ) : (
+              <span className={styles.mobileSafePill}>
+                <ShieldCheckIcon className={styles.lockTinySvg} aria-hidden /> Safe
+              </span>
+            )}
+          </div>
+
+          <nav aria-label="Checkout progress" className={styles.mobileStepperRail}>
+            <ol className={styles.mobileStepperList}>
+              {CHECKOUT_STEPS.map((s, idx) => {
+                const isCurrent = step === s.step
+                const isDone = step > s.step
+                const StepIcon = s.step === 1 ? MapPinIcon : s.step === 2 ? ShoppingBagIcon : CreditCardIcon
+                return (
+                  <li key={s.step} className={styles.mobileStepNode}>
+                    <button
+                      type="button"
+                      disabled={!isDone || pending}
+                      aria-current={isCurrent ? "step" : undefined}
+                      onClick={() => {
+                        if (isDone) moveToStep(s.step)
+                      }}
+                      className={cn(
+                        styles.mobileStepBtn,
+                        isCurrent && styles.mobileStepBtnCurrent,
+                        isDone && styles.mobileStepBtnDone
+                      )}
+                    >
+                      <span className={styles.mobileStepCircle} aria-hidden>
+                        {isDone ? <CheckIcon className={styles.stepCheckSvg} /> : <StepIcon className={styles.stepIconTiny} />}
+                      </span>
+                      <span className={styles.mobileStepLabel}>{s.shortLabel}</span>
+                    </button>
+                    {idx < CHECKOUT_STEPS.length - 1 && (
+                      <span
+                        aria-hidden
+                        className={cn(styles.mobileStepConnector, step > s.step && styles.mobileStepConnectorDone)}
+                      />
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </nav>
+        </div>
+
+        {/* MOBILE COLLAPSIBLE ORDER SUMMARY ACCORDION (Shopify/Apple style on Step 1 & Step 3) */}
+        {step !== 2 && (
+          <div className={styles.mobileAccordionWrap}>
+            <button
+              type="button"
+              aria-expanded={mobileSummaryOpen}
+              onClick={() => setMobileSummaryOpen((v) => !v)}
+              className={styles.mobileAccordionTrigger}
+            >
+              <span className={styles.mobileAccordionLeft}>
+                <ShoppingBagIcon className={styles.accordionBagSvg} aria-hidden />
+                <span>
+                  {step === 3 ? "Final order summary" : "Order summary"} ({shownCount} {shownCount === 1 ? "item" : "items"})
+                </span>
+                <ChevronDownIcon className={cn(styles.accordionChevron, mobileSummaryOpen && styles.accordionChevronOpen)} aria-hidden />
+              </span>
+              <span className={styles.mobileAccordionPrice}>{formatPrice(shownCharges.total)}</span>
+            </button>
+            {mobileSummaryOpen && (
+              <div className={styles.mobileAccordionBody}>
+                <ul className={styles.miniItemsList}>
+                  {shown.map((l) => (
+                    <li key={cartLineKey(l)} className={styles.miniItemRow}>
+                      <div className={styles.miniThumbWrap}>
+                        <ProductImage src={l.image} alt={l.name} sizes="40px" />
+                        <span className={styles.miniQtyBubble}>{l.quantity}</span>
+                      </div>
+                      <span className={styles.miniItemTextCol}>
+                        <span className={styles.miniItemName}>{l.name}</span>
+                        {l.variantLabel && <span className={styles.miniItemVariant}>{l.variantLabel}</span>}
+                      </span>
+                      <span className={styles.miniItemPrice}>{formatPrice(l.price * l.quantity)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {appliedPromo && !promoBelowMin && (
+                  <p className={styles.lockedPromoBadge}>
+                    <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
+                    <span>
+                      <strong className={styles.monoCode}>{appliedPromo.code}</strong> applied · Saving {formatPrice(shownCharges.discountAmount ?? 0)}
+                    </span>
                   </p>
-                  <button
+                )}
+                <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel={step === 3 ? "Final amount" : "Total"} className={styles.breakdownTopBorder} />
+                {step === 3 && (
+                  <button type="button" onClick={() => moveToStep(2)} className={styles.editLockedLinkBtn}>
+                    Edit order or promo code
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
+        {/* DESKTOP WEB MODERN 3-STEP PROGRESS BAR (>= 900px) */}
+        <nav aria-label="Checkout progress" className={styles.desktopStepperNav}>
+          <ol className={styles.desktopStepperList}>
+            {CHECKOUT_STEPS.map((s, idx) => {
+              const isCurrent = step === s.step
+              const isDone = step > s.step
+              const StepIcon = s.step === 1 ? MapPinIcon : s.step === 2 ? ShoppingBagIcon : CreditCardIcon
+              return (
+                <li key={s.step} className={styles.desktopStepItem}>
+                  <button
                     type="button"
-                    onClick={handleRemovePromo}
-                    className={styles.removeInlineBtn}
+                    disabled={!isDone || pending}
+                    aria-current={isCurrent ? "step" : undefined}
+                    onClick={() => {
+                      if (isDone) moveToStep(s.step)
+                    }}
+                    className={cn(
+                      styles.desktopStepBtn,
+                      isCurrent && styles.desktopStepBtnCurrent,
+                      isDone && styles.desktopStepBtnDone
+                    )}
                   >
-                    Remove
+                    <span className={styles.desktopStepNum} aria-hidden>
+                      {isDone ? <CheckIcon className={styles.stepCheckSvg} /> : <StepIcon className={styles.stepIconSm} />}
+                    </span>
+                    <span className={styles.desktopStepTextCol}>
+                      <span className={styles.desktopStepKicker}>
+                        {isDone ? "Completed" : `Step ${s.step}`}
+                      </span>
+                      <span className={styles.desktopStepLabel}>{s.label}</span>
+                    </span>
+                  </button>
+                  {idx < CHECKOUT_STEPS.length - 1 && (
+                    <span
+                      aria-hidden
+                      className={cn(styles.desktopStepLine, step > s.step && styles.desktopStepLineDone)}
+                    />
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </nav>
+
+        <form onSubmit={handleFormSubmit} noValidate className={styles.checkoutFormGrid}>
+          <div className={styles.mainColumn}>
+            {/* STEP 1: DELIVERY ADDRESS */}
+            {step === 1 && (
+              <section aria-labelledby="checkout-step-1-heading" className={styles.stepCard}>
+                <div className={styles.stepHeaderRow}>
+                  <div>
+                    <h2 id="checkout-step-1-heading" ref={stepHeadingRef} tabIndex={-1} className={styles.stepTitle}>
+                      <span className={styles.stepBadge}>1</span>
+                      Delivery details
+                    </h2>
+                    <p className={styles.stepSubtext}>
+                      {signedIn ? (
+                        addresses.length > 0 ? "Confirm where we should deliver this order." : "Enter where we should deliver."
+                      ) : authReady ? (
+                        <>
+                          Checking out as a guest.{" "}
+                          <Link href="/login?next=/checkout" className={styles.inlineAccentLink}>
+                            Sign in
+                          </Link>{" "}
+                          to save your address and track orders.
+                        </>
+                      ) : (
+                        "Enter where we should deliver."
+                      )}
+                    </p>
+                  </div>
+                  {signedIn && addresses.length > 0 && (
+                    <Link href="/account/profile?tab=addresses" className={styles.smallActionLink}>
+                      Manage addresses
+                    </Link>
+                  )}
+                </div>
+
+                {hasCompactSelectedCard && (
+                  <div className={styles.selectedAddrWrap}>
+                    <div className={styles.selectedAddrCard}>
+                      {activeSavedAddress ? (
+                        <>
+                          <span className={styles.addrTitleRow}>
+                            <MapPinIcon className={styles.pinSvg} aria-hidden />
+                            <span>{activeSavedAddress.label}</span>
+                            {activeSavedAddress.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                            <span className={styles.deliveringBadge}>
+                              <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
+                            </span>
+                          </span>
+                          <span className={styles.addrPersonLine}>
+                            {activeSavedAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {activeSavedAddress.phone}</span>
+                          </span>
+                          <span className={styles.addrStreetLine}>
+                            {activeSavedAddress.address}, {activeSavedAddress.city} - {activeSavedAddress.pincode}
+                          </span>
+                        </>
+                      ) : oneTimeAddress ? (
+                        <>
+                          <span className={styles.addrTitleRow}>
+                            <MapPinIcon className={styles.pinSvg} aria-hidden />
+                            <span className={styles.oneTimeBadge}>One-time address</span>
+                            <span className={styles.deliveringBadge}>
+                              <CheckCircle2Icon className={styles.activeCheckSvg} aria-hidden /> Delivering here
+                            </span>
+                          </span>
+                          <span className={styles.addrPersonLine}>
+                            {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
+                          </span>
+                          <span className={styles.addrStreetLine}>
+                            {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+
+                    <div className={styles.addrActionsBar}>
+                      {(addresses.length > 1 || Boolean(oneTimeAddress)) && (
+                        <button
+                          type="button"
+                          onClick={() => setAddressModal("list")}
+                          className={styles.addrActionBtn}
+                        >
+                          Change address{addresses.length > 1 ? ` (${addresses.length})` : ""}
+                        </button>
+                      )}
+                      {!activeSavedAddress && oneTimeAddress && (
+                        <button
+                          type="button"
+                          onClick={() => openNewAddressModal(false, true)}
+                          className={styles.addrActionBtn}
+                        >
+                          <PencilIcon className={styles.actionIcon14} aria-hidden /> Edit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openNewAddressModal(false)}
+                        className={cn(styles.addrActionBtn, styles.addrActionBtnPrimary)}
+                      >
+                        <PlusIcon className={styles.actionIcon14} aria-hidden /> Add new address
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showAddressInputs && (
+                  <div className={styles.addressFieldsGrid}>
+                    <TextField label="Full name" kind="personName" autoComplete="name" error={errors.name?.message} {...form.register("name")} />
+                    <TextField
+                      label="WhatsApp / mobile number"
+                      kind="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="98765 43210"
+                      leading="+91"
+                      hint="We'll confirm your order on this number"
+                      error={errors.phone?.message}
+                      {...form.register("phone")}
+                    />
+                    <TextAreaField
+                      label="Full address"
+                      maxLength={LIMITS.address.max}
+                      autoComplete="street-address"
+                      rows={3}
+                      placeholder="House no., street, landmark"
+                      containerClassName={styles.spanTwoCols}
+                      error={errors.address?.message}
+                      {...form.register("address")}
+                    />
+                    <TextField
+                      label="Pincode"
+                      kind="pincode"
+                      inputMode="numeric"
+                      autoComplete="postal-code"
+                      maxLength={6}
+                      hint={area.hint}
+                      error={errors.pincode?.message || area.error}
+                      {...form.register("pincode")}
+                    />
+                    <TextField label="City / District" kind="city" autoComplete="address-level2" error={errors.city?.message} {...form.register("city")} />
+                    <FormSelectField control={form.control} name="state" label="State" placeholder="Select state" options={STATE_OPTIONS} containerClassName={styles.spanTwoCols} />
+                  </div>
+                )}
+
+                {signedIn && showAddressInputs && selected === "new" && (
+                  <SwitchField
+                    label="Save this address to my account"
+                    description="Use it next time in one tap"
+                    checked={saveAddress}
+                    onCheckedChange={setSaveAddress}
+                  />
+                )}
+
+                <div className={styles.stepDesktopActions}>
+                  <Button type="submit" size="lg" disabled={pending || placeholder} className={styles.stepContinueBtn}>
+                    {hasCompactSelectedCard ? "Deliver here & review order" : "Continue to Order Summary"}{" "}
+                    <ArrowRightIcon className={styles.icon16} />
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {/* STEP 2: ORDER SUMMARY & PROMO CODE */}
+            {step === 2 && (
+              <>
+                <div className={styles.recapStripCard}>
+                  <div className={styles.recapStripBody}>
+                    <span className={styles.recapStripTitleRow}>
+                      <MapPinIcon className={styles.recapPinSvg} aria-hidden />
+                      <span className={styles.recapHeading}>Delivering to {deliveryRecap.name}</span>
+                      {deliveryRecap.label && <span className={styles.recapTag}>{deliveryRecap.label}</span>}
+                    </span>
+                    <p className={styles.recapSubLine}>
+                      {deliveryRecap.line}
+                      {deliveryRecap.phone ? ` · +91 ${deliveryRecap.phone}` : ""}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => moveToStep(1)} className={styles.recapChangeBtn}>
+                    Change
                   </button>
                 </div>
+
+                <section aria-labelledby="checkout-step-2-heading" className={styles.orderStepCard}>
+                  <div className={styles.stepHeaderCenterRow}>
+                    <h2 id="checkout-step-2-heading" ref={stepHeadingRef} tabIndex={-1} className={styles.stepTitle}>
+                      <span className={styles.stepBadge}>2</span>
+                      Order summary
+                      <span className={styles.itemCountPill}>
+                        {shownCount} item{shownCount === 1 ? "" : "s"}
+                      </span>
+                    </h2>
+                    <Link href="/cart" className={styles.smallActionLink}>
+                      Edit cart
+                    </Link>
+                  </div>
+
+                  <ul className={styles.orderItemsUl}>
+                    {shown.map((l) => (
+                      <li key={cartLineKey(l)}>
+                        <Link href={`/products/${l.slug}`} className={styles.orderLineLink}>
+                          <div className={styles.lineThumbWrap}>
+                            <ProductImage src={l.image} alt={l.name} sizes="60px" className={styles.lineThumbImg} />
+                            <span className={styles.qtyBubble}>{l.quantity}</span>
+                          </div>
+                          <span className={styles.lineTextCol}>
+                            <span className={styles.lineNameText}>{l.name}</span>
+                            {l.variantLabel && <span className={styles.lineVariantPill}>{l.variantLabel}</span>}
+                            <span className={styles.lineMetaText}>
+                              {formatPrice(l.price)} × {l.quantity}
+                              {l.priceChanged && " · Price updated"}
+                              {(l.shippingClass !== "standard" || l.weightGrams > 0) && (
+                                <>
+                                  {" · "}
+                                  {[
+                                    l.shippingClass === "oversized" ? "Large / bulky" : l.shippingClass === "fragile" ? "Fragile" : null,
+                                    l.weightGrams > 0 ? formatWeightGrams(l.weightGrams * l.quantity) : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </>
+                              )}
+                            </span>
+                          </span>
+                          <span className={styles.lineTotalPrice}>{formatPrice(l.price * l.quantity)}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {!placeholder && hasUnavailable && (
+                    <p className={styles.unavailableWarning}>Unavailable items were left out of this order.</p>
+                  )}
+
+                  {/* Promo code lives cleanly inside Step 2 (Order Summary) before price is locked for Payment */}
+                  <div className={styles.stepPromoWrap}>
+                    {promoBlock}
+                  </div>
+
+                  <div className={styles.noteFooterSection}>
+                    <SwitchField
+                      label="Add an order note or gift message"
+                      description="Custom name, gift message, preferred colour…"
+                      checked={hasOrderNote || Boolean(errors.note)}
+                      onCheckedChange={(checked) => {
+                        setHasOrderNote(checked)
+                        if (!checked) {
+                          form.setValue("note", "", { shouldValidate: true })
+                        }
+                      }}
+                    />
+                    {(hasOrderNote || Boolean(errors.note)) && (
+                      <TextAreaField
+                        label="Order note (optional)"
+                        maxLength={LIMITS.note.max}
+                        rows={2}
+                        placeholder="Write your gift message, custom name, or preferred colour…"
+                        error={errors.note?.message}
+                        {...form.register("note")}
+                      />
+                    )}
+                  </div>
+
+                  <div className={styles.stepDesktopActions}>
+                    <Button type="button" variant="outline" size="lg" disabled={pending} onClick={() => moveToStep(1)} className={styles.stepBackBtn}>
+                      <ArrowLeftIcon className={styles.icon16} /> Back
+                    </Button>
+                    <Button type="submit" size="lg" disabled={pending || placeholder} className={styles.stepContinueBtn}>
+                      Confirm &amp; Pay {formatPrice(shownCharges.total)} <ArrowRightIcon className={styles.icon16} />
+                    </Button>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* STEP 3: DEDICATED PAYMENT SCREEN (PRICE LOCKED, NO PROMO DISTRACTION) */}
+            {step === 3 && (
+              <section aria-labelledby="checkout-step-3-heading" className={styles.stepCard}>
+                <div className={styles.paymentHeroHeader}>
+                  <div>
+                    <h2 id="checkout-step-3-heading" ref={stepHeadingRef} tabIndex={-1} className={styles.stepTitle}>
+                      <span className={styles.stepBadge}>3</span>
+                      {shop.paymentMode === "gateway" ? "Complete payment" : "Pay via UPI"}
+                    </h2>
+                    <p className={styles.stepSubtext}>
+                      {shop.paymentMode === "gateway"
+                        ? "Your order total is finalized. Choose your payment method in the secure gateway."
+                        : "Your order total is finalized. Pay using any UPI app and enter your 12-digit UTR below."}
+                    </p>
+                  </div>
+                  <div className={styles.lockedAmountBox}>
+                    <span className={styles.lockedAmountCaption}>
+                      <LockIcon className={styles.lockTinySvg} aria-hidden /> Final payable
+                    </span>
+                    <span className={styles.lockedAmountFigure}>{formatPrice(shownCharges.total)}</span>
+                  </div>
+                </div>
+
+                {shop.paymentMode === "gateway" ? (
+                  <div className={styles.gatewayCard}>
+                    <div className={styles.gatewayIconRow}>
+                      <span className={styles.gatewayIconBadge}>
+                        <CreditCardIcon className={styles.gatewayIcon} aria-hidden />
+                      </span>
+                      <div className={styles.gatewayCopyCol}>
+                        <p className={styles.gatewayTitle}>Instant online payment</p>
+                        <p className={styles.gatewaySub}>
+                          Google Pay, PhonePe, Paytm, BHIM UPI, Credit/Debit Cards &amp; NetBanking.
+                        </p>
+                      </div>
+                    </div>
+                    <p className={styles.gatewaySafeLine}>
+                      <ShieldCheckIcon className={styles.checkSvg} aria-hidden />
+                      <span>100% encrypted · Your cart stays saved if you cancel payment.</span>
+                    </p>
+                  </div>
+                ) : (
+                  <div className={styles.upiInlineFlow}>
+                    {upiUrl && upiId ? (
+                      <div className={styles.upiStepBlock}>
+                        <p className={styles.dialogStepHeading}>
+                          <span className={styles.solidStepNum}>1</span>
+                          Pay {formatPrice(shownCharges.total)} with any UPI app
+                        </p>
+                        <a href={upiUrl} className={styles.upiDeepLinkBtn}>
+                          <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(shownCharges.total)} with UPI app
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => setShowMobileQr((v) => !v)}
+                          aria-expanded={showMobileQr}
+                          className={styles.qrToggleBtn}
+                        >
+                          <QrCodeIcon className={styles.qrSvg} />
+                          {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
+                        </button>
+                        <div className={cn(styles.qrCardRow, showMobileQr && styles.qrCardRowVisible)}>
+                          <div className={styles.qrWhiteFrame}>
+                            <QRCodeSVG value={upiUrl} size={112} marginSize={0} title={`UPI QR code to pay ${formatPrice(shownCharges.total)}`} />
+                          </div>
+                          <div className={styles.qrCopyCol}>
+                            <p className={styles.qrCopyTitle}>
+                              <QrCodeIcon className={styles.qrSvg} /> Scan with any UPI app
+                            </p>
+                            <p className={styles.qrCopySub}>
+                              Amount <strong className={styles.strongFg}>{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className={styles.upiCopyRowsList}>
+                          {[
+                            { label: "UPI ID", value: upiId },
+                            ...(upiPayeeName ? [{ label: "Name", value: upiPayeeName }] : []),
+                            { label: "Amount", value: shownCharges.total.toFixed(2) },
+                          ].map((row) => (
+                            <div key={row.label} className={styles.upiCopyRow}>
+                              <span className={styles.upiRowLabel}>{row.label}</span>
+                              <span className={styles.upiRowValueWrap}>
+                                <span className={styles.upiValueTrunc}>{row.value}</span>
+                                <button
+                                  type="button"
+                                  aria-label={`Copy ${row.label}`}
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(row.value)
+                                      toast.success("Copied")
+                                    } catch {
+                                      toast.error("Couldn't copy. Please select and copy it.")
+                                    }
+                                  }}
+                                  className={styles.copyMiniBtn}
+                                >
+                                  <CopyIcon className={styles.copyTinySvg} />
+                                </button>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className={styles.upiMissingNotice}>
+                        UPI details aren&apos;t configured yet.{" "}
+                        <a
+                          href={shopWhatsappLink(shop, `Hi! I'd like to pay ${formatPrice(shownCharges.total)} and place my order.`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.waAccentLink}
+                        >
+                          Message us on WhatsApp
+                        </a>{" "}
+                        for payment details, then enter your UTR below.
+                      </p>
+                    )}
+
+                    <div ref={utrInputRef} className={styles.utrStepSection}>
+                      <p className={styles.dialogStepHeading}>
+                        <span className={styles.solidStepNum}>2</span>
+                        Enter your 12-digit UTR / UPI reference number
+                      </p>
+                      <TextField
+                        label="UTR / UPI reference number"
+                        kind="paymentRef"
+                        required
+                        enterKeyHint="done"
+                        value={paymentRef}
+                        onChange={(e) => {
+                          setPaymentRef(e.target.value)
+                          if (paymentRefError) setPaymentRefError(null)
+                        }}
+                        placeholder="e.g. 412345678901"
+                        autoCapitalize="characters"
+                        autoComplete="off"
+                        hint="Found in your UPI app under payment details (usually a 12-digit number)."
+                        error={paymentRefError ?? undefined}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.mobilePaymentTrustWrap}>
+                  {trustAndPolicies}
+                </div>
+
+                <div className={styles.stepDesktopActions}>
+                  <Button type="button" variant="outline" size="lg" disabled={pending} onClick={() => moveToStep(2)} className={styles.stepBackBtn}>
+                    <ArrowLeftIcon className={styles.icon16} /> Back to Summary
+                  </Button>
+                  <Button type="submit" size="lg" disabled={pending || placeholder} className={styles.stepContinueBtn}>
+                    {pending ? (
+                      <span className={styles.payBtnBusySpan}>
+                        <Loader2Icon className={styles.spinSmSvg} /> Placing order…
+                      </span>
+                    ) : shop.paymentMode === "gateway" ? (
+                      <>Pay {formatPrice(shownCharges.total)} &amp; place order</>
+                    ) : (
+                      <>Confirm payment &amp; place order</>
+                    )}
+                  </Button>
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* RIGHT SIDEBAR: Context-aware per step!
+              - Step 1 (Delivery): Lightweight Order & Price preview (no promo distraction)
+              - Step 2 (Order Summary): Price Breakdown + Free Shipping bar
+              - Step 3 (Payment): Clean LOCKED Final Summary (Delivery + Items + Applied Promo pill + Final Total + Edit link, ZERO promo input) */}
+          <aside className={cn(styles.summaryAside, step !== 2 && styles.summaryAsideDesktopOnly)}>
+            {step === 3 ? (
+              <>
+                <div className={styles.lockedAsideHeader}>
+                  <h2 className={styles.summaryHeading}>Final order summary</h2>
+                  <button type="button" onClick={() => moveToStep(2)} className={styles.editLockedLinkBtn}>
+                    Edit
+                  </button>
+                </div>
+
+                <div className={styles.lockedDeliveryBox}>
+                  <div className={styles.lockedDeliveryTop}>
+                    <span className={styles.lockedDeliveryLabel}>
+                      <MapPinIcon className={styles.recapPinSvg} aria-hidden /> Delivering to
+                    </span>
+                    <button type="button" onClick={() => moveToStep(1)} className={styles.editLockedLinkBtn}>
+                      Change
+                    </button>
+                  </div>
+                  <p className={styles.lockedDeliveryName}>
+                    {deliveryRecap.name}
+                    {deliveryRecap.phone ? ` · +91 ${deliveryRecap.phone}` : ""}
+                  </p>
+                  <p className={styles.lockedDeliveryAddr}>{deliveryRecap.line}</p>
+                </div>
+
+                <ul className={styles.miniItemsList}>
+                  {shown.map((l) => (
+                    <li key={cartLineKey(l)} className={styles.miniItemRow}>
+                      <div className={styles.miniThumbWrap}>
+                        <ProductImage src={l.image} alt={l.name} sizes="40px" />
+                        <span className={styles.miniQtyBubble}>{l.quantity}</span>
+                      </div>
+                      <span className={styles.miniItemTextCol}>
+                        <span className={styles.miniItemName}>{l.name}</span>
+                        {l.variantLabel && <span className={styles.miniItemVariant}>{l.variantLabel}</span>}
+                      </span>
+                      <span className={styles.miniItemPrice}>{formatPrice(l.price * l.quantity)}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {appliedPromo && !promoBelowMin && (
+                  <p className={styles.lockedPromoBadge}>
+                    <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
+                    <span>
+                      <strong className={styles.monoCode}>{appliedPromo.code}</strong> applied · Saving {formatPrice(shownCharges.discountAmount ?? 0)}
+                    </span>
+                  </p>
+                )}
+
+                <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Final amount" className={styles.breakdownTopBorder} />
+                {trustAndPolicies}
+              </>
+            ) : (
+              <>
+                <h2 className={styles.summaryHeading}>Price summary</h2>
+                <FreeShippingBar subtotal={shownCharges.subtotal} />
+                {step === 1 && (
+                  <ul className={styles.miniItemsList}>
+                    {shown.slice(0, 3).map((l) => (
+                      <li key={cartLineKey(l)} className={styles.miniItemRow}>
+                        <div className={styles.miniThumbWrap}>
+                          <ProductImage src={l.image} alt={l.name} sizes="40px" />
+                          <span className={styles.miniQtyBubble}>{l.quantity}</span>
+                        </div>
+                        <span className={styles.miniItemTextCol}>
+                        <span className={styles.miniItemName}>{l.name}</span>
+                        {l.variantLabel && <span className={styles.miniItemVariant}>{l.variantLabel}</span>}
+                      </span>
+                        <span className={styles.miniItemPrice}>{formatPrice(l.price * l.quantity)}</span>
+                      </li>
+                    ))}
+                    {shown.length > 3 && (
+                      <li className={styles.miniMoreNote}>+{shown.length - 3} more item{shown.length - 3 === 1 ? "" : "s"}</li>
+                    )}
+                  </ul>
+                )}
+                {appliedPromo && !promoBelowMin && (
+                  <p className={styles.lockedPromoBadge}>
+                    <TicketPercentIcon className={styles.ticketSvg} aria-hidden />
+                    <span>
+                      <strong className={styles.monoCode}>{appliedPromo.code}</strong> applied · Saving {formatPrice(shownCharges.discountAmount ?? 0)}
+                    </span>
+                  </p>
+                )}
+                <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className={styles.breakdownTopBorder} />
+                {trustAndPolicies}
+              </>
+            )}
+          </aside>
+
+          {/* NATIVE MOBILE APP STICKY BOTTOM BAR (< 900px) */}
+          <div data-mobile-bottom-bar className={cn(styles.mobileBottomBar, "glass")}>
+            {step !== 2 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileSummaryOpen((v) => !v)
+                  stepperTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }}
+                className={styles.mobileTotalTrigger}
+              >
+                <span className={styles.mobileTotalValue}>{formatPrice(shownCharges.total)}</span>
+                <span className={styles.mobileViewDetailsLink}>
+                  {mobileSummaryOpen ? "Hide details" : "View details"}
+                </span>
+              </button>
+            ) : (
+              <div className={styles.mobileTotalCol}>
+                <span className={styles.mobileTotalValue}>{formatPrice(shownCharges.total)}</span>
+                <span className={styles.mobileTotalLabel}>
+                  {shownCount} {shownCount === 1 ? "item" : "items"}
+                </span>
+              </div>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              disabled={pending || placeholder}
+              className={styles.mobilePayBtn}
+            >
+              {pending ? (
+                <span className={styles.mobilePayBusySpan}>
+                  <Loader2Icon className={styles.spinSmSvg} /> Placing…
+                </span>
+              ) : (
+                <span className={styles.mobilePayCtaInner}>
+                  <span>{mobileCtaLabel}</span>
+                  {step < 3 && <ArrowRightIcon className={styles.icon16} />}
+                </span>
               )}
-            </div>
-          )}
-        </div>
-
-        <PriceBreakdown {...shownCharges} itemCount={shownCount} totalLabel="Total to pay" className={styles.breakdownTopBorder} />
-        <Button
-          type="submit"
-          size="lg"
-          disabled={pending || placeholder}
-          className={styles.desktopPayBtn}
-        >
-          {pending ? (
-            <span className={styles.payBtnBusySpan}>
-              <Loader2Icon className={styles.spinMdSvg} /> Placing order…
-            </span>
-          ) : (
-            <>
-              <span className={styles.payBtnTopLine}>Proceed to pay</span>
-              <span className={styles.payBtnAmountLine}>{formatPrice(shownCharges.total)}</span>
-            </>
-          )}
-        </Button>
-        <div className={styles.trustChecklistBox}>
-          <p className={styles.trustRow}>
-            <CheckCircle2Icon className={styles.checkSvg} />
-            <span>{shop.paymentMode === "gateway" ? "Instant confirmation via secure gateway" : "Order is placed after UPI payment"}</span>
-          </p>
-          <p className={styles.trustRow}>
-            <CheckCircle2Icon className={styles.checkSvg} />
-            <span className={styles.safeText}>100% Safe Checkout</span>
-          </p>
-          <p className={styles.policyNoteLine}>
-            By placing your order, you agree to our{" "}
-            <button
-
-              type="button"
-              onClick={() => {
-                setLegalModalTab("terms")
-                setLegalModalOpen(true)
-              }}
-              className={styles.policyInlineLink}
-            >
-              Terms
-            </button>
-            ,{" "}
-            <button
-
-              type="button"
-              onClick={() => {
-                setLegalModalTab("privacy")
-                setLegalModalOpen(true)
-              }}
-              className={styles.policyInlineLink}
-            >
-              Privacy
-            </button>{" "}
-            &amp;{" "}
-            <button
-
-              type="button"
-              onClick={() => {
-                setLegalModalTab("refund")
-                setLegalModalOpen(true)
-              }}
-              className={styles.policyInlineLink}
-            >
-              Refund Policy
-            </button>
-            .
-          </p>
-        </div>
-      </aside>
-
-      {/* Native e-commerce sticky bottom pay bar on phones */}
-      <div
-
-        data-mobile-bottom-bar
-        className={cn(styles.mobileBottomBar, "glass")}
-      >
-        <Button
-
-          type="submit"
-          size="lg"
-          disabled={pending || placeholder}
-          className={styles.mobilePayBtn}
-        >
-          {pending ? (
-            <span className={styles.mobilePayBusySpan}>
-              <Loader2Icon className={styles.spinSmSvg} /> Placing order…
-            </span>
-          ) : (
-            <>
-              <span className={styles.payBtnTopLine}>Proceed to pay</span>
-              <span className={styles.mobilePayAmountLine}>{formatPrice(shownCharges.total)}</span>
-            </>
-          )}
-        </Button>
+            </Button>
+          </div>
+        </form>
       </div>
-    </form>
 
-    <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
+      <LegalQuickModal open={legalModalOpen} onOpenChange={setLegalModalOpen} initialTab={legalModalTab} />
 
-    <Dialog
-      open={addressModal !== null}
-      onOpenChange={(next) => {
-        if (savingAddr) return
-        if (!next) setAddressModal(null)
-      }}
-      onBackStep={() => {
-        if (savingAddr) return true
-        if (addressModal === "new" && openedNewFromList) {
-          setAddressModal("list")
-          return true
-        }
-        return false
-      }}
-    >
-      <DialogContent mobileFullScreen className={styles.addrModalContent}>
-        <DialogHeader>
-          <DialogTitle>
-            {addressModal === "list"
-              ? "Choose delivery address"
-              : editingOneTime && oneTimeAddress
-                ? "Edit delivery address"
-                : "Add new delivery address"}
-          </DialogTitle>
-          <DialogDescription>
-            {addressModal === "list"
-              ? "Select one of your saved addresses or add a new one for this order."
-              : "Enter where we should deliver your order."}
-          </DialogDescription>
-        </DialogHeader>
+      <Dialog
+        open={addressModal !== null}
+        onOpenChange={(next) => {
+          if (savingAddr) return
+          if (!next) setAddressModal(null)
+        }}
+        onBackStep={() => {
+          if (savingAddr) return true
+          if (addressModal === "new" && openedNewFromList) {
+            setAddressModal("list")
+            return true
+          }
+          return false
+        }}
+      >
+        <DialogContent mobileFullScreen className={styles.addrModalContent}>
+          <DialogHeader>
+            <DialogTitle>
+              {addressModal === "list"
+                ? "Choose delivery address"
+                : editingOneTime && oneTimeAddress
+                  ? "Edit delivery address"
+                  : "Add new delivery address"}
+            </DialogTitle>
+            <DialogDescription>
+              {addressModal === "list"
+                ? "Select one of your saved addresses or add a new one for this order."
+                : "Enter where we should deliver your order."}
+            </DialogDescription>
+          </DialogHeader>
 
-        {addressModal === "list" ? (
-          <>
-            <DialogBody resetScrollKey="list" className={styles.addrModalBody}>
-              <div role="radiogroup" aria-label="Saved delivery addresses" className={styles.addrRadioList}>
-                {addresses.map((a) => {
-                  const active = selected === a.id
-                  return (
+          {addressModal === "list" ? (
+            <>
+              <DialogBody resetScrollKey="list" className={styles.addrModalBody}>
+                <div role="radiogroup" aria-label="Saved delivery addresses" className={styles.addrRadioList}>
+                  {addresses.map((a) => {
+                    const active = selected === a.id
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => {
+                          fillFrom(a)
+                          setAddressModal(null)
+                        }}
+                        className={cn(styles.addrRadioCard, active && styles.addrRadioCardActive)}
+                      >
+                        <span className={styles.radioCircle} aria-hidden>
+                          {active && <CheckIcon className={styles.checkTinySvg} />}
+                        </span>
+                        <span className={styles.radioBodyCol}>
+                          <span className={styles.addrTitleRow}>
+                            <MapPinIcon className={styles.pinSvg} aria-hidden />
+                            <span>{a.label}</span>
+                            {a.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                          </span>
+                          <span className={styles.addrPersonLine}>
+                            {a.fullName} <span className={styles.addrPhoneMuted}>· +91 {a.phone}</span>
+                          </span>
+                          <span className={styles.addrStreetLine}>
+                            {a.address}, {a.city} - {a.pincode}
+                          </span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                  {oneTimeAddress && (
                     <button
-                      key={a.id}
                       type="button"
                       role="radio"
-                      aria-checked={active}
+                      aria-checked={selected === "new"}
                       onClick={() => {
-                        fillFrom(a)
+                        applyOneTimeAddress(oneTimeAddress)
                         setAddressModal(null)
                       }}
-                      className={cn(styles.addrRadioCard, active && styles.addrRadioCardActive)}
+                      className={cn(styles.addrRadioCard, selected === "new" && styles.addrRadioCardActive)}
                     >
                       <span className={styles.radioCircle} aria-hidden>
-                        {active && <CheckIcon className={styles.checkTinySvg} />}
+                        {selected === "new" && <CheckIcon className={styles.checkTinySvg} />}
                       </span>
                       <span className={styles.radioBodyCol}>
                         <span className={styles.addrTitleRow}>
                           <MapPinIcon className={styles.pinSvg} aria-hidden />
-                          <span>{a.label}</span>
-                          {a.isDefault && <span className={styles.defaultBadge}>Default</span>}
+                          <span className={styles.oneTimeBadge}>One-time address</span>
                         </span>
                         <span className={styles.addrPersonLine}>
-                          {a.fullName} <span className={styles.addrPhoneMuted}>· +91 {a.phone}</span>
+                          {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
                         </span>
                         <span className={styles.addrStreetLine}>
-                          {a.address}, {a.city} - {a.pincode}
+                          {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
                         </span>
                       </span>
                     </button>
-                  )
-                })}
-                {oneTimeAddress && (
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={selected === "new"}
-                    onClick={() => {
-                      applyOneTimeAddress(oneTimeAddress)
-                      setAddressModal(null)
-                    }}
-                    className={cn(styles.addrRadioCard, selected === "new" && styles.addrRadioCardActive)}
-                  >
-                    <span className={styles.radioCircle} aria-hidden>
-                      {selected === "new" && <CheckIcon className={styles.checkTinySvg} />}
-                    </span>
-                    <span className={styles.radioBodyCol}>
-                      <span className={styles.addrTitleRow}>
-                        <MapPinIcon className={styles.pinSvg} aria-hidden />
-                        <span className={styles.oneTimeBadge}>One-time address</span>
-                      </span>
-                      <span className={styles.addrPersonLine}>
-                        {oneTimeAddress.fullName} <span className={styles.addrPhoneMuted}>· +91 {oneTimeAddress.phone}</span>
-                      </span>
-                      <span className={styles.addrStreetLine}>
-                        {oneTimeAddress.address}, {joinCityState(oneTimeAddress.city, oneTimeAddress.state)} - {oneTimeAddress.pincode}
-                      </span>
-                    </span>
-                  </button>
-                )}
-              </div>
-            </DialogBody>
-            <DialogFooter>
-              <Button type="button" variant="outline" size="lg" onClick={() => setAddressModal(null)} className={styles.footerBackBtn}>
-                Cancel
-              </Button>
-              <Button type="button" size="lg" onClick={() => openNewAddressModal(true)} className={styles.footerConfirmBtn}>
-                <PlusIcon className={styles.icon16} /> Add new address
-              </Button>
-            </DialogFooter>
-          </>
-        ) : addressModal === "new" ? (
-          <CheckoutAddressModalBody
-            key={addrModalKey}
-            initial={
-              editingOneTime && oneTimeAddress
-                ? oneTimeAddress
-                : {
-                    fullName: initialProfile?.fullName || addresses[0]?.fullName || "",
-                    phone: initialProfile?.phone || addresses[0]?.phone || "",
-                  }
-            }
-            canSaveMore={addresses.length < MAX_ADDRESSES}
-            saving={savingAddr}
-            openedFromList={openedNewFromList}
-            onBackToList={() => setAddressModal("list")}
-            onCancel={() => setAddressModal(null)}
-            onSubmitAddress={handleModalAddressSubmit}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
-
-    <Dialog
-        open={payDialogOpen}
-        onOpenChange={(next) => {
-          if (pending) return
-          setPayDialogOpen(next)
-          if (!next) {
-            setPaymentRefError(null)
-            setShowMobileQr(false)
-          }
-        }}
-      >
-        <DialogContent mobileFullScreen className={styles.payDialogContent}>
-          <DialogHeader>
-            <DialogTitle>Pay {formatPrice(shownCharges.total)} to place your order</DialogTitle>
-            <DialogDescription>
-              Complete your UPI payment first, then enter your 12-digit UTR reference number below to place your order.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className={styles.payDialogBody}>
-            {(() => {
-              const { upiId, upiPayeeName, orderCodePrefix } = shop
-              const upiUrl = upiId
-                ? buildUpiUrl({
-                    upiId,
-                    payeeName: upiPayeeName,
-                    amount: shownCharges.total,
-                    orderCode: orderCodePrefix || "Order",
-                  })
-                : null
-
-              return (
-                <>
-                  {upiUrl && upiId ? (
-                    <div className={styles.upiStepBlock}>
-                      <p className={styles.dialogStepHeading}>
-                        <span className={styles.solidStepNum}>1</span>
-                        Pay with any UPI app
-                      </p>
-                      <a
-                        href={upiUrl}
-                        className={styles.upiDeepLinkBtn}
-                      >
-                        <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(shownCharges.total)} with UPI app
-                      </a>
-                      <button
-
-                        type="button"
-                        onClick={() => setShowMobileQr((v) => !v)}
-                        aria-expanded={showMobileQr}
-                        className={styles.qrToggleBtn}
-                      >
-                        <QrCodeIcon className={styles.qrSvg} />
-                        {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
-                      </button>
-                      <div
-
-                        className={cn(
-                          styles.qrCardRow,
-                          showMobileQr && styles.qrCardRowVisible,
-                        )}
-                      >
-                        <div className={styles.qrWhiteFrame}>
-                          <QRCodeSVG value={upiUrl} size={104} marginSize={0} title={`UPI QR code to pay ${formatPrice(shownCharges.total)}`} />
-                        </div>
-                        <div className={styles.qrCopyCol}>
-                          <p className={styles.qrCopyTitle}>
-                            <QrCodeIcon className={styles.qrSvg} /> Scan with any UPI app
-                          </p>
-                          <p className={styles.qrCopySub}>
-                            Amount <strong className={styles.strongFg}>{formatPrice(shownCharges.total)}</strong> is pre-filled for you.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className={styles.upiCopyRowsList}>
-                        {[
-                          { label: "UPI ID", value: upiId },
-                          ...(upiPayeeName ? [{ label: "Name", value: upiPayeeName }] : []),
-                          { label: "Amount", value: shownCharges.total.toFixed(2) },
-                        ].map((row) => (
-                          <div key={row.label} className={styles.upiCopyRow}>
-                            <span className={styles.upiRowLabel}>{row.label}</span>
-                            <span className={styles.upiRowValueWrap}>
-                              <span className={styles.upiValueTrunc}>{row.value}</span>
-                              <button
-                                type="button"
-                                aria-label={`Copy ${row.label}`}
-                                onClick={async () => {
-                                  try {
-                                    await navigator.clipboard.writeText(row.value)
-                                    toast.success("Copied")
-                                  } catch {
-                                    toast.error("Couldn't copy. Please select and copy it.")
-                                  }
-                                }}
-                                className={styles.copyMiniBtn}
-                              >
-                                <CopyIcon className={styles.copyTinySvg} />
-                              </button>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className={styles.upiMissingNotice}>
-                      UPI details aren&apos;t configured yet.{" "}
-                      <a
-                        href={shopWhatsappLink(shop, `Hi! I'd like to pay ${formatPrice(shownCharges.total)} and place my order.`)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={styles.waAccentLink}
-                      >
-                        Message us on WhatsApp
-                      </a>{" "}
-                      for payment details, then enter your UTR below.
-                    </p>
                   )}
-
-                  <div className={styles.utrStepSection}>
-                    <p className={styles.dialogStepHeading}>
-                      <span className={styles.solidStepNum}>2</span>
-                      Enter your UTR / UPI reference number
-                    </p>
-                    <TextField
-                      label="UTR / UPI reference number"
-                      kind="paymentRef"
-                      required
-                      value={paymentRef}
-                      onChange={(e) => {
-                        setPaymentRef(e.target.value)
-                        if (paymentRefError) setPaymentRefError(null)
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          if (!pending) confirmPaymentAndPlaceOrder()
-                        }
-                      }}
-                      placeholder="e.g. 412345678901"
-                      autoCapitalize="characters"
-                      autoComplete="off"
-                      hint="Found in your UPI app under payment details (usually a 12-digit number)."
-                      error={paymentRefError ?? undefined}
-                    />
-                  </div>
-                </>
-              )
-            })()}
-          </DialogBody>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              disabled={pending}
-              onClick={() => setPayDialogOpen(false)}
-              className={styles.footerBackBtn}
-            >
-              Back
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              disabled={pending}
-              onClick={confirmPaymentAndPlaceOrder}
-              className={styles.footerConfirmBtn}
-            >
-              {pending && <Loader2Icon className={styles.spinSmSvg} />}
-              {pending ? "Placing order…" : "Confirm payment & place order"}
-            </Button>
-          </DialogFooter>
+                </div>
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="outline" size="lg" onClick={() => setAddressModal(null)} className={styles.footerBackBtn}>
+                  Cancel
+                </Button>
+                <Button type="button" size="lg" onClick={() => openNewAddressModal(true)} className={styles.footerConfirmBtn}>
+                  <PlusIcon className={styles.icon16} /> Add new address
+                </Button>
+              </DialogFooter>
+            </>
+          ) : addressModal === "new" ? (
+            <CheckoutAddressModalBody
+              key={addrModalKey}
+              initial={
+                editingOneTime && oneTimeAddress
+                  ? oneTimeAddress
+                  : {
+                      fullName: initialProfile?.fullName || addresses[0]?.fullName || "",
+                      phone: initialProfile?.phone || addresses[0]?.phone || "",
+                    }
+              }
+              canSaveMore={addresses.length < MAX_ADDRESSES}
+              saving={savingAddr}
+              openedFromList={openedNewFromList}
+              onBackToList={() => setAddressModal("list")}
+              onCancel={() => setAddressModal(null)}
+              onSubmitAddress={handleModalAddressSubmit}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

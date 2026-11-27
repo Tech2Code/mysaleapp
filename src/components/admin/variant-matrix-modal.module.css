@@ -1,0 +1,66 @@
+/* Section: Shopify-Style Multi-Option Variant Matrix Modal */
+.matrixDialog { width: 100%; }
+.matrixBody { display: flex; flex-direction: column; gap: 20px; }
+.matrixSection { display: flex; flex-direction: column; gap: 12px; }
+.matrixSection .matrixSectionHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.matrixSectionHeader .matrixSectionTitle { margin: 0; font-size: 14px; font-weight: 600; color: var(--foreground); }
+.matrixSectionHeader .matrixSectionSub { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.templateChipsRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.templateChipsRow .templateChipBtn { display: inline-flex; min-height: 34px; cursor: pointer; align-items: center; gap: 5px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.templateChipsRow .templateChipBtn:hover { border-color: var(--primary); color: var(--primary); background-color: color-mix(in oklab, var(--primary) 6%, var(--card)); }
+.groupsList { display: flex; flex-direction: column; gap: 10px; }
+.groupsList .groupCard { display: flex; flex-direction: column; gap: 10px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 25%, var(--card)); padding: 12px; }
+.groupCard .groupTopRow { display: flex; align-items: center; gap: 8px; }
+.groupTopRow .groupNameInput { height: 38px; min-width: 0; flex: 1 1 0%; border-radius: 8px; border: 1px solid var(--input); background-color: var(--background); padding: 0 12px; font-size: 13.5px; font-weight: 600; color: var(--foreground); outline: none; }
+.groupTopRow .groupNameInput:focus { border-color: var(--ring); box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 25%, transparent); }
+.groupCard .valuesWrap { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border-radius: 10px; border: 1px solid var(--input); background-color: var(--background); padding: 6px 8px; min-height: 44px; }
+.valuesWrap .valueChip { display: inline-flex; height: 28px; align-items: center; gap: 5px; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 10%, var(--card)); border: 1px solid color-mix(in oklab, var(--primary) 26%, transparent); padding: 0 8px 0 10px; font-size: 12px; font-weight: 600; color: var(--primary); }
+.valueChip .valueChipRemoveBtn { display: grid; width: 16px; height: 16px; cursor: pointer; place-items: center; border-radius: 9999px; border: 0; background: transparent; padding: 0; color: inherit; }
+.valueChip .valueChipRemoveBtn:hover { background-color: color-mix(in oklab, var(--primary) 18%, transparent); }
+.valuesWrap .valueAddInput { min-width: 140px; flex: 1 1 140px; height: 28px; border: 0; background: transparent; padding: 0 4px; font-size: 13px; color: var(--foreground); outline: none; }
+.groupCard .groupHint { margin: 0; font-size: 11px; color: var(--muted-foreground); }
+.bulkBar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--primary) 5%, var(--card)); padding: 10px 12px; }
+.bulkBar .bulkScopeField { display: flex; flex-direction: column; gap: 4px; flex: 1 1 150px; min-width: 140px; }
+.bulkScopeField .bulkSelect { height: 36px; width: 100%; border-radius: 8px; border: 1px solid var(--input); background-color: var(--background); padding: 0 8px; font-size: 12.5px; font-weight: 500; color: var(--foreground); outline: none; }
+.bulkScopeField .bulkSelect:focus { border-color: var(--ring); }
+.ruleTabsBlock { display: flex; flex-direction: column; gap: 10px; }
+.ruleTabsBlock .ruleTabsRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.ruleTabsRow .ruleTabBtn { display: inline-flex; min-height: 34px; cursor: pointer; align-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 12px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.ruleTabsRow .ruleTabBtn:hover { color: var(--foreground); border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); }
+.ruleTabsRow .ruleTabActive { display: inline-flex; min-height: 34px; cursor: pointer; align-items: center; border-radius: 9999px; border: 1px solid var(--primary); background-color: color-mix(in oklab, var(--primary) 12%, var(--card)); padding: 0 12px; font-size: 12px; font-weight: 700; color: var(--primary); }
+.ruleTabsBlock .ruleGridCard { display: flex; flex-direction: column; gap: 10px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--primary) 26%, var(--border)); background-color: color-mix(in oklab, var(--primary) 4%, var(--card)); padding: 12px; }
+.ruleGridCard .ruleGridHint { margin: 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.ruleGridCard .ruleGridList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.ruleGridList .ruleGridRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 10px; border: 1px solid var(--border); background-color: var(--card); padding: 8px 10px; }
+.ruleGridRow .ruleValCol { display: flex; align-items: center; gap: 6px; min-width: 110px; }
+.ruleValCol .ruleValBadge { border-radius: 6px; background-color: var(--secondary); padding: 2px 8px; font-size: 12px; font-weight: 700; color: var(--foreground); }
+.ruleValCol .ruleValCount { font-size: 11px; color: var(--muted-foreground); }
+.ruleGridRow .ruleInputsRow { display: grid; flex: 1 1 220px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ruleInputsRow .ruleMiniInput { height: 34px; width: 100%; border-radius: 8px; border: 1px solid var(--input); background-color: var(--background); padding: 0 8px; font-family: var(--font-mono); font-size: 12.5px; color: var(--foreground); outline: none; }
+.ruleInputsRow .ruleMiniInput:focus { border-color: var(--ring); }
+.bulkBar .bulkField { display: flex; flex-direction: column; gap: 4px; flex: 1 1 90px; min-width: 84px; }
+.bulkField .bulkLabel { font-size: 11px; font-weight: 600; color: var(--muted-foreground); }
+.bulkField .bulkInput { height: 36px; width: 100%; border-radius: 8px; border: 1px solid var(--input); background-color: var(--background); padding: 0 10px; font-family: var(--font-mono); font-size: 13px; color: var(--foreground); outline: none; }
+.bulkField .bulkInput:focus { border-color: var(--ring); }
+.bulkBar .bulkApplyBtn { height: 36px; border-radius: var(--radiusControlSm); padding: 0 14px; font-size: 12.5px; font-weight: 600; }
+.combosList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.combosList .comboRowCard { display: flex; flex-direction: column; gap: 10px; border-radius: 12px; border: 1px solid var(--border); background-color: var(--card); padding: 12px; }
+.comboRowCard .comboHeaderRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.comboHeaderRow .comboLabelBadges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.comboLabelBadges .comboOptionBadge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; background-color: var(--secondary); padding: 2px 8px; font-size: 12px; font-weight: 600; color: var(--foreground); }
+.comboRowCard .comboInputsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.comboInputsGrid .comboInputCell { display: flex; flex-direction: column; gap: 3px; }
+.comboInputCell .comboCellLabel { font-size: 11px; font-weight: 500; color: var(--muted-foreground); }
+.comboInputCell .comboCellInput { height: 38px; width: 100%; border-radius: 8px; border: 1px solid var(--input); background-color: var(--background); padding: 0 10px; font-family: var(--font-mono); font-size: 13px; color: var(--foreground); outline: none; }
+.comboInputCell .comboCellInput:focus { border-color: var(--ring); }
+.comboInputsGrid .comboInputError { border-color: var(--destructive); }
+.matrixErrorBanner { margin: 0; border-radius: 10px; background-color: color-mix(in oklab, var(--destructive) 10%, transparent); padding: 10px 12px; font-size: 12.5px; font-weight: 500; color: var(--destructive); }
+.icon14 { width: 14px; height: 14px; flex-shrink: 0; }
+.icon12 { width: 12px; height: 12px; flex-shrink: 0; }
+.removeIconBtn { color: var(--muted-foreground); }
+.removeIconBtn:hover { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+.footerBtn { border-radius: var(--radiusControl); }
+@media (min-width: 640px) {
+  .matrixDialog { max-width: 720px; }
+  .comboRowCard .comboInputsGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

@@ -11,7 +11,7 @@ import { Skeletonize } from "@/components/shared/skeletonize"
 import type { PlacedOrder } from "@/features/orders/actions"
 import { trackOrder } from "@/features/orders/actions"
 import { placeholderPlacedOrder, placeholderTrackedOrder } from "@/features/orders/placeholders"
-import type { TrackedOrder } from "@/features/orders/types"
+import { stripOrderPrefix, type TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/store/auth"
@@ -156,7 +156,7 @@ export function OrderPlaced({ preview = false }: { preview?: boolean }) {
             type="button"
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(code)
+                await navigator.clipboard.writeText(stripOrderPrefix(code, shop.orderCodePrefix))
                 toast.success("Order code copied")
               } catch {
                 toast.error("Couldn't copy. Please select and copy the code.")

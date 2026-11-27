@@ -88,7 +88,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
           </thead>
           <tbody>
             {order.items.map((i) => (
-              <tr key={i.productId} className={styles.tbodyRow}>
+              <tr key={i.variantId ? `${i.productId}::${i.variantId}` : i.productId} className={styles.tbodyRow}>
                 <td className={styles.tdLeft}>{i.name}</td>
                 <td className={styles.tdMiddleNum}>{i.quantity}</td>
                 <td className={styles.tdMiddleNum}>{formatMoney(i.price)}</td>

@@ -43,6 +43,36 @@
 .stockBadgeWrap .stockBadgeNormal { background-color: color-mix(in oklab, var(--background) 90%, transparent); color: var(--foreground); }
 .stockBadgeWrap .stockBadgeLow { background-color: var(--tone-warning-solid); color: var(--on-solid); }
 .stockBadgeWrap .stockBadgeOut { background-color: var(--destructive-solid); color: var(--on-solid); }
+.stockBadgeWrap .waitingAlertBadge { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; background-color: var(--primary); padding: 2px 8px; font-size: 11px; line-height: 16px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
+/* Back-in-Stock Alerts Panel (Admin Products) */
+.restockAlertsCard { margin-bottom: 16px; display: flex; flex-direction: column; gap: 14px; border-radius: 12px; border: 1px solid var(--border); padding: 14px; }
+.restockAlertsCard .restockAlertsHeader { display: flex; flex-direction: column; gap: 4px; }
+.restockAlertsHeader .restockAlertsTitleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.restockAlertsTitleRow .restockBellIcon { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+.restockAlertsTitleRow .restockAlertsHeading { margin: 0; font-family: var(--font-sans); font-size: 15px; line-height: 22px; font-weight: 600; color: var(--foreground); }
+.restockAlertsTitleRow .readyNotifyBadge { border-radius: 9999px; background-color: var(--tone-success-solid); padding: 2px 10px; font-size: 11px; line-height: 16px; font-weight: 700; color: var(--tone-success-solid-fg); }
+.restockAlertsTitleRow .waitingCountPill { border-radius: 9999px; background-color: var(--muted); padding: 2px 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--muted-foreground); }
+.restockAlertsHeader .restockAlertsDesc { margin: 0; font-size: 12.5px; line-height: 18px; color: var(--muted-foreground); }
+.restockAlertsCard .restockAlertsList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.restockAlertsList .restockAlertRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 25%, var(--card)); padding: 12px; }
+.restockAlertsList .restockAlertRowReady { border-color: var(--tone-success-border); background-color: var(--tone-success-bg-soft); }
+.restockAlertRow .restockAlertLeft { display: flex; min-width: 0; flex: 1 1 220px; align-items: center; gap: 12px; }
+.restockAlertLeft .restockAlertThumb { position: relative; width: 44px; height: 44px; flex-shrink: 0; overflow: hidden; border-radius: 10px; background-color: var(--muted); container-type: inline-size; }
+.restockAlertLeft .restockAlertInfo { min-width: 0; flex: 1 1 0%; display: flex; flex-direction: column; gap: 3px; }
+.restockAlertInfo .restockAlertProductLine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.restockAlertProductLine .restockAlertProductName { font-size: 13.5px; font-weight: 600; color: var(--foreground); }
+.restockAlertProductLine .restockAlertProductName:hover { color: var(--primary); text-decoration: underline; }
+.restockAlertProductLine .restockStockPill { border-radius: 9999px; padding: 2px 8px; font-size: 10.5px; font-weight: 700; }
+.restockAlertProductLine .restockStockIn { background-color: var(--tone-success-solid); color: var(--tone-success-solid-fg); }
+.restockAlertProductLine .restockStockOut { background-color: color-mix(in oklab, var(--destructive) 14%, transparent); color: var(--destructive); }
+.restockAlertInfo .restockCustomerLine { margin: 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.restockCustomerLine .restockCustomerName { font-weight: 600; color: var(--foreground); }
+.restockAlertRow .restockAlertActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.restockAlertActions .restockWaBtn { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); background-color: var(--whatsapp-solid); padding: 0 14px; font-size: 12.5px; font-weight: 600; color: var(--on-solid); transition: background-color 160ms ease, transform 140ms ease; }
+.restockAlertActions .restockWaBtn:hover { background-color: color-mix(in oklab, var(--whatsapp-solid) 88%, black); transform: translateY(-1px); }
+.restockAlertActions .restockMarkBtn { gap: 4px; border-radius: var(--radiusControl); }
+.restockAlertActions .restockDeleteBtn { color: var(--muted-foreground); }
+.restockAlertActions .restockDeleteBtn:hover { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
 .tileBody .tileMeta { display: flex; flex-direction: column; gap: 4px; }
 .tileMeta .tileMetaHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tileMetaHeader .tileCategory { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); }
@@ -105,6 +135,41 @@
 .seoPreviewBox .seoTitle { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 26px; color: var(--tone-seo-link); }
 .seoPreviewBox .seoDesc { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .priceGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.variantSyncedPricingCard { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 35%, var(--card)); padding: 12px 14px; }
+.variantSyncedPricingCard .variantSyncedRow { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.variantSyncedRow .variantSyncedLabel { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.variantSyncedRow .variantSyncedValue { font-family: var(--font-mono); font-size: 13.5px; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.variantSyncedPricingCard .variantSyncedHint { margin: 4px 0 0 0; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-top: 8px; font-size: 11.5px; line-height: 16px; color: var(--muted-foreground); }
+.variantsEmptyCard { display: flex; flex-direction: column; gap: 10px; border-radius: 12px; border: 1px dashed var(--border); background-color: color-mix(in oklab, var(--muted) 24%, transparent); padding: 14px; }
+.variantsEmptyCard .variantsEmptyTitle { margin: 0; font-size: 13px; font-weight: 600; color: var(--foreground); }
+.variantsEmptyCard .variantsEmptySub { margin: 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.variantsEmptyCard .variantPresetRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.variantPresetRow .variantPresetChip { display: inline-flex; min-height: 32px; cursor: pointer; align-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 10px; font-size: 11.5px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.variantPresetRow .variantPresetChip:hover { border-color: var(--primary); color: var(--primary); background-color: color-mix(in oklab, var(--primary) 6%, var(--card)); }
+.variantsEmptyCard .variantAddBtn { align-self: flex-start; gap: 6px; border-radius: var(--radiusControl); }
+.variantsStack { display: flex; flex-direction: column; gap: 12px; }
+.variantsStack .variantSummaryList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.variantSummaryList .variantSummaryItem { display: flex; align-items: center; gap: 8px; border-radius: 12px; border: 1px solid var(--border); background-color: var(--card); padding: 8px 10px 8px 12px; transition: border-color 150ms ease, background-color 150ms ease; }
+.variantSummaryList .variantSummaryItem:hover { border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); }
+.variantSummaryItem .variantSummaryMainBtn { display: flex; min-width: 0; flex: 1 1 0%; cursor: pointer; flex-direction: column; gap: 4px; border: 0; background: transparent; padding: 2px 0; text-align: left; }
+.variantSummaryMainBtn .variantSummaryTop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.variantSummaryTop .variantSummaryLabel { font-size: 13.5px; font-weight: 600; color: var(--foreground); }
+.variantSummaryTop .variantStockTag { border-radius: 9999px; padding: 2px 8px; font-size: 10.5px; line-height: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.variantSummaryTop .variantStockIn { background-color: var(--tone-success-bg-soft); color: var(--tone-success-fg-strong); }
+.variantSummaryTop .variantStockOut { background-color: var(--tone-danger-bg-soft); color: var(--tone-danger-icon); }
+.variantSummaryMainBtn .variantSummaryMeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; }
+.variantSummaryMeta .variantPriceMono { font-family: var(--font-mono); font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.variantSummaryMeta .variantCompareMono { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+.variantSummaryMeta .variantSkuTag { font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground); }
+.variantSummaryItem .variantSummaryActions { display: flex; flex-shrink: 0; align-items: center; gap: 2px; }
+.variantSummaryActions .variantDeleteIconBtn { color: var(--muted-foreground); }
+.variantSummaryActions .variantDeleteIconBtn:hover { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+.variantsStack .variantFooterBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 2px; }
+.variantFooterBar .variantTotalSummary { font-size: 12px; color: var(--muted-foreground); }
+.variantModalQuickChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.variantModalQuickChips .variantQuickChip { display: inline-flex; min-height: 34px; cursor: pointer; align-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 12px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.variantModalQuickChips .variantQuickChip:hover { border-color: color-mix(in oklab, var(--primary) 50%, var(--border)); color: var(--foreground); }
+.variantModalQuickChips .variantQuickChipActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 10%, var(--card)); color: var(--primary); font-weight: 600; }
 .shippingNote { border-radius: 12px; background-color: color-mix(in oklab, var(--secondary) 70%, transparent); padding: 12px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 /* Category Manager */
 .dialogSmMax { width: 100%; }

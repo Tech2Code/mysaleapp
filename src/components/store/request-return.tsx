@@ -1784,17 +1784,17 @@ export function ReturnRequestsPanel({
                   {r.pickedUpAt
                     ? isExchange
                       ? isReplacement
-                        ? "Old item picked up. Once it reaches us and is checked, your fresh replacement (same size & colour) will be dispatched."
-                        : "Old item picked up. Once it reaches us and passes quality check, your new variant will be dispatched."
+                        ? "Returned item picked up. Once it reaches us and is checked, your fresh replacement (same size & colour) will be dispatched."
+                        : "Returned item picked up. Once it reaches us and passes quality check, your new variant will be dispatched."
                       : "Pickup successful. Once the items reach us and are checked, your refund is processed."
                     : r.pickupDate
                       ? r.exchangeMode === "doorstep"
-                        ? `Doorstep exchange expected by ${formatDate(r.pickupDate)}. Our partner will bring your new item and collect the old item together — keep the old item packed and ready.`
-                        : `Expected pickup by ${formatDate(r.pickupDate)}. Keep the ${isExchange ? "old item(s)" : "items"} packed and ready.`
+                        ? `Doorstep exchange expected by ${formatDate(r.pickupDate)}. Our partner will bring your new item and collect the original item together — keep it packed and ready.`
+                        : `Expected pickup by ${formatDate(r.pickupDate)}. Keep the ${isExchange ? "item(s)" : "items"} packed and ready.`
                       : isExchange
                         ? isReplacement
-                          ? "Send the old item back as described above. Once checked, we'll dispatch your same-item replacement."
-                          : "Send the old item back as described above. Once checked, we'll dispatch your new variant."
+                          ? "Send the returned item back as described above. Once checked, we'll dispatch your same-item replacement."
+                          : "Send the returned item back as described above. Once checked, we'll dispatch your new variant."
                         : "Send the items back as described above. Once they reach us and are checked, your refund is processed."}
                 </p>
               )}
@@ -1807,8 +1807,8 @@ export function ReturnRequestsPanel({
                     : r.exchangeStatus === "dispatched" || r.exchangeShippedAt
                       ? `${isReplacement ? "Your fresh replacement" : "Your new variant"} is on the way!${r.exchangeTracking ? ` (${r.exchangeTracking})` : ""}`
                       : isReplacement
-                        ? "We received your old item and are preparing your fresh same-item replacement for dispatch."
-                        : "We received your old item and checked it. Your new variant is being prepared for dispatch."}
+                        ? "We received your returned item and are preparing your fresh same-item replacement for dispatch."
+                        : "We received your returned item and checked it. Your new variant is being prepared for dispatch."}
                 </p>
               )}
               {r.status === "withdrawn" && (

@@ -1,9 +1,9 @@
 "use client"
 
-import { PlusIcon, StarIcon } from "lucide-react"
+import { PlusIcon, SparklesIcon, StarIcon } from "lucide-react"
 import Link from "next/link"
-import { memo } from "react"
-import type { ProductCardData } from "@/features/products/types"
+import { memo, useEffect, useState } from "react"
+import { isBackInStock, type ProductCardData } from "@/features/products/types"
 import { discountPercent, formatPrice, formatRating } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useCart } from "@/store/cart"
@@ -15,8 +15,16 @@ export type { ProductCardData }
 
 export const ProductCard = memo(function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
   const add = useCart((s) => s.add)
+  const [clientNow, setClientNow] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    setClientNow(Date.now())
+  }, [])
   const off = discountPercent(product.price, product.compareAtPrice)
   const soldOut = product.stock <= 0
+  const variants = product.variants ?? []
+  const hasVariants = variants.length > 0
+  const hasPriceRange = hasVariants && new Set(variants.map((v) => v.price)).size > 1
+  const backInStock = !soldOut && clientNow !== undefined && isBackInStock(product, clientNow)
   const reviewCount = product.reviewCount ?? 0
   const ratingAvg = Number(product.ratingAvg ?? 0)
   const hasRating = reviewCount > 0 && ratingAvg > 0
@@ -50,6 +58,11 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
               Sold out
             </span>
           )}
+          {backInStock && (
+            <span className={styles.backInStockBadge}>
+              <SparklesIcon className={styles.backInStockSvg} aria-hidden /> Back in stock
+            </span>
+          )}
         </div>
 
         {hasRating && (
@@ -76,6 +89,15 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
           >
             <PlusIcon className={styles.plusIcon} />
           </button>
+        ) : hasVariants ? (
+          <Link
+            href={`/products/${product.slug}`}
+            prefetch={true}
+            aria-label={`Select options for ${product.name}`}
+            className={styles.quickAddBtn}
+          >
+            <PlusIcon className={styles.plusIcon} />
+          </Link>
         ) : (
           <button
             type="button"
@@ -109,7 +131,9 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
           </Link>
         </h3>
         <div className={styles.priceRow}>
-          <span className={styles.currentPrice}>{formatPrice(product.price)}</span>
+          <span className={styles.currentPrice}>
+            {hasPriceRange ? `From ${formatPrice(product.price)}` : formatPrice(product.price)}
+          </span>
           {product.compareAtPrice && (
             <span className={styles.comparePrice}>
               {formatPrice(product.compareAtPrice)}

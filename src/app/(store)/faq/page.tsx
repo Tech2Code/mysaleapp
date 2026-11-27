@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const shop = await getStoreSettings()
   return pageMetadata(shop, {
     title: "Frequently Asked Questions (FAQs)",
-    description: `Answers to common questions about ordering, UPI checkout, shipping across India, returns, and custom handmade gifts at ${shop.shopName}.`,
+    description: `Answers to common questions about ordering, UPI checkout, shipping across India, returns, and product care at ${shop.shopName}.`,
     path: "/faq",
   })
 }

@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import styles from "./faq-view.module.css"
 
-export type FaqCategoryKey = "all" | "orders" | "shipping" | "returns" | "handmade"
+export type FaqCategoryKey = "all" | "orders" | "shipping" | "returns" | "products"
 
 export type FaqItem = {
   id: string
@@ -45,7 +45,7 @@ const FAQ_CATEGORIES: {
   { key: "orders", label: "Orders & UPI", icon: ShieldCheckIcon },
   { key: "shipping", label: "Shipping & Delivery", icon: TruckIcon },
   { key: "returns", label: "Returns & Refunds", icon: RotateCcwIcon },
-  { key: "handmade", label: "Handmade & Custom", icon: SparklesIcon },
+  { key: "products", label: "Products & Care", icon: SparklesIcon },
 ]
 
 export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
@@ -64,7 +64,7 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
   const returnSummary =
     shop.returnWindowDays > 0
       ? `We accept return and replacement requests within ${shop.returnWindowDays} ${shop.returnWindowDays === 1 ? "day" : "days"} of delivery for damaged, defective, or incorrect items.`
-      : "Because each piece is handcrafted in small batches, returns are only accepted if an item arrives damaged or incorrect."
+      : "Returns are accepted if an item arrives damaged, defective, or different from what you ordered."
 
   const invoiceSummary = gstActive(shop)
     ? `Yes — all product prices are inclusive of ${shop.gstRate}% GST, and once signed in you can download a GST Tax Invoice directly from My Orders.`
@@ -95,7 +95,7 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
       categoryLabel: "Orders & UPI",
       question: "Do you offer Cash on Delivery (COD)?",
       answer:
-        "Because every piece is crafted in small artisan batches and packed specifically for each buyer, we operate strictly on prepaid UPI orders. You can chat directly with us on WhatsApp before paying if you have any questions about an item.",
+        "We operate on prepaid UPI / online orders to keep shipping fast and transparent with zero COD surcharges. You can chat directly with us on WhatsApp before paying if you have any questions about an item.",
     },
     {
       id: "gst-invoice",
@@ -147,28 +147,28 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
         "Once a return is inspected or an order is cancelled before dispatch, refunds are sent straight back to your original UPI ID or bank account within 2–5 business days, along with a reference UTR number.",
     },
     {
-      id: "handmade-variations",
-      category: "handmade",
-      categoryLabel: "Handmade & Custom",
-      question: "Why might my piece look slightly different from the photos?",
+      id: "product-variations",
+      category: "products",
+      categoryLabel: "Products & Care",
+      question: "Could product colours or finishes vary slightly from the photos?",
       answer:
-        "Every item is shaped, painted, or finished by hand rather than by factory moulds. Subtle variations in glaze, brush strokes, wood grain, or weave are natural hallmarks of authentic handmade craft — making your piece truly one of a kind.",
+        "We photograph every product accurately, though slight variations in colour or finish can occur due to screen calibration, studio lighting, or natural material variations.",
       linkHref: "/about",
-      linkLabel: "Read our artisan story",
+      linkLabel: "Learn more about us",
     },
     {
-      id: "custom-and-bulk-gifting",
-      category: "handmade",
-      categoryLabel: "Handmade & Custom",
-      question: "Do you take custom orders or bulk festive & wedding gifting?",
-      answer: `Yes! We love working on custom colour palettes, personalised gift notes, and curated wedding or corporate hampers. Reach out to ${shop.shopName} on WhatsApp with your quantity and timeline for a custom quote.`,
+      id: "custom-and-bulk-orders",
+      category: "products",
+      categoryLabel: "Products & Care",
+      question: "Do you accept bulk, corporate, or custom gifting orders?",
+      answer: `Yes! Reach out to ${shop.shopName} on WhatsApp with the items, quantities, and delivery timeline you need, and we'll share a custom quote.`,
       linkHref: "/contact",
-      linkLabel: "Contact us for custom orders",
+      linkLabel: "Contact us for bulk orders",
     },
     {
       id: "verified-customer-reviews",
-      category: "handmade",
-      categoryLabel: "Handmade & Custom",
+      category: "products",
+      categoryLabel: "Products & Care",
       question: "Who can post a product review on the store?",
       answer:
         "Only customers who have received a delivered order for that specific product can rate and review it. This guarantees that every rating and aspect highlight you see comes from a 100% verified buyer.",
@@ -220,7 +220,7 @@ export function FaqView({ shop }: { shop: StoreSettings }) {
       <JsonLd data={faqJsonLd} />
       <PageHeader
         title="Frequently asked questions"
-        description={`Everything you need to know about ordering, UPI payments, delivery across India, returns, and handmade care at ${shop.shopName}.`}
+        description={`Everything you need to know about ordering, UPI payments, delivery across India, returns, and product care at ${shop.shopName}.`}
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "FAQs" }]}
       />
 
@@ -336,7 +336,7 @@ export function FaqView({ shop }: { shop: StoreSettings }) {
         {/* Bottom Direct Support CTA Banner */}
         <div className={styles.faqSupportBanner}>
           <div className={styles.faqSupportCopy}>
-            <p className={styles.faqSupportEyebrow}>Personal artisan support</p>
+            <p className={styles.faqSupportEyebrow}>Direct store support</p>
             <h2 className={styles.faqSupportHeading}>Still have a question?</h2>
             <p className={styles.faqSupportSub}>
               Chat directly with {shop.shopName} on WhatsApp for custom gift requests, product photos, or order assistance.

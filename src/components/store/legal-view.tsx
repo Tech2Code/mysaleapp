@@ -177,7 +177,7 @@ export function PrivacyPolicyView({ shop }: { shop: StoreSettings }) {
             <section className={styles.clauseCard}>
               <h2 className={styles.clauseHeading}>1. Information We Collect (Data Minimization)</h2>
               <p className={styles.clauseText}>
-                We collect only the minimum information required to fulfil your handmade orders, verify UPI payments, and provide customer support:
+                We collect only the minimum information required to fulfil your orders, verify payments, and provide customer support:
               </p>
               <ul className={styles.bulletList}>
                 <Bullet label="Account details (optional)">
@@ -318,9 +318,9 @@ export function TermsOfServiceView({ shop }: { shop: StoreSettings }) {
         <div className={styles.contentLayout}>
           <div className={styles.clausesStack}>
             <section className={styles.clauseCard}>
-              <h2 className={styles.clauseHeading}>1. Handmade Artisanal Products</h2>
+              <h2 className={styles.clauseHeading}>1. Product Descriptions &amp; Availability</h2>
               <p className={styles.clauseText}>
-                Every piece at {shop.shopName} is crafted by hand in small batches. Because our products are handmade rather than mass-produced, subtle variations in colour, texture, glaze, weave, or dimensions are natural characteristics of artisanal work and not manufacturing defects.
+                We aim to display accurate product specifications, photos, pricing, and live stock availability at {shop.shopName}. Minor differences in colour or finish may occur due to screen display settings or natural material variations.
               </p>
             </section>
 

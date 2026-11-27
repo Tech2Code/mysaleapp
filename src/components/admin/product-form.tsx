@@ -6,7 +6,9 @@ import {
   FileTextIcon,
   ImageIcon,
   IndianRupeeIcon,
+  LayersIcon,
   ListChecksIcon,
+  PencilIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
@@ -20,6 +22,7 @@ import { toast } from "sonner"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
 import { useStoreSettings } from "@/components/store/store-settings-provider"
 import { Button } from "@/components/ui/button"
+import { VariantMatrixModal, type VariantFormRow } from "./variant-matrix-modal"
 import { siteConfig } from "@/config/site"
 import { saveProduct } from "@/features/products/actions"
 import {
@@ -115,6 +118,15 @@ function toFormValues(product: Product | null): ProductInput {
     shortDescription: product?.shortDescription ?? "",
     highlights: (product?.highlights ?? []).join("\n"),
     specs: product?.specs ?? [],
+    variants: (product?.variants ?? []).map((vr) => ({
+      id: vr.id,
+      label: vr.label,
+      ...(vr.options ? { options: vr.options } : {}),
+      price: vr.price,
+      compareAtPrice: vr.compareAtPrice ?? "",
+      stock: vr.stock,
+      sku: vr.sku ?? "",
+    })),
     careInstructions: product?.careInstructions ?? "",
     reviewAspects: (product?.reviewAspects ?? []).join(", "),
     price: product?.price ?? "",
@@ -196,14 +208,51 @@ function ProductFormInner({
   const photosDirty = hasDirty(df, "images")
   const seoDirty = hasDirty(df, "seoTitle", "seoDescription")
   const visibilityDirty = hasDirty(df, "isActive", "isFeatured")
-  const pricingDirty = hasDirty(df, "price", "compareAtPrice", "stock", "categoryId")
+  const pricingDirty = hasDirty(df, "price", "compareAtPrice", "stock", "categoryId", "variants")
   const shippingDirty = hasDirty(df, "shippingClass", "weightGrams", "returnWindowDays")
 
   const { fields: specs, append: appendSpec, remove: removeSpec } = useFieldArray({ control: form.control, name: "specs" })
-  const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal, returnWindowVal] = useWatch({
+  const { fields: variants, replace: replaceVariants, remove: removeVariant } = useFieldArray({ control: form.control, name: "variants" })
+  const [variantModalOpen, setVariantModalOpen] = useState(false)
+  const [name, slug, description, highlightsText, seoTitle, seoDescription, weightVal, shippingClassVal, returnWindowVal, basePriceVal, watchedVariants] = useWatch({
     control: form.control,
-    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription", "weightGrams", "shippingClass", "returnWindowDays"],
+    name: ["name", "slug", "description", "highlights", "seoTitle", "seoDescription", "weightGrams", "shippingClass", "returnWindowDays", "price", "variants"],
   })
+  const hasVariants = Array.isArray(watchedVariants) && watchedVariants.length > 0
+  const variantsTotalStock = hasVariants
+    ? watchedVariants.reduce((sum, vr) => sum + (Number.isFinite(Number(vr?.stock)) ? Math.max(0, Math.trunc(Number(vr?.stock))) : 0), 0)
+    : 0
+  const variantPrices = hasVariants
+    ? watchedVariants.map((vr) => Number(vr?.price)).filter((n) => Number.isFinite(n) && n >= 1)
+    : []
+  const variantMinPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0
+  const variantMaxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0
+
+  const syncBaseFromVariants = (nextList: { price?: unknown; compareAtPrice?: unknown; stock?: unknown }[]) => {
+    if (nextList.length === 0) return
+    const total = nextList.reduce((sum, vr) => sum + (Number.isFinite(Number(vr?.stock)) ? Math.max(0, Math.trunc(Number(vr?.stock))) : 0), 0)
+    const inStock = nextList.filter((vr) => Number(vr?.stock) > 0)
+    const pool = inStock.length > 0 ? inStock : nextList
+    const lowest = pool.reduce((best, cur) => (Number(cur?.price) < Number(best?.price) ? cur : best), pool[0])
+    const lowestPrice = Number(lowest?.price)
+    if (Number.isFinite(lowestPrice) && lowestPrice >= 1) {
+      form.setValue("price", lowestPrice, { shouldDirty: false })
+      const lowestCompare = lowest?.compareAtPrice === "" || lowest?.compareAtPrice == null ? "" : Number(lowest.compareAtPrice)
+      form.setValue("compareAtPrice", typeof lowestCompare === "number" && Number.isFinite(lowestCompare) && lowestCompare > lowestPrice ? lowestCompare : "", { shouldDirty: false })
+    }
+    form.setValue("stock", total, { shouldDirty: false })
+  }
+
+  const handleSaveMatrix = (nextRows: VariantFormRow[]) => {
+    replaceVariants(nextRows)
+    syncBaseFromVariants(nextRows)
+  }
+
+  const handleRemoveVariant = (index: number) => {
+    const nextList = (Array.isArray(watchedVariants) ? watchedVariants : []).filter((_, idx) => idx !== index)
+    removeVariant(index)
+    syncBaseFromVariants(nextList)
+  }
   const highlightCount = String(highlightsText ?? "").split("\n").filter((l) => l.trim()).length
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) =>
@@ -231,6 +280,15 @@ function ProductFormInner({
             shortDescription: values.shortDescription,
             highlights: values.highlights,
             specs: values.specs,
+            variants: values.variants.map((vr) => ({
+              id: vr.id,
+              label: vr.label,
+              ...(vr.options && Object.keys(vr.options).length > 0 ? { options: vr.options } : {}),
+              price: vr.price,
+              compareAtPrice: vr.compareAtPrice ?? null,
+              stock: vr.stock,
+              sku: vr.sku ?? null,
+            })),
             careInstructions: values.careInstructions,
             price: values.price,
             compareAtPrice: values.compareAtPrice,
@@ -429,20 +487,53 @@ function ProductFormInner({
             />
           </Section>
 
-          <Section title="Pricing & stock" description="Selling price, MRP, inventory & category." icon={IndianRupeeIcon} dirty={pricingDirty}>
-            <div className={styles.priceGrid}>
-              <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
-              <TextField
-                label="MRP" kind="money"
-                fieldSize="md"
-                inputMode="decimal"
-                leading="₹"
-                hint="Optional, shows a discount"
-                error={errors.compareAtPrice?.message}
-                {...form.register("compareAtPrice")}
-              />
-            </div>
-            <TextField label="Stock" kind="digits" maxLength={String(LIMITS.stock.max).length} fieldSize="md" inputMode="numeric" hint="0 = sold out" error={errors.stock?.message} {...form.register("stock")} />
+          <Section title="Pricing & stock" description={hasVariants ? "Auto-calculated from your product options below." : "Selling price, MRP, inventory & category."} icon={IndianRupeeIcon} dirty={pricingDirty}>
+            {hasVariants ? (
+              <div className={styles.variantSyncedPricingCard}>
+                <div className={styles.variantSyncedRow}>
+                  <span className={styles.variantSyncedLabel}>Price range</span>
+                  <span className={styles.variantSyncedValue}>
+                    {variantMinPrice === variantMaxPrice
+                      ? formatPrice(variantMinPrice)
+                      : `${formatPrice(variantMinPrice)} – ${formatPrice(variantMaxPrice)}`}
+                  </span>
+                </div>
+                <div className={styles.variantSyncedRow}>
+                  <span className={styles.variantSyncedLabel}>Total stock</span>
+                  <span className={styles.variantSyncedValue}>
+                    {variantsTotalStock} across {variants.length} option{variants.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <p className={styles.variantSyncedHint}>
+                  Pricing and inventory are controlled per option in <strong>Variants &amp; options</strong> below. Remove all options to switch back to a single price.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className={styles.priceGrid}>
+                  <TextField label="Price" kind="money" fieldSize="md" inputMode="decimal" leading="₹" error={errors.price?.message} {...form.register("price")} />
+                  <TextField
+                    label="MRP" kind="money"
+                    fieldSize="md"
+                    inputMode="decimal"
+                    leading="₹"
+                    hint="Optional, shows a discount"
+                    error={errors.compareAtPrice?.message}
+                    {...form.register("compareAtPrice")}
+                  />
+                </div>
+                <TextField
+                  label="Stock"
+                  kind="digits"
+                  maxLength={String(LIMITS.stock.max).length}
+                  fieldSize="md"
+                  inputMode="numeric"
+                  hint="0 = sold out"
+                  error={errors.stock?.message}
+                  {...form.register("stock")}
+                />
+              </>
+            )}
             <FormSelectField
               control={form.control}
               name="categoryId"
@@ -451,6 +542,90 @@ function ProductFormInner({
               placeholder="No category"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
             />
+          </Section>
+
+          <Section
+            title="Variants & options (optional)"
+            description="Color × Size, Storage × Color, or Weight options with separate prices & stock."
+            icon={LayersIcon}
+            dirty={hasDirty(df, "variants")}
+          >
+            {variants.length === 0 ? (
+              <div className={styles.variantsEmptyCard}>
+                <p className={styles.variantsEmptyTitle}>Single-option product</p>
+                <p className={styles.variantsEmptySub}>
+                  Set up options like Color and Size — all combinations are generated automatically in one matrix.
+                </p>
+                <Button type="button" variant="outline" size="sm" className={styles.variantAddBtn} onClick={() => setVariantModalOpen(true)}>
+                  <PlusIcon className={styles.iconSm} /> Set up variants
+                </Button>
+              </div>
+            ) : (
+              <div className={styles.variantsStack}>
+                <ul className={styles.variantSummaryList}>
+                  {variants.map((field, index) => {
+                    const row = watchedVariants?.[index]
+                    const label = row?.label || `Option ${index + 1}`
+                    const price = Number(row?.price ?? 0)
+                    const compareAt = row?.compareAtPrice ? Number(row.compareAtPrice) : null
+                    const stock = Number(row?.stock ?? 0)
+                    const skuText = typeof row?.sku === "string" && row.sku.trim() ? row.sku.trim() : null
+                    return (
+                      <li key={field.id} className={styles.variantSummaryItem}>
+                        <button
+                          type="button"
+                          onClick={() => setVariantModalOpen(true)}
+                          className={styles.variantSummaryMainBtn}
+                        >
+                          <span className={styles.variantSummaryTop}>
+                            <span className={styles.variantSummaryLabel}>{label}</span>
+                            <span className={cn(styles.variantStockTag, stock <= 0 ? styles.variantStockOut : styles.variantStockIn)}>
+                              {stock <= 0 ? "Sold out" : `${stock} in stock`}
+                            </span>
+                          </span>
+                          <span className={styles.variantSummaryMeta}>
+                            <span className={styles.variantPriceMono}>{formatPrice(price)}</span>
+                            {compareAt && compareAt > price && (
+                              <span className={styles.variantCompareMono}>{formatPrice(compareAt)}</span>
+                            )}
+                            {skuText && <span className={styles.variantSkuTag}>SKU: {skuText}</span>}
+                          </span>
+                        </button>
+                        <div className={styles.variantSummaryActions}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Manage ${label}`}
+                            onClick={() => setVariantModalOpen(true)}
+                          >
+                            <PencilIcon className={styles.iconSm} />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Remove ${label}`}
+                            onClick={() => handleRemoveVariant(index)}
+                            className={styles.variantDeleteIconBtn}
+                          >
+                            <Trash2Icon className={styles.iconSm} />
+                          </Button>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <div className={styles.variantFooterBar}>
+                  <span className={styles.variantTotalSummary}>
+                    <strong>{variantsTotalStock}</strong> total stock · {variants.length} combination{variants.length === 1 ? "" : "s"}
+                  </span>
+                  <Button type="button" variant="outline" size="sm" className={styles.pillBtn} onClick={() => setVariantModalOpen(true)}>
+                    <PencilIcon className={styles.iconSm} /> Manage variants
+                  </Button>
+                </div>
+              </div>
+            )}
           </Section>
 
           <Section
@@ -511,6 +686,26 @@ function ProductFormInner({
           </Section>
         </div>
       </div>
+
+      <VariantMatrixModal
+        open={variantModalOpen}
+        onOpenChange={setVariantModalOpen}
+        initialVariants={
+          Array.isArray(watchedVariants)
+            ? watchedVariants.map((vr) => ({
+                id: String(vr?.id ?? ""),
+                label: String(vr?.label ?? ""),
+                ...(vr?.options ? { options: vr.options } : {}),
+                price: vr?.price == null ? "" : (vr.price as number | string),
+                compareAtPrice: vr?.compareAtPrice == null ? "" : (vr.compareAtPrice as number | string),
+                stock: vr?.stock == null ? 0 : (vr.stock as number | string),
+                sku: typeof vr?.sku === "string" ? vr.sku : "",
+              }))
+            : []
+        }
+        defaultPrice={Number(basePriceVal) >= 1 ? Number(basePriceVal) : 499}
+        onSave={handleSaveMatrix}
+      />
 
       {/* Spans the whole form, so it's obvious Save covers every section. */}
       <StickySaveBar

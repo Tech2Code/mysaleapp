@@ -68,7 +68,14 @@ export type InstallPromptApi = {
 export function useInstallPrompt(): InstallPromptApi {
   const s = useSyncExternalStore(subscribe, getState, () => serverState)
   const ua = typeof navigator === "undefined" ? "" : navigator.userAgent
+  const vendor = typeof navigator === "undefined" ? "" : (navigator.vendor ?? "")
   const isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && typeof navigator !== "undefined" && navigator.maxTouchPoints > 1)
+  // Only real iOS Safari (Apple vendor, Safari token, excluding Chrome/Firefox/Edge/in-app browsers & DevTools emulation)
+  const isIosSafari =
+    isIos &&
+    /apple/i.test(vendor) &&
+    /safari/i.test(ua) &&
+    !/crios|fxios|edgios|opios|fban|fbav|instagram|whatsapp|line|twitter|gsa/i.test(ua)
 
   const install = useCallback(async () => {
     const e = state.deferred
@@ -92,6 +99,6 @@ export function useInstallPrompt(): InstallPromptApi {
     set({ dismissed: true })
   }, [])
 
-  const needsManualSteps = isIos && !s.installed
+  const needsManualSteps = isIosSafari && !s.installed
   return { canInstall: !s.installed && (s.deferred !== null || needsManualSteps), needsManualSteps, dismissed: s.dismissed, install, dismiss }
 }

@@ -11,7 +11,7 @@ import { calculateCharges, formatWeightGrams } from "@/features/orders/pricing"
 import { placeholderCartLines } from "@/features/products/placeholders"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
+import { cartLineKey, MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
 import { FreeShippingBar } from "./cart-drawer"
 import styles from "./cart.module.css"
 import { useLiveCart, type LiveCartLine, type LiveProduct } from "./live-cart"
@@ -90,63 +90,67 @@ function CartLayout({
         )}
         <ul className={styles.cartLinesList}>
           <AnimatePresence initial={false}>
-            {lines.map((item) => (
-              <m.li
-                key={item.productId}
-                layout
-                exit={{ opacity: 0, x: -40 }}
-                className={cn(styles.cartLineRow, !item.available && styles.cartLineUnavailable)}
-              >
-                <Link
-                  href={`/products/${item.slug}`}
-                  className={styles.lineThumbLink}
+            {lines.map((item) => {
+              const lineKey = cartLineKey(item)
+              return (
+                <m.li
+                  key={lineKey}
+                  layout
+                  exit={{ opacity: 0, x: -40 }}
+                  className={cn(styles.cartLineRow, !item.available && styles.cartLineUnavailable)}
                 >
-                  <ProductImage src={item.image} alt={item.name} sizes="112px" />
-                </Link>
-                <div className={styles.lineBody}>
-                  <div className={styles.lineHeader}>
-                    <div className={styles.lineTitleGroup}>
-                      <Link href={`/products/${item.slug}`} className={styles.lineNameLink}>
-                        {item.name}
-                      </Link>
-                      <p className={styles.linePriceSub}>
-                        {item.available ? formatPrice(item.price) : "Unavailable"}
-                        {item.priceChanged && <span className={styles.priceChangedTag}>(price updated)</span>}
-                      </p>
-                      {item.available && (item.shippingClass !== "standard" || item.weightGrams > 0) && (
-                        <p className={styles.shippingClassPill}>
-                          {[
-                            item.shippingClass === "oversized" ? "Large / bulky" : item.shippingClass === "fragile" ? "Fragile" : null,
-                            item.weightGrams > 0 ? `${formatWeightGrams(item.weightGrams)} each` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
+                  <Link
+                    href={`/products/${item.slug}`}
+                    className={styles.lineThumbLink}
+                  >
+                    <ProductImage src={item.image} alt={item.name} sizes="112px" />
+                  </Link>
+                  <div className={styles.lineBody}>
+                    <div className={styles.lineHeader}>
+                      <div className={styles.lineTitleGroup}>
+                        <Link href={`/products/${item.slug}`} className={styles.lineNameLink}>
+                          {item.name}
+                        </Link>
+                        {item.variantLabel && <span className={styles.variantPill}>{item.variantLabel}</span>}
+                        <p className={styles.linePriceSub}>
+                          {item.available ? formatPrice(item.price) : "Unavailable"}
+                          {item.priceChanged && <span className={styles.priceChangedTag}>(price updated)</span>}
                         </p>
-                      )}
+                        {item.available && (item.shippingClass !== "standard" || item.weightGrams > 0) && (
+                          <p className={styles.shippingClassPill}>
+                            {[
+                              item.shippingClass === "oversized" ? "Large / bulky" : item.shippingClass === "fragile" ? "Fragile" : null,
+                              item.weightGrams > 0 ? `${formatWeightGrams(item.weightGrams)} each` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onRemove?.(lineKey)}
+                        className={styles.lineRemoveBtn}
+                        aria-label={`Remove ${item.name}`}
+                      >
+                        <Trash2Icon className={styles.trashIcon} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onRemove?.(item.productId)}
-                      className={styles.lineRemoveBtn}
-                      aria-label={`Remove ${item.name}`}
-                    >
-                      <Trash2Icon className={styles.trashIcon} />
-                    </button>
+                    {item.available && (
+                      <div className={styles.lineFooter}>
+                        <QuantityStepper
+                          label={item.name}
+                          value={item.quantity}
+                          max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
+                          onChange={(q) => onQuantity?.(lineKey, q)}
+                        />
+                        <span className={styles.lineSubtotalText}>{formatPrice(item.price * item.quantity)}</span>
+                      </div>
+                    )}
                   </div>
-                  {item.available && (
-                    <div className={styles.lineFooter}>
-                      <QuantityStepper
-                        label={item.name}
-                        value={item.quantity}
-                        max={Math.min(item.maxQuantity, MAX_QTY_PER_ITEM)}
-                        onChange={(q) => onQuantity?.(item.productId, q)}
-                      />
-                      <span className={styles.lineSubtotalText}>{formatPrice(item.price * item.quantity)}</span>
-                    </div>
-                  )}
-                </div>
-              </m.li>
-            ))}
+                </m.li>
+              )
+            })}
           </AnimatePresence>
         </ul>
       </div>

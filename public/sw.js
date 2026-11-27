@@ -7,13 +7,13 @@
  *    so the installed mobile app opens instantaneously from cache while updating in the background.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v4"
+const VERSION = "v5"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
 const OFFLINE_URL = "/offline"
 const PRECACHE_PAGES = ["/", "/?source=pwa", OFFLINE_URL]
-const PRECACHE_ICONS = ["/icons/192", "/icons/512", "/icon", "/apple-icon"]
+const PRECACHE_ICONS = ["/icons/192?v=2", "/icons/512?v=2", "/icons/maskable-512?v=2", "/icon", "/apple-icon"]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

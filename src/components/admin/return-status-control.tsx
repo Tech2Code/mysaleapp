@@ -189,7 +189,17 @@ export function ReturnStatusControl({
       {picked === "exchange_undo_deliver" && activeExchangeReq && (
         <ExchangeFulfillmentControl request={activeExchangeReq} mode="undo_delivered" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
       )}
-      {picked === "create" && <CreateReturnRequest orderId={orderId} orderCode={orderCode} items={items} returns={returns} />}
+      {picked === "create" && (
+        <CreateReturnRequest
+          orderId={orderId}
+          orderCode={orderCode}
+          items={items}
+          returns={returns}
+          discountAmount={discountAmount}
+          paidAmount={paidAmount}
+          refundedAmount={refundedAmount}
+        />
+      )}
       {picked === "undo" && undoTarget && undoText && <UndoStepButton requestId={undoTarget.id} title={undoText.title} description={undoText.description} />}
       {picked === "revert_shipped" && canRevertDelivered && (
         <div className={styles.revertShippedBlock}>

@@ -21,3 +21,6 @@
 @media (max-width: 639.98px) {
   .rootBody[data-product-detail="true"] > nav[data-mobile-bottom-bar], .rootBody[data-product-detail="true"] > a[aria-label="Chat with us on WhatsApp"] { display: none; }
 }
+@media (max-width: 899.98px) {
+  .rootBody[data-checkout-fullscreen="true"] > header, .rootBody[data-checkout-fullscreen="true"] > footer, .rootBody[data-checkout-fullscreen="true"] > div[role="status"], .rootBody[data-checkout-fullscreen="true"] > nav[data-mobile-bottom-bar], .rootBody[data-checkout-fullscreen="true"] > a[aria-label="Chat with us on WhatsApp"] { display: none; }
+}

@@ -6,6 +6,9 @@ import { LIMITS } from "@/lib/validation"
 
 export type CartItem = {
   productId: string
+  variantId?: string
+  variantLabel?: string
+  variantSku?: string | null
   slug: string
   name: string
   price: number
@@ -14,16 +17,21 @@ export type CartItem = {
   maxQuantity: number
 }
 
+/** Unique key for a cart line: separates distinct variants of the same product cleanly. */
+export function cartLineKey(item: { productId: string; variantId?: string }): string {
+  return item.variantId ? `${item.productId}::${item.variantId}` : item.productId
+}
+
 export const MAX_QTY_PER_ITEM = LIMITS.quantityPerItem.max
 
 type CartState = {
   items: CartItem[]
   isOpen: boolean
-  /** The product that was added last, so the cart drawer can highlight it. Not saved. */
+  /** The line key that was added last, so the cart drawer can highlight it. Not saved. */
   lastAddedId: string | null
   add: (item: Omit<CartItem, "quantity">, quantity?: number) => void
-  setQuantity: (productId: string, quantity: number) => void
-  remove: (productId: string) => void
+  setQuantity: (lineKey: string, quantity: number) => void
+  remove: (lineKey: string) => void
   clear: () => void
   setOpen: (open: boolean) => void
 }
@@ -68,13 +76,14 @@ export const useCart = create<CartState>()(
           }
           const addQty = Math.trunc(quantity)
           if (addQty < 1) return state
-          const existing = state.items.find((i) => i.productId === item.productId)
+          const targetKey = cartLineKey(item)
+          const existing = state.items.find((i) => cartLineKey(i) === targetKey)
           if (existing) {
             return {
               isOpen: true,
-              lastAddedId: item.productId,
+              lastAddedId: targetKey,
               items: state.items.map((i) =>
-                i.productId === item.productId
+                cartLineKey(i) === targetKey
                   ? { ...i, ...item, quantity: clampQty(i.quantity + addQty, item.maxQuantity) }
                   : i
               ),
@@ -82,21 +91,21 @@ export const useCart = create<CartState>()(
           }
           return {
             isOpen: true,
-            lastAddedId: item.productId,
+            lastAddedId: targetKey,
             items: [...state.items, { ...item, quantity: clampQty(addQty, item.maxQuantity) }],
           }
         }),
-      setQuantity: (productId, quantity) =>
+      setQuantity: (lineKey, quantity) =>
         set((state) => {
           if (!Number.isFinite(quantity)) return state
           return {
             items: state.items
-              .map((i) => (i.productId === productId ? { ...i, quantity: clampQty(quantity, i.maxQuantity) } : i))
+              .map((i) => (cartLineKey(i) === lineKey || i.productId === lineKey ? { ...i, quantity: clampQty(quantity, i.maxQuantity) } : i))
               .filter((i) => i.quantity >= 1),
           }
         }),
-      remove: (productId) =>
-        set((state) => ({ items: state.items.filter((i) => i.productId !== productId) })),
+      remove: (lineKey) =>
+        set((state) => ({ items: state.items.filter((i) => cartLineKey(i) !== lineKey && i.productId !== lineKey) })),
       clear: () => set({ items: [] }),
       setOpen: (isOpen) => set(isOpen ? { isOpen } : { isOpen, lastAddedId: null }),
     }),

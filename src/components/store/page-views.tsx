@@ -61,12 +61,14 @@ export function CheckoutPageView({
 }) {
   return (
     <>
-      <PageHeader
-        title="Checkout"
-        description="Confirm your delivery details and pay by UPI to place your order."
-        breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
-      />
-      <Body>
+      <div className={styles.checkoutDesktopHeader}>
+        <PageHeader
+          title="Checkout"
+          description="Confirm your delivery details and pay by UPI to place your order."
+          breadcrumbs={[{ name: "Home", href: "/" }, { name: "Cart", href: "/cart" }, { name: "Checkout" }]}
+        />
+      </div>
+      <div className={styles.checkoutBodyContainer}>
         <CheckoutForm
           products={products}
           initialAddresses={initialAddresses}
@@ -74,7 +76,7 @@ export function CheckoutPageView({
           initialUserId={initialUserId}
           preview={preview}
         />
-      </Body>
+      </div>
     </>
   )
 }
@@ -140,29 +142,26 @@ export function OrderPlacedPageView({ preview }: { preview?: boolean }) {
 // ---------------------------------------------------------------- about
 
 const values = [
-  { icon: HandHeartIcon, title: "Made by hand", text: "Every piece is shaped, painted or woven by a real person — never mass-produced." },
-  { icon: LeafIcon, title: "Mindful materials", text: "Natural clay, cotton, jute, soy wax and wood, sourced responsibly wherever we can." },
-  { icon: SparklesIcon, title: "Personal service", text: "Chat with us on WhatsApp for questions, custom orders and delivery updates." },
+  { icon: HandHeartIcon, title: "Curated quality", text: "Every product is quality-checked and packed securely before dispatch." },
+  { icon: LeafIcon, title: "Honest value", text: "Clear pricing, transparent shipping, and real product details with no hidden fees." },
+  { icon: SparklesIcon, title: "Personal support", text: "Chat with us on WhatsApp for questions, bulk orders, and delivery updates." },
 ]
 
 export function AboutView({ shop }: { shop: StoreSettings }) {
   return (
     <>
       <PageHeader
-        title="Our story"
-        description={`${shop.shopName} began with a simple idea: the things we live with should carry a little bit of someone's heart.`}
+        title="About us"
+        description={shop.tagline || `${shop.shopName} — thoughtfully curated products delivered across India.`}
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "About" }]}
       />
       <div className={styles.aboutContainer}>
         <FadeIn className={styles.storyIntro}>
           <p className={styles.storyParagraph}>
-            We work with small studios and independent artisans{shop.city ? ` around ${shop.city}` : ""} to bring you decor and
-            gifts that feel personal. Each piece is made in small batches, which means tiny variations in colour and texture —
-            that&apos;s the beauty of handmade.
+            {shop.description || `At ${shop.shopName}${shop.city ? ` in ${shop.city}` : ""}, we bring you carefully selected products across our collections with transparent pricing, secure checkout, and reliable doorstep delivery across India.`}
           </p>
           <p className={styles.storyParagraph}>
-            Have something specific in mind? We love custom orders — personalised names, colours and bulk gifting for
-            weddings and festivals.
+            Looking for bulk orders, gifting, or help choosing the right item? Message us directly on WhatsApp and we&apos;ll be happy to help.
           </p>
         </FadeIn>
         <div className={styles.valuesGrid}>

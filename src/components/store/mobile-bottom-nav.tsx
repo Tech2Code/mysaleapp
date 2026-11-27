@@ -145,7 +145,8 @@ function BottomNavTabs({ pathname }: { pathname: string | null }) {
 
 function BottomNavWithPath() {
   const pathname = usePathname()
-  const isProductDetail = /^\/products\/[^/]+$/.test(pathname) || pathname === "/checkout"
+  const isCheckout = pathname === "/checkout"
+  const isProductDetail = /^\/products\/[^/]+$/.test(pathname) || isCheckout
 
   useLayoutEffect(() => {
     if (isProductDetail) {
@@ -153,10 +154,16 @@ function BottomNavWithPath() {
     } else {
       document.body.removeAttribute("data-product-detail")
     }
+    if (isCheckout) {
+      document.body.setAttribute("data-checkout-fullscreen", "true")
+    } else {
+      document.body.removeAttribute("data-checkout-fullscreen")
+    }
     return () => {
       document.body.removeAttribute("data-product-detail")
+      document.body.removeAttribute("data-checkout-fullscreen")
     }
-  }, [isProductDetail])
+  }, [isProductDetail, isCheckout])
 
   return <BottomNavTabs pathname={pathname} />
 }

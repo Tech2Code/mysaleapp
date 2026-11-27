@@ -103,8 +103,8 @@ describe("returnStage", () => {
     expect(exReceived).toMatchObject({
       key: "received",
       step: 3,
-      label: "Exchange received",
-      customerLabel: "Old item received",
+      label: "Returned item received",
+      customerLabel: "Returned item received",
       active: true,
     })
     const exDispatched = returnStage({
@@ -297,5 +297,13 @@ describe("returnTimeline", () => {
   it("never leaks amounts", () => {
     const t = returnTimeline({ ...base, requests: [req("received")], returns: [ret(true)], refundedAmount: 250 })
     expect(JSON.stringify(t)).not.toContain("₹")
+  })
+
+  it("uses clear 'Item picked up' and 'Returned item received' labels for both admin and customer on returns", () => {
+    const t = returnTimeline({ ...base, requests: [req("requested")] })
+    const pickedUp = t.find((e) => e.key === "picked_up")
+    const received = t.find((e) => e.key === "received")
+    expect(pickedUp).toMatchObject({ label: "Item picked up", customerLabel: "Item picked up" })
+    expect(received).toMatchObject({ label: "Returned item received", customerLabel: "Returned item received" })
   })
 })

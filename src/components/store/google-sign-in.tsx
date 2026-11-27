@@ -88,7 +88,7 @@ type AuthMode = "signin" | "signup" | "forgot" | "reset-password"
 
 const SIGN_IN_PERKS = [
   { icon: PackageIcon, title: "Live order tracking", text: "Check real-time status and courier updates in one place." },
-  { icon: HeartIcon, title: "Synced wishlist", text: "Access your saved handmade favourites across every device." },
+  { icon: HeartIcon, title: "Synced wishlist", text: "Access your saved favourites across every device." },
   { icon: MapPinIcon, title: "Faster checkout", text: "Use your saved delivery addresses and contact details." },
 ]
 
@@ -473,7 +473,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
               <LogoMark className={styles.logoBadge} />
               <div className={styles.brandNameMeta}>
                 <p className={styles.brandShopTitle}>{shopName}</p>
-                <p className={styles.brandSubTag}>Handcrafted Store</p>
+                <p className={styles.brandSubTag}>Online Store</p>
               </div>
             </div>
             <span className={styles.modePill}>
@@ -490,7 +490,7 @@ export function GoogleSignIn({ shopName = "our store" }: { shopName?: string }) 
           </h1>
           <p className={styles.welcomeLead}>
             {mode === "signup"
-              ? "Save your delivery details once so every future handmade order is faster, simpler, and tracked in one place."
+              ? "Save your delivery details once so every future order is faster, simpler, and tracked in one place."
               : "Sign in with one-tap Google or your email to track live orders, manage addresses, and sync your saved favourites."}
           </p>
 

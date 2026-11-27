@@ -17,7 +17,7 @@ export function CategoryView({ category, products }: { category: Pick<Category, 
           <ProductGrid products={products} />
         ) : (
           <p className={styles.emptyCollectionBox}>
-            New pieces for this collection are being crafted. Check back soon!
+            New products for this category are coming soon. Check back shortly!
           </p>
         )}
       </div>

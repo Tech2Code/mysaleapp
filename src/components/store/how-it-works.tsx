@@ -5,7 +5,7 @@ import styles from "./how-it-works.module.css"
 const steps = [
   { icon: ShoppingBagIcon, title: "Pick what you love", text: "Add what you love to your cart — no account needed." },
   { icon: BadgeIndianRupeeIcon, title: "Pay by UPI", text: "Pay securely with any UPI app and share the reference number." },
-  { icon: HeartHandshakeIcon, title: "We confirm & craft", text: "Once your payment is verified, we confirm and start crafting." },
+  { icon: HeartHandshakeIcon, title: "We confirm & pack", text: "Once your payment is verified, we confirm and pack your order carefully." },
   { icon: TruckIcon, title: "Delivered with care", text: "Track every step online with your order code." },
 ]
 
@@ -15,7 +15,7 @@ export function HowItWorks() {
       <FadeIn className={styles.headerBlock}>
         <p className={styles.eyebrowText}>Simple ordering</p>
         <h2 id="how-title" className={styles.sectionTitle}>
-          From our hands to yours in 4 easy steps
+          From our store to your doorstep in 4 easy steps
         </h2>
       </FadeIn>
       <ol className={styles.stepsGrid}>

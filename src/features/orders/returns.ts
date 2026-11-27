@@ -197,9 +197,9 @@ const STAGE_COPY: Record<ReturnStageKey, { step: 1 | 2 | 3 | 4; tone: ReturnStag
     detail: "The customer cancelled the request", customerDetail: "You cancelled this request",
   },
   received: {
-    step: 3, tone: "success", label: "Return received", customerLabel: "Return received",
+    step: 3, tone: "success", label: "Returned item received", customerLabel: "Returned item received",
     detail: "Goods back, no refund recorded yet. Use “I have refunded” on the return below, or “Refund the returned items” in the status dropdown",
-    customerDetail: "We have your items. Your refund will follow",
+    customerDetail: "We have received your returned item(s). Your refund will follow",
   },
   exchange_dispatched: {
     step: 3, tone: "progress", label: "Exchange dispatched", customerLabel: "Exchange item on the way",
@@ -244,7 +244,7 @@ export function requestStatusMeta(
       }
     }
     return {
-      label: isRep ? "Old item received" : "Exchange received",
+      label: "Returned item received",
       tone: "progress",
     }
   }
@@ -489,14 +489,14 @@ export function returnStage(input: ReturnStageInput): ReturnStage | null {
         stage("received", {
           step: 3,
           tone: "progress",
-          label: isRepReq ? "Old item received" : "Exchange received",
-          customerLabel: isRepReq ? "Old item received" : "Old item received",
+          label: "Returned item received",
+          customerLabel: "Returned item received",
           detail: isRepReq
-            ? "Old item received. Dispatch the fresh same-item replacement from the status dropdown"
-            : "Old item received & checked. Dispatch the requested variant from the status dropdown",
+            ? "Returned item received. Dispatch the fresh same-item replacement from the status dropdown"
+            : "Returned item received & checked. Dispatch the requested variant from the status dropdown",
           customerDetail: isRepReq
-            ? "We received your old item and are preparing your fresh same-item replacement"
-            : "We received your old item and checked it. Your new variant is being prepared for dispatch",
+            ? "We received your returned item and are preparing your fresh same-item replacement"
+            : "We received your returned item and checked it. Your new variant is being prepared for dispatch",
           active: true,
         })
       )
@@ -545,16 +545,16 @@ export function customerStatusLine(orderDescription: string, s: ReturnStage | nu
           : "Return approved — send the items back as asked."
     case "picked_up":
       return isRep
-        ? "Old item picked up. Your fresh replacement (same size & colour) will be dispatched once we receive it."
+        ? "Returned item picked up. Your fresh replacement (same size & colour) will be dispatched once we receive it."
         : isExchange
-          ? "Old item picked up. Your new variant will be dispatched once we receive and check it."
+          ? "Returned item picked up. Your new variant will be dispatched once we receive and check it."
           : "Pickup successful. Your refund follows once we receive the items."
     case "received":
       return isRep
-        ? "We received your old item and are preparing your fresh same-item replacement."
+        ? "We received your returned item and are preparing your fresh same-item replacement."
         : isExchange
-          ? "We received your old item and checked it. Your new variant is being prepared for dispatch."
-          : "We have your items. Your refund will follow."
+          ? "We received your returned item and checked it. Your new variant is being prepared for dispatch."
+          : "We have received your returned item(s). Your refund will follow."
     case "exchange_dispatched":
       return `${s.customerDetail}.`
     case "exchange_completed":
@@ -704,14 +704,14 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
       state: waiting ? "upcoming" : pickedUp ? "done" : "current",
     })
     entries.push({
-      key: "picked_up", label: "Pickup successful", customerLabel: "Old item picked up",
+      key: "picked_up", label: "Item picked up", customerLabel: "Item picked up",
       at: request.pickedUpAt ?? null, note: null,
       state: stage.key === "picked_up" ? "current" : pickedUp ? "done" : "upcoming",
     })
   }
 
   if (open) {
-    entries.push({ key: "received", label: "Old item received", customerLabel: isExchange ? "Old item received" : "Return received", at: null, note: null, state: "upcoming" })
+    entries.push({ key: "received", label: "Returned item received", customerLabel: "Returned item received", at: null, note: null, state: "upcoming" })
     if (isExchange) {
       entries.push({
         key: "exchange_dispatched",
@@ -744,8 +744,8 @@ export function returnTimeline(input: ReturnStageInput): ReturnTimelineEntry[] {
 
   entries.push({
     key: "received",
-    label: isExchange ? (isRep ? "Old item received" : "Exchange received") : "Return received",
-    customerLabel: isExchange ? "Old item received" : "Return received",
+    label: "Returned item received",
+    customerLabel: "Returned item received",
     at: lastReturn?.createdAt ?? null,
     note: null,
     adminDetail: returnRefundSummary(input.returns),

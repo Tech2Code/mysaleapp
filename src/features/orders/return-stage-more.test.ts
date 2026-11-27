@@ -49,7 +49,7 @@ describe("one wording per state", () => {
     const s = returnStage({ ...base, returns: [{ refunded: false, createdAt: "2026-01-02T00:00:00Z" }] })!
     expect(s.detail).toMatch(/no refund recorded/i)
     expect(s.detail).toMatch(/refund/i)
-    expect(s.customerDetail).toBe("We have your items. Your refund will follow")
+    expect(s.customerDetail).toBe("We have received your returned item(s). Your refund will follow")
   })
 })
 

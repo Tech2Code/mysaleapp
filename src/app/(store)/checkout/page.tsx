@@ -14,7 +14,7 @@ export default async function CheckoutPage() {
     getMyProfile(),
     getCurrentUser(),
   ])
-  const live = products.map(({ id, price, stock, name, images, slug, weightGrams, shippingClass }) => ({
+  const live = products.map(({ id, price, stock, name, images, slug, weightGrams, shippingClass, variants }) => ({
     id,
     price,
     stock,
@@ -23,6 +23,7 @@ export default async function CheckoutPage() {
     slug,
     weightGrams,
     shippingClass,
+    variants,
   }))
 
   return (

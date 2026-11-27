@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes"
 import { Suspense, type ReactNode } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { ScrollReset } from "./scroll-reset"
+import { AppSplash } from "./app-splash"
 import { AuthListener } from "./auth-listener"
 import { BusyOverlayProvider } from "./busy-overlay"
 import { RouteProgressProvider } from "./route-progress"
@@ -25,6 +26,7 @@ export function Providers({ children }: { children: ReactNode }) {
           </Suspense>
           <AuthListener />
           <ServiceWorkerRegister />
+          <AppSplash />
         </LazyMotion>
       </MotionConfig>
     </ThemeProvider>

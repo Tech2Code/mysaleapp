@@ -52,31 +52,43 @@ export function OrderSummary({
       </h3>
 
       <ul className={styles.summaryItemsUl}>
-        {order.items.map((item) => (
-          <li key={item.productId} className={styles.summaryItemLi}>
-            <div className={styles.itemFlexRow}>
-              <Link
-                href={`/products/${item.slug}`}
-                {...linkProps}
-                className={styles.itemThumbLink}
-              >
-                <ProductImage src={item.image} alt={item.name} sizes="64px" />
-              </Link>
-              <div className={styles.itemDetailsCol}>
-                <Link href={`/products/${item.slug}`} {...linkProps} className={styles.itemNameLink}>
-                  {item.name}
+        {order.items.map((item) => {
+          const suffix = item.variantLabel ? ` — ${item.variantLabel}` : ""
+          const cleanName = suffix && item.name.endsWith(suffix) ? item.name.slice(0, -suffix.length) : item.name
+          return (
+            <li key={item.variantId ? `${item.productId}::${item.variantId}` : item.productId} className={styles.summaryItemLi}>
+              <div className={styles.itemFlexRow}>
+                <Link
+                  href={`/products/${item.slug}`}
+                  {...linkProps}
+                  className={styles.itemThumbLink}
+                >
+                  <ProductImage src={item.image} alt={cleanName} sizes="64px" />
                 </Link>
-                <p className={styles.itemUnitQty}>
-                  {formatPrice(item.price)} × {item.quantity}
-                </p>
+                <div className={styles.itemDetailsCol}>
+                  <Link href={`/products/${item.slug}`} {...linkProps} className={styles.itemNameLink}>
+                    {cleanName}
+                  </Link>
+                  {(item.variantLabel || (audience === "admin" && item.variantSku)) && (
+                    <div className={styles.itemVariantRow}>
+                      {item.variantLabel && <span className={styles.itemVariantPill}>{item.variantLabel}</span>}
+                      {audience === "admin" && item.variantSku && (
+                        <span className={styles.itemSkuTag}>SKU: {item.variantSku}</span>
+                      )}
+                    </div>
+                  )}
+                  <p className={styles.itemUnitQty}>
+                    {formatPrice(item.price)} × {item.quantity}
+                  </p>
+                </div>
+                <p className={styles.itemLineTotal}>{formatPrice(item.price * item.quantity)}</p>
               </div>
-              <p className={styles.itemLineTotal}>{formatPrice(item.price * item.quantity)}</p>
-            </div>
-            {audience === "customer" && order.status === "delivered" && !item.productId.startsWith("ph-") && (
-              <OrderItemReviewWidget item={item} />
-            )}
-          </li>
-        ))}
+              {audience === "customer" && order.status === "delivered" && !item.productId.startsWith("ph-") && (
+                <OrderItemReviewWidget item={item} />
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       <PriceBreakdown

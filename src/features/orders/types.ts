@@ -28,6 +28,27 @@ export function isOrderStatus(value: unknown): value is OrderStatus {
   return typeof value === "string" && (ORDER_STATUSES as readonly string[]).includes(value)
 }
 
+/**
+ * Strips the store's fixed order prefix (e.g. "KK-" from "KK-7F3K9Q" -> "7F3K9Q") for suffix-only
+ * copy & track-order input. Leaves codes with a different prefix untouched so legacy orders still work.
+ */
+export function stripOrderPrefix(orderCode: string, prefix: string): string {
+  const cleanCode = orderCode.trim().toUpperCase()
+  const cleanPrefix = prefix.trim().toUpperCase().replace(/-+$/, "")
+  if (!cleanPrefix) return cleanCode
+  const head = `${cleanPrefix}-`
+  return cleanCode.startsWith(head) ? cleanCode.slice(head.length) : cleanCode
+}
+
+/** Rebuilds the full order code from a suffix (e.g. "7F3K9Q" + "KK" -> "KK-7F3K9Q"). */
+export function composeOrderCode(rawInput: string, prefix: string): string {
+  const clean = rawInput.trim().toUpperCase()
+  if (!clean) return ""
+  if (clean.includes("-")) return clean
+  const cleanPrefix = prefix.trim().toUpperCase().replace(/-+$/, "")
+  return cleanPrefix ? `${cleanPrefix}-${clean}` : clean
+}
+
 // ---------------------------------------------------------------------------
 // Payment
 // ---------------------------------------------------------------------------
@@ -147,6 +168,9 @@ export function canVerifyPayment(order: { status: OrderStatus; paymentStatus: Pa
 // ---------------------------------------------------------------------------
 export type OrderItem = {
   productId: string
+  variantId?: string | null
+  variantLabel?: string | null
+  variantSku?: string | null
   name: string
   slug: string
   price: number

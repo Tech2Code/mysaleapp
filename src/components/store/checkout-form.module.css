@@ -1,25 +1,95 @@
 /* Section: Empty Cart State */
-.emptyCartBox { display: flex; flex-direction: column; align-items: center; gap: 16px; border-radius: var(--radiusCard); border: 1px dashed var(--border); padding: 56px 16px; text-align: center; }
+.emptyCartBox { display: flex; flex-direction: column; align-items: center; gap: 16px; border-radius: var(--radiusCard); border: 1px dashed var(--border); margin: 24px 16px; padding: 56px 16px; text-align: center; }
 .emptyCartBox .emptyTitle { margin: 0; font-family: var(--font-heading); font-size: 24px; color: var(--foreground); }
 .emptyCartBox .browsePillBtn { border-radius: var(--radiusControl); padding-left: 24px; padding-right: 24px; }
-/* Section: Checkout Split Layout & Cards */
-.checkoutFormGrid { display: grid; gap: 24px; }
-.checkoutFormGrid .mainColumn { display: flex; min-width: 0; flex-direction: column; gap: 24px; }
-.mainColumn .stepCard { display: flex; flex-direction: column; gap: 16px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
-.mainColumn .orderStepCard { display: flex; flex: 1 1 0%; flex-direction: column; gap: 20px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
+/* Section: Full-View Native Mobile App Shell & Modern Stepper */
+.checkoutFlowWrap { display: flex; min-height: 100dvh; flex-direction: column; gap: 8px; background-color: color-mix(in oklab, var(--muted) 48%, var(--background)); padding-bottom: 96px; scroll-margin-top: 0; }
+.checkoutFlowWrap .mobileAppHeader { position: sticky; top: 0; z-index: 45; display: flex; flex-direction: column; background-color: color-mix(in oklab, var(--card) 94%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); padding-top: env(safe-area-inset-top); box-shadow: 0 2px 12px -4px var(--shadow-color-soft); }
+.mobileAppHeader .mobileAppBarRow { display: flex; align-items: center; gap: 10px; padding: 10px 14px 8px 14px; }
+.mobileAppBarRow .mobileAppBackBtn { display: inline-grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); color: var(--foreground); cursor: pointer; transition: background-color 150ms ease, transform 140ms ease; }
+.mobileAppBarRow .mobileAppBackBtn:hover { background-color: var(--muted); }
+.mobileAppBarRow .mobileAppBackBtn:active { transform: scale(0.95); }
+.mobileAppBarRow .mobileAppTitleCol { min-width: 0; flex: 1 1 0%; display: flex; align-items: center; }
+.mobileAppTitleCol .mobileAppStepTitle { font-family: var(--font-heading); font-size: 17px; line-height: 22px; font-weight: 600; color: var(--foreground); }
+.mobileAppBarRow .mobileLockedPill { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 4px 10px; font-size: 11px; font-weight: 700; color: var(--tone-success-fg-strong); }
+.mobileAppBarRow .mobileSafePill { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--primary); }
+.lockTinySvg { width: 12px; height: 12px; flex-shrink: 0; }
+.mobileAppHeader .mobileStepperRail { padding: 4px 16px 12px 16px; }
+.mobileStepperRail .mobileStepperList { margin: 0; padding: 0; list-style: none; display: flex; align-items: flex-start; justify-content: space-between; }
+.mobileStepperList .mobileStepNode { position: relative; display: flex; flex: 1 1 0%; align-items: center; }
+.mobileStepperList .mobileStepNode:last-child { flex: 0 0 auto; }
+.mobileStepNode .mobileStepBtn { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: var(--muted-foreground); cursor: default; z-index: 1; }
+.mobileStepNode .mobileStepBtnDone { cursor: pointer; color: var(--foreground); }
+.mobileStepNode .mobileStepBtnCurrent { color: var(--primary); }
+.mobileStepBtn .mobileStepCircle { display: inline-grid; width: 28px; height: 28px; place-items: center; border-radius: 9999px; border: 1.5px solid var(--border); background-color: var(--card); color: var(--muted-foreground); transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 180ms ease; }
+.mobileStepBtnCurrent .mobileStepCircle { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 18%, transparent); transform: scale(1.04); }
+.mobileStepBtnDone .mobileStepCircle { border-color: var(--success-solid); background-color: var(--success-solid); color: var(--on-solid); }
+.stepIconTiny { width: 13px; height: 13px; stroke-width: 2.2; }
+.stepIconSm { width: 15px; height: 15px; stroke-width: 2.2; }
+.stepCheckSvg { width: 13px; height: 13px; stroke-width: 3; }
+.mobileStepBtn .mobileStepLabel { font-size: 11px; line-height: 14px; font-weight: 600; white-space: nowrap; }
+.mobileStepNode .mobileStepConnector { height: 2px; flex: 1 1 0%; margin: -16px 6px 0 6px; border-radius: 9999px; background-color: var(--border); transition: background-color 220ms ease; }
+.mobileStepNode .mobileStepConnectorDone { background-color: var(--success-solid); }
+/* Section: Mobile Edge-to-Edge Collapsible Order Summary Accordion */
+.checkoutFlowWrap .mobileAccordionWrap { background-color: var(--card); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.mobileAccordionWrap .mobileAccordionTrigger { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: 10px; border: 0; background-color: var(--card); padding: 12px 16px; text-align: left; cursor: pointer; }
+.mobileAccordionTrigger .mobileAccordionLeft { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--foreground); }
+.mobileAccordionLeft .accordionBagSvg { width: 16px; height: 16px; color: var(--primary); flex-shrink: 0; }
+.mobileAccordionLeft .accordionChevron { width: 16px; height: 16px; color: var(--muted-foreground); transition: transform 180ms ease; }
+.mobileAccordionLeft .accordionChevronOpen { transform: rotate(180deg); }
+.mobileAccordionTrigger .mobileAccordionPrice { font-size: 15px; font-weight: 800; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.mobileAccordionWrap .mobileAccordionBody { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding: 14px 16px; background-color: color-mix(in oklab, var(--secondary) 32%, var(--card)); }
+/* Section: Desktop Web Modern 3-Step Progress Bar */
+.checkoutFlowWrap .desktopStepperNav { display: none; border-radius: var(--radiusCard); background-color: var(--card); padding: 16px 24px; box-shadow: var(--store-elevation-sm); }
+.desktopStepperNav .desktopStepperList { margin: 0; padding: 0; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.desktopStepperList .desktopStepItem { display: flex; flex: 1 1 0%; align-items: center; gap: 14px; min-width: 0; }
+.desktopStepperList .desktopStepItem:last-child { flex: 0 1 auto; }
+.desktopStepItem .desktopStepBtn { display: inline-flex; align-items: center; gap: 12px; border-radius: 14px; border: 1px solid transparent; background: transparent; padding: 6px 12px 6px 6px; text-align: left; color: var(--muted-foreground); white-space: nowrap; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
+.desktopStepItem .desktopStepBtn:disabled { cursor: default; }
+.desktopStepItem .desktopStepBtnCurrent { border-color: color-mix(in oklab, var(--primary) 24%, var(--border)); background-color: color-mix(in oklab, var(--primary) 6%, var(--card)); color: var(--foreground); }
+.desktopStepItem .desktopStepBtnDone { cursor: pointer; color: var(--foreground); }
+.desktopStepItem .desktopStepBtnDone:hover { background-color: color-mix(in oklab, var(--success) 8%, var(--card)); }
+.desktopStepBtn .desktopStepNum { display: inline-grid; width: 34px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 1.5px solid var(--border); background-color: var(--card); color: var(--muted-foreground); transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, box-shadow 200ms ease; }
+.desktopStepBtnCurrent .desktopStepNum { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 16%, transparent); }
+.desktopStepBtnDone .desktopStepNum { border-color: var(--success-solid); background-color: var(--success-solid); color: var(--on-solid); }
+.desktopStepBtn .desktopStepTextCol { display: flex; flex-direction: column; gap: 1px; }
+.desktopStepTextCol .desktopStepKicker { font-size: 10.5px; line-height: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted-foreground); }
+.desktopStepBtnCurrent .desktopStepKicker { color: var(--primary); }
+.desktopStepBtnDone .desktopStepKicker { color: var(--tone-success-fg-strong); }
+.desktopStepTextCol .desktopStepLabel { font-size: 13.5px; line-height: 18px; font-weight: 600; }
+.desktopStepItem .desktopStepLine { height: 2px; flex: 1 1 0%; min-width: 24px; border-radius: 9999px; background-color: var(--border); transition: background-color 220ms ease; }
+.desktopStepItem .desktopStepLineDone { background-color: var(--success-solid); }
+/* Section: Checkout Split Layout & Edge-to-Edge Mobile Step Sections */
+.checkoutFormGrid { display: grid; gap: 8px; }
+.checkoutFormGrid .mainColumn { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
+.mainColumn .stepCard { display: flex; flex-direction: column; gap: 16px; border-radius: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background-color: var(--card); padding: 16px; }
+.mainColumn .orderStepCard { display: flex; flex-direction: column; gap: 16px; border-radius: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background-color: var(--card); padding: 16px; }
 .stepHeaderRow { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .stepHeaderCenterRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.stepTitle { margin: 0; display: flex; align-items: center; gap: 10px; font-family: var(--font-heading); font-size: 20px; font-weight: 600; color: var(--foreground); }
-.stepTitle .stepBadge { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--primary); }
+.stepTitle { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--font-heading); font-size: 17px; font-weight: 600; color: var(--foreground); outline: none; }
+.stepTitle .stepBadge { display: none; width: 24px; height: 24px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); font-family: var(--font-sans); font-size: 12px; font-weight: 700; color: var(--primary); }
 .stepTitle .itemCountPill { border-radius: 9999px; background-color: var(--secondary); padding: 2px 10px; font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: color-mix(in oklab, var(--foreground) 82%, transparent); }
-.stepSubtext { margin: 4px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
+.stepSubtext { margin: 4px 0 0 0; font-size: 13px; line-height: 19px; color: var(--muted-foreground); }
 .inlineAccentLink { font-weight: 500; color: var(--primary); text-underline-offset: 4px; }
 .inlineAccentLink:hover { text-decoration: underline; }
 .smallActionLink { font-size: 12px; font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .smallActionLink:hover { text-decoration: underline; }
+.stepDesktopActions { display: none; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+.stepDesktopActions .stepBackBtn { border-radius: var(--radiusControl); padding-left: 18px; padding-right: 18px; gap: 6px; }
+.stepDesktopActions .stepContinueBtn { border-radius: var(--radiusControl); padding-left: 24px; padding-right: 24px; gap: 8px; box-shadow: 0 8px 20px -6px color-mix(in oklab, var(--primary) 30%, transparent); }
+/* Section: Compact Delivery Recap Strip */
+.recapStripCard { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background-color: var(--card); padding: 14px 16px; }
+.recapStripCard .recapStripBody { min-width: 0; flex: 1 1 0%; display: flex; flex-direction: column; gap: 2px; }
+.recapStripBody .recapStripTitleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--foreground); }
+.recapStripTitleRow .recapPinSvg { width: 14px; height: 14px; flex-shrink: 0; color: var(--primary); }
+.recapStripTitleRow .recapHeading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recapStripTitleRow .recapTag { border-radius: 9999px; background-color: var(--secondary); padding: 1px 8px; font-size: 10.5px; font-weight: 600; color: var(--foreground); }
+.recapStripBody .recapSubLine { margin: 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recapStripCard .recapChangeBtn { flex-shrink: 0; min-height: 36px; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--primary) 26%, transparent); background-color: color-mix(in oklab, var(--primary) 8%, var(--card)); padding: 0 14px; font-size: 12px; font-weight: 600; color: var(--primary); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
+.recapStripCard .recapChangeBtn:hover { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 15%, var(--card)); }
 /* Section: Compact Delivery Address Card & Address Picker Modal */
 .selectedAddrWrap { display: flex; flex-direction: column; gap: 12px; }
-.selectedAddrWrap .selectedAddrCard { display: flex; flex-direction: column; gap: 4px; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border)); background-color: color-mix(in oklab, var(--primary) 5%, var(--card)); padding: 14px 16px; font-size: 14px; }
+.selectedAddrWrap .selectedAddrCard { display: flex; flex-direction: column; gap: 4px; border-radius: 14px; border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border)); background-color: color-mix(in oklab, var(--primary) 5%, var(--card)); padding: 14px; font-size: 14px; }
 .addrTitleRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 600; color: var(--foreground); }
 .addrTitleRow .pinSvg { width: 16px; height: 16px; flex-shrink: 0; color: var(--primary); }
 .addrTitleRow .defaultBadge { border-radius: 9999px; background-color: var(--secondary); padding: 2px 8px; font-size: 10.5px; font-weight: 600; color: var(--foreground); }
@@ -30,7 +100,7 @@
 .addrPersonLine .addrPhoneMuted { font-weight: 400; color: var(--muted-foreground); }
 .addrStreetLine { margin-top: 2px; font-size: 13.5px; line-height: 20px; color: var(--muted-foreground); }
 .selectedAddrWrap .addrActionsBar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.addrActionsBar .addrActionBtn { display: inline-flex; height: var(--controlHSm); align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease; }
+.addrActionsBar .addrActionBtn { display: inline-flex; min-height: 44px; flex: 1 1 auto; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControlSm); border: 1px solid var(--input); background-color: var(--card); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); cursor: pointer; transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1); }
 .addrActionsBar .addrActionBtn:hover { border-color: color-mix(in oklab, var(--primary) 45%, var(--border)); background-color: var(--secondary); transform: translateY(-1px); }
 .addrActionsBar .addrActionBtn:active { transform: scale(0.98); }
 .addrActionsBar .addrActionBtnPrimary { border-color: color-mix(in oklab, var(--primary) 26%, transparent); background-color: color-mix(in oklab, var(--primary) 10%, var(--card)); color: var(--primary); }
@@ -40,7 +110,7 @@
 .addrModalForm { display: flex; min-height: 0; flex: 1 1 0%; flex-direction: column; overflow: hidden; }
 .addrModalBody { display: flex; flex-direction: column; gap: 14px; }
 .addrRadioList { display: flex; flex-direction: column; gap: 10px; }
-.addrRadioList .addrRadioCard { display: flex; width: 100%; align-items: flex-start; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 14px; text-align: left; font-size: 13.5px; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.addrRadioList .addrRadioCard { display: flex; width: 100%; align-items: flex-start; gap: 12px; border-radius: 16px; border: 1px solid var(--border); background-color: var(--card); padding: 14px; text-align: left; font-size: 13.5px; cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
 .addrRadioList .addrRadioCard:hover { border-color: color-mix(in oklab, var(--primary) 45%, transparent); background-color: color-mix(in oklab, var(--secondary) 60%, var(--card)); }
 .addrRadioList .addrRadioCardActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 6%, var(--card)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 26%, transparent); }
 .addrRadioCard .radioCircle { margin-top: 2px; display: grid; width: 18px; height: 18px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 1.5px solid color-mix(in oklab, var(--muted-foreground) 42%, var(--border)); background-color: var(--card); }
@@ -50,38 +120,89 @@
 .labelChipsGroup { display: flex; flex-direction: column; gap: 6px; }
 .labelChipsGroup .labelChipsCaption { font-size: 13px; font-weight: 500; color: var(--foreground); }
 .labelChipsGroup .labelChipsRow { display: flex; flex-wrap: wrap; gap: 8px; }
-.labelChipsRow .labelChipBtn { min-height: 34px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 14px; font-size: 12.5px; font-weight: 600; color: var(--muted-foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.labelChipsRow .labelChipBtn { min-height: 36px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); padding: 0 14px; font-size: 12.5px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
 .labelChipsRow .labelChipBtn:hover { color: var(--foreground); border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); }
 .labelChipsRow .labelChipBtnActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 12%, var(--card)); color: var(--primary); }
 .addrLimitNote { margin: 0; border-radius: 12px; background-color: var(--muted); padding: 10px 12px; font-size: 12px; color: var(--muted-foreground); }
 .icon16 { width: 16px; height: 16px; flex-shrink: 0; }
+.icon18 { width: 18px; height: 18px; flex-shrink: 0; }
 .addressFieldsGrid { display: grid; column-gap: 20px; row-gap: 4px; }
-/* Section: Order Items List & Note Switch */
-.orderItemsUl { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
-.orderItemsUl .orderLineLink { display: flex; align-items: center; gap: 14px; border-radius: 16px; border: 0; background-color: var(--store-section-tint, var(--muted)); padding: 12px; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+/* Section: Order Items List, Step 2 Promo & Note Switch */
+.orderItemsUl { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.orderItemsUl .orderLineLink { display: flex; align-items: center; gap: 12px; border-radius: 14px; border: 0; background-color: var(--store-section-tint, var(--muted)); padding: 10px 12px; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .orderItemsUl .orderLineLink:hover { background-color: var(--secondary); transform: translateY(-1px); }
-.orderLineLink .lineThumbWrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; overflow: hidden; border-radius: 12px; background-color: var(--muted); container-type: inline-size; }
+.orderLineLink .lineThumbWrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; overflow: hidden; border-radius: 10px; background-color: var(--muted); container-type: inline-size; }
 .lineThumbWrap .lineThumbImg { transition: transform 300ms ease-out; }
 .orderLineLink:hover .lineThumbImg { transform: scale(1.05); }
 .lineThumbWrap .qtyBubble { position: absolute; top: -4px; right: -4px; display: grid; width: 20px; height: 20px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10.5px; font-weight: 700; color: var(--background); }
-.orderLineLink .lineTextCol { min-width: 0; flex: 1 1 0%; font-size: 14px; font-weight: 500; }
+.orderLineLink .lineTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; align-items: flex-start; font-size: 14px; font-weight: 500; }
 .lineTextCol .lineNameText { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--foreground); transition: color 150ms ease; }
 .orderLineLink:hover .lineNameText { color: var(--primary); }
-.lineTextCol .lineMetaText { margin-top: 2px; display: block; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.lineTextCol .lineVariantPill { margin-top: 4px; display: inline-flex; align-items: center; border-radius: 6px; background-color: var(--card); border: 1px solid var(--border); padding: 1px 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--foreground); }
+.lineTextCol .lineMetaText { margin-top: 3px; display: block; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
 .orderLineLink .lineTotalPrice { flex-shrink: 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--foreground); }
 .unavailableWarning { margin: 0; font-size: 12px; color: var(--destructive); }
-.noteFooterSection { margin-top: auto; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
-/* Section: Price Summary Sidebar & Promo Code */
-.summaryAside { height: fit-content; display: flex; flex-direction: column; gap: 20px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 20px; box-shadow: var(--store-elevation-sm); }
-.summaryAside .summaryHeading { margin: 0; font-family: var(--font-heading); font-size: 20px; font-weight: 600; color: var(--foreground); }
-.summaryAside .promoSection { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
-.promoSection .appliedPromoCard { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-radius: 16px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 12px; font-size: 12px; }
+.stepPromoWrap { border-top: 1px solid var(--border); padding-top: 14px; }
+.noteFooterSection { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 14px; }
+/* Section: Payment Step (Price-Locked & Distraction-Free) */
+.paymentHeroHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.paymentHeroHeader .lockedAmountBox { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; border-radius: 14px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 12px 14px; }
+.lockedAmountBox .lockedAmountCaption { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--tone-success-fg-strong); }
+.lockedAmountBox .lockedAmountFigure { font-size: 20px; line-height: 24px; font-weight: 800; color: var(--tone-success-fg-strong); font-variant-numeric: tabular-nums; }
+.gatewayCard { display: flex; flex-direction: column; gap: 14px; border-radius: 16px; border: 1px solid color-mix(in oklab, var(--primary) 26%, var(--border)); background-color: color-mix(in oklab, var(--primary) 4%, var(--card)); padding: 16px; }
+.gatewayCard .gatewayIconRow { display: flex; align-items: flex-start; gap: 12px; }
+.gatewayIconRow .gatewayIconBadge { display: grid; width: 40px; height: 40px; flex-shrink: 0; place-items: center; border-radius: 12px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); color: var(--primary); }
+.gatewayIconBadge .gatewayIcon { width: 20px; height: 20px; }
+.gatewayIconRow .gatewayCopyCol { display: flex; flex-direction: column; gap: 4px; }
+.gatewayCopyCol .gatewayTitle { margin: 0; font-size: 15px; font-weight: 600; color: var(--foreground); }
+.gatewayCopyCol .gatewaySub { margin: 0; font-size: 13px; line-height: 19px; color: var(--muted-foreground); }
+.gatewayCard .gatewaySafeLine { margin: 0; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; font-size: 12px; color: var(--muted-foreground); }
+.upiInlineFlow { display: flex; flex-direction: column; gap: 20px; }
+.upiStepBlock { display: flex; flex-direction: column; gap: 14px; }
+.dialogStepHeading { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--foreground); }
+.dialogStepHeading .solidStepNum { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: var(--primary); font-size: 12px; font-weight: 700; color: var(--primary-foreground); }
+.upiDeepLinkBtn { display: flex; height: 50px; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--primary); padding: 0 20px; font-size: 14px; font-weight: 600; color: var(--primary-foreground); box-shadow: 0 6px 14px -4px color-mix(in oklab, var(--primary) 34%, transparent); transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease; }
+.upiDeepLinkBtn:hover { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); box-shadow: 0 10px 20px -4px color-mix(in oklab, var(--primary) 44%, transparent); }
+.upiDeepLinkBtn:active { transform: scale(0.98); }
+.upiDeepLinkBtn .phoneSvg { width: 16px; height: 16px; }
+.qrToggleBtn { display: flex; height: 46px; width: 100%; cursor: pointer; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
+.qrToggleBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
+.qrToggleBtn:active { transform: scale(0.98); }
+.qrToggleBtn .qrSvg { width: 16px; height: 16px; color: var(--primary); }
+.qrCardRow { display: none; align-items: center; gap: 16px; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 55%, transparent); padding: 14px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
+.qrCardRowVisible { display: flex; }
+.qrCardRow .qrWhiteFrame { flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border); background-color: var(--on-solid); padding: 6px; }
+.qrCardRow .qrCopyCol { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted-foreground); }
+.qrCopyCol .qrCopyTitle { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--foreground); }
+.qrCopyTitle .qrSvg { width: 16px; height: 16px; color: var(--primary); }
+.qrCopyCol .qrCopySub { margin: 0; font-size: 12px; line-height: 19px; color: var(--muted-foreground); }
+.qrCopySub .strongFg { font-weight: 600; color: var(--foreground); }
+.upiCopyRowsList { display: flex; flex-direction: column; gap: 8px; }
+.upiCopyRowsList .upiCopyRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 65%, transparent); background-color: color-mix(in oklab, var(--muted) 48%, transparent); padding: 10px 14px; font-size: 12px; }
+.upiCopyRow .upiRowLabel { font-weight: 500; color: var(--muted-foreground); }
+.upiCopyRow .upiRowValueWrap { display: flex; min-width: 0; align-items: center; gap: 6px; font-family: var(--font-mono); font-weight: 600; color: var(--foreground); }
+.upiRowValueWrap .upiValueTrunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upiRowValueWrap .copyMiniBtn { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.upiRowValueWrap .copyMiniBtn:hover { background-color: var(--background); color: var(--foreground); }
+.copyMiniBtn .copyTinySvg { width: 14px; height: 14px; }
+.upiMissingNotice { margin: 0; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 50%, transparent); padding: 16px; font-size: 14px; line-height: 22px; }
+.upiMissingNotice .waAccentLink { font-weight: 600; color: var(--primary); text-decoration: underline; text-underline-offset: 4px; }
+.utrStepSection { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
+.mobilePaymentTrustWrap { display: block; }
+/* Section: Promo Code (Collapsed Trigger + Input + Applied Card) */
+.promoSection { display: flex; flex-direction: column; gap: 8px; }
+.promoSection .promoToggleBtn { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px dashed color-mix(in oklab, var(--primary) 35%, var(--border)); background-color: color-mix(in oklab, var(--primary) 4%, var(--card)); padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--foreground); cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; }
+.promoSection .promoToggleBtn:hover { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 8%, var(--card)); }
+.promoToggleBtn .promoToggleLeft { display: inline-flex; align-items: center; gap: 8px; }
+.promoToggleLeft .promoTagSvg { width: 15px; height: 15px; color: var(--primary); }
+.promoToggleBtn .promoToggleAction { font-size: 12px; font-weight: 700; color: var(--primary); }
+.promoSection .appliedPromoCard { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border-radius: 14px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 12px; font-size: 12px; }
 .appliedPromoCard .promoInfoCol { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .promoInfoCol .promoCodeRow { margin: 0; display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--tone-success-fg-strong); }
-.promoCodeRow .ticketSvg { width: 16px; height: 16px; flex-shrink: 0; }
-.promoCodeRow .monoCode { font-family: var(--font-mono); letter-spacing: 0.6px; }
+.ticketSvg { width: 15px; height: 15px; flex-shrink: 0; }
+.monoCode { font-family: var(--font-mono); letter-spacing: 0.6px; }
 .promoInfoCol .promoSavingsNote { margin: 0; color: var(--muted-foreground); }
-.appliedPromoCard .removePromoBtn { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background: transparent; padding: 4px 8px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.appliedPromoCard .removePromoBtn { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 9999px; border: 0; background: transparent; padding: 4px 8px; font-size: 12px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
 .appliedPromoCard .removePromoBtn:hover { background-color: var(--background); color: var(--foreground); }
 .removePromoBtn .xSmallSvg { width: 14px; height: 14px; }
 .promoSection .promoInputStack { display: flex; flex-direction: column; gap: 6px; }
@@ -96,85 +217,89 @@
 .promoInputStack .promoBelowMinRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 500; color: var(--tone-warning-icon); }
 .promoBelowMinRow .promoBelowMinMsg { margin: 0; }
 .promoBelowMinMsg .monoBold { font-family: var(--font-mono); font-weight: 700; }
-.promoBelowMinRow .removeInlineBtn { flex-shrink: 0; border: 0; background: transparent; padding: 0; color: var(--muted-foreground); text-underline-offset: 4px; }
+.promoBelowMinRow .removeInlineBtn { flex-shrink: 0; border: 0; background: transparent; padding: 0; color: var(--muted-foreground); cursor: pointer; text-underline-offset: 4px; }
 .promoBelowMinRow .removeInlineBtn:hover { color: var(--foreground); text-decoration: underline; }
-.breakdownTopBorder { border-top: 1px solid var(--border); padding-top: 16px; }
-.desktopPayBtn { display: none; height: 52px; width: 100%; flex-direction: column; gap: 2px; border-radius: var(--radiusControl); padding-top: 6px; padding-bottom: 6px; box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 32%, transparent); }
-.payBtnBusySpan { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
-.spinMdSvg { width: 20px; height: 20px; animation: spinKeyframes 1s linear infinite; }
-.payBtnTopLine { font-size: 14px; line-height: 17px; font-weight: 600; }
-.payBtnAmountLine { font-size: 16px; line-height: 19px; font-weight: 800; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+/* Section: Context-Aware Right Sidebar & Locked Payment Summary */
+.summaryAside { height: fit-content; display: flex; flex-direction: column; gap: 16px; border-radius: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background-color: var(--card); padding: 16px; }
+.summaryAsideDesktopOnly { display: none; }
+.summaryAside .summaryHeading { margin: 0; font-family: var(--font-heading); font-size: 17px; font-weight: 600; color: var(--foreground); }
+.lockedAsideHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.editLockedLinkBtn { border: 0; background: transparent; padding: 0; font-size: 12px; font-weight: 600; color: var(--primary); cursor: pointer; text-underline-offset: 3px; }
+.editLockedLinkBtn:hover { text-decoration: underline; }
+.lockedDeliveryBox { display: flex; flex-direction: column; gap: 3px; border-radius: 12px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 38%, transparent); padding: 10px 12px; }
+.lockedDeliveryBox .lockedDeliveryTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lockedDeliveryTop .lockedDeliveryLabel { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--muted-foreground); }
+.lockedDeliveryBox .lockedDeliveryName { margin: 0; font-size: 13px; font-weight: 600; color: var(--foreground); }
+.lockedDeliveryBox .lockedDeliveryAddr { margin: 0; font-size: 12px; line-height: 17px; color: var(--muted-foreground); }
+.miniItemsList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.miniItemsList .miniItemRow { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.miniItemRow .miniThumbWrap { position: relative; width: 40px; height: 40px; flex-shrink: 0; overflow: hidden; border-radius: 8px; background-color: var(--muted); container-type: inline-size; }
+.miniThumbWrap .miniQtyBubble { position: absolute; top: -3px; right: -3px; display: grid; width: 17px; height: 17px; place-items: center; border-radius: 9999px; background-color: var(--foreground); font-size: 10px; font-weight: 700; color: var(--background); }
+.miniItemRow .miniItemTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
+.miniItemTextCol .miniItemName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--foreground); }
+.miniItemTextCol .miniItemVariant { align-self: flex-start; border-radius: 5px; background-color: var(--muted); padding: 1px 6px; font-size: 10.5px; line-height: 15px; font-weight: 600; color: var(--muted-foreground); }
+.miniItemRow .miniItemPrice { flex-shrink: 0; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.miniItemsList .miniMoreNote { font-size: 11.5px; font-weight: 500; color: var(--muted-foreground); }
+.lockedPromoBadge { margin: 0; display: flex; align-items: center; gap: 6px; border-radius: 10px; border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 8px 10px; font-size: 12px; font-weight: 500; color: var(--tone-success-fg-strong); }
+.breakdownTopBorder { border-top: 1px solid var(--border); padding-top: 14px; }
+.payBtnBusySpan { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
 .trustChecklistBox { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; background-color: color-mix(in oklab, var(--muted) 42%, transparent); padding: 12px 14px; font-size: 12px; color: var(--muted-foreground); }
 .trustChecklistBox .trustRow { margin: 0; display: flex; align-items: center; gap: 8px; }
 .trustRow .checkSvg { width: 16px; height: 16px; flex-shrink: 0; color: var(--primary); }
 .trustRow .safeText { font-weight: 500; color: color-mix(in oklab, var(--foreground) 82%, transparent); }
 .trustChecklistBox .policyNoteLine { margin: 4px 0 0 0; border-top: 1px solid color-mix(in oklab, var(--border) 65%, transparent); padding-top: 8px; font-size: 11.5px; line-height: 17px; color: var(--muted-foreground); }
-.policyNoteLine .policyInlineLink { border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--primary); text-underline-offset: 3px; }
+.policyNoteLine .policyInlineLink { border: 0; background: transparent; padding: 0; font-weight: 600; color: var(--primary); cursor: pointer; text-underline-offset: 3px; }
 .policyNoteLine .policyInlineLink:hover { text-decoration: underline; }
-/* Section: Mobile Sticky Bottom Pay Bar */
-.mobileBottomBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; align-items: center; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding: 10px 14px max(12px, env(safe-area-inset-bottom)) 14px; box-shadow: 0 -8px 28px -8px var(--shadow-color); }
+/* Section: Native Mobile App Sticky Bottom Dock */
+.mobileBottomBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--border); padding: 12px 16px max(14px, env(safe-area-inset-bottom)) 16px; box-shadow: 0 -10px 28px -8px var(--shadow-color); }
 :global([data-skeleton]) .mobileBottomBar { display: none; }
-.mobileBottomBar .mobilePayBtn { height: 52px; min-width: 0; width: 100%; flex-direction: column; gap: 2px; border-radius: var(--radiusControl); padding: 6px 20px; box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 30%, transparent); }
+.mobileBottomBar .mobileTotalTrigger { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; min-width: 88px; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+.mobileBottomBar .mobileTotalCol { display: flex; flex-direction: column; flex-shrink: 0; min-width: 88px; }
+.mobileTotalValue { font-size: 18px; line-height: 22px; font-weight: 800; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.mobileTotalLabel { font-size: 11.5px; line-height: 15px; font-weight: 500; color: var(--muted-foreground); }
+.mobileViewDetailsLink { font-size: 11.5px; line-height: 15px; font-weight: 600; color: var(--primary); }
+.mobileBottomBar .mobilePayBtn { height: 50px; min-width: 0; flex: 1 1 0%; border-radius: var(--radiusControl); padding: 0 20px; box-shadow: 0 8px 20px -4px color-mix(in oklab, var(--primary) 34%, transparent); }
 .mobileBottomBar .mobilePayBtn:active { transform: scale(0.98); }
+.mobilePayCtaInner { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14.5px; font-weight: 700; }
 .mobilePayBusySpan { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
 .spinSmSvg { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
-.mobilePayAmountLine { font-size: 14px; line-height: 17px; font-weight: 800; letter-spacing: -0.2px; font-variant-numeric: tabular-nums; }
-/* Section: UPI Payment Dialog */
-.payDialogContent { width: 100%; }
-.payDialogBody { display: flex; flex-direction: column; gap: 20px; }
-.upiStepBlock { display: flex; flex-direction: column; gap: 14px; }
-.dialogStepHeading { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--foreground); }
-.dialogStepHeading .solidStepNum { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: var(--primary); font-size: 12px; font-weight: 700; color: var(--primary-foreground); }
-.upiDeepLinkBtn { display: flex; height: var(--controlHLg); align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--primary); padding: 0 20px; font-size: 14px; font-weight: 600; color: var(--primary-foreground); box-shadow: 0 6px 14px -4px color-mix(in oklab, var(--primary) 34%, transparent); transition: background-color 180ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease; }
-.upiDeepLinkBtn:hover { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); box-shadow: 0 10px 20px -4px color-mix(in oklab, var(--primary) 44%, transparent); }
-.upiDeepLinkBtn:active { transform: scale(0.98); }
-.upiDeepLinkBtn .phoneSvg { width: 16px; height: 16px; }
-.qrToggleBtn { display: flex; height: var(--controlHMd); width: 100%; cursor: pointer; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--card); padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
-.qrToggleBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
-.qrToggleBtn:active { transform: scale(0.98); }
-.qrToggleBtn .qrSvg { width: 16px; height: 16px; color: var(--primary); }
-.qrCardRow { display: none; align-items: center; gap: 16px; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--secondary) 55%, transparent); padding: 14px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
-.qrCardRowVisible { display: flex; }
-.qrCardRow .qrWhiteFrame { flex-shrink: 0; border-radius: 12px; border: 1px solid var(--border); background-color: var(--on-solid); padding: 6px; }
-.qrCardRow .qrCopyCol { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted-foreground); }
-.qrCopyCol .qrCopyTitle { margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--foreground); }
-.qrCopyTitle .qrSvg { width: 16px; height: 16px; color: var(--primary); }
-.qrCopyCol .qrCopySub { margin: 0; font-size: 12px; line-height: 19px; color: var(--muted-foreground); }
-.qrCopySub .strongFg { font-weight: 600; color: var(--foreground); }
-.upiCopyRowsList { display: flex; flex-direction: column; gap: 8px; }
-.upiCopyRowsList .upiCopyRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 65%, transparent); background-color: color-mix(in oklab, var(--muted) 48%, transparent); padding: 8px 14px; font-size: 12px; }
-.upiCopyRow .upiRowLabel { font-weight: 500; color: var(--muted-foreground); }
-.upiCopyRow .upiRowValueWrap { display: flex; min-width: 0; align-items: center; gap: 6px; font-family: var(--font-mono); font-weight: 600; color: var(--foreground); }
-.upiRowValueWrap .upiValueTrunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.upiRowValueWrap .copyMiniBtn { display: grid; width: 24px; height: 24px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
-.upiRowValueWrap .copyMiniBtn:hover { background-color: var(--background); color: var(--foreground); }
-.copyMiniBtn .copyTinySvg { width: 14px; height: 14px; }
-.upiMissingNotice { margin: 0; border-radius: 16px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 50%, transparent); padding: 16px; font-size: 14px; line-height: 22px; }
-.upiMissingNotice .waAccentLink { font-weight: 600; color: var(--primary); text-decoration: underline; text-underline-offset: 4px; }
-.utrStepSection { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; }
 .footerBackBtn { border-radius: var(--radiusControl); padding-left: 20px; padding-right: 20px; }
 .footerConfirmBtn { gap: 6px; border-radius: var(--radiusControl); padding-left: 24px; padding-right: 24px; }
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
-  .emptyCartBox { padding: 80px 24px; }
-  .mainColumn .stepCard { padding: 28px; }
-  .mainColumn .orderStepCard { padding: 28px; }
-  .stepTitle { font-size: 24px; }
+  .emptyCartBox { margin: 0; padding: 80px 24px; }
   .addrModalContent { max-width: 512px; }
   .addressFieldsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .spanTwoCols { grid-column: span 2 / span 2; }
+  .addrActionsBar .addrActionBtn { flex: 0 1 auto; }
   .orderItemsUl .orderLineLink { padding: 14px; }
-  .summaryAside { padding: 24px; }
-  .desktopPayBtn { display: inline-flex; }
-  .mobileBottomBar { display: none; }
-  .payDialogContent { max-width: 448px; }
+  .paymentHeroHeader .lockedAmountBox { width: auto; flex-direction: column; align-items: flex-end; gap: 2px; padding: 8px 14px; }
 }
 @media (min-width: 768px) {
   .upiDeepLinkBtn { display: none; }
   .qrToggleBtn { display: none; }
   .qrCardRow { display: flex; }
 }
+@media (min-width: 900px) {
+  .checkoutFlowWrap { min-height: auto; gap: 20px; background-color: transparent; padding-bottom: 0; scroll-margin-top: calc(var(--store-header-h, 64px) + 16px); }
+  .checkoutFlowWrap .mobileAppHeader { display: none; }
+  .checkoutFlowWrap .mobileAccordionWrap { display: none; }
+  .checkoutFlowWrap .desktopStepperNav { display: block; }
+  .checkoutFormGrid { gap: 20px; }
+  .checkoutFormGrid .mainColumn { gap: 16px; }
+  .mainColumn .stepCard { border-radius: var(--radiusCard); border: 0; padding: 24px; box-shadow: var(--store-elevation-sm); }
+  .mainColumn .orderStepCard { border-radius: var(--radiusCard); border: 0; padding: 24px; box-shadow: var(--store-elevation-sm); }
+  .recapStripCard { border-radius: 16px; border: 1px solid var(--border); padding: 12px 16px; }
+  .stepTitle { font-size: 22px; gap: 10px; }
+  .stepTitle .stepBadge { display: grid; }
+  .stepDesktopActions { display: flex; }
+  .summaryAside { border-radius: var(--radiusCard); border: 0; padding: 22px; box-shadow: var(--store-elevation-sm); }
+  .summaryAside .summaryHeading { font-size: 18px; }
+  .mobilePaymentTrustWrap { display: none; }
+  .mobileBottomBar { display: none; }
+}
 @media (min-width: 1024px) {
-  .checkoutFormGrid { grid-template-columns: 1fr 380px; gap: 32px; }
+  .checkoutFormGrid { grid-template-columns: 1fr 376px; gap: 28px; }
+  .summaryAsideDesktopOnly { display: flex; }
   .summaryAside { position: sticky; top: calc(var(--store-header-h, 64px) + 16px); }
 }

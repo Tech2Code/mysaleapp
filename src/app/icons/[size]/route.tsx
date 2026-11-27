@@ -17,5 +17,9 @@ export async function GET(_req: Request, { params }: RouteContext<"/icons/[size]
   const { size } = await params
   if (!Object.hasOwn(VARIANTS, size)) return new Response("Not found", { status: 404 })
   const v = VARIANTS[size]
-  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} />, { width: v.size, height: v.size })
+  return new ImageResponse(<BrandMark size={v.size} padding={v.padding} />, {
+    width: v.size,
+    height: v.size,
+    headers: { "Cache-Control": "public, max-age=86400, must-revalidate" },
+  })
 }

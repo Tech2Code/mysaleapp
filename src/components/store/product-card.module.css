@@ -13,9 +13,11 @@
 .imageLink .hoverVignette { pointer-events: none; position: absolute; inset: 0; background-image: linear-gradient(0deg, var(--backdrop-scrim-soft) 0%, transparent 60%); opacity: 0; transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); }
 .productCard:hover .hoverVignette { opacity: 1; }
 /* Section: Badges & Rating Overlay */
-.mediaFrame .badgeStack { pointer-events: none; position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 4px; }
-.badgeStack .discountBadge { border-radius: 9999px; background-color: var(--primary); padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 2px 6px var(--shadow-color); }
-.badgeStack .soldOutBadge { border-radius: 9999px; background-color: var(--destructive-solid); padding: 2px 8px; font-size: 11px; font-weight: 700; color: var(--on-solid); box-shadow: 0 2px 6px var(--shadow-color); }
+.mediaFrame .badgeStack { pointer-events: none; position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.badgeStack .discountBadge { display: inline-flex; align-items: center; border-radius: 9999px; background-color: var(--primary); padding: 4px 8px; font-size: 11px; line-height: 1; font-weight: 700; color: var(--primary-foreground); box-shadow: 0 2px 6px var(--shadow-color); }
+.badgeStack .soldOutBadge { display: inline-flex; align-items: center; border-radius: 9999px; background-color: var(--destructive-solid); padding: 4px 8px; font-size: 11px; line-height: 1; font-weight: 700; color: var(--on-solid); box-shadow: 0 2px 6px var(--shadow-color); }
+.badgeStack .backInStockBadge { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; background-color: var(--tone-success-solid); padding: 4px 8px; font-size: 11px; line-height: 1; font-weight: 700; color: var(--tone-success-solid-fg); box-shadow: 0 2px 6px var(--shadow-color); }
+.backInStockBadge .backInStockSvg { width: 11px; height: 11px; flex-shrink: 0; }
 .mediaFrame .ratingPill { pointer-events: none; position: absolute; bottom: 8px; left: 8px; display: inline-flex; max-width: calc(100% - 52px); align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 9999px; background-color: color-mix(in oklab, var(--card) 86%, transparent); padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-variant-numeric: tabular-nums; }
 .ratingPill .pillStar { width: 12px; height: 12px; fill: var(--tone-star); color: var(--tone-star); }
 .ratingPill .pillDivider { color: color-mix(in oklab, var(--muted-foreground) 50%, transparent); }
@@ -38,12 +40,12 @@
 .mediaFrame .quickAddBtn:focus-visible { transform: translateY(0); opacity: 1; }
 .plusIcon { width: 16px; height: 16px; }
 /* Section: Card Details & Pricing */
-.productCard .cardBody { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; padding: 0 2px; }
+.productCard .cardBody { margin-top: 8px; display: flex; flex: 1 1 0%; flex-direction: column; gap: 2px; padding: 0 2px; }
 .cardBody .categoryName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted-foreground); text-transform: uppercase; }
 .cardBody .productTitle { margin: 0; font-family: var(--font-sans); font-size: 14px; line-height: 19px; font-weight: 600; color: var(--foreground); }
 .productTitle .titleLink { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 150ms ease; }
 .productTitle .titleLink:hover { color: var(--muted-foreground); }
-.cardBody .priceRow { display: flex; align-items: baseline; gap: 6px; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.cardBody .priceRow { margin-top: auto; display: flex; align-items: baseline; gap: 6px; padding-top: 4px; font-variant-numeric: tabular-nums; }
 .priceRow .currentPrice { font-size: 14px; font-weight: 700; color: var(--foreground); }
 .priceRow .comparePrice { font-size: 12px; color: var(--muted-foreground); text-decoration: line-through; }
 /* Section: Product Image & Fallback Tile */
@@ -60,8 +62,9 @@
   .productCard:hover { box-shadow: none; }
   .productCard .mediaFrame { border-radius: 16px; }
   .mediaFrame .badgeStack { top: 12px; left: 12px; gap: 6px; }
-  .badgeStack .discountBadge { padding: 4px 10px; font-size: 12px; }
-  .badgeStack .soldOutBadge { padding: 4px 10px; font-size: 12px; }
+  .badgeStack .discountBadge { padding: 5px 10px; font-size: 12px; }
+  .badgeStack .soldOutBadge { padding: 5px 10px; font-size: 12px; }
+  .badgeStack .backInStockBadge { padding: 5px 10px; font-size: 12px; }
   .mediaFrame .ratingPill { bottom: 12px; left: 12px; max-width: calc(100% - 64px); padding: 4px 10px; font-size: 12px; }
   .mediaFrame .cardWishlistPos { top: 12px; right: 12px; width: 36px; height: 36px; }
   .mediaFrame .quickAddDisabled { right: 12px; bottom: 12px; width: 40px; height: 40px; }

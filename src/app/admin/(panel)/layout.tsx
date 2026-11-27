@@ -14,16 +14,9 @@ import { getServerSupabase } from "@/lib/supabase/server"
  * wrapping made the layout show its own fallback first and the page's loading.tsx only afterwards (two different
  * frames). Every admin query and action also calls requireAdmin() itself.
  */
-async function AdminGate({ children }: { children: ReactNode }) {
+async function AdminGate() {
   await requireAdmin({ allowWhenPinLocked: true })
-  if (await isAdminPinLocked()) {
-    return (
-      <div className={styles.pinLockedPlaceholder} aria-live="polite">
-        Admin screen is locked. Enter your 4-digit PIN in the prompt to view this page.
-      </div>
-    )
-  }
-  return <>{children}</>
+  return null
 }
 
 /** Avatar + email of the signed-in admin, top right. */
@@ -100,8 +93,9 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
           }
         />
         <main data-slot="admin-main" className={styles.adminMainContent}>
+          {children}
           <Suspense fallback={null}>
-            <AdminGate>{children}</AdminGate>
+            <AdminGate />
           </Suspense>
         </main>
       </div>

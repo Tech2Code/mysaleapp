@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMounted } from "@/hooks/use-mounted"
 import { calculateCharges } from "@/features/orders/pricing"
-import type { ShippingClass } from "@/features/products/types"
-import { MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
+import type { ProductVariant, ShippingClass } from "@/features/products/types"
+import { cartLineKey, MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
 import { useStoreSettings } from "./store-settings-provider"
 
 export type LiveProduct = {
@@ -16,6 +16,29 @@ export type LiveProduct = {
   slug: string
   weightGrams: number
   shippingClass: ShippingClass
+  variants?: ProductVariant[]
+}
+
+function resolveLiveLine(live: LiveProduct | undefined, item: CartItem) {
+  if (!live) return null
+  const variants = live.variants ?? []
+  if (variants.length > 0) {
+    const matched = item.variantId ? variants.find((v) => v.id === item.variantId) : undefined
+    if (!matched || matched.stock <= 0) return null
+    return {
+      price: matched.price,
+      stock: matched.stock,
+      variantLabel: matched.label,
+      variantSku: matched.sku ?? null,
+    }
+  }
+  if (live.stock <= 0) return null
+  return {
+    price: live.price,
+    stock: live.stock,
+    variantLabel: item.variantLabel,
+    variantSku: item.variantSku ?? null,
+  }
 }
 
 export type LiveCartLine = CartItem & {
@@ -42,16 +65,20 @@ export function useLiveCart(products: LiveProduct[]) {
     const newlyChanged: string[] = []
     const synced = items.map((item) => {
       const live = byId.get(item.productId)
-      if (!live || live.stock <= 0) return item
-      const nextQty = Math.min(item.quantity, live.stock, MAX_QTY_PER_ITEM)
+      const resolved = resolveLiveLine(live, item)
+      if (!live || !resolved) return item
+      const lineKey = cartLineKey(item)
+      const nextQty = Math.min(item.quantity, resolved.stock, MAX_QTY_PER_ITEM)
       const nextImg = live.images[0] ?? item.image
-      if (live.price !== item.price) {
-        newlyChanged.push(item.productId)
+      if (resolved.price !== item.price) {
+        newlyChanged.push(lineKey)
       }
       if (
         nextQty !== item.quantity ||
-        live.stock !== item.maxQuantity ||
-        live.price !== item.price ||
+        resolved.stock !== item.maxQuantity ||
+        resolved.price !== item.price ||
+        resolved.variantLabel !== item.variantLabel ||
+        resolved.variantSku !== (item.variantSku ?? null) ||
         live.name !== item.name ||
         live.slug !== item.slug ||
         nextImg !== item.image
@@ -61,9 +88,11 @@ export function useLiveCart(products: LiveProduct[]) {
           ...item,
           name: live.name,
           slug: live.slug,
-          price: live.price,
+          price: resolved.price,
+          variantLabel: resolved.variantLabel,
+          variantSku: resolved.variantSku,
           image: nextImg,
-          maxQuantity: live.stock,
+          maxQuantity: resolved.stock,
           quantity: nextQty,
         }
       }
@@ -87,19 +116,23 @@ export function useLiveCart(products: LiveProduct[]) {
     const byId = new Map(products.map((p) => [p.id, p]))
     const lines: LiveCartLine[] = (mounted ? items : []).map((item) => {
       const live = byId.get(item.productId)
-      if (!live || live.stock <= 0) {
+      const resolved = resolveLiveLine(live, item)
+      const lineKey = cartLineKey(item)
+      if (!live || !resolved) {
         return { ...item, available: false, priceChanged: false, weightGrams: 0, shippingClass: "standard" }
       }
       return {
         ...item,
         name: live.name,
         slug: live.slug,
+        variantLabel: resolved.variantLabel,
+        variantSku: resolved.variantSku,
         image: live.images[0] ?? item.image,
-        price: live.price,
-        maxQuantity: live.stock,
-        quantity: Math.min(item.quantity, live.stock, MAX_QTY_PER_ITEM),
+        price: resolved.price,
+        maxQuantity: resolved.stock,
+        quantity: Math.min(item.quantity, resolved.stock, MAX_QTY_PER_ITEM),
         available: true,
-        priceChanged: priceChangedIds.has(item.productId) || live.price !== item.price,
+        priceChanged: priceChangedIds.has(lineKey) || resolved.price !== item.price,
         weightGrams: live.weightGrams,
         shippingClass: live.shippingClass,
       }

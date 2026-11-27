@@ -32,6 +32,7 @@ export const SHIPPING_CLASS_OPTIONS: { value: ShippingClass; label: string }[] =
 export const MAX_HIGHLIGHTS = 6
 export const MAX_SPECS = 10
 export const MAX_REVIEW_ASPECTS = 8
+export const MAX_VARIANTS = 60
 
 /** Comma-separated (or array) review aspect labels → normalized unique array in the database. */
 const reviewAspectList = z
@@ -80,6 +81,24 @@ const specSchema = z.object({
   value: z.string().trim().min(1, "Enter the value").max(LIMITS.specValue.max, "Too long"),
 })
 
+const variantSchema = z
+  .object({
+    id: z.string().trim().min(1).max(64),
+    label: z.string().trim().min(1, "Enter option name (e.g. Black / M)").max(80, "Keep option name under 80 characters"),
+    options: z.record(z.string().trim().min(1).max(30), z.string().trim().min(1).max(40)).optional(),
+    price: v.money(LIMITS.money.max, "Price is required").refine((n) => n >= 1, "Price must be at least ₹1"),
+    compareAtPrice: v.optionalMoney(LIMITS.money.max).optional(),
+    stock: v.wholeNumber(LIMITS.stock.max, "Stock is required"),
+    sku: z.preprocess(
+      (x) => (typeof x === "string" && x.trim() === "" ? null : x),
+      z.string().trim().max(40, "Keep SKU under 40 characters").nullable().optional()
+    ),
+  })
+  .refine((vr) => vr.compareAtPrice == null || vr.compareAtPrice > vr.price, {
+    message: "MRP must be higher than variant price",
+    path: ["compareAtPrice"],
+  })
+
 export const productSchema = z
   .object({
     name: z.string().trim().min(LIMITS.productName.min, "Name is too short").max(LIMITS.productName.max, `Keep it under ${LIMITS.productName.max} characters`),
@@ -112,6 +131,7 @@ export const productSchema = z
     ),
     highlights: highlightLines,
     specs: z.array(specSchema).max(MAX_SPECS, `Up to ${MAX_SPECS} details`).default([]),
+    variants: z.array(variantSchema).max(MAX_VARIANTS, `Up to ${MAX_VARIANTS} variants`).default([]),
     careInstructions: z.preprocess(
       (v) => (typeof v === "string" && v.trim() === "" ? null : v),
       z.string().trim().max(LIMITS.careInstructions.max, `Keep it under ${LIMITS.careInstructions.max} characters`).nullable()
@@ -161,3 +181,17 @@ export const productReviewSchema = z.object({
 
 export type ProductReviewInput = z.input<typeof productReviewSchema>
 export type ProductReviewValues = z.output<typeof productReviewSchema>
+
+export const stockAlertSchema = z.object({
+  productId: z.uuid("Invalid product"),
+  name: z
+    .string()
+    .trim()
+    .max(LIMITS.personName.max, `Keep your name under ${LIMITS.personName.max} characters`)
+    .optional()
+    .default(""),
+  phone: v.phoneIN(),
+})
+
+export type StockAlertInput = z.input<typeof stockAlertSchema>
+export type StockAlertValues = z.output<typeof stockAlertSchema>

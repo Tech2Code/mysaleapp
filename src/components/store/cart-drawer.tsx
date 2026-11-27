@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { cartCount, cartSubtotal, MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
+import { cartCount, cartLineKey, cartSubtotal, MAX_QTY_PER_ITEM, useCart, type CartItem } from "@/store/cart"
 import styles from "./cart.module.css"
 import { useLiveCart, type LiveProduct } from "./live-cart"
 import { ProductImage } from "./product-image"
@@ -117,6 +117,7 @@ function DrawerItem({
             <Trash2Icon className={styles.trashIcon} />
           </button>
         </div>
+        {item.variantLabel && <span className={styles.variantPill}>{item.variantLabel}</span>}
         <p className={styles.unitPriceText}>{available ? `${formatPrice(item.price)} each` : "Unavailable"}</p>
 
         {available && (
@@ -198,17 +199,20 @@ export function CartDrawer({ products }: { products?: LiveProduct[] }) {
               )}
               <ul className={styles.drawerItemList}>
                 <AnimatePresence initial={false} mode="popLayout">
-                  {displayLines.map((item) => (
-                    <DrawerItem
-                      key={item.productId}
-                      item={item}
-                      available={item.available}
-                      highlighted={item.productId === lastAddedId}
-                      onNavigate={close}
-                      onQuantity={(q) => setQuantity(item.productId, q)}
-                      onRemove={() => remove(item.productId)}
-                    />
-                  ))}
+                  {displayLines.map((item) => {
+                    const lineKey = cartLineKey(item)
+                    return (
+                      <DrawerItem
+                        key={lineKey}
+                        item={item}
+                        available={item.available}
+                        highlighted={lineKey === lastAddedId}
+                        onNavigate={close}
+                        onQuantity={(q) => setQuantity(lineKey, q)}
+                        onRemove={() => remove(lineKey)}
+                      />
+                    )
+                  })}
                 </AnimatePresence>
               </ul>
             </div>

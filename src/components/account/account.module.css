@@ -100,8 +100,8 @@
 .defaultStarPill .starFill14 { width: 14px; height: 14px; fill: currentColor; }
 .addressCardItem .addrFullName { margin: 12px 0 0 0; font-weight: 500; color: var(--foreground); }
 .addressCardItem .addrPhone { margin: 0; font-size: 14px; color: var(--muted-foreground); }
-.addressCardItem .addrStreet { margin: 4px 0 0 0; font-size: 14px; color: var(--foreground); }
-.addressCardItem .addrCardActions { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
+.addressCardItem .addrStreet { margin: 4px 0 16px 0; font-size: 14px; color: var(--foreground); }
+.addressCardItem .addrCardActions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
 .addrCardActions .deleteAddrBtn { margin-left: auto; border-radius: var(--radiusControlSm); color: var(--destructive); }
 .addrCardActions .deleteAddrBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
 /* Section: Profile Form, Password Form & Deactivate Account */

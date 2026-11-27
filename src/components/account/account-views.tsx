@@ -26,7 +26,7 @@ import { placeholderOrders } from "@/features/orders/placeholders"
 import type { CustomerOrderStatusCounts } from "@/features/orders/queries"
 import { canRequestAgain, customerStatusLine, stageInputOf } from "@/features/orders/returns"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
-import { isAwaitingPayment, STATUS_META, type Order, type OrderWithHistory } from "@/features/orders/types"
+import { isAwaitingPayment, STATUS_META, stripOrderPrefix, type Order, type OrderWithHistory } from "@/features/orders/types"
 import type { StoreSettings } from "@/features/settings/types"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -212,7 +212,7 @@ export function MyOrderView({
           <div>
             <div className={styles.codeRow}>
               <h2 className={styles.codeHeading}>{order.orderCode}</h2>
-              <CopyButton value={order.orderCode} label="Order ID" />
+              <CopyButton value={stripOrderPrefix(order.orderCode, shop.orderCodePrefix)} label="Order code" />
             </div>
             <p className={styles.placedSubtext}>Placed on {formatDate(order.createdAt)}</p>
           </div>

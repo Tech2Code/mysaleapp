@@ -1,13 +1,13 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircle2Icon, Loader2Icon, MessageSquarePlusIcon, PackageXIcon, PencilIcon, RotateCcwIcon, ShoppingBagIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, BellRingIcon, CheckCircle2Icon, CheckIcon, Loader2Icon, MessageSquarePlusIcon, PackageXIcon, PencilIcon, RotateCcwIcon, ShoppingBagIcon, SparklesIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, Trash2Icon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState, useTransition } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
-import { SearchField, SelectField, TextAreaField } from "@/components/form"
+import { SearchField, SelectField, TextAreaField, TextField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { Carousel } from "@/components/shared/carousel"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
@@ -23,31 +23,195 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { deleteProductReview, getMyProductReviewState, submitProductReview } from "@/features/products/actions"
+import { deleteProductReview, getMyProductReviewState, submitProductReview, subscribeStockAlert } from "@/features/products/actions"
 import { productReviewSchema, type ProductReviewInput, type ProductReviewValues } from "@/features/products/schema"
-import type { Product, ProductReview } from "@/features/products/types"
-import { discountPercent, formatDate, formatPrice, formatRating } from "@/lib/format"
+import { extractVariantOptionGroups, isBackInStock, type Product, type ProductReview } from "@/features/products/types"
+import { discountPercent, formatDate, formatPrice, formatRating, normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
-import { MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
+import { cartLineKey, MAX_QTY_PER_ITEM, useCart } from "@/store/cart"
 import { ProductImage } from "./product-image"
 import { QuantityStepper } from "./quantity-stepper"
 import { WishlistButton } from "./wishlist-button"
 import styles from "./product-actions.module.css"
 
+const STOCK_ALERT_STORAGE_KEY = "kk-stock-alerts"
+
+function readSavedStockAlerts(): string[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.localStorage.getItem(STOCK_ALERT_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : []
+  } catch {
+    return []
+  }
+}
+
+function saveStockAlertId(productId: string) {
+  if (typeof window === "undefined") return
+  try {
+    const set = new Set(readSavedStockAlerts())
+    set.add(productId)
+    window.localStorage.setItem(STOCK_ALERT_STORAGE_KEY, JSON.stringify(Array.from(set).slice(-50)))
+  } catch {}
+}
+
+type ProductVariantCtxValue = {
+  selectedVariantId: string
+  setSelectedVariantId: (id: string) => void
+  activePrice: number
+  activeCompareAt: number | null
+}
+
+const ProductVariantContext = createContext<ProductVariantCtxValue | null>(null)
+
+/**
+ * Shared client context on the Product Detail Page so selecting a Color / Size variant
+ * updates the top hero price (`mainPriceText`, `comparePriceText`, `Save X%`) AND the Buy Box in sync.
+ */
+export function ProductVariantProvider({
+  product,
+  children,
+}: {
+  product: Pick<Product, "price" | "compareAtPrice" | "variants">
+  children: ReactNode
+}) {
+  const variants = product.variants ?? []
+  const hasVariants = variants.length > 0
+  const [selectedVariantId, setSelectedVariantId] = useState<string>(() => {
+    if (!hasVariants) return ""
+    return (variants.find((v) => v.stock > 0) ?? variants[0]).id
+  })
+  const activeVariant = hasVariants ? (variants.find((v) => v.id === selectedVariantId) ?? variants[0]) : null
+  const activePrice = activeVariant ? activeVariant.price : product.price
+  const activeCompareAt = activeVariant ? (activeVariant.compareAtPrice ?? null) : product.compareAtPrice
+
+  const value = useMemo(
+    () => ({ selectedVariantId, setSelectedVariantId, activePrice, activeCompareAt }),
+    [selectedVariantId, activePrice, activeCompareAt]
+  )
+
+  return <ProductVariantContext.Provider value={value}>{children}</ProductVariantContext.Provider>
+}
+
+/** Live-updating top hero price row on the Product Detail Page (reflects selected variant instantly). */
+export function ProductLivePriceHeader({
+  product,
+  styles: pdpStyles,
+}: {
+  product: Pick<Product, "price" | "compareAtPrice" | "ratingAvg" | "reviewCount">
+  styles: Readonly<Record<string, string>>
+}) {
+  const ctx = useContext(ProductVariantContext)
+  const price = ctx ? ctx.activePrice : product.price
+  const compareAt = ctx ? ctx.activeCompareAt : product.compareAtPrice
+  const off = discountPercent(price, compareAt)
+
+  return (
+    <div className={pdpStyles.priceHeaderRow}>
+      <span className={pdpStyles.mainPriceText}>{formatPrice(price)}</span>
+      {compareAt && compareAt > price && (
+        <span className={pdpStyles.comparePriceText}>{formatPrice(compareAt)}</span>
+      )}
+      {off && <span className={pdpStyles.saveBadge}>Save {off}%</span>}
+      {(product.reviewCount ?? 0) > 0 && (
+        <a href="#customer-reviews" className={pdpStyles.reviewsAnchorPill}>
+          <StarIcon className={pdpStyles.starGoldIcon} aria-hidden />
+          <span className={pdpStyles.ratingScoreText}>{formatRating(Number(product.ratingAvg ?? 0))}</span>
+          <span className={pdpStyles.ratingCountText}>({product.reviewCount})</span>
+        </a>
+      )}
+    </div>
+  )
+}
+
 export function ProductActions({
   product,
 }: {
-  product: Pick<Product, "id" | "slug" | "name" | "price" | "images" | "stock">
+  product: Pick<Product, "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "restockedAt" | "variants">
 }) {
   const router = useRouter()
+  const { user } = useAuth()
   const add = useCart((s) => s.add)
   const setOpen = useCart((s) => s.setOpen)
-  const inCart = useCart((s) => s.items.find((i) => i.productId === product.id)?.quantity ?? 0)
+  const variantCtx = useContext(ProductVariantContext)
+  const variants = product.variants ?? []
+  const hasVariants = variants.length > 0
+  const [localVariantId, setLocalVariantId] = useState<string>(() => {
+    if (!hasVariants) return ""
+    return (variants.find((v) => v.stock > 0) ?? variants[0]).id
+  })
+  const selectedVariantId = variantCtx ? variantCtx.selectedVariantId : localVariantId
+  const setSelectedVariantId = variantCtx ? variantCtx.setSelectedVariantId : setLocalVariantId
+  const activeVariant = hasVariants ? (variants.find((v) => v.id === selectedVariantId) ?? variants[0]) : null
+  const activePrice = activeVariant ? activeVariant.price : product.price
+  const activeCompareAt = activeVariant ? (activeVariant.compareAtPrice ?? null) : product.compareAtPrice
+  const activeStock = activeVariant ? activeVariant.stock : product.stock
+  const activeLineKey = cartLineKey({ productId: product.id, variantId: activeVariant?.id })
+  const inCart = useCart((s) => s.items.find((i) => cartLineKey(i) === activeLineKey)?.quantity ?? 0)
   const [chosen, setChosen] = useState(1)
-  const soldOut = product.stock <= 0
-  const max = Math.min(product.stock, MAX_QTY_PER_ITEM)
+  const [clientNow, setClientNow] = useState<number | undefined>(undefined)
+  const [notifyOpen, setNotifyOpen] = useState(false)
+  const [alreadyNotified, setAlreadyNotified] = useState(false)
+  const [notifyName, setNotifyName] = useState("")
+  const [notifyPhone, setNotifyPhone] = useState("")
+  const [notifyPhoneError, setNotifyPhoneError] = useState<string | null>(null)
+  const [notifyPending, startNotifyTransition] = useTransition()
+  useBlockWhile(notifyPending)
+  const soldOut = activeStock <= 0
+  const backInStock = clientNow !== undefined && isBackInStock({ stock: activeStock, restockedAt: product.restockedAt }, clientNow)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate client clock & local notify state after mount
+    setClientNow(Date.now())
+    if (soldOut) {
+      setAlreadyNotified(readSavedStockAlerts().includes(product.id))
+    } else {
+      setAlreadyNotified(false)
+    }
+  }, [product.id, soldOut])
+
+  const openNotifyDialog = () => {
+    setNotifyName((prev) => prev || user?.name?.trim() || "")
+    setNotifyPhoneError(null)
+    setNotifyOpen(true)
+  }
+
+  const handleNotifySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const cleanPhone = normalizeIndianPhone(notifyPhone)
+    if (!cleanPhone) {
+      setNotifyPhoneError("Enter a valid 10-digit WhatsApp / mobile number")
+      return
+    }
+    setNotifyPhoneError(null)
+    startNotifyTransition(async () => {
+      const res = await subscribeStockAlert({
+        productId: product.id,
+        name: notifyName.trim(),
+        phone: cleanPhone,
+      })
+      if (!res.ok) {
+        if (res.fieldErrors?.phone?.[0]) setNotifyPhoneError(res.fieldErrors.phone[0])
+        toast.error(res.error)
+        return
+      }
+      saveStockAlertId(product.id)
+      setAlreadyNotified(true)
+      setNotifyOpen(false)
+      setNotifyPhone("")
+      setNotifyPhoneError(null)
+      toast.success(
+        res.data.alreadySubscribed
+          ? "You're already on the notify list! We'll message you on WhatsApp as soon as it's back."
+          : "Alert saved! We'll notify you on WhatsApp as soon as this piece is back in stock."
+      )
+    })
+  }
+
+  const max = Math.min(activeStock, MAX_QTY_PER_ITEM)
   // stock can drop while the page is open: never show or add more than can be bought
   const qty = Math.max(1, Math.min(chosen, max))
   const addToCart = () => {
@@ -68,42 +232,295 @@ export function ProductActions({
     router.push("/checkout")
   }
 
+const COLOR_SWATCH_MAP: Record<string, string> = {
+  black: "#18181b",
+  white: "#fafafa",
+  red: "#dc2626",
+  blue: "#2563eb",
+  navy: "#1e3a8a",
+  green: "#16a34a",
+  olive: "#4d7c0f",
+  yellow: "#eab308",
+  gold: "#d97706",
+  orange: "#ea580c",
+  pink: "#ec4899",
+  rose: "#e11d48",
+  purple: "#7c3aed",
+  lavender: "#a78bfa",
+  brown: "#78350f",
+  beige: "#d6c7ae",
+  cream: "#fef3c7",
+  ivory: "#fffbeb",
+  grey: "#6b7280",
+  gray: "#6b7280",
+  silver: "#cbd5e1",
+  maroon: "#7f1d1d",
+  terracotta: "#b85c38",
+  teal: "#0d9488",
+  cyan: "#06b6d4",
+}
+
+function swatchHexForOption(groupName: string, value: string): string | null {
+  if (!/colou?r|shade|finish/i.test(groupName)) return null
+  const lower = value.trim().toLowerCase()
+  if (COLOR_SWATCH_MAP[lower]) return COLOR_SWATCH_MAP[lower]
+  for (const [key, hex] of Object.entries(COLOR_SWATCH_MAP)) {
+    if (lower.includes(key)) return hex
+  }
+  return null
+}
+
   const line = {
     productId: product.id,
+    ...(activeVariant ? { variantId: activeVariant.id, variantLabel: activeVariant.label, variantSku: activeVariant.sku ?? null } : {}),
     slug: product.slug,
     name: product.name,
-    price: product.price,
+    price: activePrice,
     image: product.images[0] ?? null,
-    maxQuantity: product.stock,
+    maxQuantity: activeStock,
   }
+
+  const optionGroups = hasVariants ? extractVariantOptionGroups(variants) : []
+  const selectedOptions: Record<string, string> = activeVariant?.options ?? {}
+
+  const selectAttributeValue = (groupName: string, value: string) => {
+    const desired = { ...selectedOptions, [groupName]: value }
+    // 1. Exact match for all currently selected attributes
+    const exact = variants.find((v) =>
+      v.options && Object.entries(desired).every(([k, val]) => v.options?.[k] === val)
+    )
+    if (exact) {
+      setSelectedVariantId(exact.id)
+      setChosen(1)
+      return
+    }
+    // 2. Fallback: first in-stock variant with the newly clicked attribute value (or first matching variant)
+    const candidates = variants.filter((v) => v.options?.[groupName] === value)
+    const best = candidates.find((v) => v.stock > 0) ?? candidates[0]
+    if (best) {
+      setSelectedVariantId(best.id)
+      setChosen(1)
+    }
+  }
+
+  const variantPicker = hasVariants ? (
+    <div className={styles.variantPickerBlock}>
+      {optionGroups.length > 0 ? (
+        <>
+          <div className={styles.variantPriceTopRow}>
+            <span className={styles.variantSelectedPriceWrap}>
+              <span className={styles.variantSelectedPrice}>{formatPrice(activePrice)}</span>
+              {activeCompareAt && activeCompareAt > activePrice && (
+                <span className={styles.variantSelectedCompare}>{formatPrice(activeCompareAt)}</span>
+              )}
+            </span>
+            <span className={styles.variantSelectedSummaryPill}>{activeVariant?.label}</span>
+          </div>
+          {optionGroups.map((group) => {
+            const currentVal = selectedOptions[group.name] ?? ""
+            return (
+              <div key={group.name} className={styles.variantAxisGroup}>
+                <span className={styles.variantPickerLabel}>
+                  {group.name}: <strong className={styles.variantSelectedName}>{currentVal}</strong>
+                </span>
+                <div className={styles.variantPillsRow} role="radiogroup" aria-label={group.name}>
+                  {group.values.map((val) => {
+                    const isSelected = currentVal === val
+                    const swatch = swatchHexForOption(group.name, val)
+                    const matchingExact = variants.find((v) =>
+                      v.options &&
+                      v.options[group.name] === val &&
+                      Object.entries(selectedOptions).every(([k, sVal]) => k === group.name || v.options?.[k] === sVal)
+                    )
+                    const anyStockForVal = variants.some((v) => v.options?.[group.name] === val && v.stock > 0)
+                    const isOos = matchingExact ? matchingExact.stock <= 0 : !anyStockForVal
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => selectAttributeValue(group.name, val)}
+                        className={cn(
+                          styles.variantPillBtn,
+                          isSelected && styles.variantPillSelected,
+                          isOos && styles.variantPillOos
+                        )}
+                      >
+                        {swatch && <span className={styles.variantColorDot} style={{ backgroundColor: swatch }} aria-hidden />}
+                        <span className={cn(isOos && styles.variantOosStrike)}>{val}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </>
+      ) : (
+        <>
+          <div className={styles.variantPickerHeader}>
+            <span className={styles.variantPickerLabel}>
+              Select option: <strong className={styles.variantSelectedName}>{activeVariant?.label}</strong>
+            </span>
+            <span className={styles.variantSelectedPriceWrap}>
+              <span className={styles.variantSelectedPrice}>{formatPrice(activePrice)}</span>
+              {activeCompareAt && activeCompareAt > activePrice && (
+                <span className={styles.variantSelectedCompare}>{formatPrice(activeCompareAt)}</span>
+              )}
+            </span>
+          </div>
+          <div className={styles.variantPillsRow} role="radiogroup" aria-label="Product options">
+            {variants.map((v) => {
+              const isSelected = activeVariant?.id === v.id
+              const isOos = v.stock <= 0
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => {
+                    setSelectedVariantId(v.id)
+                    setChosen(1)
+                  }}
+                  className={cn(
+                    styles.variantPillBtn,
+                    isSelected && styles.variantPillSelected,
+                    isOos && styles.variantPillOos
+                  )}
+                >
+                  <span className={cn(isOos && styles.variantOosStrike)}>{v.label}</span>
+                  {isOos && <span className={styles.variantOosTag}>Sold out</span>}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  ) : null
 
   if (soldOut) {
     return (
       <div className={styles.actionsStack}>
+        {variantPicker}
         <p role="status" className={styles.soldOutBanner}>
           <PackageXIcon className={styles.pkgXSvg} />
           <span>
-            Sold out for now — handmade pieces take time. Save it to your wishlist and check back soon.
+            Sold out for now — get notified on WhatsApp the moment this item is back in stock.
           </span>
         </p>
         <div className={styles.soldOutRow}>
-          <Button size="lg" variant="outline" disabled className={styles.soldOutBtn}>
-            <ShoppingBagIcon className={styles.bagSvg20} /> Sold out
-          </Button>
+          {alreadyNotified ? (
+            <Button type="button" size="lg" variant="outline" onClick={openNotifyDialog} className={styles.notifiedDoneBtn}>
+              <CheckIcon className={styles.bagSvg18} /> You&apos;re on the notify list
+            </Button>
+          ) : (
+            <Button type="button" size="lg" onClick={openNotifyDialog} className={styles.notifyMeBtn}>
+              <BellRingIcon className={styles.bagSvg18} /> Notify me when back in stock
+            </Button>
+          )}
           <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn52} />
         </div>
-        <Button size="lg" disabled className={styles.soldOutBuyBtn}>
-          Buy now
-        </Button>
+
+        {/* Native mobile sticky bottom notify bar when sold out */}
+        <div data-mobile-bottom-bar className={cn(styles.mobileSoldOutBar, "glass")}>
+          {alreadyNotified ? (
+            <Button type="button" size="lg" variant="outline" onClick={openNotifyDialog} className={styles.mobileNotifiedBtn}>
+              <CheckIcon className={styles.bagSvg18} /> On notify list
+            </Button>
+          ) : (
+            <Button type="button" size="lg" onClick={openNotifyDialog} className={styles.mobileNotifyBtn}>
+              <BellRingIcon className={styles.bagSvg18} /> Notify me when back
+            </Button>
+          )}
+          <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn52} />
+        </div>
+
+        <Dialog
+          open={notifyOpen}
+          onOpenChange={(next) => {
+            if (notifyPending) return
+            setNotifyOpen(next)
+            if (!next) setNotifyPhoneError(null)
+          }}
+        >
+          <DialogContent mobileFullScreen className={styles.notifyDialogModal}>
+            <DialogHeader showCloseButton={!notifyPending}>
+              <DialogTitle>Get notified when back in stock</DialogTitle>
+              <DialogDescription>
+                Leave your WhatsApp / mobile number and we&apos;ll alert you as soon as this piece is restocked.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleNotifySubmit} noValidate className={styles.reviewDialogForm}>
+              <DialogBody className={styles.notifyDialogBody}>
+                <div className={styles.productContextStrip}>
+                  <div className={styles.contextThumb}>
+                    <ProductImage src={product.images[0] ?? null} alt={product.name} sizes="48px" />
+                  </div>
+                  <div className={styles.contextInfoCol}>
+                    <p className={styles.contextTitle}>
+                      {activeVariant ? `${product.name} — ${activeVariant.label}` : product.name}
+                    </p>
+                    <p className={styles.contextSub}>{formatPrice(activePrice)} · Currently sold out</p>
+                  </div>
+                </div>
+
+                <TextField
+                  label="WhatsApp / mobile number *"
+                  kind="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  leading="+91"
+                  required
+                  placeholder="98765 43210"
+                  hint="We only use this to message you once when this item is back in stock."
+                  value={notifyPhone}
+                  onChange={(e) => {
+                    setNotifyPhone(e.target.value)
+                    if (notifyPhoneError) setNotifyPhoneError(null)
+                  }}
+                  error={notifyPhoneError ?? undefined}
+                />
+                <TextField
+                  label="Your name (optional)"
+                  kind="personName"
+                  autoComplete="name"
+                  placeholder="e.g. Priya"
+                  value={notifyName}
+                  onChange={(e) => setNotifyName(e.target.value)}
+                />
+              </DialogBody>
+              <DialogFooter>
+                <Button type="button" variant="outline" size="lg" disabled={notifyPending} onClick={() => setNotifyOpen(false)} className={styles.notifyCancelBtn}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="lg" disabled={notifyPending} className={styles.notifySubmitBtn}>
+                  {notifyPending ? <Loader2Icon className={styles.spinSvg} /> : <BellRingIcon className={styles.bagSvg18} />}
+                  {notifyPending ? "Saving…" : "Notify me on WhatsApp"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     )
   }
 
   return (
     <div className={styles.actionsStack}>
-      {product.stock <= 5 && (
+      {variantPicker}
+      {backInStock && (
+        <p role="status" className={styles.backInStockPill}>
+          <SparklesIcon className={styles.backInStockIcon} aria-hidden />
+          <span>Back in stock — Fresh batch just arrived!</span>
+        </p>
+      )}
+      {activeStock <= 5 && (
         <p className={styles.lowStockAlert}>
-          Only {product.stock} {product.stock === 1 ? "item" : "items"} left in stock
+          Only {activeStock} {activeStock === 1 ? "item" : "items"} left in stock
         </p>
       )}
       {/* Row 1: quantity | add to cart, 50 / 50. Row 2: buy now (the rest of the row) + wishlist. Every control is h-13. */}
@@ -126,7 +543,7 @@ export function ProductActions({
           onClick={buyNow}
         >
           <span className={styles.buyBtnTopText}>Buy now</span>
-          <span className={styles.buyBtnPriceLg}>{formatPrice(product.price * qty)}</span>
+          <span className={styles.buyBtnPriceLg}>{formatPrice(activePrice * qty)}</span>
         </Button>
         <WishlistButton productId={product.id} productName={product.name} size="lg" className={styles.wishlistBtn56} />
       </div>
@@ -153,7 +570,7 @@ export function ProductActions({
           onClick={buyNow}
         >
           <span className={styles.buyBtnTopText}>Buy now</span>
-          <span className={styles.buyBtnPriceSm}>{formatPrice(product.price * qty)}</span>
+          <span className={styles.buyBtnPriceSm}>{formatPrice(activePrice * qty)}</span>
         </Button>
       </div>
     </div>
@@ -169,7 +586,7 @@ const RATING_LABELS: Record<number, string> = {
 }
 
 const DEFAULT_REVIEW_ASPECTS = [
-  "Craftsmanship",
+  "Build Quality",
   "Colour & Finish",
   "Material Quality",
   "Packaging",
@@ -1810,7 +2227,7 @@ export function ProductReviewsPageView({
               <p className={styles.emptyTitle}>No reviews for {product.name} yet</p>
               <p className={styles.emptySub}>
                 {canReview
-                  ? "Click “Write a customer review” to share what you loved about this handmade piece."
+                  ? "Click “Write a customer review” to share what you loved about this product."
                   : "Once customers receive their delivered order, their verified feedback will appear here."}
               </p>
             </div>

@@ -1,9 +1,9 @@
-import { CheckCircle2Icon, HandHeartIcon, InfoIcon, RotateCcwIcon, ShieldCheckIcon, StarIcon, TruckIcon } from "lucide-react"
+import { CheckCircle2Icon, HandHeartIcon, InfoIcon, RotateCcwIcon, ShieldCheckIcon, TruckIcon } from "lucide-react"
 import { Accordion, AccordionItem } from "@/components/shared/accordion"
 import { FadeIn } from "@/components/shared/motion"
 import { ReadMore } from "@/components/shared/read-more"
 import { Breadcrumbs } from "@/components/store/page-header"
-import { ProductActions, ProductReviewsSection } from "@/components/store/product-actions"
+import { ProductActions, ProductLivePriceHeader, ProductReviewsSection, ProductVariantProvider } from "@/components/store/product-actions"
 import { ProductGallery } from "@/components/store/product-gallery"
 import { ProductCarousel } from "@/components/store/product-grid"
 import { SectionHeading } from "@/components/store/section-heading"
@@ -11,7 +11,7 @@ import { describeProductSurcharges } from "@/features/orders/pricing"
 import type { Product, ProductCardData, ProductReview } from "@/features/products/types"
 import { priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
-import { discountPercent, formatPrice, formatRating } from "@/lib/format"
+import { formatPrice } from "@/lib/format"
 import styles from "./product-detail.module.css"
 
 /** Breadcrumb trail (also used for the page's structured data). */
@@ -41,7 +41,6 @@ export function ProductDetailView({
   settings: StoreSettings
   reviews?: ProductReview[]
 }) {
-  const off = discountPercent(product.price, product.compareAtPrice)
   const taxNote = priceNote(settings)
   const surcharges = describeProductSurcharges(product, settings)
   const returnDays = product.returnWindowDays ?? settings.returnWindowDays
@@ -85,31 +84,13 @@ export function ProductDetailView({
         </FadeIn>
 
         <FadeIn y={16} delay={0.1} className={styles.infoColumn}>
+          <ProductVariantProvider product={product}>
           {product.category && (
             <p className={styles.categoryEyebrow}>{product.category.name}</p>
           )}
           <h1 className={styles.productHeading}>{product.name}</h1>
 
-          <div className={styles.priceHeaderRow}>
-            <span className={styles.mainPriceText}>{formatPrice(product.price)}</span>
-            {product.compareAtPrice && (
-              <span className={styles.comparePriceText}>{formatPrice(product.compareAtPrice)}</span>
-            )}
-            {off && (
-              <span className={styles.saveBadge}>Save {off}%</span>
-            )}
-            {(product.reviewCount ?? 0) > 0 && (
-              <a
-
-                href="#customer-reviews"
-                className={styles.reviewsAnchorPill}
-              >
-                <StarIcon className={styles.starGoldIcon} aria-hidden />
-                <span className={styles.ratingScoreText}>{formatRating(Number(product.ratingAvg ?? 0))}</span>
-                <span className={styles.ratingCountText}>({product.reviewCount})</span>
-              </a>
-            )}
-          </div>
+          <ProductLivePriceHeader product={product} styles={styles} />
           {taxNote && <p className={styles.taxNoteText}>{taxNote}</p>}
 
           {summary && <p className={styles.summaryText}>{summary}</p>}
@@ -147,6 +128,7 @@ export function ProductDetailView({
           <div className={styles.actionsMount}>
             <ProductActions product={product} />
           </div>
+          </ProductVariantProvider>
 
           {/* Trust row: compact, directly under the buttons (where the doubt is). */}
           <ul className={styles.perksCard}>
@@ -162,7 +144,7 @@ export function ProductDetailView({
 
           <section className={styles.aboutSection} aria-labelledby="details-title">
             <h2 id="details-title" className={styles.subHeading}>
-              About this piece
+              About this product
             </h2>
             <ReadMore length={product.description.length} className={styles.readMoreWrap}>
               <div className={styles.descriptionProse}>{product.description}</div>
@@ -187,7 +169,7 @@ export function ProductDetailView({
             <Accordion>
               {product.careInstructions && <AccordionItem title="Care instructions">{product.careInstructions}</AccordionItem>}
               <AccordionItem title="Delivery & returns">
-                {freeDelivery} We pack every order by hand and share live courier tracking details once dispatched.{" "}
+                {freeDelivery} We pack every order carefully and share live courier tracking details once dispatched.{" "}
                 {returnDays > 0
                   ? `You can request a return or exchange within ${returnDays} ${returnDays === 1 ? "day" : "days"} of delivery from your Order page.`
                   : "This piece is non-returnable once delivered; if it arrives damaged in transit, message us on WhatsApp right away."}

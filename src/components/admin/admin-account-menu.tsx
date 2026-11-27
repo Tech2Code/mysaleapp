@@ -105,6 +105,7 @@ function computeGateMode(
 export function AdminAccountMenu({ account }: { account: AdminAccount }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [unlockPending, startUnlockRefresh] = useTransition()
   const [askSignOut, setAskSignOut] = useState(false)
   const [pinState, setPinState] = useState<AdminPinStatus>(() => ({
     mode: account.pinStatus?.mode ?? "unset",
@@ -135,9 +136,9 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
     setGateMode(computeGateMode(account.pinStatus, account.lastSignInAt))
   }
 
-  useBlockWhile(pending)
+  useBlockWhile(pending || unlockPending)
   const showSuccess = useBusySuccess()
-  const later = useToastAfter(pending)
+  const later = useToastAfter(pending || unlockPending)
   const initial = (account.name || account.email).charAt(0).toUpperCase()
 
   // Listen for live PIN updates from /admin/account or other open browser tabs
@@ -407,11 +408,19 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
         onConfirm={handleSignOutNow}
       />
 
+      {unlockPending && (
+        <div
+          data-admin-pin-locked=""
+          aria-hidden
+          className={styles.pinLockBackdrop}
+        />
+      )}
+
       <AdminPinGateDialog
         key={gateMode}
         gateMode={gateMode}
         email={account.email}
-        onUnlocked={(next) => {
+        onUnlocked={(next, message, tone = "success") => {
           setPinState((prev) => ({
             ...prev,
             ...next,
@@ -419,7 +428,12 @@ export function AdminAccountMenu({ account }: { account: AdminAccount }) {
           }))
           setGateMode("none")
           notifyAdminPinChanged({ ...next, manualLock: false })
-          router.refresh()
+          if (message) {
+            later(() => (tone === "info" ? toast.info(message) : toast.success(message)))
+          }
+          startUnlockRefresh(() => {
+            router.refresh()
+          })
         }}
         onSignOut={handleSignOutNow}
       />
@@ -435,12 +449,15 @@ function AdminPinGateDialog({
 }: {
   gateMode: "none" | "unlock" | "setup-prompt"
   email: string
-  onUnlocked: (next: { unlockedAt: number; mode?: AdminPinMode; hasPin?: boolean }) => void
+  onUnlocked: (
+    next: { unlockedAt: number; mode?: AdminPinMode; hasPin?: boolean },
+    message?: string,
+    tone?: "success" | "info"
+  ) => void
   onSignOut: () => void
 }) {
   const [pending, startTransition] = useTransition()
   useBlockWhile(pending)
-  const later = useToastAfter(pending)
 
   const [pin, setPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
@@ -472,8 +489,7 @@ function AdminPinGateDialog({
         queueMicrotask(() => pinInputRef.current?.focus())
         return
       }
-      later(() => toast.success("Admin panel unlocked"))
-      onUnlocked({ unlockedAt: res.data.unlockedAt, mode: "enabled", hasPin: true })
+      onUnlocked({ unlockedAt: res.data.unlockedAt, mode: "enabled", hasPin: true }, "Admin panel unlocked")
     })
   }
 
@@ -497,8 +513,7 @@ function AdminPinGateDialog({
         toast.error(res.error)
         return
       }
-      later(() => toast.success("4-digit PIN enabled"))
-      onUnlocked({ unlockedAt: res.data.unlockedAt, mode: "enabled", hasPin: true })
+      onUnlocked({ unlockedAt: res.data.unlockedAt, mode: "enabled", hasPin: true }, "4-digit PIN enabled")
     })
   }
 
@@ -509,8 +524,11 @@ function AdminPinGateDialog({
         toast.error(res.error)
         return
       }
-      later(() => toast.info("PIN lock turned off. You can enable it anytime in My account."))
-      onUnlocked({ unlockedAt: res.data.unlockedAt, mode: "disabled", hasPin: false })
+      onUnlocked(
+        { unlockedAt: res.data.unlockedAt, mode: "disabled", hasPin: false },
+        "PIN lock turned off. You can enable it anytime in My account.",
+        "info"
+      )
     })
   }
 
@@ -553,12 +571,14 @@ function AdminPinGateDialog({
           : recoveryAction === "disable"
             ? "PIN lock turned off & unlocked"
             : "Admin panel unlocked"
-      later(() => toast.success(message))
-      onUnlocked({
-        unlockedAt: res.data.unlockedAt,
-        mode: res.data.mode,
-        hasPin: res.data.mode === "enabled",
-      })
+      onUnlocked(
+        {
+          unlockedAt: res.data.unlockedAt,
+          mode: res.data.mode,
+          hasPin: res.data.mode === "enabled",
+        },
+        message
+      )
     })
   }
 

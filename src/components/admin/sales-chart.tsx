@@ -278,8 +278,8 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
                     </defs>
                     <path d={area} fill={`url(#${gradId})`} />
                     <path
+                      key={`${metric}-${points.length}`}
                       d={line}
-                      pathLength={1}
                       fill="none"
                       stroke="var(--primary)"
                       strokeWidth="2.25"
@@ -390,13 +390,32 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
             </div>
 
             {/* x labels */}
-            <div className={styles.xAxisRow} aria-hidden>
-              {points.map((p, i) => (
-                <span key={`${p.label}-${i}`} className={styles.xAxisCell}>
-                  {i % every === 0 && <span className={styles.xAxisLabel}>{p.label}</span>}
-                </span>
-              ))}
-            </div>
+            {chartMode === "area" ? (
+              <div className={styles.xAxisAreaRow} aria-hidden>
+                {points.map((p, i) => {
+                  if (i % every !== 0) return null
+                  const xPct = points.length > 1 ? (i / (points.length - 1)) * 100 : 50
+                  const align = i === 0 ? "0%" : xPct >= 92 ? "-100%" : "-50%"
+                  return (
+                    <span
+                      key={`${p.label}-${i}`}
+                      className={styles.xAxisAreaLabel}
+                      style={{ left: `${xPct}%`, transform: `translateX(${align})` }}
+                    >
+                      {p.label}
+                    </span>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className={styles.xAxisRow} aria-hidden>
+                {points.map((p, i) => (
+                  <span key={`${p.label}-${i}`} className={styles.xAxisCell}>
+                    {i % every === 0 && <span className={styles.xAxisLabel}>{p.label}</span>}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

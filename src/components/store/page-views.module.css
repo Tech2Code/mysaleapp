@@ -1,5 +1,7 @@
 /* Section: Shared Storefront Page Body & Views */
 .pageBodyContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 16px 16px 0 16px; }
+.checkoutDesktopHeader { display: none; }
+.checkoutBodyContainer { margin: 0 auto; width: 100%; max-width: 1280px; padding: 0; }
 .emptyCollectionBox { border-radius: var(--radiusCard); border: 1px dashed var(--border); background-color: var(--card); padding: 56px 16px; text-align: center; color: var(--muted-foreground); margin: 0; }
 /* Section: Order Placed & Login Hero Wrappers */
 .heroBackdropSection { background: radial-gradient(60% 60% at 15% 20%, var(--hero-a), transparent 70%), radial-gradient(50% 55% at 85% 15%, var(--hero-b), transparent 70%), radial-gradient(60% 60% at 50% 100%, var(--hero-c), transparent 70%), var(--background); }
@@ -46,6 +48,19 @@
 .wishlistWrapper .deviceNotice { margin: 0; border-radius: 16px; background-color: var(--secondary); padding: 16px; font-size: 14px; color: var(--foreground); }
 .deviceNotice .signInLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .deviceNotice .signInLink:hover { text-decoration: underline; }
+.wishlistWrapper .wishlistRestockBanner { display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 1px solid var(--tone-success-border); background-color: var(--tone-success-bg-soft); padding: 16px; }
+.wishlistRestockBanner .wishlistRestockHeader { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wishlistRestockHeader .wishlistRestockBadge { display: inline-flex; align-items: center; gap: 5px; border-radius: 9999px; background-color: var(--tone-success-solid); padding: 3px 10px; font-size: 11px; font-weight: 700; color: var(--tone-success-solid-fg); }
+.wishlistRestockHeader .wishlistRestockTitle { margin: 0; font-size: 14px; font-weight: 600; color: var(--tone-success-fg-strong); }
+.restockIcon14 { width: 14px; height: 14px; flex-shrink: 0; }
+.wishlistRestockBanner .wishlistRestockList { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.wishlistRestockList .wishlistRestockRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 14px; border: 1px solid var(--border); background-color: var(--card); padding: 10px 12px; }
+.wishlistRestockRow .wishlistRestockLink { display: flex; min-width: 0; flex: 1 1 180px; align-items: center; gap: 10px; }
+.wishlistRestockLink .wishlistRestockThumb { position: relative; width: 44px; height: 44px; flex-shrink: 0; overflow: hidden; border-radius: 10px; background-color: var(--muted); container-type: inline-size; }
+.wishlistRestockLink .wishlistRestockMeta { min-width: 0; flex: 1 1 0%; display: flex; flex-direction: column; gap: 2px; }
+.wishlistRestockMeta .wishlistRestockName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; color: var(--foreground); }
+.wishlistRestockMeta .wishlistRestockPrice { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.wishlistRestockRow .wishlistRestockAddBtn { flex-shrink: 0; gap: 6px; border-radius: var(--radiusControl); }
 .wishlistWrapper .emptyWishlistCard { display: flex; flex-direction: column; align-items: center; gap: 16px; border-radius: var(--radiusCard); border: 1px dashed var(--border); background-color: var(--card); padding: 56px 16px; text-align: center; }
 .emptyWishlistCard .heartCircle { display: grid; width: 80px; height: 80px; place-items: center; border-radius: 9999px; background-color: var(--secondary); }
 .heartCircle .heartIcon { width: 32px; height: 32px; color: var(--primary); }
@@ -72,8 +87,13 @@
   .contactContainer .businessLegalCard { grid-column: span 2 / span 2; }
   .wishlistGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+@media (min-width: 900px) {
+  .checkoutDesktopHeader { display: block; }
+  .checkoutBodyContainer { padding: 24px 24px 0 24px; }
+}
 @media (min-width: 1024px) {
   .pageBodyContainer { padding: 24px 32px 0 32px; }
+  .checkoutBodyContainer { padding: 24px 32px 0 32px; }
   .heroBackdropSection .orderPlacedContainer { padding: 96px 32px; }
   .heroBackdropSection .loginContainer { padding: 64px 32px; }
   .aboutContainer { padding: 48px 32px 0 32px; }

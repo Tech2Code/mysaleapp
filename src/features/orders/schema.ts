@@ -22,6 +22,7 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>
 
 export const cartLineSchema = z.object({
   productId: z.uuid(),
+  variantId: z.string().trim().min(1).max(64).optional(),
   quantity: v.quantity(),
 })
 

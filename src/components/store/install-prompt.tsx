@@ -3,6 +3,7 @@
 import { DownloadIcon, ShareIcon, SquarePlusIcon, XIcon } from "lucide-react"
 import { AnimatePresence } from "motion/react"
 import * as m from "motion/react-m"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -12,11 +13,15 @@ import { LogoMark } from "@/components/shared/logo"
 import { useStoreSettings } from "./store-settings-provider"
 import styles from "./store-widgets.module.css"
 
+const QUIET_INSTALL_PATHS = ["/checkout", "/cart", "/login", "/order-placed", "/account", "/track"]
+
 /**
  * A small "Install app" banner at the bottom of the screen, shown a few seconds after arriving.
- * Hidden when already installed, when dismissed (for 14 days), or when the browser can't install the app.
+ * Hidden when already installed, when dismissed (for 14 days), on focused flows (checkout/cart/login/account),
+ * or when the browser can't install the app.
  */
 export function InstallPrompt() {
+  const pathname = usePathname()
   const shop = useStoreSettings()
   const { canInstall, needsManualSteps, dismissed, install, dismiss } = useInstallPrompt()
   const [ready, setReady] = useState(false)
@@ -27,7 +32,8 @@ export function InstallPrompt() {
     return () => clearTimeout(t)
   }, [])
 
-  const show = ready && canInstall && !dismissed
+  const isQuietRoute = Boolean(pathname && QUIET_INSTALL_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)))
+  const show = ready && canInstall && !dismissed && !isQuietRoute
 
   return (
     <AnimatePresence>

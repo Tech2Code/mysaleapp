@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { demoProducts } from "./demo-data"
-import { categorySchema, productReviewSchema, productSchema } from "./schema"
-import { buildSearchText, parseSearchQuery, scoreProductSearch } from "./types"
+import { categorySchema, productReviewSchema, productSchema, stockAlertSchema } from "./schema"
+import { BACK_IN_STOCK_DAYS, buildSearchText, isBackInStock, parseSearchQuery, scoreProductSearch } from "./types"
 
 const base = {
   name: "Candle",
@@ -55,6 +55,25 @@ describe("productSchema", () => {
   it("requires product price of at least ₹1", () => {
     expect(productSchema.safeParse({ ...base, price: 0 }).success).toBe(false)
     expect(productSchema.safeParse({ ...base, price: 1 }).success).toBe(true)
+  })
+
+  it("accepts multi-option variants (Color x Size) and rejects variant MRP lower than or equal to price", () => {
+    const ok = productSchema.parse({
+      ...base,
+      variants: [
+        { id: "v-bm", label: "Black / M", options: { Color: "Black", Size: "M" }, price: 799, compareAtPrice: 999, stock: 10, sku: "CS-BLK-M" },
+        { id: "v-rl", label: "Red / L", options: { Color: "Red", Size: "L" }, price: 849, stock: 5 },
+      ],
+    })
+    expect(ok.variants).toHaveLength(2)
+    expect(ok.variants[0].options).toEqual({ Color: "Black", Size: "M" })
+    expect(ok.variants[0].sku).toBe("CS-BLK-M")
+
+    const bad = productSchema.safeParse({
+      ...base,
+      variants: [{ id: "v-m", label: "Size M", price: 799, compareAtPrice: 700, stock: 5 }],
+    })
+    expect(bad.success).toBe(false)
   })
 })
 
@@ -202,6 +221,39 @@ describe("productReviewSchema", () => {
         rating: 5,
         title: "x".repeat(401),
         comment: "Valid comment",
+      }).success
+    ).toBe(false)
+  })
+})
+
+describe("back in stock (isBackInStock & stockAlertSchema)", () => {
+  it("detects products restocked within BACK_IN_STOCK_DAYS only when in stock", () => {
+    const now = Date.parse("2026-05-10T12:00:00Z")
+    const twoDaysAgo = new Date(now - 2 * 86_400_000).toISOString()
+    const expired = new Date(now - (BACK_IN_STOCK_DAYS + 1) * 86_400_000).toISOString()
+
+    expect(isBackInStock({ stock: 5, restockedAt: twoDaysAgo }, now)).toBe(true)
+    expect(isBackInStock({ stock: 0, restockedAt: twoDaysAgo }, now)).toBe(false)
+    expect(isBackInStock({ stock: 5, restockedAt: expired }, now)).toBe(false)
+    expect(isBackInStock({ stock: 5, restockedAt: null }, now)).toBe(false)
+  })
+
+  it("validates stockAlertSchema phone and optional name", () => {
+    const ok = stockAlertSchema.safeParse({
+      productId: "00000000-0000-4000-8000-000000000001",
+      name: "  Priya  ",
+      phone: "+91 98765 43210",
+    })
+    expect(ok.success).toBe(true)
+    if (ok.success) {
+      expect(ok.data.name).toBe("Priya")
+      expect(ok.data.phone).toBe("9876543210")
+    }
+
+    expect(
+      stockAlertSchema.safeParse({
+        productId: "00000000-0000-4000-8000-000000000001",
+        phone: "12345",
       }).success
     ).toBe(false)
   })

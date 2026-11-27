@@ -74,6 +74,7 @@ const csp = [
 ].join("; ")
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // Lets a phone on the same Wi-Fi open the dev server (otherwise dev assets/HMR are blocked and the page doesn't hydrate).
   allowedDevOrigins: ["192.168.1.*"],
   cacheComponents: true,

@@ -8,7 +8,7 @@ import { RATE_LIMIT_MESSAGE, limited } from "@/features/security/rate-limit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { CACHE_TAGS } from "./queries"
-import { categorySchema, productReviewSchema, productSchema, type ProductValues } from "./schema"
+import { categorySchema, productReviewSchema, productSchema, stockAlertSchema, type ProductValues } from "./schema"
 import type { ProductReview } from "./types"
 
 function toRow(p: ProductValues) {
@@ -18,15 +18,31 @@ function toRow(p: ProductValues) {
 }
 
 function toRowWithStock(p: ProductValues) {
+  const hasVariants = p.variants.length > 0
+  const effectiveStock = hasVariants ? p.variants.reduce((sum, vr) => sum + vr.stock, 0) : p.stock
+  const inStockVariants = p.variants.filter((vr) => vr.stock > 0)
+  const pricePool = inStockVariants.length > 0 ? inStockVariants : p.variants
+  const lowestVariant = hasVariants
+    ? pricePool.reduce((best, cur) => (cur.price < best.price ? cur : best), pricePool[0])
+    : null
   return {
     name: p.name,
     slug: p.slug,
     description: p.description,
-    price: p.price,
-    compare_at_price: p.compareAtPrice ?? null,
+    price: lowestVariant ? lowestVariant.price : p.price,
+    compare_at_price: lowestVariant ? (lowestVariant.compareAtPrice ?? null) : (p.compareAtPrice ?? null),
     images: p.images,
     category_id: p.categoryId ?? null,
-    stock: p.stock,
+    stock: effectiveStock,
+    variants: p.variants.map((vr) => ({
+      id: vr.id,
+      label: vr.label,
+      ...(vr.options && Object.keys(vr.options).length > 0 ? { options: vr.options } : {}),
+      price: vr.price,
+      compareAtPrice: vr.compareAtPrice ?? null,
+      stock: vr.stock,
+      sku: vr.sku ?? null,
+    })),
     weight_grams: p.weightGrams,
     shipping_class: p.shippingClass,
     return_window_days: p.returnWindowDays ?? null,
@@ -99,12 +115,21 @@ export async function saveProduct(
 
   const supabase = await getServerSupabase()
 
+  const insertPayload = toRowWithStock(parsed.data)
   if (!id) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("products")
-      .insert(toRowWithStock(parsed.data))
+      .insert(insertPayload)
       .select("id, stock")
       .single<{ id: string; stock: number }>()
+    // Backward-compatible fallback if migration 0069 (variants column) is not yet pushed and no variants were added
+    if (error && parsed.data.variants.length === 0 && /variants/i.test(error.message)) {
+      const { variants: _ignored, ...fallbackInsert } = insertPayload
+      void _ignored
+      const retry = await supabase.from("products").insert(fallbackInsert).select("id, stock").single<{ id: string; stock: number }>()
+      data = retry.data
+      error = retry.error
+    }
     if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
     await logAdminAction(supabase, {
       actorId: auth.user.id,
@@ -123,12 +148,20 @@ export async function saveProduct(
     .eq("id", id)
     .maybeSingle<{ images: string[] }>()
 
-  const { data, error } = await supabase
+  const updatePayload = toRow(parsed.data)
+  let { data, error } = await supabase
     .from("products")
-    .update(toRow(parsed.data))
+    .update(updatePayload)
     .eq("id", id)
     .select("id, stock")
     .single<{ id: string; stock: number }>()
+  if (error && parsed.data.variants.length === 0 && /variants/i.test(error.message)) {
+    const { variants: _ignored, ...fallbackUpdate } = updatePayload
+    void _ignored
+    const retry = await supabase.from("products").update(fallbackUpdate).eq("id", id).select("id, stock").single<{ id: string; stock: number }>()
+    data = retry.data
+    error = retry.error
+  }
   if (error || !data) return fail(friendlyDbError(error?.message ?? "", error?.code))
 
   const kept = new Set(parsed.data.images)
@@ -138,8 +171,20 @@ export async function saveProduct(
   }
 
   let stock = data.stock
+  const hasVariants = parsed.data.variants.length > 0
+  if (hasVariants) {
+    const variantTotalStock = parsed.data.variants.reduce((sum, vr) => sum + vr.stock, 0)
+    const variantDelta = variantTotalStock - data.stock
+    if (variantDelta !== 0) {
+      const { data: after, error: stockError } = await supabase.rpc("adjust_product_stock", { p_id: id, p_delta: variantDelta })
+      if (!stockError) stock = Number(after)
+    }
+    if (data.stock <= 0 && stock > 0) {
+      await supabase.from("products").update({ restocked_at: new Date().toISOString() }).eq("id", id)
+    }
+  }
   const expected = Number.isInteger(expectedStock) ? (expectedStock as number) : null
-  const delta = expected === null ? 0 : parsed.data.stock - expected
+  const delta = hasVariants || expected === null ? 0 : parsed.data.stock - expected
   if (delta !== 0) {
     const { data: after, error: stockError } = await supabase.rpc("adjust_product_stock", { p_id: id, p_delta: delta })
     if (stockError) {
@@ -147,6 +192,10 @@ export async function saveProduct(
       return fail("Saved, but the stock could not be updated. Please try again.")
     }
     stock = Number(after)
+    if (data.stock <= 0 && stock > 0) {
+      // Best-effort stamp restocked_at if migration 0068 column exists without trigger
+      await supabase.from("products").update({ restocked_at: new Date().toISOString() }).eq("id", id)
+    }
   }
 
   await logAdminAction(supabase, {
@@ -503,5 +552,76 @@ export async function deleteProductReview(input: unknown): Promise<ActionResult>
   }
 
   refreshReviews()
+  return { ok: true }
+}
+
+/** Subscribe a customer's WhatsApp/mobile number to be notified when a sold-out product is restocked. */
+export async function subscribeStockAlert(
+  input: unknown
+): Promise<ActionResult<{ alreadySubscribed: boolean }>> {
+  const parsed = stockAlertSchema.safeParse(input)
+  if (!parsed.success) {
+    return fail("Please enter a valid 10-digit WhatsApp / mobile number.", z.flattenError(parsed.error).fieldErrors)
+  }
+  const { productId, name, phone } = parsed.data
+  if (await limited("place-order", `stock-alert:${phone}`)) return fail(RATE_LIMIT_MESSAGE)
+
+  const supabase = await getServerSupabase()
+  const { data, error } = await supabase.rpc("subscribe_stock_alert", {
+    p_product_id: productId,
+    p_name: name ?? "",
+    p_phone: phone,
+  })
+  if (error) {
+    if (error.message.includes("ALREADY_IN_STOCK")) {
+      refreshCatalogue()
+      return fail("Good news! This item is already back in stock — refresh to order.")
+    }
+    if (error.message.includes("PRODUCT_NOT_FOUND")) {
+      return fail("This product is no longer available.")
+    }
+    if (error.message.includes("INVALID_PHONE")) {
+      return fail("Please enter a valid 10-digit mobile number.", { phone: ["Enter a valid 10-digit mobile number"] })
+    }
+    return fail("Could not save your alert right now. Please try again shortly.")
+  }
+
+  const res = data as { alreadySubscribed?: boolean } | null
+  revalidatePath("/admin/products")
+  return { ok: true, data: { alreadySubscribed: Boolean(res?.alreadySubscribed) } }
+}
+
+export async function markStockAlertNotified(alertId: string): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  if (!z.uuid().safeParse(alertId).success) return fail("Invalid alert")
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase
+    .from("stock_alerts")
+    .update({ status: "notified", notified_at: new Date().toISOString() })
+    .eq("id", alertId)
+  if (error) return fail("Could not update alert status.")
+
+  await logAdminAction(supabase, {
+    actorId: auth.user.id,
+    action: "stock_alert.notified",
+    targetType: "product",
+    targetId: alertId,
+  })
+  revalidatePath("/admin/products")
+  return { ok: true }
+}
+
+export async function deleteStockAlert(alertId: string): Promise<ActionResult> {
+  const auth = await assertAdmin()
+  if (!auth.ok) return fail(auth.error)
+  if (!z.uuid().safeParse(alertId).success) return fail("Invalid alert")
+
+  const supabase = await getServerSupabase()
+  const { error } = await supabase.from("stock_alerts").delete().eq("id", alertId)
+  if (error) return fail("Could not remove alert.")
+
+  revalidatePath("/admin/products")
   return { ok: true }
 }

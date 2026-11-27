@@ -21,6 +21,39 @@ export function isShippingClass(value: unknown): value is ShippingClass {
 
 export type ProductSpec = { label: string; value: string }
 
+/** Optional sellable variant (e.g. Color: Black + Size: M) with its own price and stock. */
+export type ProductVariant = {
+  id: string
+  label: string
+  /** Structured option map for multi-attribute products, e.g. { Color: "Black", Size: "M" }. */
+  options?: Record<string, string>
+  price: number
+  compareAtPrice?: number | null
+  stock: number
+  sku?: string | null
+}
+
+/** Extracts ordered option groups (e.g. [{ name: "Color", values: ["Black", "White"] }, { name: "Size", values: ["S", "M", "L"] }]) from variants. */
+export function extractVariantOptionGroups(variants: readonly ProductVariant[]): { name: string; values: string[] }[] {
+  const order: string[] = []
+  const map = new Map<string, string[]>()
+  for (const v of variants) {
+    if (!v.options) continue
+    for (const [rawKey, rawVal] of Object.entries(v.options)) {
+      const key = rawKey.trim()
+      const val = rawVal.trim()
+      if (!key || !val) continue
+      if (!map.has(key)) {
+        order.push(key)
+        map.set(key, [])
+      }
+      const list = map.get(key)!
+      if (!list.includes(val)) list.push(val)
+    }
+  }
+  return order.map((name) => ({ name, values: map.get(name) ?? [] }))
+}
+
 export type ProductReview = {
   id: string
   productId: string
@@ -68,8 +101,42 @@ export type Product = {
   ratingAvg?: number
   /** Total verified customer reviews count. */
   reviewCount?: number
+  /** Timestamp when a sold-out product was restocked (added by migration 0068). */
+  restockedAt?: string | null
+  /** Optional sellable variants (Size / Colour / Capacity / Pack). Empty array = single-SKU product. */
+  variants?: ProductVariant[]
   createdAt: string
   updatedAt: string
+}
+
+/** Number of days a restocked product displays the "Back in stock" badge. */
+export const BACK_IN_STOCK_DAYS = 7
+
+/** True when a product is currently in stock and was restocked within the last `BACK_IN_STOCK_DAYS` days. */
+export function isBackInStock(
+  product: { stock: number; restockedAt?: string | null },
+  nowMs?: number
+): boolean {
+  if (product.stock <= 0 || !product.restockedAt) return false
+  const ts = Date.parse(product.restockedAt)
+  if (!Number.isFinite(ts)) return false
+  if (nowMs === undefined) return true
+  const ageMs = nowMs - ts
+  return ageMs >= -60_000 && ageMs <= BACK_IN_STOCK_DAYS * 86_400_000
+}
+
+export type StockAlert = {
+  id: string
+  productId: string
+  productName: string
+  productSlug: string
+  productImage: string | null
+  productStock: number
+  customerName: string
+  phone: string
+  status: "waiting" | "notified"
+  notifiedAt: string | null
+  createdAt: string
 }
 
 /** Shape of a `products` row joined with its category, as returned by Supabase. */
@@ -99,6 +166,10 @@ export type ProductRow = {
   seo_description: string | null
   rating_avg?: number | string | null
   review_count?: number | null
+  /** Added by migration 0068; optional so the app keeps working before it is applied. */
+  restocked_at?: string | null
+  /** Added by migration 0069; optional so the app keeps working before it is applied. */
+  variants?: ProductVariant[] | null
   created_at: string
   updated_at: string
 }
@@ -115,8 +186,38 @@ export type CategoryRow = {
 
 export const PRODUCT_SELECT = "*, category:categories(name, slug, review_aspects)"
 
+function normalizeVariants(raw: unknown): ProductVariant[] {
+  if (!Array.isArray(raw)) return []
+  const out: ProductVariant[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue
+    const v = item as Record<string, unknown>
+    const id = typeof v.id === "string" ? v.id.trim() : ""
+    const label = typeof v.label === "string" ? v.label.trim() : ""
+    const price = Number(v.price)
+    const stock = Number(v.stock)
+    if (!id || !label || !Number.isFinite(price) || price < 1 || !Number.isFinite(stock) || stock < 0) continue
+    const rawCompare = v.compareAtPrice == null ? null : Number(v.compareAtPrice)
+    const compareAtPrice = rawCompare != null && Number.isFinite(rawCompare) && rawCompare > price ? rawCompare : null
+    const sku = typeof v.sku === "string" && v.sku.trim() ? v.sku.trim() : null
+    let options: Record<string, string> | undefined
+    if (v.options && typeof v.options === "object" && !Array.isArray(v.options)) {
+      const cleanOpts: Record<string, string> = {}
+      for (const [ok, ov] of Object.entries(v.options as Record<string, unknown>)) {
+        if (typeof ov === "string" && ok.trim() && ov.trim()) {
+          cleanOpts[ok.trim()] = ov.trim()
+        }
+      }
+      if (Object.keys(cleanOpts).length > 0) options = cleanOpts
+    }
+    out.push({ id, label, ...(options ? { options } : {}), price, compareAtPrice, stock: Math.trunc(stock), sku })
+  }
+  return out
+}
+
 export function mapProduct(row: ProductRow): Product {
   const rawWeight = Number(row.weight_grams ?? 0)
+  const variants = normalizeVariants(row.variants)
   return {
     id: row.id,
     name: row.name,
@@ -151,6 +252,8 @@ export function mapProduct(row: ProductRow): Product {
     seoDescription: row.seo_description,
     ratingAvg: Number(row.rating_avg ?? 0),
     reviewCount: Number(row.review_count ?? 0),
+    restockedAt: row.restocked_at ?? null,
+    variants,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -171,7 +274,7 @@ export function mapCategory(row: CategoryRow): Category {
 /** Everything a product card needs. Keep client props this small: they are serialized into the page. */
 export type ProductCardData = Pick<
   Product,
-  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category" | "ratingAvg" | "reviewCount"
+  "id" | "slug" | "name" | "price" | "compareAtPrice" | "images" | "stock" | "category" | "ratingAvg" | "reviewCount" | "restockedAt" | "variants"
 >
 
 /** What the client-side shop browser needs: card fields + sort keys + a precomputed lowercase search string. */
@@ -194,6 +297,8 @@ export function toCardData(p: ProductCardData): ProductCardData {
     category: p.category,
     ...(p.ratingAvg !== undefined ? { ratingAvg: p.ratingAvg } : {}),
     ...(p.reviewCount !== undefined ? { reviewCount: p.reviewCount } : {}),
+    ...(p.restockedAt !== undefined ? { restockedAt: p.restockedAt } : {}),
+    ...(p.variants && p.variants.length > 0 ? { variants: p.variants } : {}),
   }
 }
 
@@ -604,11 +709,11 @@ export function scoreProductSearch(
     }
   }
 
-  if (parsed.hasFemaleIntent && (catName === "jewellery" || catName === "candles" || catName === "gifts" || FEMININE_ONLY_PATTERNS.test(name))) {
+  if (parsed.hasFemaleIntent && (name.includes("women") || text.includes("women") || FEMININE_ONLY_PATTERNS.test(name))) {
     score += 18
   }
 
-  if (parsed.hasMaleIntent && (catName === "home decor" || catName === "gifts" || catName === "wall art" || catName === "candles")) {
+  if (parsed.hasMaleIntent && (name.includes("men") || text.includes("men"))) {
     score += 14
   }
 

@@ -165,8 +165,8 @@ export function LegalQuickModal({
           {tab === "terms" && (
             <ul className={styles.legalPointList}>
               <li className={styles.legalPointItem}>
-                <span className={styles.pointHeading}>1. Handmade Artisanal Pieces</span>
-                Each item is crafted by hand in small batches; subtle natural variations in colour or texture are part of handmade work.
+                <span className={styles.pointHeading}>1. Product Descriptions &amp; Availability</span>
+                We strive for accurate product photos, specifications, and live inventory; slight colour differences may occur across device screens.
               </li>
               <li className={styles.legalPointItem}>
                 <span className={styles.pointHeading}>2. Prepaid UPI &amp; 12-Digit UTR Verification</span>

@@ -21,7 +21,7 @@ import { placeholderTrackedOrder } from "@/features/orders/placeholders"
 import type { StoreSettings } from "@/features/settings/types"
 import { trackOrderSchema } from "@/features/orders/schema"
 import { canRequestAgain, customerStatusLine, returnStage, stageInputOf } from "@/features/orders/returns"
-import { STATUS_META, type TrackedOrder } from "@/features/orders/types"
+import { composeOrderCode, STATUS_META, stripOrderPrefix, type TrackedOrder } from "@/features/orders/types"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { formatDate } from "@/lib/format"
 import { WhatsAppIcon } from "./brand-icons"
@@ -41,13 +41,12 @@ import styles from "./order-status.module.css"
 
 type TrackInput = z.input<typeof trackOrderSchema>
 
-const hints = [
-  { icon: HashIcon, text: "Find the order code in your WhatsApp message (like KK-7F3K9Q)." },
-  { icon: PhoneIcon, text: "Enter the last 4 digits of the phone number you ordered with." },
-  { icon: PackageSearchIcon, text: "See live status, courier and tracking details right here." },
-]
-
-function EmptyState({ signedIn }: { signedIn: boolean }) {
+function EmptyState({ signedIn, prefix }: { signedIn: boolean; prefix: string }) {
+  const hints = [
+    { icon: HashIcon, text: `Find the order code in your WhatsApp message (like ${prefix}-7F3K9Q) and enter the part after ${prefix}-.` },
+    { icon: PhoneIcon, text: "Enter the last 4 digits of the phone number you ordered with." },
+    { icon: PackageSearchIcon, text: "See live status, courier and tracking details right here." },
+  ]
   return (
     <div className={styles.trackEmptyBox}>
       <div className={styles.searchIconCircle}>
@@ -123,7 +122,7 @@ function TrackResult({
         <div>
           <div className={styles.codeRow}>
             <p className={styles.orderCodeText}>{result.orderCode}</p>
-            <CopyButton value={result.orderCode} label="Order ID" />
+            <CopyButton value={stripOrderPrefix(result.orderCode, shop.orderCodePrefix)} label="Order code" />
           </div>
           <p className={styles.placedMetaText}>
             Placed {formatDate(result.createdAt)} · {result.city}
@@ -226,12 +225,19 @@ function TrackResult({
           {itemCount} item{itemCount === 1 ? "" : "s"} in this order
         </h3>
         <ul className={styles.itemsList}>
-          {result.items.map((i) => (
-            <li key={i.productId} className={styles.itemLine}>
-              <span className={styles.itemName}>{i.name}</span>
-              <span className={styles.itemQty}>× {i.quantity}</span>
-            </li>
-          ))}
+          {result.items.map((i) => {
+            const suffix = i.variantLabel ? ` — ${i.variantLabel}` : ""
+            const cleanName = suffix && i.name.endsWith(suffix) ? i.name.slice(0, -suffix.length) : i.name
+            return (
+              <li key={i.variantId ? `${i.productId}::${i.variantId}` : i.productId} className={styles.itemLine}>
+                <span className={styles.itemNameCol}>
+                  <span className={styles.itemName}>{cleanName}</span>
+                  {i.variantLabel && <span className={styles.itemVariantPill}>{i.variantLabel}</span>}
+                </span>
+                <span className={styles.itemQty}>× {i.quantity}</span>
+              </li>
+            )
+          })}
         </ul>
         <p className={styles.invoiceHint}>
           {isOwner ? (
@@ -307,6 +313,8 @@ export function TrackOrder() {
 
 function TrackOrderBody({ urlCode }: { urlCode: string }) {
   const shop = useStoreSettings()
+  const orderPrefix = (shop.orderCodePrefix || "KK").trim().toUpperCase().replace(/-+$/, "")
+  const initialSuffix = stripOrderPrefix(urlCode, orderPrefix)
   const user = useAuth((s) => s.user)
   const signedIn = Boolean(user)
   const [result, setResult] = useState<TrackedOrder | null>(null)
@@ -317,17 +325,20 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
 
   const form = useForm<TrackInput>({
     resolver: zodResolver(trackOrderSchema),
-    defaultValues: { code: urlCode, phoneLast4: "" },
+    defaultValues: { code: initialSuffix ? composeOrderCode(initialSuffix, orderPrefix) : "", phoneLast4: "" },
   })
+  const [codeSuffix, setCodeSuffix] = useState(initialSuffix)
 
   useEffect(() => {
-    form.reset({ code: urlCode, phoneLast4: "" })
+    const nextSuffix = stripOrderPrefix(urlCode, orderPrefix)
+    form.reset({ code: nextSuffix ? composeOrderCode(nextSuffix, orderPrefix) : "", phoneLast4: "" })
     return () => {
+      setCodeSuffix("")
       form.reset({ code: "", phoneLast4: "" })
       setResult(null)
       setQuery(null)
     }
-  }, [urlCode, form])
+  }, [urlCode, orderPrefix, form])
 
   // On phones the result sits below the form: bring it into view after the reader's own lookup only
   // (refresh / payment / cancel re-reads must not move the page).
@@ -401,14 +412,41 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
             {signedIn ? "Takes 5 seconds. Enter your order code and phone's last 4 digits." : "Takes 5 seconds. No login needed."}
           </p>
         </div>
-        <TextField
-          label="Order code" kind="orderCode"
-          className={styles.codeFieldInput}
-          placeholder="KK-7F3K9Q"
-          autoCapitalize="characters"
-          error={form.formState.errors.code?.message}
-          {...form.register("code")}
-        />
+        <div className={styles.prefixFieldWrap}>
+          <label htmlFor="track-order-code" className={styles.prefixFieldLabel}>
+            Order code
+          </label>
+          <div className={cn(styles.prefixInputShell, form.formState.errors.code && styles.prefixInputShellError)}>
+            <span className={styles.prefixFixedBadge} aria-hidden="true">
+              {orderPrefix}-
+            </span>
+            <input
+              id="track-order-code"
+              type="text"
+              value={codeSuffix}
+              onChange={(e) => {
+                const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "")
+                const cleanSuffix = stripOrderPrefix(raw, orderPrefix)
+                setCodeSuffix(cleanSuffix)
+                form.setValue("code", cleanSuffix ? composeOrderCode(cleanSuffix, orderPrefix) : "", {
+                  shouldValidate: form.formState.isSubmitted,
+                })
+              }}
+              placeholder="7F3K9Q"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={Boolean(form.formState.errors.code)}
+              aria-describedby={form.formState.errors.code ? "track-order-code-err" : undefined}
+              className={styles.prefixSuffixInput}
+            />
+          </div>
+          {form.formState.errors.code?.message && (
+            <p id="track-order-code-err" role="alert" className={styles.prefixFieldError}>
+              {form.formState.errors.code.message}
+            </p>
+          )}
+        </div>
         <TextField
           label="Last 4 digits of phone" kind="orderLast4"
           inputMode="numeric"
@@ -446,7 +484,7 @@ function TrackOrderBody({ urlCode }: { urlCode: string }) {
             <TrackResult key={result.orderCode} result={result} query={query} shop={shop} signedIn={signedIn} refetch={refetch} />
           ) : (
             <m.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={styles.fullHeightBox}>
-              <EmptyState signedIn={signedIn} />
+              <EmptyState signedIn={signedIn} prefix={orderPrefix} />
             </m.div>
           )}
         </AnimatePresence>

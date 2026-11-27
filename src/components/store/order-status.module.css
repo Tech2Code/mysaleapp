@@ -39,9 +39,11 @@
 .trackResultCard .itemsSummarySection { border-top: 1px solid var(--border); padding-top: 20px; font-size: 14px; }
 .itemsSummarySection .itemsHeading { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--foreground); }
 .itemsSummarySection .itemsList { margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; color: var(--muted-foreground); }
-.itemsList .itemLine { display: flex; gap: 8px; }
-.itemLine .itemName { min-width: 0; flex: 1 1 0%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 21px; }
-.itemLine .itemQty { flex-shrink: 0; }
+.itemsList .itemLine { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.itemLine .itemNameCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; align-items: flex-start; gap: 3px; }
+.itemNameCol .itemName { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 21px; color: var(--foreground); font-weight: 500; }
+.itemNameCol .itemVariantPill { display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid var(--border); background-color: var(--muted); padding: 1px 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--foreground); }
+.itemLine .itemQty { flex-shrink: 0; line-height: 21px; }
 .itemsSummarySection .invoiceHint { margin: 12px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
 .invoiceHint .invoiceLink { font-weight: 600; color: var(--primary); text-underline-offset: 4px; }
 .invoiceHint .invoiceLink:hover { text-decoration: underline; }
@@ -57,6 +59,15 @@
 .lookupForm .formTitle { margin: 0; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
 .lookupForm .formSubtitle { margin: 4px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
 .lookupForm .codeFieldInput { font-family: var(--font-mono); text-transform: uppercase; }
+.lookupForm .prefixFieldWrap { display: flex; flex-direction: column; gap: 6px; padding-bottom: 12px; }
+.prefixFieldWrap .prefixFieldLabel { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--foreground); }
+.prefixFieldWrap .prefixInputShell { display: flex; height: var(--controlHLg); align-items: stretch; overflow: hidden; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--background); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.prefixFieldWrap .prefixInputShell:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 24%, transparent); }
+.prefixFieldWrap .prefixInputShellError { border-color: var(--destructive); }
+.prefixInputShell .prefixFixedBadge { display: inline-flex; flex-shrink: 0; align-items: center; border-right: 1px solid var(--border); background-color: var(--muted); padding: 0 12px; font-family: var(--font-mono); font-size: 14px; font-weight: 700; letter-spacing: 0.6px; color: var(--muted-foreground); user-select: none; }
+.prefixInputShell .prefixSuffixInput { min-width: 0; flex: 1 1 0%; border: 0; background: transparent; padding: 0 14px; font-family: var(--font-mono); font-size: 15px; font-weight: 600; letter-spacing: 0.8px; color: var(--foreground); text-transform: uppercase; outline: none; }
+.prefixInputShell .prefixSuffixInput::placeholder { font-weight: 400; color: var(--muted-foreground); opacity: 0.7; }
+.prefixFieldWrap .prefixFieldError { margin: 0; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--destructive); }
 .lookupForm .submitBtn { width: 100%; border-radius: var(--radiusControl); }
 .spinIcon { width: 16px; height: 16px; animation: spinKeyframes 1s linear infinite; }
 @keyframes spinKeyframes { to { transform: rotate(360deg); } }

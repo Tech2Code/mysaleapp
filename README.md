@@ -1,6 +1,6 @@
-# Kalakriti: handmade gifts store
+# Kalakriti: Universal Direct-to-Consumer Online Store
 
-A fast, installable (PWA) online store where customers pay via **UPI** (with zero gateway fees) and receive order updates on **WhatsApp**. It includes an admin panel for products, categories, orders, returns/exchanges, refunds, promo codes/coupons, and store settings (with a 7-day admin session + 12-hour 4-digit Quick PIN lock), verified customer product reviews & star ratings, email/password & Google login for customers (with password change/reset and self-service account deactivation + automatic recovery on login), saved addresses, a synced wishlist, guest & account order tracking, GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
+A fast, installable (PWA with branded animated splash) niche-agnostic online store where customers pay via **UPI** (with zero gateway fees) or optional payment gateways and receive order updates on **WhatsApp**. It includes an admin panel for products (with multi-option Color × Size × custom variants, smart pricing rules, and per-variant stock/SKU), categories, orders, returns/exchanges, refunds, promo codes/coupons, back-in-stock alerts, and store settings (with a 7-day admin session + 12-hour 4-digit Quick PIN lock), verified customer product reviews & star ratings, email/password & Google login for customers (with password change/reset and self-service account deactivation + automatic recovery on login), saved addresses, a synced wishlist, guest & account order tracking (with fixed order-prefix input), GST-ready printable invoices, and built-in SEO. Everything runs on free tiers (₹0/month).
 
 | | |
 |---|---|
@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0067_decide_doorstep_courier.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0069_product_variants.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -171,7 +171,7 @@ src/
   store/              Client state (cart, wishlist, auth) with Zustand
   styles/             Independent Light & Dark CSS variable theme files (`theme-store.css`, `theme-admin.css`)
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0067) + seed
+supabase/             SQL migrations (0001..0069) + seed
 public/sw.js          Service worker (offline support)
 ```
 
@@ -185,7 +185,7 @@ public/sw.js          Service worker (offline support)
 | `npm run build` | Production build (also type-checks) |
 | `npm run start` | Run the production build |
 | `npm run lint` | ESLint |
-| `npm test` | Run the Vitest unit test suite (30 test files, 834 tests) |
+| `npm test` | Run the Vitest unit test suite (30 test files, 840 tests) |
 | `npm run db:dry` | Dry-run pending Supabase migrations against the linked remote project |
 | `npm run db:push` | Push pending Supabase migrations to the linked remote project |
 

@@ -119,7 +119,7 @@ function DesktopCollectionsDropdown({
           >
             <div role="menu" aria-label="Product collections" className={styles.collectionsPopoverCard}>
               <div className={styles.collectionsPopoverHeader}>
-                <p className={styles.collectionsEyebrow}>Handcrafted collections</p>
+                <p className={styles.collectionsEyebrow}>Browse categories</p>
               </div>
               <ul className={styles.collectionsGridList}>
                 {categories.map((cat) => {
