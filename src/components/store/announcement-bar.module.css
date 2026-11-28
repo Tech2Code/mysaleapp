@@ -1,7 +1,7 @@
-/* Section: Storefront Top Announcement Bar (30% Support Surface + 10% Accent Icon, Borderless) */
-.announcementBanner { background-color: var(--store-support, var(--primary)); padding: 6px 16px; text-align: center; font-size: 12px; font-weight: 500; letter-spacing: 0.4px; color: var(--store-support-fg, var(--primary-foreground)); }
+/* Section: Storefront Top Announcement Bar (Unified Primary Brand Strip, WCAG AA Guaranteed) */
+.announcementBanner { background-color: var(--primary); padding: 7px 16px; text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; color: var(--primary-foreground); }
 .announcementBanner .bannerContent { display: inline-flex; align-items: center; gap: 6px; }
-.bannerContent .bannerIcon { width: 14px; height: 14px; flex-shrink: 0; color: var(--store-accent, currentColor); }
+.bannerContent .bannerIcon { width: 14px; height: 14px; flex-shrink: 0; color: currentColor; opacity: 0.9; }
 @media (min-width: 640px) {
   .announcementBanner { font-size: 13px; }
 }

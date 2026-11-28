@@ -1,21 +1,16 @@
 /* Section: Storefront Home View & Sections */
 .homeContentStack { display: flex; flex-direction: column; gap: 48px; padding-top: 48px; }
 .homeContentStack .pageSection { margin: 0 auto; width: 100%; max-width: 1280px; padding: 0 16px; }
-/* Section: Bespoke Studio CTA Band (30% Support Navy/Slate Surface + 10% Accent CTA, Borderless Elevation) */
-.pageSection .bespokeBanner { position: relative; overflow: hidden; border-radius: 20px; border: 0; background: radial-gradient(80% 100% at 85% 15%, color-mix(in oklab, var(--primary) 22%, transparent), transparent 55%), radial-gradient(70% 90% at 15% 90%, var(--hero-c), transparent 55%), var(--store-support, var(--foreground)); padding: 48px 24px; text-align: center; color: var(--store-support-fg, var(--background)); box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--on-solid) 14%, transparent), 0 24px 48px -12px var(--shadow-color-strong); }
+/* Section: Bespoke Studio CTA Band (Airy Theme-Tinted Surface + Crisp Hairline + Primary CTA) */
+.pageSection .bespokeBanner { position: relative; overflow: hidden; border-radius: 20px; border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--border)); background: radial-gradient(75% 95% at 88% 12%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%), radial-gradient(65% 85% at 12% 92%, var(--hero-c), transparent 58%), linear-gradient(135deg, color-mix(in oklab, var(--primary) 6%, var(--card)) 0%, var(--store-section-tint, var(--secondary)) 55%, color-mix(in oklab, var(--primary) 4%, var(--card)) 100%); padding: 48px 24px; text-align: center; color: var(--foreground); box-shadow: var(--store-elevation-sm); }
 .bespokeBanner .bannerEyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 1.4px; color: var(--primary); text-transform: uppercase; }
-.bespokeBanner .bannerTitle { position: relative; margin: 8px auto 0 auto; max-width: 672px; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--store-support-fg, var(--background)); }
-.bespokeBanner .bannerSubtitle { position: relative; margin: 12px auto 0 auto; max-width: 576px; font-size: 14px; line-height: 22px; color: color-mix(in oklab, var(--store-support-fg, var(--background)) 78%, transparent); }
+.bespokeBanner .bannerTitle { position: relative; margin: 8px auto 0 auto; max-width: 672px; font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
+.bespokeBanner .bannerSubtitle { position: relative; margin: 12px auto 0 auto; max-width: 576px; font-size: 14px; line-height: 22px; color: var(--muted-foreground); }
 .bespokeBanner .bannerActions { position: relative; margin-top: 28px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .bannerActions .chatAccentBtn { display: inline-flex; height: var(--controlHLg); align-items: center; gap: 8px; border-radius: var(--radiusControl); background-color: var(--primary); padding: 0 22px; font-size: 14px; font-weight: 600; color: var(--primary-foreground); box-shadow: 0 8px 20px -4px color-mix(in oklab, var(--primary) 35%, transparent); transition: transform 160ms ease, background-color 180ms ease, box-shadow 180ms ease; }
 .bannerActions .chatAccentBtn:hover { background-color: var(--store-accent-hover, var(--primary)); transform: translateY(-1px); box-shadow: 0 12px 24px -4px color-mix(in oklab, var(--primary) 45%, transparent); }
 .bannerActions .chatAccentBtn:active { transform: scale(0.98); }
 .chatAccentBtn .chatBtnIcon { width: 18px; height: 18px; color: var(--primary-foreground); }
-.bannerActions .browseOutlineBtn { display: inline-flex; height: var(--controlHLg); align-items: center; gap: 8px; border-radius: var(--radiusControl); border: 1px solid color-mix(in oklab, var(--store-support-fg, var(--background)) 28%, transparent); padding: 0 22px; font-size: 14px; font-weight: 600; color: var(--store-support-fg, var(--background)); transition: background-color 180ms ease, transform 160ms ease; }
-.bannerActions .browseOutlineBtn:hover { background-color: color-mix(in oklab, var(--store-support-fg, var(--background)) 10%, transparent); transform: translateY(-1px); }
-.bannerActions .browseOutlineBtn:active { transform: scale(0.98); }
-.browseOutlineBtn .browseArrow { width: 16px; height: 16px; transition: transform 150ms ease; }
-.bannerActions .browseOutlineBtn:hover .browseArrow { transform: translateX(4px); }
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
   .homeContentStack { gap: 80px; padding-top: 80px; }

@@ -10,7 +10,7 @@
 .accordionDetails[open] .chevronIcon { transform: rotate(180deg); }
 .accordionDetails .accordionBody { padding-bottom: 20px; font-size: 14px; line-height: 22px; color: var(--muted-foreground); }
 /* Section: Brand Logo & LogoMark */
-.logoMarkBox { position: relative; display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; border-radius: 12px; background-image: linear-gradient(135deg, var(--logo-grad-start) 0%, var(--primary) 50%, var(--logo-grad-end) 100%); font-family: var(--font-heading); font-size: 18px; font-weight: 600; color: var(--logo-fg); box-shadow: 0 4px 10px -2px color-mix(in oklab, var(--primary) 34%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--on-solid) 25%, transparent); }
+.logoMarkBox { position: relative; display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; border-radius: 12px; background-image: linear-gradient(135deg, var(--logo-grad-start) 0%, var(--logo-grad-mid, var(--primary)) 50%, var(--logo-grad-end) 100%); font-family: var(--font-heading); font-size: 18px; font-weight: 600; color: var(--logo-fg); box-shadow: 0 4px 10px -2px color-mix(in oklab, var(--primary) 34%, transparent), inset 0 0 0 1px color-mix(in oklab, var(--on-solid) 25%, transparent); }
 .logoMarkBox .logoSheen { pointer-events: none; position: absolute; left: 0; right: 0; top: 0; height: 50%; background-image: linear-gradient(180deg, color-mix(in oklab, var(--on-solid) 16%, transparent) 0%, transparent 100%); }
 .logoMarkBox .glyphRelative { position: relative; filter: drop-shadow(0 1px 1px var(--shadow-color)); }
 .logoLink { display: flex; min-width: 0; align-items: center; gap: 10px; }

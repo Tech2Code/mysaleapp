@@ -42,7 +42,7 @@
 .presetGrid .presetCardActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 5%, var(--card)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 28%, transparent); }
 .presetCardBtn .presetTopRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .presetTopRow .swatchDotsRow { display: inline-flex; align-items: center; gap: 4px; }
-.swatchDotsRow .swatchDot { width: 16px; height: 16px; border-radius: 9999px; border: 1px solid rgba(15, 23, 42, 0.14); }
+.swatchDotsRow .swatchDot { width: 16px; height: 16px; border-radius: 9999px; border: 1px solid color-mix(in oklab, var(--foreground) 18%, transparent); }
 .presetTopRow .activeCheckCircle { display: inline-grid; width: 20px; height: 20px; flex-shrink: 0; place-items: center; border-radius: 9999px; background-color: var(--primary); color: var(--primary-foreground); }
 .presetTopRow .contrastMicroPill { border-radius: 9999px; background-color: var(--muted); padding: 2px 7px; font-size: 10px; font-weight: 600; color: var(--muted-foreground); }
 .presetCardBtn .presetTextCol { display: flex; flex-direction: column; gap: 2px; }

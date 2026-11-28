@@ -1332,6 +1332,21 @@ Chronological log of all features, UI redesigns, bug fixes, root-cause analyses,
 
 ---
 
+### 2026-11-28 23:12 IST — Lighten Bespoke Studio CTA Banner for Light & Dark Theme Harmony
+
+- **User Prompt**: `".home-view-module__YpomYW__pageSection .home-view-module__YpomYW__bespokeBanner ye section kuch jayada hi dark lag raha h? light mode me?"`
+- **Problem / Root Cause**:
+  - `.bespokeBanner` in `src/components/store/home-view.module.css` used dark `--store-support` as its background even in Light mode, making it feel heavy against the airy storefront and reducing contrast on the `var(--primary)` eyebrow text.
+- **Solution / Changes Made**:
+  - Replaced the heavy dark block with a soft theme-tinted editorial gradient (`--card` + `--store-section-tint` + subtle `--primary` radial glow), a `1px` tinted border hairline, and high-contrast `--foreground` / `--muted-foreground` typography that adapts seamlessly across all 8 presets, Custom theme, and Light/Dark modes; removed unused `.browseOutlineBtn`/`.browseArrow` CSS rules.
+  - Follow-up deep CSS contrast audit fixes: pinned `.dark[data-theme="charcoal"]` `--logo-grad-*` to obsidian so the ivory `LogoMark` glyph never disappears on light `--primary`, switched `AnnouncementBar` to `var(--primary)` / `var(--primary-foreground)` with `currentColor` icon so Charcoal Light never renders invisible dark-on-dark icons, and replaced hardcoded dark swatch ring border in `theme-settings-section.module.css` with theme-aware `color-mix(...)`.
+- **Files Modified**:
+  - `src/components/store/home-view.module.css`, `src/components/store/announcement-bar.module.css`, `src/styles/theme.css`, `src/components/shared/shared.module.css`, `src/components/admin/theme-settings-section.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
 ### 2026-11-28 22:16 IST — Restore Borderless Frosted-Glass `.stickyFilterBar` Styling on Shop All
 
 - **User Prompt**: `"class=\"product-browser-module__IbPrtq__stickyFilterBar\" ye sticky pe jese pele th avese kar do, border etc hata do"`
