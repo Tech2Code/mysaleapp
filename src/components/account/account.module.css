@@ -138,6 +138,8 @@
 .recoveryTitle .shieldSvg { width: 14px; height: 14px; flex-shrink: 0; }
 .recoveryInfoBox .recoveryText { margin: 4px 0 0 0; color: var(--muted-foreground); }
 /* Section: Print & Responsive Breakpoints */
+.saveAsFieldGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.saveAsFieldGroup .saveAsFieldLabel { font-size: 13px; font-weight: 500; color: var(--foreground); }
 @media print {
   .invoicePageStack .invoiceTopBar { display: none; }
 }

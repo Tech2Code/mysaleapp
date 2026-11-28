@@ -5,6 +5,7 @@ import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, use
 import { SearchField, SelectField } from "@/components/form"
 import { Pagination } from "@/components/shared/pagination"
 import { PillTabs } from "@/components/shared/pill-tabs"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { parseSearchQuery, priceDistanceToQuery, scoreProductSearch, type Category, type ProductListItem } from "@/features/products/types"
 import { LIMITS } from "@/lib/validation"
 import styles from "./product-browser.module.css"
@@ -83,6 +84,25 @@ function ProductBrowserBody({
   const [category, setCategory] = useState(params.get("category") ?? "all")
   const [sort, setSort] = useState<SortKey>(sortFrom(params))
   const [page, setPage] = useState<number>(pageFrom(params))
+  const [pageTransitioning, setPageTransitioning] = useState(false)
+  const pageTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    setPage(nextPage)
+    setPageTransitioning(true)
+    if (pageTransitionTimerRef.current) clearTimeout(pageTransitionTimerRef.current)
+    pageTransitionTimerRef.current = setTimeout(() => {
+      pageTransitionTimerRef.current = null
+      setPageTransitioning(false)
+    }, 180)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (pageTransitionTimerRef.current) clearTimeout(pageTransitionTimerRef.current)
+    },
+    []
+  )
 
   // The URL stays shareable without a server round-trip (debounced: Safari rate-limits replaceState).
   // `synced` is the last filter state the URL is known to carry (read from it or written to it), so a change
@@ -273,23 +293,6 @@ function ProductBrowserBody({
             }}
             options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
           />
-          <div className={styles.mobileSortRow}>
-            <PillTabs
-              role="group"
-              tone="tint"
-              size="sm"
-              ariaLabel="Sort products"
-              value={sort}
-              onChange={(next) => {
-                setSort(next)
-                setPage(1)
-              }}
-              items={(Object.entries(SORTS) as [SortKey, string][]).map(([key, label]) => ({
-                value: key,
-                label,
-              }))}
-            />
-          </div>
         </div>
 
         <PillTabs
@@ -308,10 +311,26 @@ function ProductBrowserBody({
       </div>
 
       <div ref={listRef}>
-        <p className={styles.resultsCountText} aria-live="polite">
-          {visible.length} {visible.length === 1 ? "product" : "products"}
-          {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ""}
-        </p>
+        <div className={styles.resultsHeaderRow}>
+          <p className={styles.resultsCountText} aria-live="polite">
+            {visible.length} {visible.length === 1 ? "product" : "products"}
+            {totalPages > 1 ? ` · Page ${currentPage} of ${totalPages}` : ""}
+          </p>
+          <SelectField
+            label="Sort products"
+            hideLabel
+            pill
+            fieldSize="md"
+            prefix="Sort:"
+            containerClassName={styles.mobileSortSelect}
+            value={sort}
+            onValueChange={(next) => {
+              setSort(next as SortKey)
+              setPage(1)
+            }}
+            options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
+          />
+        </div>
 
         {visible.length === 0 ? (
           <div className={styles.noMatchStack}>
@@ -359,20 +378,32 @@ function ProductBrowserBody({
           </div>
         ) : (
           <>
-            <div className={styles.browserGrid}>
-              {paginatedProducts.map((p, i) => (
-                <div key={p.id}>
-                  <ProductCard product={p} priority={i < 4} />
+            {pageTransitioning ? (
+              <Skeletonize>
+                <div className={styles.browserGrid}>
+                  {paginatedProducts.map((p, i) => (
+                    <div key={p.id}>
+                      <ProductCard product={p} priority={i < 4} />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </Skeletonize>
+            ) : (
+              <div className={styles.browserGrid}>
+                {paginatedProducts.map((p, i) => (
+                  <div key={p.id}>
+                    <ProductCard product={p} priority={i < 4} />
+                  </div>
+                ))}
+              </div>
+            )}
             {totalPages > 1 && (
               <Pagination
                 page={currentPage}
                 totalPages={totalPages}
                 totalItems={visible.length}
                 pageSize={PRODUCTS_PER_PAGE}
-                onPageChange={setPage}
+                onPageChange={handlePageChange}
               />
             )}
           </>

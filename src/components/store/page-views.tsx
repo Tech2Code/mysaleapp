@@ -2,14 +2,14 @@ import { ArrowRightIcon, HandHeartIcon, LeafIcon, MailIcon, MapPinIcon, PhoneIco
 import Link from "next/link"
 import { Suspense, type ComponentType, type ReactNode, type SVGProps } from "react"
 import { FadeIn } from "@/components/shared/motion"
+import { Skeletonize } from "@/components/shared/skeletonize"
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/store/brand-icons"
 import { CartView } from "@/components/store/cart-view"
 import { CheckoutForm } from "@/components/store/checkout-form"
 import { GoogleSignIn } from "@/components/store/google-sign-in"
 import { OrderPlaced } from "@/components/store/order-placed"
 import { PageHeader } from "@/components/store/page-header"
-import { PRODUCTS_PER_PAGE, ProductBrowser } from "@/components/store/product-browser"
-import { ProductGrid } from "@/components/store/product-grid"
+import { ProductBrowser } from "@/components/store/product-browser"
 import { TrackOrder } from "@/components/store/track-order"
 import { WishlistView } from "@/components/store/wishlist-view"
 import type { LiveProduct } from "@/components/store/live-cart"
@@ -112,8 +112,13 @@ export function ProductsPageView({
         {preview ? (
           <ProductBrowser products={items} categories={categories} preview />
         ) : (
-          /* Fallback is the first page of the crawlable grid; filters and pagination hydrate on top of it. */
-          <Suspense fallback={<ProductGrid products={items.slice(0, PRODUCTS_PER_PAGE)} />}>
+          <Suspense
+            fallback={
+              <Skeletonize>
+                <ProductBrowser products={items} categories={categories} preview />
+              </Skeletonize>
+            }
+          >
             <ProductBrowser products={items} categories={categories} />
           </Suspense>
         )}

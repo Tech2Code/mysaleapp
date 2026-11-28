@@ -1,6 +1,9 @@
 import { BRAND_PALETTE, BrandGlyph } from "@/components/shared/brand-glyph"
+import type { ThemeBrandPalette } from "@/features/settings/theme"
 
 export type BrandMarkVariant = "badge" | "maskable"
+
+type PaletteInput = Pick<ThemeBrandPalette, "boxColor" | "ribbon" | "accent" | "gradient" | "borderColor">
 
 /**
  * Shared JSX for generated icons (rendered by next/og ImageResponse for favicon, Apple icon,
@@ -15,10 +18,12 @@ export function BrandMark({
   size,
   padding = 0,
   variant = "badge",
+  palette = BRAND_PALETTE,
 }: {
   size: number
   padding?: number
   variant?: BrandMarkVariant
+  palette?: PaletteInput
 }) {
   if (variant === "maskable") {
     const glyphSize = Math.round(size * 0.56)
@@ -30,14 +35,14 @@ export function BrandMark({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: BRAND_PALETTE.gradient,
+          background: palette.gradient,
         }}
       >
         <BrandGlyph
           size={glyphSize}
-          boxColor={BRAND_PALETTE.boxColor}
-          ribbon={BRAND_PALETTE.ribbon}
-          accent={BRAND_PALETTE.accent}
+          boxColor={palette.boxColor}
+          ribbon={palette.ribbon}
+          accent={palette.accent}
         />
       </div>
     )
@@ -67,15 +72,15 @@ export function BrandMark({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: BRAND_PALETTE.gradient,
-          border: `${border}px solid ${BRAND_PALETTE.borderColor}`,
+          background: palette.gradient,
+          border: `${border}px solid ${palette.borderColor}`,
         }}
       >
         <BrandGlyph
           size={glyphSize}
-          boxColor={BRAND_PALETTE.boxColor}
-          ribbon={BRAND_PALETTE.ribbon}
-          accent={BRAND_PALETTE.accent}
+          boxColor={palette.boxColor}
+          ribbon={palette.ribbon}
+          accent={palette.accent}
         />
       </div>
     </div>

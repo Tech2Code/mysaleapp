@@ -1,9 +1,9 @@
 /* Section: Mobile Bottom Navigation Bar (Exact .glass Transparency + 10% Accent Active Pill) */
 @keyframes navCartBump { 0% { transform: scale(1) rotate(0deg); } 28% { transform: scale(1.22) rotate(-10deg); } 60% { transform: scale(0.92) rotate(6deg); } 100% { transform: scale(1) rotate(0deg); } }
-.bottomNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -6px 28px -10px var(--shadow-color); }
-.bottomNav .tabList { display: grid; height: 62px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 6px; list-style: none; margin: 0; }
+.bottomNav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 0px); box-shadow: 0 -6px 24px -10px var(--shadow-color); }
+.bottomNav .tabList { display: grid; height: 64px; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; padding: 0 6px; list-style: none; margin: 0; }
 .tabList .tabItem { display: flex; justify-content: center; }
-.tabItem .tabInteractive { display: flex; min-height: 44px; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0; color: var(--muted-foreground); transition: color 150ms ease, transform 150ms ease; background: transparent; border: 0; }
+.tabItem .tabInteractive { display: flex; min-height: 48px; width: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 0; color: var(--muted-foreground); transition: color 150ms ease, transform 150ms ease; background: transparent; border: 0; }
 .tabItem .tabInteractive:hover { color: var(--foreground); }
 .tabItem .tabInteractive:active { transform: scale(0.95); }
 .tabItem .tabInteractiveActive { color: var(--primary); }

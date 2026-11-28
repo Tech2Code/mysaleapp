@@ -5,8 +5,8 @@ A fast, installable (PWA with branded animated splash) niche-agnostic online sto
 | | |
 |---|---|
 | Framework | Next.js 16 (App Router, Cache Components) + TypeScript |
-| UI & Styling | Plain CSS Modules (`*.module.css`, 36 modules), Base UI (`@base-ui/react`), Motion animations |
-| Design System | Dual CSS Variable Themes (`src/styles/theme-store.css` for Storefront Sky/Ocean/Coral & `src/styles/theme-admin.css` for Admin Slate/Terracotta, independent Light & Dark) |
+| UI & Styling | Plain CSS Modules (`*.module.css`, 37 modules), Base UI (`@base-ui/react`), Motion animations |
+| Design System | Unified CSS Variable Theme System (`src/styles/theme.css` — 8 WCAG AA/AAA presets + Custom 3-color builder in Admin Settings, Light & Dark across Storefront & Admin) |
 | Database / Auth / Images | Supabase (Postgres + RLS, Google OAuth, Storage, `pg_cron`) |
 | Hosting | Vercel (free Hobby plan) |
 
@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0077_audit_hardening.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0078_store_theme.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)

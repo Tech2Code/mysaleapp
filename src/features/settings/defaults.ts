@@ -1,3 +1,4 @@
+import { DEFAULT_CUSTOM_THEME, DEFAULT_THEME_PRESET } from "./theme"
 import type { PromoCode, StoreSettings } from "./types"
 
 export const DEFAULT_PROMO_CODES: PromoCode[] = [
@@ -71,4 +72,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   paymentGateway: "razorpay",
   upiId: null,
   upiPayeeName: null,
+
+  themePreset: DEFAULT_THEME_PRESET,
+  themeCustom: DEFAULT_CUSTOM_THEME,
 }

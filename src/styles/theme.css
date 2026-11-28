@@ -1,0 +1,780 @@
+/* ============================================================================
+ * UNIFIED STOREFRONT + ADMIN THEME SYSTEM — Single Source of Truth
+ * ============================================================================
+ * Controls BOTH Storefront and Admin Panel (Light & Dark) from one file.
+ * Active preset is applied on `<html data-theme="...">` from Admin → Settings.
+ * Default preset: Artisanal Terracotta (`terracotta`).
+ * ============================================================================ */
+
+:root {
+  /* Motion */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring-fallback: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring-physics: linear(0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1);
+
+  /* Default Storefront Radii & Button Sizing */
+  --radiusControl: 12px;
+  --radiusControlSm: 10px;
+  --radiusCard: 20px;
+  --radiusPanel: 14px;
+  --radiusModal: 20px;
+  --btnDefaultH: 44px;
+  --btnDefaultPx: 20px;
+
+  /* Preset 1 (Default): Artisanal Terracotta — Light */
+  --background: #faf8f5;
+  --foreground: #231b17;
+  --card: #ffffff;
+  --card-foreground: #231b17;
+  --popover: #ffffff;
+  --popover-foreground: #231b17;
+  --primary: #b84a27;
+  --primary-foreground: #ffffff;
+  --secondary: #f2ede6;
+  --secondary-foreground: #231b17;
+  --muted: #f4efe9;
+  --muted-foreground: #665850;
+  --accent: #fcece6;
+  --accent-foreground: #9a391b;
+  --border: rgba(35, 27, 23, 0.1);
+  --input: rgba(35, 27, 23, 0.16);
+  --ring: #b84a27;
+
+  /* Unified Extended Surfaces & Elevation (Light) */
+  --store-calm-bg: var(--background);
+  --store-calm-card: var(--card);
+  --store-section-tint: #f2ede6;
+  --store-sky-surface: #f7f1ea;
+  --store-sky-soft: #f3ebe2;
+  --store-support: #2d201a;
+  --store-support-fg: #faf6f1;
+  --store-support-surface: var(--secondary);
+  --store-support-muted: var(--muted-foreground);
+  --store-accent: var(--primary);
+  --store-accent-hover: #9e3d1e;
+  --store-accent-fg: var(--primary-foreground);
+  --store-glass-bg: color-mix(in oklab, var(--background) 84%, transparent);
+  --store-glass-border: var(--border);
+  --store-elevation-sm: 0 2px 10px -2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.035), 0 0 0 1px var(--border);
+  --store-elevation-md: 0 12px 30px -8px rgba(15, 23, 42, 0.11), 0 4px 10px -2px rgba(15, 23, 42, 0.05), 0 0 0 1px var(--border);
+
+  /* Unified Admin Surface & Sidebar Tokens (derived from active theme) */
+  --admin-surface: var(--store-section-tint);
+  --admin-card: var(--card);
+  --admin-card-hover: color-mix(in oklab, var(--card) 96%, var(--foreground));
+  --admin-well: color-mix(in oklab, var(--secondary) 82%, var(--foreground) 5%);
+  --admin-border: transparent;
+  --admin-border-strong: var(--border);
+  --admin-shadow-xs: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 2px 10px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --admin-shadow-sm: inset 0 1px 0 0 rgba(255, 255, 255, 0.95), 0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --admin-shadow-md: inset 0 1px 0 0 rgba(255, 255, 255, 0.98), 0 14px 34px -6px rgba(15, 23, 42, 0.11), 0 4px 10px rgba(15, 23, 42, 0.05);
+  --admin-highlight-bg: linear-gradient(155deg, color-mix(in oklab, var(--primary) 7%, var(--card)) 0%, var(--card) 60%, color-mix(in oklab, var(--primary) 5%, var(--card)) 100%);
+  --admin-highlight-border: color-mix(in oklab, var(--primary) 26%, transparent);
+  --admin-highlight-fg: var(--foreground);
+  --admin-highlight-shadow: 0 2px 10px -2px color-mix(in oklab, var(--primary) 10%, transparent), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --admin-showcase-bg: radial-gradient(circle at 18% 18%, color-mix(in oklab, var(--primary) 13%, transparent), transparent 52%), radial-gradient(circle at 82% 80%, color-mix(in oklab, var(--foreground) 6%, transparent), transparent 50%), linear-gradient(145deg, var(--store-section-tint) 0%, var(--secondary) 100%);
+  --admin-scrollbar: color-mix(in oklab, var(--foreground) 18%, transparent);
+  --admin-scrollbar-hover: color-mix(in oklab, var(--foreground) 34%, transparent);
+  --sidebar: var(--store-section-tint);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Brand Logo & Hero Ambient Blobs (derived from active theme primary) */
+  --logo-grad-start: color-mix(in oklab, var(--primary) 82%, white);
+  --logo-grad-end: color-mix(in oklab, var(--primary) 72%, black);
+  --logo-fg: #fffaf4;
+  --hero-a: rgba(184, 74, 39, 0.12);
+  --hero-b: rgba(142, 41, 54, 0.08);
+  --hero-c: rgba(217, 107, 56, 0.1);
+  --text-gradient-mid: #8e2936;
+
+  /* Brand Actions (Success / Destructive / WhatsApp) */
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-solid: oklch(0.53 0.2 25);
+  --success: oklch(0.58 0.13 155);
+  --success-solid: oklch(0.5 0.13 155);
+  --whatsapp: oklch(0.66 0.17 150);
+  --whatsapp-solid: oklch(0.5 0.13 152);
+  --on-solid: #ffffff;
+
+  /* Semantic Status & Tone Tokens — Success (Emerald) */
+  --tone-success-bg: rgba(236, 253, 245, 0.78);
+  --tone-success-bg-soft: rgba(16, 185, 129, 0.1);
+  --tone-success-border: rgba(16, 185, 129, 0.38);
+  --tone-success-fg: #064e3b;
+  --tone-success-fg-strong: #047857;
+  --tone-success-icon: #059669;
+  --tone-success-solid: #059669;
+  --tone-success-solid-hover: #047857;
+  --tone-success-solid-fg: #ffffff;
+  --tone-success-pill-bg: #d1fae5;
+  --tone-success-pill-fg: #064e3b;
+  --tone-success-grad: linear-gradient(135deg, #34d399 0%, #10b981 52%, #059669 100%);
+
+  /* Semantic Status & Tone Tokens — Warning (Amber) */
+  --tone-warning-bg: #fef3c7;
+  --tone-warning-bg-soft: rgba(255, 251, 235, 0.75);
+  --tone-warning-border: rgba(245, 158, 11, 0.38);
+  --tone-warning-fg: #78350f;
+  --tone-warning-fg-strong: #451a03;
+  --tone-warning-icon: #d97706;
+  --tone-warning-solid: #f59e0b;
+  --tone-warning-pill-bg: #fef3c7;
+  --tone-warning-pill-fg: #78350f;
+
+  /* Semantic Status & Tone Tokens — Info (Sky) */
+  --tone-info-bg: rgba(240, 249, 255, 0.75);
+  --tone-info-bg-soft: rgba(14, 165, 233, 0.12);
+  --tone-info-border: #bae6fd;
+  --tone-info-fg: #0c4a6e;
+  --tone-info-icon: #0284c7;
+  --tone-info-solid: #0ea5e9;
+  --tone-info-pill-bg: #e0f2fe;
+  --tone-info-pill-fg: #0c4a6e;
+  --tone-seo-link: #1a0dab;
+
+  /* Semantic Status & Tone Tokens — Exchange (Indigo) */
+  --tone-exchange-bg: rgba(99, 102, 241, 0.08);
+  --tone-exchange-border: rgba(99, 102, 241, 0.25);
+  --tone-exchange-fg: #312e81;
+  --tone-exchange-fg-muted: #3730a3;
+  --tone-exchange-icon: #4f46e5;
+  --tone-exchange-pill-bg: rgba(99, 102, 241, 0.12);
+  --tone-exchange-pill-fg: #4338ca;
+
+  /* Semantic Status & Tone Tokens — Shipping / Progress (Violet) */
+  --tone-shipping-bg: rgba(245, 243, 255, 0.65);
+  --tone-shipping-bg-soft: rgba(139, 92, 246, 0.12);
+  --tone-shipping-border: #ddd6fe;
+  --tone-shipping-fg: #4c1d95;
+  --tone-shipping-icon: #6d28d9;
+  --tone-shipping-solid: #7c3aed;
+  --tone-shipping-pill-bg: #ede9fe;
+  --tone-shipping-pill-fg: #4c1d95;
+
+  /* Semantic Status & Tone Tokens — Refund Due (Orange) */
+  --tone-refund-bg: rgba(255, 247, 237, 0.7);
+  --tone-refund-border: #fed7aa;
+  --tone-refund-fg: #7c2d12;
+  --tone-refund-pill-bg: #ffedd5;
+  --tone-refund-pill-fg: #7c2d12;
+
+  /* Semantic Status & Tone Tokens — Danger (Rose) */
+  --tone-danger-bg: #fee2e2;
+  --tone-danger-bg-soft: rgba(244, 63, 94, 0.12);
+  --tone-danger-border: rgba(239, 68, 68, 0.35);
+  --tone-danger-fg: #7f1d1d;
+  --tone-danger-icon: #be123c;
+  --tone-danger-solid: #f43f5e;
+  --tone-danger-solid-soft: #fb7185;
+  --tone-danger-pill-bg: #fee2e2;
+  --tone-danger-pill-fg: #7f1d1d;
+
+  /* Semantic Status & Tone Tokens — Neutral Slate */
+  --tone-slate-bg: #e2e8f0;
+  --tone-slate-fg: #0f172a;
+  --tone-slate-soft-bg: #f1f5f9;
+  --tone-slate-soft-fg: #334155;
+
+  /* Rating Stars & Overlays */
+  --tone-star: #f59e0b;
+  --tone-star-soft: #fbbf24;
+  --backdrop-scrim: rgba(15, 23, 42, 0.38);
+  --backdrop-scrim-soft: rgba(15, 23, 42, 0.18);
+  --backdrop-scrim-strong: rgba(0, 0, 0, 0.62);
+  --shadow-color: rgba(15, 23, 42, 0.12);
+  --shadow-color-soft: rgba(15, 23, 42, 0.06);
+  --shadow-color-strong: rgba(15, 23, 42, 0.24);
+
+  /* Toast Notifications (Sonner) */
+  --toast-normal-bg: oklch(0.21 0.02 45 / 96%);
+  --toast-normal-text: oklch(0.98 0.005 80);
+  --toast-normal-border: oklch(1 0 0 / 16%);
+  --toast-success-bg: oklch(0.23 0.045 155 / 96%);
+  --toast-success-text: oklch(0.98 0.01 155);
+  --toast-success-border: oklch(0.68 0.17 155 / 50%);
+  --toast-error-bg: oklch(0.24 0.075 25 / 96%);
+  --toast-error-text: oklch(0.98 0.01 25);
+  --toast-error-border: oklch(0.66 0.2 25 / 55%);
+  --toast-warning-bg: oklch(0.25 0.06 75 / 96%);
+  --toast-warning-text: oklch(0.98 0.01 80);
+  --toast-warning-border: oklch(0.76 0.16 75 / 50%);
+  --toast-info-bg: oklch(0.23 0.04 240 / 96%);
+  --toast-info-text: oklch(0.98 0.01 240);
+  --toast-info-border: oklch(0.7 0.14 240 / 50%);
+}
+
+/* Admin Panel Density Only (Same Colors, Tighter Operational Geometry) */
+:root:has([data-slot="admin-layout"]) {
+  --app-header-h: var(--admin-topbar-h);
+  --store-header-h: var(--admin-topbar-h);
+  --radiusControl: 8px;
+  --radiusControlSm: 6px;
+  --radiusCard: 12px;
+  --radiusPanel: 10px;
+  --radiusModal: 16px;
+  --btnDefaultH: 40px;
+  --btnDefaultPx: 16px;
+}
+
+/* ============================================================================
+ * BASE DARK MODE (Default Preset 1: Artisanal Terracotta — Dark)
+ * ============================================================================ */
+.dark {
+  color-scheme: dark;
+  --background: #14110f;
+  --foreground: #f6f1eb;
+  --card: #1e1916;
+  --card-foreground: #f6f1eb;
+  --popover: #1e1916;
+  --popover-foreground: #f6f1eb;
+  --primary: #e06d47;
+  --primary-foreground: #14110f;
+  --secondary: #26201c;
+  --secondary-foreground: #f6f1eb;
+  --muted: #231d19;
+  --muted-foreground: #b0a298;
+  --accent: #31231d;
+  --accent-foreground: #f59c7d;
+  --border: rgba(255, 245, 235, 0.11);
+  --input: rgba(255, 245, 235, 0.17);
+  --ring: #e06d47;
+
+  --store-section-tint: #191512;
+  --store-sky-surface: #1c1714;
+  --store-sky-soft: #221c18;
+  --store-support: #27201c;
+  --store-support-fg: #f6f1eb;
+  --store-accent-hover: #eb805c;
+  --store-glass-bg: color-mix(in oklab, var(--background) 84%, transparent);
+  --store-elevation-sm: 0 6px 20px -6px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 0 0 1px var(--border);
+  --store-elevation-md: 0 16px 36px -8px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 0 1px var(--border);
+
+  --admin-surface: var(--background);
+  --admin-card: var(--card);
+  --admin-card-hover: var(--secondary);
+  --admin-well: color-mix(in oklab, var(--secondary) 90%, #ffffff 5%);
+  --admin-shadow-xs: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 4px 14px -2px rgba(0, 0, 0, 0.45);
+  --admin-shadow-sm: inset 0 1px 0 0 rgba(255, 255, 255, 0.09), 0 10px 26px -4px rgba(0, 0, 0, 0.55);
+  --admin-shadow-md: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 16px 36px -6px rgba(0, 0, 0, 0.65);
+  --admin-highlight-bg: linear-gradient(155deg, color-mix(in oklab, var(--primary) 14%, var(--card)) 0%, var(--card) 68%);
+  --admin-highlight-border: color-mix(in oklab, var(--primary) 28%, transparent);
+  --admin-highlight-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+  --admin-showcase-bg: radial-gradient(circle at 18% 18%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 52%), radial-gradient(circle at 82% 80%, rgba(255, 255, 255, 0.04), transparent 50%), linear-gradient(145deg, var(--card) 0%, var(--background) 100%);
+  --sidebar: color-mix(in oklab, var(--background) 60%, var(--card));
+
+  --hero-a: rgba(224, 109, 71, 0.16);
+  --hero-b: rgba(217, 107, 56, 0.1);
+  --hero-c: rgba(142, 41, 54, 0.12);
+  --text-gradient-mid: #f59c7d;
+
+  /* Brand Actions (Dark) */
+  --destructive: oklch(0.7 0.19 22);
+  --success: oklch(0.72 0.14 155);
+  --whatsapp: oklch(0.72 0.17 150);
+
+  /* Semantic Status & Tone Tokens — Dark */
+  --tone-success-bg: rgba(6, 78, 59, 0.26);
+  --tone-success-bg-soft: rgba(16, 185, 129, 0.15);
+  --tone-success-border: rgba(6, 95, 70, 0.55);
+  --tone-success-fg: #a7f3d0;
+  --tone-success-fg-strong: #6ee7b7;
+  --tone-success-icon: #34d399;
+  --tone-success-solid: #10b981;
+  --tone-success-solid-hover: #34d399;
+  --tone-success-solid-fg: #022c22;
+  --tone-success-pill-bg: rgba(6, 78, 59, 0.4);
+  --tone-success-pill-fg: #a7f3d0;
+
+  --tone-warning-bg: rgba(120, 53, 15, 0.38);
+  --tone-warning-bg-soft: rgba(69, 26, 3, 0.28);
+  --tone-warning-border: rgba(146, 64, 14, 0.55);
+  --tone-warning-fg: #fde68a;
+  --tone-warning-fg-strong: #fef3c7;
+  --tone-warning-icon: #fbbf24;
+  --tone-warning-pill-bg: rgba(120, 53, 15, 0.4);
+  --tone-warning-pill-fg: #fde68a;
+
+  --tone-info-bg: rgba(8, 47, 73, 0.26);
+  --tone-info-bg-soft: rgba(14, 165, 233, 0.18);
+  --tone-info-border: rgba(12, 74, 110, 0.5);
+  --tone-info-fg: #bae6fd;
+  --tone-info-icon: #7dd3fc;
+  --tone-info-solid: #38bdf8;
+  --tone-info-pill-bg: rgba(12, 74, 110, 0.4);
+  --tone-info-pill-fg: #bae6fd;
+  --tone-seo-link: #8ab4f8;
+
+  --tone-exchange-bg: rgba(99, 102, 241, 0.14);
+  --tone-exchange-border: rgba(99, 102, 241, 0.3);
+  --tone-exchange-fg: #c7d2fe;
+  --tone-exchange-fg-muted: #a5b4fc;
+  --tone-exchange-icon: #a5b4fc;
+  --tone-exchange-pill-bg: rgba(99, 102, 241, 0.22);
+  --tone-exchange-pill-fg: #c7d2fe;
+
+  --tone-shipping-bg: rgba(46, 16, 101, 0.22);
+  --tone-shipping-bg-soft: rgba(167, 139, 250, 0.15);
+  --tone-shipping-border: rgba(76, 29, 149, 0.5);
+  --tone-shipping-fg: #ddd6fe;
+  --tone-shipping-icon: #c4b5fd;
+  --tone-shipping-pill-bg: rgba(76, 29, 149, 0.4);
+  --tone-shipping-pill-fg: #ddd6fe;
+
+  --tone-refund-bg: rgba(67, 20, 7, 0.24);
+  --tone-refund-border: rgba(124, 45, 18, 0.5);
+  --tone-refund-fg: #fed7aa;
+  --tone-refund-pill-bg: rgba(124, 45, 18, 0.4);
+  --tone-refund-pill-fg: #fed7aa;
+
+  --tone-danger-bg: rgba(127, 29, 29, 0.35);
+  --tone-danger-bg-soft: rgba(251, 113, 133, 0.15);
+  --tone-danger-border: rgba(185, 28, 28, 0.5);
+  --tone-danger-fg: #fecaca;
+  --tone-danger-icon: #fda4af;
+  --tone-danger-solid: #fb7185;
+  --tone-danger-solid-soft: #fda4af;
+  --tone-danger-pill-bg: rgba(127, 29, 29, 0.4);
+  --tone-danger-pill-fg: #fecaca;
+
+  --tone-slate-bg: #1e293b;
+  --tone-slate-fg: #e2e8f0;
+  --tone-slate-soft-bg: #1e293b;
+  --tone-slate-soft-fg: #cbd5e1;
+
+  --tone-star: #fbbf24;
+  --tone-star-soft: #fcd34d;
+  --backdrop-scrim: rgba(0, 0, 0, 0.52);
+  --backdrop-scrim-soft: rgba(0, 0, 0, 0.28);
+  --backdrop-scrim-strong: rgba(0, 0, 0, 0.72);
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-color-soft: rgba(0, 0, 0, 0.28);
+  --shadow-color-strong: rgba(0, 0, 0, 0.65);
+}
+
+/* ============================================================================
+ * PRESET 2: OBSIDIAN & VERMILION (Modern Editorial D2C)
+ * ============================================================================ */
+:root[data-theme="vermilion"] {
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #d63b2f;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f5f8;
+  --secondary-foreground: #111827;
+  --muted: #f4f6f9;
+  --muted-foreground: #4b5563;
+  --accent: #feeceb;
+  --accent-foreground: #b22b21;
+  --border: rgba(17, 24, 39, 0.1);
+  --input: rgba(17, 24, 39, 0.16);
+  --ring: #d63b2f;
+  --store-section-tint: #f4f6f9;
+  --store-sky-surface: #f1f5f9;
+  --store-sky-soft: #eef2f7;
+  --store-support: #111827;
+  --store-support-fg: #f9fafb;
+  --store-accent-hover: #bc2f24;
+  --hero-a: rgba(214, 59, 47, 0.11);
+  --hero-b: rgba(17, 24, 39, 0.06);
+  --hero-c: rgba(56, 189, 248, 0.09);
+}
+.dark[data-theme="vermilion"] {
+  --background: #0b0f17;
+  --foreground: #f3f6fa;
+  --card: #131924;
+  --card-foreground: #f3f6fa;
+  --popover: #131924;
+  --popover-foreground: #f3f6fa;
+  --primary: #e64f43;
+  --primary-foreground: #ffffff;
+  --secondary: #1b2332;
+  --secondary-foreground: #f3f6fa;
+  --muted: #171e2b;
+  --muted-foreground: #9ca8ba;
+  --accent: #2d1b1e;
+  --accent-foreground: #ff9087;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.16);
+  --ring: #e64f43;
+  --store-section-tint: #0f1520;
+  --store-sky-surface: #111927;
+  --store-sky-soft: #152032;
+  --store-support: #172133;
+  --store-support-fg: #f3f6fa;
+  --store-accent-hover: #f26358;
+  --hero-a: rgba(230, 79, 67, 0.15);
+  --hero-b: rgba(56, 189, 248, 0.1);
+  --hero-c: rgba(230, 79, 67, 0.08);
+}
+
+/* ============================================================================
+ * PRESET 3: FOREST EMERALD (Organic Luxury)
+ * ============================================================================ */
+:root[data-theme="emerald"] {
+  --background: #f9faf8;
+  --foreground: #13221c;
+  --card: #ffffff;
+  --card-foreground: #13221c;
+  --popover: #ffffff;
+  --popover-foreground: #13221c;
+  --primary: #156847;
+  --primary-foreground: #ffffff;
+  --secondary: #eef3ef;
+  --secondary-foreground: #13221c;
+  --muted: #f0f4f1;
+  --muted-foreground: #4b6158;
+  --accent: #e3f5ec;
+  --accent-foreground: #0f5137;
+  --border: rgba(19, 34, 28, 0.1);
+  --input: rgba(19, 34, 28, 0.16);
+  --ring: #156847;
+  --store-section-tint: #eef3ef;
+  --store-sky-surface: #edf4ef;
+  --store-sky-soft: #e6f0e9;
+  --store-support: #13221c;
+  --store-support-fg: #f2f7f4;
+  --store-accent-hover: #0f5438;
+  --hero-a: rgba(21, 104, 71, 0.11);
+  --hero-b: rgba(16, 185, 129, 0.08);
+  --hero-c: rgba(19, 34, 28, 0.05);
+}
+.dark[data-theme="emerald"] {
+  --background: #0c1411;
+  --foreground: #edf5f1;
+  --card: #131e1a;
+  --card-foreground: #edf5f1;
+  --popover: #131e1a;
+  --popover-foreground: #edf5f1;
+  --primary: #2ea876;
+  --primary-foreground: #061a12;
+  --secondary: #1a2923;
+  --secondary-foreground: #edf5f1;
+  --muted: #16231e;
+  --muted-foreground: #94aca2;
+  --accent: #132d23;
+  --accent-foreground: #6ee7b7;
+  --border: rgba(237, 245, 241, 0.11);
+  --input: rgba(237, 245, 241, 0.17);
+  --ring: #2ea876;
+  --store-section-tint: #101a16;
+  --store-sky-surface: #12201b;
+  --store-sky-soft: #172721;
+  --store-support: #192b24;
+  --store-support-fg: #edf5f1;
+  --store-accent-hover: #42be8b;
+  --hero-a: rgba(46, 168, 118, 0.15);
+  --hero-b: rgba(16, 185, 129, 0.09);
+  --hero-c: rgba(46, 168, 118, 0.07);
+}
+
+/* ============================================================================
+ * PRESET 4: ROYAL INDIGO (Stripe-Grade Clarity)
+ * ============================================================================ */
+:root[data-theme="indigo"] {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4338ca;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f8;
+  --secondary-foreground: #0f172a;
+  --muted: #f4f5f9;
+  --muted-foreground: #475569;
+  --accent: #eef2ff;
+  --accent-foreground: #3730a3;
+  --border: rgba(15, 23, 42, 0.1);
+  --input: rgba(15, 23, 42, 0.16);
+  --ring: #4338ca;
+  --store-section-tint: #f3f4f8;
+  --store-sky-surface: #eef1fb;
+  --store-sky-soft: #e8ecfa;
+  --store-support: #1e1b4b;
+  --store-support-fg: #f5f7ff;
+  --store-accent-hover: #3730a3;
+  --hero-a: rgba(67, 56, 202, 0.11);
+  --hero-b: rgba(99, 102, 241, 0.09);
+  --hero-c: rgba(56, 189, 248, 0.08);
+}
+.dark[data-theme="indigo"] {
+  --background: #0b0e17;
+  --foreground: #f1f5f9;
+  --card: #131826;
+  --card-foreground: #f1f5f9;
+  --popover: #131826;
+  --popover-foreground: #f1f5f9;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1c2336;
+  --secondary-foreground: #f1f5f9;
+  --muted: #171d2d;
+  --muted-foreground: #94a3b8;
+  --accent: #212247;
+  --accent-foreground: #a5b4fc;
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.17);
+  --ring: #6366f1;
+  --store-section-tint: #0f1420;
+  --store-sky-surface: #13192b;
+  --store-sky-soft: #182036;
+  --store-support: #1c2440;
+  --store-support-fg: #f1f5f9;
+  --store-accent-hover: #7c7ff5;
+  --hero-a: rgba(99, 102, 241, 0.16);
+  --hero-b: rgba(56, 189, 248, 0.1);
+  --hero-c: rgba(129, 140, 248, 0.09);
+}
+
+/* ============================================================================
+ * PRESET 5: DEEP TEAL & SAND (Coastal Studio)
+ * ============================================================================ */
+:root[data-theme="teal"] {
+  --background: #faf9f6;
+  --foreground: #0c2d36;
+  --card: #ffffff;
+  --card-foreground: #0c2d36;
+  --popover: #ffffff;
+  --popover-foreground: #0c2d36;
+  --primary: #0f6b75;
+  --primary-foreground: #ffffff;
+  --secondary: #edf4f5;
+  --secondary-foreground: #0c2d36;
+  --muted: #f0f5f5;
+  --muted-foreground: #4a666e;
+  --accent: #e2f4f6;
+  --accent-foreground: #0b535b;
+  --border: rgba(12, 45, 54, 0.1);
+  --input: rgba(12, 45, 54, 0.16);
+  --ring: #0f6b75;
+  --store-section-tint: #edf4f5;
+  --store-sky-surface: #eaf3f4;
+  --store-sky-soft: #e2eff1;
+  --store-support: #0c2d36;
+  --store-support-fg: #f2f9fa;
+  --store-accent-hover: #0b565e;
+  --hero-a: rgba(15, 107, 117, 0.11);
+  --hero-b: rgba(20, 184, 166, 0.08);
+  --hero-c: rgba(12, 45, 54, 0.06);
+}
+.dark[data-theme="teal"] {
+  --background: #0a1417;
+  --foreground: #ecf6f8;
+  --card: #111f24;
+  --card-foreground: #ecf6f8;
+  --popover: #111f24;
+  --popover-foreground: #ecf6f8;
+  --primary: #22a6b3;
+  --primary-foreground: #05191c;
+  --secondary: #182b31;
+  --secondary-foreground: #ecf6f8;
+  --muted: #142429;
+  --muted-foreground: #8faab2;
+  --accent: #112e34;
+  --accent-foreground: #67e8f9;
+  --border: rgba(236, 246, 248, 0.11);
+  --input: rgba(236, 246, 248, 0.17);
+  --ring: #22a6b3;
+  --store-section-tint: #0e1a1e;
+  --store-sky-surface: #112126;
+  --store-sky-soft: #16292f;
+  --store-support: #182e35;
+  --store-support-fg: #ecf6f8;
+  --store-accent-hover: #38bcc9;
+  --hero-a: rgba(34, 166, 179, 0.16);
+  --hero-b: rgba(56, 189, 248, 0.09);
+  --hero-c: rgba(34, 166, 179, 0.08);
+}
+
+/* ============================================================================
+ * PRESET 6: BURGUNDY & CREAM (Heritage Boutique)
+ * ============================================================================ */
+:root[data-theme="burgundy"] {
+  --background: #fcf9f5;
+  --foreground: #26181a;
+  --card: #ffffff;
+  --card-foreground: #26181a;
+  --popover: #ffffff;
+  --popover-foreground: #26181a;
+  --primary: #8c2336;
+  --primary-foreground: #ffffff;
+  --secondary: #f5ecee;
+  --secondary-foreground: #26181a;
+  --muted: #f6eff0;
+  --muted-foreground: #695457;
+  --accent: #fbe8ec;
+  --accent-foreground: #731a2b;
+  --border: rgba(38, 24, 26, 0.11);
+  --input: rgba(38, 24, 26, 0.16);
+  --ring: #8c2336;
+  --store-section-tint: #f5ecee;
+  --store-sky-surface: #f8eff0;
+  --store-sky-soft: #f3e6e8;
+  --store-support: #33131b;
+  --store-support-fg: #fcf6f7;
+  --store-accent-hover: #731a2b;
+  --hero-a: rgba(140, 35, 54, 0.11);
+  --hero-b: rgba(217, 107, 56, 0.08);
+  --hero-c: rgba(140, 35, 54, 0.07);
+}
+.dark[data-theme="burgundy"] {
+  --background: #150e10;
+  --foreground: #faf2f3;
+  --card: #201518;
+  --card-foreground: #faf2f3;
+  --popover: #201518;
+  --popover-foreground: #faf2f3;
+  --primary: #d94e67;
+  --primary-foreground: #ffffff;
+  --secondary: #2b1d21;
+  --secondary-foreground: #faf2f3;
+  --muted: #24181b;
+  --muted-foreground: #b59ca0;
+  --accent: #381b23;
+  --accent-foreground: #fda4af;
+  --border: rgba(255, 240, 242, 0.12);
+  --input: rgba(255, 240, 242, 0.17);
+  --ring: #d94e67;
+  --store-section-tint: #1a1214;
+  --store-sky-surface: #201519;
+  --store-sky-soft: #271a1f;
+  --store-support: #2e1c22;
+  --store-support-fg: #faf2f3;
+  --store-accent-hover: #e6667d;
+  --hero-a: rgba(217, 78, 103, 0.16);
+  --hero-b: rgba(217, 107, 56, 0.09);
+  --hero-c: rgba(217, 78, 103, 0.08);
+}
+
+/* ============================================================================
+ * PRESET 7: MIDNIGHT COBALT (Crisp High-Trust Commerce)
+ * ============================================================================ */
+:root[data-theme="cobalt"] {
+  --background: #f8fafc;
+  --foreground: #0b1f3a;
+  --card: #ffffff;
+  --card-foreground: #0b1f3a;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f3a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #0b1f3a;
+  --muted: #f0f4f9;
+  --muted-foreground: #475d78;
+  --accent: #dbeafe;
+  --accent-foreground: #1e40af;
+  --border: rgba(11, 31, 58, 0.1);
+  --input: rgba(11, 31, 58, 0.16);
+  --ring: #1d4ed8;
+  --store-section-tint: #eef2f7;
+  --store-sky-surface: #eaf1fb;
+  --store-sky-soft: #e2ecf9;
+  --store-support: #0b1f3a;
+  --store-support-fg: #f3f7fc;
+  --store-accent-hover: #1e40af;
+  --hero-a: rgba(29, 78, 216, 0.11);
+  --hero-b: rgba(56, 189, 248, 0.09);
+  --hero-c: rgba(11, 31, 58, 0.05);
+}
+.dark[data-theme="cobalt"] {
+  --background: #09101d;
+  --foreground: #eff6ff;
+  --card: #111b2e;
+  --card-foreground: #eff6ff;
+  --popover: #111b2e;
+  --popover-foreground: #eff6ff;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #192640;
+  --secondary-foreground: #eff6ff;
+  --muted: #142036;
+  --muted-foreground: #93a8c7;
+  --accent: #182b4d;
+  --accent-foreground: #93c5fd;
+  --border: rgba(255, 255, 255, 0.11);
+  --input: rgba(255, 255, 255, 0.17);
+  --ring: #3b82f6;
+  --store-section-tint: #0d1627;
+  --store-sky-surface: #111d33;
+  --store-sky-soft: #16243f;
+  --store-support: #182845;
+  --store-support-fg: #eff6ff;
+  --store-accent-hover: #60a5fa;
+  --hero-a: rgba(59, 130, 246, 0.16);
+  --hero-b: rgba(56, 189, 248, 0.11);
+  --hero-c: rgba(59, 130, 246, 0.08);
+}
+
+/* ============================================================================
+ * PRESET 8: CHARCOAL GALLERY (Minimalist Luxury Monochrome)
+ * ============================================================================ */
+:root[data-theme="charcoal"] {
+  --background: #ffffff;
+  --foreground: #141414;
+  --card: #ffffff;
+  --card-foreground: #141414;
+  --popover: #ffffff;
+  --popover-foreground: #141414;
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #141414;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --border: rgba(24, 24, 27, 0.11);
+  --input: rgba(24, 24, 27, 0.18);
+  --ring: #18181b;
+  --store-section-tint: #f5f5f6;
+  --store-sky-surface: #f4f4f5;
+  --store-sky-soft: #ececef;
+  --store-support: #18181b;
+  --store-support-fg: #fafafa;
+  --store-accent-hover: #27272a;
+  --hero-a: rgba(24, 24, 27, 0.07);
+  --hero-b: rgba(180, 83, 9, 0.06);
+  --hero-c: rgba(24, 24, 27, 0.04);
+}
+.dark[data-theme="charcoal"] {
+  --background: #0c0c0e;
+  --foreground: #fafafa;
+  --card: #16161a;
+  --card-foreground: #fafafa;
+  --popover: #16161a;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #111113;
+  --secondary: #202026;
+  --secondary-foreground: #fafafa;
+  --muted: #1b1b20;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272e;
+  --accent-foreground: #fafafa;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.18);
+  --ring: #e4e4e7;
+  --store-section-tint: #111114;
+  --store-sky-surface: #151519;
+  --store-sky-soft: #1c1c21;
+  --store-support: #1f1f25;
+  --store-support-fg: #fafafa;
+  --store-accent-hover: #e4e4e7;
+  --hero-a: rgba(255, 255, 255, 0.07);
+  --hero-b: rgba(251, 191, 36, 0.06);
+  --hero-c: rgba(255, 255, 255, 0.04);
+}

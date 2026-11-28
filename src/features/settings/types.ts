@@ -1,4 +1,5 @@
 import type { PaymentGatewayProvider, PaymentMode } from "@/features/orders/types"
+import type { CustomThemeColors, ThemePresetId } from "./theme"
 
 /**
  * Everything the shop owner can change from Admin → Settings, without touching code.
@@ -77,6 +78,12 @@ export type StoreSettings = {
   upiId: string | null
   /** Name shown in the customer's UPI app when paying. */
   upiPayeeName: string | null
+
+  // ---- Appearance / Unified Theme ----
+  /** Selected preset ID (one of 8 curated presets, or "custom"). Applied across both Storefront & Admin. */
+  themePreset: ThemePresetId
+  /** 3 brand colors when themePreset === "custom" (auto-derives dark mode & surface tints). */
+  themeCustom: CustomThemeColors | null
 }
 
 export type PromoDiscountType = "percent" | "flat"

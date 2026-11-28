@@ -14,7 +14,7 @@
 .variantSelectedPriceWrap .variantSelectedPrice { font-size: 16px; font-weight: 700; color: var(--foreground); }
 .variantSelectedPriceWrap .variantSelectedCompare { font-size: 12px; color: var(--muted-foreground); text-decoration: line-through; }
 .variantPillsRow { display: flex; flex-wrap: wrap; gap: 8px; }
-.variantPillsRow .variantPillBtn { position: relative; overflow: hidden; display: inline-flex; min-height: 40px; cursor: pointer; align-items: center; gap: 7px; border-radius: 10px; border: 1.5px solid var(--border); background-color: var(--card); padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 120ms ease; }
+.variantPillsRow .variantPillBtn { position: relative; overflow: hidden; display: inline-flex; min-height: 42px; cursor: pointer; align-items: center; gap: 7px; border-radius: 10px; border: 1.5px solid var(--border); background-color: var(--card); padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--foreground); transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 120ms ease; }
 .variantPillsRow .variantPillBtn:hover { border-color: color-mix(in oklab, var(--primary) 55%, var(--border)); }
 .variantPillsRow .variantPillBtn:active { transform: scale(0.97); }
 .variantPillsRow .variantPillSelected { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 10%, var(--card)); color: var(--primary); box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 24%, transparent); }
@@ -310,6 +310,11 @@
   .feedSearchRow .feedSortSelect { width: 220px; flex: 0 0 220px; }
   .feedToolbar .aspectFilterRow { flex-wrap: wrap; }
   .fullReviewsList .reviewCardItem { padding: 20px; }
+}
+@media (pointer: coarse) {
+  .variantPillsRow .variantPillBtn { min-height: 44px; }
+  .voteBtnsGroup .voteCircleBtn { width: 40px; height: 40px; }
+  .reviewOwnerBtns .ownerIconBtn { width: 40px; height: 40px; }
 }
 @media (min-width: 1024px) {
   .reviewsSection { padding: 0 32px; }

@@ -96,11 +96,19 @@ export async function getMyOrder(code: string, nextPath = `/account/orders/${cod
     ...order,
     items: order.items.map((item) => {
       const live = byId.get(item.productId)
+      const resolvedAspects =
+        item.reviewAspects && item.reviewAspects.length > 0
+          ? item.reviewAspects
+          : live?.reviewAspects && live.reviewAspects.length > 0
+            ? live.reviewAspects
+            : live?.category?.reviewAspects && live.category.reviewAspects.length > 0
+              ? live.category.reviewAspects
+              : undefined
       return {
         ...item,
         returnWindowDays:
           item.returnWindowDays ?? live?.returnWindowDays ?? shop.returnWindowDays,
-        reviewAspects: item.reviewAspects ?? live?.reviewAspects,
+        reviewAspects: resolvedAspects,
       }
     }),
   }

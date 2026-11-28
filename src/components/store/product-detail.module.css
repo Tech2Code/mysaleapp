@@ -7,10 +7,10 @@
 .thumbRail .thumbBtnActive { opacity: 1; box-shadow: 0 0 0 2px var(--primary); }
 .galleryLayout .mainStage { position: relative; aspect-ratio: 4 / 5; flex: 1 1 0%; overflow: hidden; border-radius: 16px; background-color: var(--muted); box-shadow: var(--store-elevation-sm); user-select: none; container-type: inline-size; }
 .mainStage .slideLayer { position: absolute; inset: 0; }
-.mainStage .navArrowPrev { position: absolute; top: 50%; left: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowPrev { position: absolute; top: 50%; left: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 40px; height: 40px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 92%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
 .mainStage .navArrowPrev:hover { background-color: var(--card); }
 .mainStage .navArrowPrev:active { transform: translateY(-50%) scale(0.95); }
-.mainStage .navArrowNext { position: absolute; top: 50%; right: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 36px; height: 36px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 88%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
+.mainStage .navArrowNext { position: absolute; top: 50%; right: 12px; z-index: 10; transform: translateY(-50%); display: grid; width: 40px; height: 40px; place-items: center; border-radius: 9999px; border: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 92%, transparent); color: var(--foreground); box-shadow: 0 4px 12px var(--shadow-color); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); transition: background-color 150ms ease, transform 150ms ease; }
 .mainStage .navArrowNext:hover { background-color: var(--card); }
 .mainStage .navArrowNext:active { transform: translateY(-50%) scale(0.95); }
 .arrowIcon { width: 20px; height: 20px; }
@@ -23,8 +23,8 @@
 .infoColumn .categoryEyebrow { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 1.4px; color: var(--primary); text-transform: uppercase; }
 .infoColumn .productHeading { margin: 8px 0 0 0; font-size: 30px; line-height: 36px; font-weight: 600; color: var(--foreground); }
 .infoColumn .priceHeaderRow { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
-.priceHeaderRow .mainPriceText { font-family: var(--font-heading); font-size: 30px; line-height: 36px; font-weight: 600; color: var(--foreground); }
-.priceHeaderRow .comparePriceText { font-size: 18px; color: var(--muted-foreground); text-decoration: line-through; }
+.priceHeaderRow .mainPriceText { font-family: var(--font-heading); font-size: 30px; line-height: 36px; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.priceHeaderRow .comparePriceText { font-size: 18px; color: var(--muted-foreground); text-decoration: line-through; font-variant-numeric: tabular-nums; }
 .priceHeaderRow .saveBadge { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 4px 12px; font-size: 14px; font-weight: 600; color: var(--primary); }
 .priceHeaderRow .reviewsAnchorPill { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--foreground); transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .priceHeaderRow .reviewsAnchorPill:hover { transform: translateY(-1px); box-shadow: var(--store-elevation-md); }
@@ -90,6 +90,9 @@
 @media (min-width: 768px) {
   .galleryLayout { flex-direction: row; }
   .galleryLayout .thumbRail { width: 92px; flex-direction: column; gap: 12px; }
+}
+@media (pointer: coarse) {
+  .mainStage .navArrowPrev, .mainStage .navArrowNext { width: 44px; height: 44px; }
 }
 @media (min-width: 1024px) {
   .crumbsBar { padding: 24px 32px 16px 32px; }

@@ -1238,3 +1238,134 @@ Chronological log of all features, UI redesigns, bug fixes, root-cause analyses,
   - `src/data/faqs.json` (created)
   - `src/components/store/faq-view.tsx`
   - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 21:43 IST — Fix Shop All Page Skeleton & Page-Switch Loader, Convert Address "Save as" to Icon Tabs, and Unify Order vs Product Review Aspects
+
+- **User Prompt**:
+  1. Shop All page par jab bhi new page hota hai to pura center ka content gayab ho jata hai aur achanak se aata hai — wahan skeleton loader hona chahiye.
+  2. Address "Save as" ko select box hata kar icon tabs mein do.
+  3. Order page ke review popup mein "What did you love about it?" ke options aur Product Detail page ke options alag-alag kyun aate hain?
+- **Problems / Root Causes**:
+  1. **Shop All Skeleton (`page-views.tsx`, `product-browser.tsx`)**: `ProductsPageView` rendered `<Suspense fallback={<ProductGrid ... />}>` without `<Skeletonize>` or the filter bar, and clicking a new pagination page in `ProductBrowser` swapped straight to uncached product cards (`opacity: 0` pending images) with no skeleton transition.
+  2. **Address "Save as" (`address-book.tsx`, `checkout-form.tsx`, `request-return.tsx`)**: `AddressDialog` rendered a `<FormSelectField>` dropdown for `label` (`Home` / `Work` / `Other`), while Checkout and Return pickup address modals rendered plain text buttons without icons.
+  3. **Review Aspects Mismatch (`src/features/orders/queries.ts`)**: `getMyOrder()` set `reviewAspects: item.reviewAspects ?? live?.reviewAspects`. Because `mapProduct()` defaults `live.reviewAspects` to `[]` (truthy empty array) when a product has no product-level override, `??` stopped at `[]` and never fell back to `live.category?.reviewAspects`, forcing the Order review popup onto `DEFAULT_REVIEW_ASPECTS` while Product Detail resolved `product.category.reviewAspects`.
+- **Solution / Changes Made**:
+  1. Replaced `ProductsPageView`'s `<Suspense fallback>` with `<Skeletonize><ProductBrowser products={items} categories={categories} preview /></Skeletonize>` and added a crisp `180ms` `<Skeletonize>` transition on `ProductBrowser` pagination changes (with unmount timer cleanup).
+  2. Replaced "Save as" across `AddressBook`, `CheckoutForm` ("Add new address" modal), and `RequestReturn` (New pickup address modal) with the shared `<SegmentedTabs layout="equal" surface="card" shape="rounded" />` featuring `HomeIcon`, `BriefcaseIcon`, and `MapPinIcon`.
+  3. Updated `getMyOrder()` in `src/features/orders/queries.ts` to resolve `reviewAspects` in the exact same priority order as Product Detail (`item.reviewAspects` non-empty → `live.reviewAspects` non-empty → `live.category.reviewAspects` non-empty → `undefined` / defaults).
+  4. Added 3 permanent regression tests in `src/features/orders/ux-flows-audit.test.ts`.
+- **Files Modified**:
+  - `src/components/store/page-views.tsx`
+  - `src/components/store/product-browser.tsx`
+  - `src/components/account/address-book.tsx`, `src/components/account/account.module.css`
+  - `src/components/store/checkout-form.tsx`
+  - `src/components/store/request-return.tsx`
+  - `src/features/orders/queries.ts`
+  - `src/features/orders/ux-flows-audit.test.ts`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 21:51 IST — Fix Mobile Shop All Duplicate Sort/Category Pill Carousels & Hide Mobile Tab Carousel Arrows
+
+- **User Prompt**: `"ye dono mobile me same ui lag rahe h ? with carausal ui ux odd lag raha h, mobile me? fix ths ui issue"` (with screenshot showing Sort & Category stacked as two identical pill carousels with `<` `>` arrow buttons on mobile).
+- **Problem / Root Cause**:
+  1. `ProductBrowser` rendered two stacked `PillTabs` rows on mobile (`< 640px`) — one for Sort (`Featured`, `Newest`, `Price: low to high`) and another right below it for Categories (`All`, `Home Decor`, `Gifts`…), making them look visually identical and confusing.
+  2. `PillTabs` and `SegmentedTabs` rendered two `44px` circular `<` `>` chevron buttons on mobile (`< 640px`), consuming `~104px` (~30%) of a `360px` screen width on touch devices where users swipe naturally.
+- **Solution / Changes Made**:
+  1. Removed the duplicate mobile Sort `PillTabs` row in `src/components/store/product-browser.tsx` and placed a compact mobile-only Sort `<SelectField>` (`Sort: Featured`) in the results header bar right opposite the product count (`16 products`), while keeping the sticky bar clean with Search + a single edge-to-edge swipeable Category pill strip (desktop `>= 640px` layout unchanged).
+  2. Hid `.scrollArrowBtn` on mobile (`< 640px`) in `pill-tabs.module.css` and `segmented-tabs.module.css` (shown at `>= 640px` on desktop) so mobile tab strips deliver a full-width native touch-swipe experience.
+- **Files Modified**:
+  - `src/components/store/product-browser.tsx`
+  - `src/components/store/product-browser.module.css`
+  - `src/components/shared/pill-tabs.module.css`
+  - `src/components/shared/segmented-tabs.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 22:13 IST — App-Wide Modern Ecommerce UI, WCAG AA Contrast & Accessibility Craft Pass (`/impeccable`)
+
+- **User Prompt**: `"/impeccable mere all ovver the app ke ui ko ek baar analize kar ke mordern feasiable assesable etc jese ek mordern ecommerce app me hona chaiye vesa ui implement karo. bus dhyan rahe web and mobile ki fuctionality me change na aae"`
+- **Problems / Root Causes**:
+  1. **WCAG AA Primary Contrast (`theme-store.css`)**: Storefront `--primary` (`#ff6b5a`) on white (`#ffffff`) had a ~2.92:1 contrast ratio, failing WCAG AA (4.5:1) on CTAs, active tabs, badges, and links; `--border` (`0.055`) and `--input` (`0.09`) were too faint on light displays.
+  2. **Unthemed Browser Surfaces & High-Contrast Focus (`globals.css`)**: Missing palette-tinted `::selection`, `caret-color`, `accent-color`, default `text-underline-offset`, and `@media (forced-colors: active)` `:focus-visible` outline fallbacks for box-shadow focus rings.
+  3. **Visual Craft & Hierarchy (`hero.module.css`, `product-card.module.css`, `header.module.css`, `footer.module.css`)**: Hero headline accent used low-contrast gradient text; mobile product cards nested double box-shadows (`.productCard` + `.mediaFrame`); desktop hover-only Quick Add button was not revealed on `:focus-within`; sticky header and footer lacked crisp hairline separation borders.
+  4. **Touch Targets & Tabular Numerals (`mobile-bottom-nav.module.css`, `product-detail.module.css`, `product-actions.module.css`, `cart.module.css`, `checkout-form.module.css`, `ui.module.css`, `form.module.css`, `admin-core.module.css`, `admin/(panel)/layout.tsx`)**: Several mobile/coarse-pointer interactive controls (dialog/checkout back buttons, cart remove buttons, gallery arrows, copy buttons, variant pills, search clear/voice icons, admin nav links) were below `44px`; price/table figures lacked `tabular-nums` in several views; Admin panel lacked a keyboard skip-to-content link.
+- **Solution / Changes Made**:
+  - Deepened storefront `--primary` to WCAG AA-compliant `#dc4331` (4.63:1 on white) / hover `#c53423` (dark `#e24c3b`) and sharpened `--border`, `--input`, and `--muted-foreground` tokens in `theme-store.css` and `theme-admin.css`.
+  - Added themed `::selection`, `caret-color`, `accent-color`, `text-underline-offset`, and `@media (forced-colors: active)` focus outlines in `globals.css`.
+  - Replaced hero gradient text with sharp editorial italic `color: var(--primary)`, eliminated nested mobile product-card shadows, added `:focus-within` Quick Add reveal, and added crisp header/footer hairlines.
+  - Upgraded coarse-pointer / mobile touch targets to `>= 44px`, refined Switch proportions & placeholder legibility, added `font-variant-numeric: tabular-nums` to PDP prices, cart totals, and tables, and added an accessible Skip to content link to `AdminPanelLayout` — with zero changes to web or mobile JS/business functionality.
+- **Files Modified**:
+  - `src/app/globals.css`, `src/styles/theme-store.css`, `src/styles/theme-admin.css`
+  - `src/components/store/header.module.css`, `src/components/store/hero.module.css`, `src/components/store/product-card.module.css`, `src/components/store/mobile-bottom-nav.module.css`, `src/components/store/footer.module.css`, `src/components/store/product-detail.module.css`, `src/components/store/product-actions.module.css`, `src/components/store/cart.module.css`, `src/components/store/checkout-form.module.css`
+  - `src/components/ui/ui.module.css`, `src/components/form/form.module.css`, `src/components/admin/admin-core.module.css`, `src/app/admin/(panel)/layout.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 22:43 IST — Unified Storefront + Admin Theme System (8 Curated Presets + Custom 3-Color Builder in Admin Settings)
+
+- **User Prompt**: `"i think theme user nad amin me alag alag chal raha h? inko same hi kar de to manage karne me aasan rahega ... yesa ho sakta h kaya , m ye 8 ke 8 option de du admin me takki admin inme se koe bhi select kar sake, or ek custom bhi jisse user apne aap koe custom bana sake?"`
+- **Problem / Root Cause**:
+  - Storefront (`src/styles/theme-store.css`) and Admin Panel (`src/styles/theme-admin.css`) used two completely separate color palettes, making the two halves look like unrelated apps and requiring edits in two files for any re-theme.
+- **Solution / Changes Made**:
+  - Unified Storefront + Admin colors into a single stylesheet [src/styles/theme.css](file:///d:/nextApps/mysaleapp/src/styles/theme.css) imported once in [src/app/globals.css](file:///d:/nextApps/mysaleapp/src/app/globals.css), with **Artisanal Terracotta** as the default and all **8 WCAG AA/AAA presets** (`terracotta`, `vermilion`, `emerald`, `indigo`, `teal`, `burgundy`, `cobalt`, `charcoal`) supporting Light & Dark modes across both Storefront and Admin (Admin retains compact density only).
+  - Created [src/features/settings/theme.ts](file:///d:/nextApps/mysaleapp/src/features/settings/theme.ts) with preset metadata, strict 6-digit hex validation, WCAG 2.1 contrast calculation, and automatic Light + Dark CSS derivation from 3 custom brand colors.
+  - Added DB migration [supabase/migrations/0078_store_theme.sql](file:///d:/nextApps/mysaleapp/supabase/migrations/0078_store_theme.sql) (`theme_preset`, `theme_custom`) and wired `StoreSettings` types, defaults, Zod schema, cached queries, and `saveStoreSettings` (with graceful unpushed-migration fallback).
+  - Injected `data-theme={settings.themePreset}` and SSR custom CSS `<style id="kalakriti-custom-theme">` in [src/app/layout.tsx](file:///d:/nextApps/mysaleapp/src/app/layout.tsx) for zero-FOUC rendering.
+  - Added **Theme & Appearance** section ([theme-settings-section.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/theme-settings-section.tsx) + [theme-settings-section.module.css](file:///d:/nextApps/mysaleapp/src/components/admin/theme-settings-section.module.css)) inside Admin → Settings ([store-settings-form.tsx](file:///d:/nextApps/mysaleapp/src/components/admin/store-settings-form.tsx)) with live Storefront + Admin dual preview, Light/Dark toggle, 8 preset cards, 3-color custom builder, WCAG AA contrast badges, and instant DOM sync on save.
+  - Added unit tests in [src/features/settings/theme.test.ts](file:///d:/nextApps/mysaleapp/src/features/settings/theme.test.ts).
+  - Synced Favicon (`src/app/icon.tsx`), Apple Touch Icon (`src/app/apple-icon.tsx`), PWA icons (`src/app/icons/[size]/route.tsx`), `manifest.ts`, `generateViewport()` `themeColor`, and `LogoMark` (`src/components/shared/logo.tsx` + `theme.css`) to the active unified theme with cache-busting `?v=<theme>` URLs and live browser-tab favicon refresh on Save.
+  - Applied migration `0078_store_theme.sql` to remote Supabase (`nepfgwfunxebhsfrfxeb`).
+- **Files Created / Modified**:
+  - Created: `src/styles/theme.css`, `src/features/settings/theme.ts`, `src/features/settings/theme.test.ts`, `supabase/migrations/0078_store_theme.sql`, `src/components/admin/theme-settings-section.tsx`, `src/components/admin/theme-settings-section.module.css`
+  - Modified: `src/app/globals.css`, `src/app/layout.tsx`, `src/features/settings/{types,defaults,schema,queries,actions}.ts`, `src/components/admin/store-settings-form.tsx`, `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 22:16 IST — Restore Borderless Frosted-Glass `.stickyFilterBar` Styling on Shop All
+
+- **User Prompt**: `"class=\"product-browser-module__IbPrtq__stickyFilterBar\" ye sticky pe jese pele th avese kar do, border etc hata do"`
+- **Problem / Root Cause**:
+  - `.stickyFilterBar` in `product-browser.module.css` had a `border: 1px solid transparent` / `border-radius: 16px` and `border-color` on `[data-stuck]`, making it look like a bordered box instead of the original seamless borderless frosted-glass bar.
+- **Solution / Changes Made**:
+  - Restored `.stickyFilterBar` to `border: 0; border-radius: 0; background-color: transparent; box-shadow: none;` and `.stickyFilterBar[data-stuck]` to frosted glass (`background-color: color-mix(in oklab, var(--background) 82%, transparent); backdrop-filter: blur(28px) saturate(180%); box-shadow: 0 14px 32px -16px var(--shadow-color-soft);`) with zero border and compositor-safe transitions.
+- **Files Modified**:
+  - `src/components/store/product-browser.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 22:18 IST — Restore Full-Viewport Edge-to-Edge Width on `.stickyFilterBar`
+
+- **User Prompt**: `"class=\"product-browser-module__IbPrtq__stickyFilterBar\" iski width jitni thi full me utni karo na sticky hone pe"`
+- **Solution / Changes Made**:
+  - Restored full-bleed viewport width (`margin: 0 calc(50% - 50vw) 32px calc(50% - 50vw); padding: 14px calc(50vw - 50%);`) and `:global(body):has(.stickyFilterBar) { overflow-x: clip; }` on `.stickyFilterBar` in `src/components/store/product-browser.module.css` so the frosted-glass sticky bar spans 100% edge-to-edge on web & mobile while keeping the inner controls aligned with the page container.
+- **Files Modified**:
+  - `src/components/store/product-browser.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 22:23 IST — Refine `SegmentedTabs` Height & Tray Proportions on Mobile and Desktop
+
+- **User Prompt**: `".segmented-tabs-module__1SexrG__segmentedTray mobile me tab ki height kuch jayada hi lag rahi h? isko fix karo or web me bhi ek baar usi hisab se dekh lena"`
+- **Problem / Root Cause**:
+  - `.segmentedTray` used `padding: 4px` around `.segmentBtnScroll` (`height: 44px`), producing a `54px` tall tab bar on mobile (`< 640px`) and `46px` for equal segmented tabs on desktop.
+- **Solution / Changes Made**:
+  - Tightened `.segmentedTray` to `padding: 3px; gap: 3px; border-radius: 11px;`.
+  - Standardized mobile `.segmentBtn` and `.segmentBtnScroll` to `height: 36px` (`44px` total tray height on mobile — sleek while preserving comfortable tap area) and desktop (`>= 640px`) to `height: 34px` (`42px` total tray height).
+- **Files Modified**:
+  - `src/components/shared/segmented-tabs.module.css`
+  - `DEVELOPMENT_LOG.md`

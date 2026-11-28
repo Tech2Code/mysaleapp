@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next"
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google"
-import { BRAND_PALETTE } from "@/components/shared/brand-glyph"
 import { Providers } from "@/components/shared/providers"
 import { StoreSettingsProvider } from "@/components/store/store-settings-provider"
 import { siteConfig } from "@/config/site"
 import { getStoreSettings } from "@/features/settings/queries"
+import { buildCustomThemeCss, resolveThemeBrandPalette } from "@/features/settings/theme"
 import "./globals.css"
 import styles from "@/app/(store)/store-layout.module.css"
 
@@ -23,6 +23,7 @@ const body = Plus_Jakarta_Sans({
 /** Site-wide metadata comes from Admin → Settings (shop name, tagline, description, keywords). */
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getStoreSettings()
+  const brand = resolveThemeBrandPalette(s.themePreset, s.themeCustom)
   const title = `${s.shopName} — ${s.tagline}`
   return {
     metadataBase: new URL(siteConfig.url),
@@ -33,6 +34,10 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: s.shopName }],
     creator: s.shopName,
     formatDetection: { telephone: false },
+    icons: {
+      icon: [{ url: `/icon?v=${brand.versionKey}`, type: "image/png" }],
+      apple: [{ url: `/apple-icon?v=${brand.versionKey}`, type: "image/png" }],
+    },
     // No site-wide canonical: it would be inherited by every page. Pages set their own via pageMetadata().
     openGraph: {
       type: "website",
@@ -53,21 +58,37 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: BRAND_PALETTE.themeColor },
-    { media: "(prefers-color-scheme: dark)", color: "#0B0F17" },
-  ],
-  width: "device-width",
-  initialScale: 1,
+export async function generateViewport(): Promise<Viewport> {
+  const s = await getStoreSettings()
+  const brand = resolveThemeBrandPalette(s.themePreset, s.themeCustom)
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: brand.themeColor },
+      { media: "(prefers-color-scheme: dark)", color: "#0B0F17" },
+    ],
+    width: "device-width",
+    initialScale: 1,
+  }
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getStoreSettings()
+  const customThemeCss =
+    settings.themePreset === "custom" && settings.themeCustom
+      ? buildCustomThemeCss(settings.themeCustom)
+      : null
 
   return (
-    <html lang="en-IN" suppressHydrationWarning className={`${display.variable} ${body.variable} ${styles.rootHtml}`}>
+    <html
+      lang="en-IN"
+      data-theme={settings.themePreset}
+      suppressHydrationWarning
+      className={`${display.variable} ${body.variable} ${styles.rootHtml}`}
+    >
       <body suppressHydrationWarning className={styles.rootBody}>
+        {customThemeCss && (
+          <style id="kalakriti-custom-theme" dangerouslySetInnerHTML={{ __html: customThemeCss }} />
+        )}
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var p=location.pathname;if(/^\\/products\\/[^/]+$/.test(p)||p==="/checkout")document.body.setAttribute("data-product-detail","true");else document.body.removeAttribute("data-product-detail")}catch(e){}`,

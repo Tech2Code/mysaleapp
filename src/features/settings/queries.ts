@@ -5,6 +5,7 @@ import { getPublicSupabase } from "@/lib/supabase/public"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { formatPhoneDisplay } from "@/lib/format"
 import { DEFAULT_SETTINGS } from "./defaults"
+import { isThemePresetId, parseCustomTheme } from "./theme"
 import { PAYMENT_GATEWAY_PROVIDERS, type PaymentGatewayProvider } from "@/features/orders/types"
 import type { PromoCode, PromoDiscountType, StoreSettings } from "./types"
 
@@ -46,6 +47,8 @@ type SettingsRow = {
   instagram_url: string | null
   facebook_url: string | null
   order_code_prefix: string | null
+  theme_preset?: string | null
+  theme_custom?: unknown
 }
 
 /**
@@ -117,6 +120,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
         : d.paymentGateway,
     upiId: data.upi_id,
     upiPayeeName: data.upi_payee_name,
+    themePreset: isThemePresetId(data.theme_preset) ? data.theme_preset : d.themePreset,
+    themeCustom: parseCustomTheme(data.theme_custom) ?? d.themeCustom,
   }
 }
 

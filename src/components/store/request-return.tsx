@@ -5,7 +5,9 @@ import {
   ArrowLeftIcon,
   ArrowLeftRightIcon,
   ArrowRightIcon,
+  BriefcaseIcon,
   CheckIcon,
+  HomeIcon,
   Loader2Icon,
   MapPinIcon,
   MinusIcon,
@@ -33,6 +35,7 @@ import { requestReturn, withdrawReturnRequest } from "@/features/orders/actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { isOpenRequest, itemReturnWindow, requestStatusMeta, returnableQuantities, returnLineKey, splitReturnDetails } from "@/features/orders/returns"
 import { ReturnsList } from "@/components/shared/returns-list"
+import { SegmentedTabs, type SegmentedTabItem } from "@/components/shared/segmented-tabs"
 import { netReturnRefund, notRefundedCharges, refundLines } from "@/features/orders/refund"
 import type { OrderFee, OrderItem, OrderReturn, OrderStatus, ReturnRequest, ReturnResolutionType, StatusHistoryEntry } from "@/features/orders/types"
 import { formatDate, formatDateTime, formatPrice, normalizeIndianPhone } from "@/lib/format"
@@ -844,18 +847,20 @@ export function RequestReturn({
                         label="Save this address to my address book"
                       />
                       {saveNewPickupAddress && (
-                        <div className={styles.labelPillsRow}>
-                          {ADDRESS_LABELS.map((lbl) => (
-                            <button
-                              key={lbl}
-                              type="button"
-                              onClick={() => setNewAddressLabel(lbl)}
-                              className={cn(styles.labelChipBtn, newAddressLabel === lbl && styles.labelChipBtnActive)}
-                            >
-                              {lbl}
-                            </button>
-                          ))}
-                        </div>
+                        <SegmentedTabs
+                          role="group"
+                          ariaLabel="Save address as"
+                          layout="equal"
+                          surface="card"
+                          shape="rounded"
+                          items={[
+                            { value: "Home", label: "Home", icon: HomeIcon },
+                            { value: "Work", label: "Work", icon: BriefcaseIcon },
+                            { value: "Other", label: "Other", icon: MapPinIcon },
+                          ] satisfies readonly SegmentedTabItem<(typeof ADDRESS_LABELS)[number]>[]}
+                          value={newAddressLabel}
+                          onChange={setNewAddressLabel}
+                        />
                       )}
                     </div>
                   )}

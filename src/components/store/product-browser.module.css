@@ -1,15 +1,18 @@
-/* Section: Product Browser Sticky Filter Bar & Grid (Compositor-Safe Sticky Bar Without Scroll Repaint Flicker) */
-.stickyFilterBar { position: sticky; top: var(--store-header-h); z-index: 20; margin: 0 -12px 28px -12px; display: flex; flex-direction: column; gap: 12px; border: 1px solid transparent; border-radius: 16px; background-color: var(--background); box-shadow: none; padding: 12px; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.stickyFilterBar[data-stuck] { background-color: var(--background); border-color: color-mix(in oklab, var(--border) 65%, transparent); box-shadow: 0 12px 28px -16px var(--shadow-color-soft); }
+/* Section: Product Browser Sticky Filter Bar & Grid (Seamless Default + Full-Width Frosted Glass When Sticky) */
+.stickyFilterBar { position: sticky; top: var(--store-header-h); z-index: 20; margin: 0 calc(50% - 50vw) 32px calc(50% - 50vw); display: flex; flex-direction: column; gap: 12px; border: 0; border-radius: 0; background-color: transparent; box-shadow: none; padding: 14px calc(50vw - 50%); transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+.stickyFilterBar[data-stuck] { background-color: color-mix(in oklab, var(--background) 82%, transparent); box-shadow: 0 14px 32px -16px var(--shadow-color-soft); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); }
+:global(body):has(.stickyFilterBar) { overflow-x: clip; }
 .stickyFilterBar .controlsRow { display: flex; flex-direction: column; gap: 10px; }
 .controlsRow .searchGrow { flex: 1 1 0%; }
 .controlsRow .sortSelectWidth { display: none; }
-.controlsRow .mobileSortRow { min-width: 0; width: 100%; }
 .stickyFilterBar :global([data-slot="input"]), .stickyFilterBar :global([data-slot="select-trigger"]) { background-color: var(--card); border: 0; box-shadow: var(--store-elevation-sm); transition: box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms cubic-bezier(0.22, 1, 0.36, 1), transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .stickyFilterBar :global([data-slot="input"]):hover, .stickyFilterBar :global([data-slot="select-trigger"]):hover { box-shadow: var(--store-elevation-md); }
 .stickyFilterBar :global([data-slot="input"]):focus-visible, .stickyFilterBar :global([data-slot="select-trigger"]):focus-visible, .stickyFilterBar :global([data-slot="select-trigger"])[data-popup-open] { background-color: var(--card); box-shadow: 0 0 0 2px var(--ring), var(--store-elevation-md); }
 /* Section: Results Count & Empty State */
-.resultsCountText { margin: 0 0 16px 0; font-size: 14px; color: var(--muted-foreground); }
+.resultsHeaderRow { margin: 0 0 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.resultsHeaderRow .resultsCountText { margin: 0; font-size: 13px; color: var(--muted-foreground); white-space: nowrap; }
+.resultsHeaderRow .mobileSortSelect { width: 176px; flex: 0 0 auto; }
+.resultsHeaderRow .mobileSortSelect :global([data-slot="select-trigger"]) { background-color: var(--card); border: 0; box-shadow: var(--store-elevation-sm); font-size: 12px; }
 .noMatchStack { display: flex; flex-direction: column; gap: 24px; }
 .noMatchStack .noMatchBanner { display: flex; flex-direction: column; align-items: center; gap: 8px; border-radius: 16px; border: 1px dashed var(--border); background-color: color-mix(in oklab, var(--muted) 40%, transparent); padding: 24px 16px; text-align: center; }
 .noMatchBanner .noMatchTitle { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 600; color: var(--foreground); }
@@ -20,8 +23,8 @@
 @media (min-width: 640px) {
   .stickyFilterBar .controlsRow { flex-direction: row; align-items: center; gap: 12px; }
   .controlsRow .sortSelectWidth { display: block; width: 232px; flex: 0 0 232px; }
-  .controlsRow .mobileSortRow { display: none; }
-  .stickyFilterBar .chipsRow { flex-wrap: wrap; }
+  .resultsHeaderRow .resultsCountText { font-size: 14px; }
+  .resultsHeaderRow .mobileSortSelect { display: none; }
   .browserGrid { column-gap: 24px; }
 }
 @media (min-width: 768px) {

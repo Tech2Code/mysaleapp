@@ -438,4 +438,33 @@ describe("9. Complete Production Audit Regression Guards (2026-11-28)", () => {
     expect(readFileSync(join(SRC, "components/store/footer.module.css"), "utf8")).toContain(".whatsappIcon")
     expect(readFileSync(join(SRC, "components/store/search-dialog.module.css"), "utf8")).toContain(".arrowSvg")
   })
+
+  it("Shop All Suspense fallback & pagination transitions use <Skeletonize>", () => {
+    const pageViews = readFileSync(join(SRC, "components/store/page-views.tsx"), "utf8")
+    expect(pageViews).toContain("<Skeletonize>")
+    expect(pageViews).toContain("<ProductBrowser products={items} categories={categories} preview />")
+    const browser = readFileSync(join(SRC, "components/store/product-browser.tsx"), "utf8")
+    expect(browser).toContain("pageTransitioning")
+    expect(browser).toContain("<Skeletonize>")
+  })
+
+  it("Address 'Save as' uses icon SegmentedTabs across AddressBook, Checkout, and Return pickup forms", () => {
+    for (const rel of [
+      "components/account/address-book.tsx",
+      "components/store/checkout-form.tsx",
+      "components/store/request-return.tsx",
+    ]) {
+      const code = readFileSync(join(SRC, rel), "utf8")
+      expect(code).toContain('ariaLabel="Save address as"')
+      expect(code).toContain("BriefcaseIcon")
+      expect(code).toContain("HomeIcon")
+    }
+    const addrBook = readFileSync(join(SRC, "components/account/address-book.tsx"), "utf8")
+    expect(addrBook).not.toContain('name="label" label="Save as"')
+  })
+
+  it("Order detail review aspects fall back to live.category.reviewAspects matching Product Detail", () => {
+    const queries = readFileSync(join(SRC, "features/orders/queries.ts"), "utf8")
+    expect(queries).toContain("live?.category?.reviewAspects")
+  })
 })

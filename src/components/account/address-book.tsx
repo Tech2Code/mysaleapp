@@ -1,12 +1,13 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { CheckIcon, HomeIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react"
+import { BriefcaseIcon, CheckIcon, HomeIcon, Loader2Icon, MapPinIcon, PencilIcon, PlusIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
+import { SegmentedTabs, type SegmentedTabItem } from "@/components/shared/segmented-tabs"
 import { FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
@@ -29,7 +30,11 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import styles from "./account.module.css"
 
-const labelOptions = ADDRESS_LABELS.map((l) => ({ value: l, label: l }))
+const ADDRESS_LABEL_TABS: readonly SegmentedTabItem<(typeof ADDRESS_LABELS)[number]>[] = [
+  { value: "Home", label: "Home", icon: HomeIcon },
+  { value: "Work", label: "Work", icon: BriefcaseIcon },
+  { value: "Other", label: "Other", icon: MapPinIcon },
+]
 
 function AddressDialog({
   address,
@@ -123,19 +128,37 @@ function AddressDialog({
           </DialogHeader>
 
           <DialogBody className={styles.dialogBodyStack}>
-            <div className={styles.twoColFieldsGrid}>
-              <FormSelectField control={form.control} name="label" label="Save as" options={labelOptions} />
-              <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
+            <div className={styles.saveAsFieldGroup}>
+              <span className={styles.saveAsFieldLabel}>Save as</span>
+              <Controller
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <SegmentedTabs
+                    role="group"
+                    ariaLabel="Save address as"
+                    layout="equal"
+                    surface="card"
+                    shape="rounded"
+                    items={ADDRESS_LABEL_TABS}
+                    value={field.value}
+                    onChange={(next) => field.onChange(next)}
+                  />
+                )}
+              />
             </div>
-            <TextField
-              label="Mobile number" kind="phone"
-              type="tel"
-              inputMode="tel"
-              leading="+91"
-              autoComplete="tel"
-              error={errors.phone?.message}
-              {...form.register("phone")}
-            />
+            <div className={styles.twoColFieldsGrid}>
+              <TextField label="Full name" kind="personName" autoComplete="name" error={errors.fullName?.message} {...form.register("fullName")} />
+              <TextField
+                label="Mobile number" kind="phone"
+                type="tel"
+                inputMode="tel"
+                leading="+91"
+                autoComplete="tel"
+                error={errors.phone?.message}
+                {...form.register("phone")}
+              />
+            </div>
             <TextAreaField
               label="Full address" maxLength={LIMITS.address.max}
               rows={3}

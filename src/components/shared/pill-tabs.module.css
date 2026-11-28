@@ -2,7 +2,7 @@
 .pillTabsShell { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .pillTabsShell .pillTabsTrack { display: flex; flex-wrap: nowrap; flex: 1 1 auto; min-width: 0; align-items: center; gap: 8px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding: 4px 2px; margin: -4px -2px; scrollbar-width: none; }
 .pillTabsShell .pillTabsTrack::-webkit-scrollbar { display: none; }
-.pillTabsShell .scrollArrowBtn { display: grid; flex: none; width: 44px; height: 44px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); color: var(--foreground); place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: var(--store-elevation-sm); transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease; }
+.pillTabsShell .scrollArrowBtn { display: none; flex: none; width: 34px; height: 34px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); color: var(--foreground); place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: var(--store-elevation-sm); transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease; }
 .pillTabsShell .scrollArrowBtn:hover:not(:disabled) { background-color: var(--secondary); border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); color: var(--primary); }
 .pillTabsShell .scrollArrowBtn:active:not(:disabled) { transform: scale(0.95); }
 .pillTabsShell .scrollArrowBtn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
@@ -28,7 +28,7 @@
 .pillBtn .pillCountTintActive { background-color: color-mix(in oklab, var(--primary) 16%, transparent); color: var(--primary); }
 /* Section: Responsive Breakpoints */
 @media (min-width: 640px) {
-  .pillTabsShell .scrollArrowBtn { width: 34px; height: 34px; }
+  .pillTabsShell .scrollArrowBtn { display: grid; width: 34px; height: 34px; }
   .pillTabsTrack .pillBtn { height: 38px; padding: 0 15px; }
   .pillTabsTrack .pillBtnSm { height: 34px; padding: 0 12px; }
 }

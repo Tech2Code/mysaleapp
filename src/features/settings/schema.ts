@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { PAYMENT_GATEWAY_PROVIDERS, PAYMENT_MODES } from "@/features/orders/types"
+import { DEFAULT_THEME_PRESET, HEX_COLOR_PATTERN, THEME_PRESET_IDS } from "./theme"
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS, PATTERNS, todayIST, v } from "@/lib/validation"
 import { hasMaxTwoDecimals, requiredNumber } from "@/lib/zod-helpers"
@@ -104,7 +105,31 @@ export const storeSettingsSchema = z.object({
   upiPayeeName: v.optionalText(LIMITS.payeeName.max).pipe(
     z.string().min(LIMITS.payeeName.min, "Too short").nullable()
   ),
+
+  // ---- Appearance / Unified Theme ----
+  themePreset: z.enum(THEME_PRESET_IDS).default(DEFAULT_THEME_PRESET),
+  themeCustom: z
+    .object({
+      primary: z.string().trim(),
+      background: z.string().trim(),
+      foreground: z.string().trim(),
+    })
+    .nullable()
+    .optional()
+    .default(null),
 }).superRefine((s, ctx) => {
+  if (s.themePreset === "custom") {
+    const custom = s.themeCustom
+    if (!custom || !HEX_COLOR_PATTERN.test(custom.primary)) {
+      ctx.addIssue({ code: "custom", path: ["themeCustom", "primary"], message: "Use a 6-digit hex color like #B84A27" })
+    }
+    if (!custom || !HEX_COLOR_PATTERN.test(custom.background)) {
+      ctx.addIssue({ code: "custom", path: ["themeCustom", "background"], message: "Use a 6-digit hex color like #FAF8F5" })
+    }
+    if (!custom || !HEX_COLOR_PATTERN.test(custom.foreground)) {
+      ctx.addIssue({ code: "custom", path: ["themeCustom", "foreground"], message: "Use a 6-digit hex color like #231B17" })
+    }
+  }
   if (!s.phoneSameAsWhatsapp && s.phone) {
     const res = v.optionalDisplayPhone().safeParse(s.phone)
     if (!res.success) {

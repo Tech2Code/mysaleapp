@@ -44,17 +44,17 @@
 .itemInfoCol .itemTopRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .itemTopRow .itemNameLink { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 19px; font-weight: 600; color: var(--foreground); transition: color 150ms ease; }
 .itemTopRow .itemNameLink:hover { color: var(--primary); }
-.itemTopRow .removeItemBtn { margin: -6px; display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.itemTopRow .removeItemBtn { margin: -6px; display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: 9999px; border: 0; background: transparent; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
 .itemTopRow .removeItemBtn:hover { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive); }
 .removeItemBtn .trashIcon { width: 16px; height: 16px; }
 .variantPill { margin-top: 4px; display: inline-flex; align-self: flex-start; align-items: center; border-radius: 6px; border: 1px solid var(--border); background-color: var(--card); padding: 1px 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--foreground); }
-.itemInfoCol .unitPriceText { margin: 3px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
+.itemInfoCol .unitPriceText { margin: 3px 0 0 0; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 .itemInfoCol .itemBottomRow { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; }
-.itemBottomRow .lineTotalText { font-family: var(--font-heading); font-size: 18px; line-height: 24px; font-weight: 600; color: var(--foreground); }
+.itemBottomRow .lineTotalText { font-family: var(--font-heading); font-size: 18px; line-height: 24px; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
 .drawerSheet .drawerFooter { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); background-color: color-mix(in oklab, var(--card) 85%, transparent); padding: 16px 20px max(20px, env(safe-area-inset-bottom, 0px)) 20px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .drawerFooter .subtotalRow { display: flex; align-items: baseline; justify-content: space-between; }
 .subtotalRow .subtotalLabel { font-size: 14px; color: var(--muted-foreground); }
-.subtotalRow .subtotalValue { font-family: var(--font-heading); font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); }
+.subtotalRow .subtotalValue { font-family: var(--font-heading); font-size: 24px; line-height: 30px; font-weight: 600; color: var(--foreground); font-variant-numeric: tabular-nums; }
 .drawerFooter .deliveryHint { margin: 0; font-size: 12px; color: var(--muted-foreground); }
 .drawerFooter .checkoutBtn { height: var(--controlHXl); width: 100%; border-radius: var(--radiusControl); font-size: 15px; box-shadow: 0 10px 24px -6px color-mix(in oklab, var(--primary) 35%, transparent); }
 .drawerFooter .checkoutBtnDisabled { pointer-events: none; opacity: 0.5; }
@@ -93,11 +93,11 @@
 .lineTitleGroup .linePriceSub { margin: 2px 0 0 0; font-size: 14px; color: var(--muted-foreground); }
 .linePriceSub .priceChangedTag { margin-left: 8px; font-size: 12px; color: var(--primary); }
 .lineTitleGroup .shippingClassPill { margin: 4px 0 0 0; display: inline-block; border-radius: 8px; background-color: var(--card); padding: 4px 8px; font-size: 12px; color: var(--muted-foreground); }
-.lineHeader .lineRemoveBtn { border-radius: 9999px; border: 0; background: transparent; padding: 8px; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
+.lineHeader .lineRemoveBtn { display: inline-grid; min-width: 36px; min-height: 36px; place-items: center; border-radius: 9999px; border: 0; background: transparent; padding: 8px; color: var(--muted-foreground); transition: background-color 150ms ease, color 150ms ease; }
 .lineHeader .lineRemoveBtn:hover { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive); }
 .lineRemoveBtn .trashIcon { width: 16px; height: 16px; }
 .lineBody .lineFooter { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.lineFooter .lineSubtotalText { font-size: 18px; line-height: 24px; font-weight: 700; color: var(--foreground); }
+.lineFooter .lineSubtotalText { font-size: 18px; line-height: 24px; font-weight: 700; color: var(--foreground); font-variant-numeric: tabular-nums; }
 .cartLayoutGrid .summarySidebar { height: fit-content; display: flex; flex-direction: column; gap: 16px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); box-shadow: var(--store-elevation-sm); padding: 24px; }
 .summarySidebar .summaryHeading { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 20px; line-height: 28px; font-weight: 600; }
 .summaryHeading .summaryItemCount { font-size: 14px; font-weight: 500; color: var(--muted-foreground); }
@@ -119,6 +119,9 @@
   .cartLayoutGrid .cartItemsPanel { padding: 24px; }
   .cartLinesList .cartLineRow { padding: 16px; }
   .cartLineRow .lineThumbLink { width: 112px; height: 112px; }
+}
+@media (pointer: coarse) {
+  .itemTopRow .removeItemBtn, .lineHeader .lineRemoveBtn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 }
 @media (min-width: 1024px) {
   .cartLayoutGrid { grid-template-columns: 1fr 380px; gap: 32px; }

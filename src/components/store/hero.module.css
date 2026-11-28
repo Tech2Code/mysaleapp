@@ -15,9 +15,9 @@
 .heroContainer .heroContent { min-width: 0; width: 100%; max-width: 640px; }
 .heroContent .heroBadge { display: inline-flex; align-items: center; gap: 8px; border-radius: 9999px; border: 0; background-color: color-mix(in oklab, var(--card) 82%, transparent); padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--foreground); box-shadow: var(--store-elevation-sm); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .heroBadge .badgeIcon { width: 14px; height: 14px; color: var(--primary); }
-.heroContent .heroHeading { margin: 16px 0 0 0; padding: 4px 0 6px 0; font-size: 38px; line-height: 46px; font-weight: 600; color: var(--foreground); text-wrap: unset; overflow-wrap: break-word; }
+.heroContent .heroHeading { margin: 16px 0 0 0; padding: 4px 0 6px 0; font-size: 38px; line-height: 44px; font-weight: 600; letter-spacing: -0.8px; color: var(--foreground); text-wrap: balance; overflow-wrap: break-word; }
 .heroHeading .headingLine { display: block; }
-.heroHeading .headingAccent { display: inline; background-image: linear-gradient(110deg, var(--primary), var(--text-gradient-mid, var(--primary)), var(--primary)); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-box-decoration-break: clone; box-decoration-break: clone; color: transparent; font-style: italic; padding: 8px 8px 12px 4px; margin: -8px -8px -12px -4px; }
+.heroHeading .headingAccent { display: inline; color: var(--primary); font-style: italic; }
 .heroContent .heroDescription { margin: 14px 0 0 0; max-width: 512px; font-size: 16px; line-height: 26px; color: var(--muted-foreground); }
 /* Section: Primary 10% Accent CTA & WhatsApp Trust Note */
 .heroContent .ctaRow { margin-top: 24px; display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 10px; }

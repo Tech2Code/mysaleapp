@@ -1,5 +1,4 @@
-@import "../styles/theme-store.css";
-@import "../styles/theme-admin.css";
+@import "../styles/theme.css";
 
 @keyframes blob {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -15,7 +14,7 @@
   50% { transform: translate3d(0, -10px, 0); }
 }
 
-/* Shared Structural & Layout Tokens (Theme colors live in src/styles/theme-store.css and src/styles/theme-admin.css) */
+/* Shared Structural & Layout Tokens (Unified theme colors live in src/styles/theme.css) */
 :root {
   --store-header-h: 64px;
   --admin-topbar-h: 56px;
@@ -172,6 +171,34 @@
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 22%, transparent);
+    color: var(--foreground);
+  }
+  input,
+  textarea {
+    caret-color: var(--primary);
+  }
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: var(--primary);
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  @media (forced-colors: active) {
+    :focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible,
+    [role="combobox"]:focus-visible {
+      outline: 2px solid Highlight !important;
+      outline-offset: 2px !important;
+    }
   }
 
   /* Pointer cursor on everything clickable. */

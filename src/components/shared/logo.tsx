@@ -21,7 +21,7 @@ export function LogoMark({ className }: { className?: string }) {
         size={24}
         boxColor={BRAND_PALETTE.boxColor}
         ribbon={BRAND_PALETTE.ribbon}
-        accent={BRAND_PALETTE.accent}
+        accent="var(--store-accent-hover)"
         className={styles.glyphRelative}
       />
     </span>

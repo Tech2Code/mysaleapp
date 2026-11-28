@@ -64,13 +64,13 @@
 /* Section: Input, Textarea, Label, Separator & Switch (Crisp White Control Surface) */
 :where(.inputField) { height: var(--btnDefaultH, 40px); width: 100%; min-width: 0; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 6px 12px; font-size: 16px; color: var(--foreground); text-overflow: ellipsis; box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.inputField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
-.inputField::placeholder { text-overflow: ellipsis; font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
+.inputField::placeholder { text-overflow: ellipsis; font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 76%, transparent); }
 .inputField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .inputField:disabled { pointer-events: none; cursor: not-allowed; background-color: var(--muted); opacity: 0.5; }
 .inputField[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
 :where(.textareaField) { display: flex; field-sizing: content; min-height: 76px; width: 100%; min-width: 0; resize: none; border-radius: var(--radiusControl, 10px); border: 1px solid var(--input); background-color: var(--card); padding: 10px 12px; font-size: 16px; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); outline: none; transition: border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 :where(.textareaField):hover:not(:disabled):not(:focus-visible) { border-color: color-mix(in oklab, var(--foreground) 24%, transparent); }
-.textareaField::placeholder { font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
+.textareaField::placeholder { font-weight: 400; color: color-mix(in oklab, var(--muted-foreground) 76%, transparent); }
 .textareaField:focus-visible { border-color: var(--ring); background-color: var(--card); box-shadow: var(--focusRing, 0 0 0 3px color-mix(in oklab, var(--ring) 28%, transparent)); }
 .textareaField:disabled { cursor: not-allowed; background-color: var(--muted); opacity: 0.5; }
 .textareaField[aria-invalid="true"] { border-color: var(--destructive); box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 20%, transparent); }
@@ -79,17 +79,18 @@
 .separatorBase[data-horizontal] { height: 1px; width: 100%; }
 .separatorBase[data-vertical] { width: 1px; align-self: stretch; }
 .switchRoot { position: relative; display: inline-flex; flex-shrink: 0; align-items: center; border-radius: 9999px; border: 1px solid transparent; outline: none; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
-.switchRoot[data-size="default"] { width: 32px; height: 18px; }
-.switchRoot[data-size="sm"] { width: 24px; height: 14px; }
+.switchRoot[data-size="default"] { width: 36px; height: 20px; }
+.switchRoot[data-size="sm"] { width: 28px; height: 16px; }
 .switchRoot[data-checked] { background-color: var(--primary); }
 .switchRoot[data-unchecked] { background-color: var(--input); }
 .switchRoot:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 45%, transparent); }
 .switchRoot[data-disabled] { cursor: not-allowed; opacity: 0.5; }
-.switchRoot .switchThumb { pointer-events: none; display: block; border-radius: 9999px; background-color: var(--background); transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
+.switchRoot .switchThumb { pointer-events: none; display: block; border-radius: 9999px; background-color: var(--background); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1); }
 .switchRoot[data-size="default"] .switchThumb { width: 16px; height: 16px; }
 .switchRoot[data-size="sm"] .switchThumb { width: 12px; height: 12px; }
-.switchRoot[data-checked] .switchThumb { transform: translateX(calc(100% - 2px)); }
-.switchRoot[data-unchecked] .switchThumb { transform: translateX(0); }
+.switchRoot[data-size="default"][data-checked] .switchThumb { transform: translateX(17px); }
+.switchRoot[data-size="sm"][data-checked] .switchThumb { transform: translateX(13px); }
+.switchRoot[data-unchecked] .switchThumb { transform: translateX(1px); }
 :global(.dark) .switchRoot[data-checked] .switchThumb { background-color: var(--primary-foreground); }
 :global(.dark) .switchRoot[data-unchecked] .switchThumb { background-color: var(--foreground); }
 /* Section: Custom Checkbox */
@@ -138,10 +139,10 @@
 :where(.dialogHeader) { display: flex; flex-shrink: 0; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border); background-color: var(--card); padding: 14px 16px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
 :where(.dialogHeaderMobileFull) { background-color: var(--card); padding: max(14px, env(safe-area-inset-top)) 16px 14px 16px; }
 .dialogHeader .dialogHeaderTopRow { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; }
-.dialogHeaderTopRow .mobileBackBtn { display: inline-grid; width: 40px; height: 40px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
+.dialogHeaderTopRow .mobileBackBtn { display: inline-grid; width: 44px; height: 44px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .dialogHeaderTopRow .mobileBackBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 18%, var(--border)); }
 .dialogHeaderTopRow .headerTitleCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
-.dialogHeaderTopRow .headerCloseBtn { display: inline-grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--muted-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
+.dialogHeaderTopRow .headerCloseBtn { display: inline-grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: var(--radiusPill, 9999px); border: 1px solid var(--border); background-color: var(--background); color: var(--muted-foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .dialogHeaderTopRow .headerCloseBtn:hover { background-color: var(--muted); border-color: color-mix(in oklab, var(--foreground) 18%, var(--border)); color: var(--foreground); }
 .dialogHeaderTopRow .headerCloseHiddenMobile { display: none; }
 .icon16 { width: 16px; height: 16px; }
@@ -205,7 +206,7 @@
 .selectScrollBtn svg { width: 16px; height: 16px; }
 /* Section: Table & Tabs */
 .tableContainer { position: relative; width: 100%; overflow-x: auto; }
-.tableElement { width: 100%; caption-side: bottom; font-size: 14px; border-collapse: collapse; }
+.tableElement { width: 100%; caption-side: bottom; font-size: 14px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .tableHeader tr { border-bottom: 1px solid var(--border); }
 .tableBody tr:last-child { border-bottom: 0; }
 .tableFooter { border-top: 1px solid var(--border); background-color: color-mix(in oklab, var(--muted) 50%, transparent); font-weight: 500; }

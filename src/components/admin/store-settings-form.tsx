@@ -9,6 +9,7 @@ import {
   IndianRupeeIcon,
   Loader2Icon,
   MailIcon,
+  PaletteIcon,
   PhoneIcon,
   PlusIcon,
   ReceiptIcon,
@@ -42,6 +43,15 @@ import { matchState, STATE_OPTIONS } from "@/features/location/states"
 import { createPromoCode, deletePromoCode, saveStoreSettings, togglePromoCode } from "@/features/settings/actions"
 import { DEFAULT_SETTINGS } from "@/features/settings/defaults"
 import {
+  DEFAULT_CUSTOM_THEME,
+  THEME_PRESETS,
+  buildCustomThemeCss,
+  type CustomThemeColors,
+  type ThemePresetId,
+} from "@/features/settings/theme"
+import { EmailSettingsCard } from "./email-settings-card"
+import { ThemeSettingsSection } from "./theme-settings-section"
+import {
   createPromoCodeSchema,
   storeSettingsSchema,
   type CreatePromoCodeInput,
@@ -54,7 +64,6 @@ import { PAYMENT_GATEWAY_LABEL, PAYMENT_GATEWAY_PROVIDERS, type PaymentGatewayPr
 import { formatWeightGrams } from "@/features/orders/pricing"
 import { formatDate, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { EmailSettingsCard } from "./email-settings-card"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
@@ -164,6 +173,8 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     paymentGateway: s.paymentGateway,
     upiId: s.upiId ?? "",
     upiPayeeName: s.upiPayeeName ?? "",
+    themePreset: s.themePreset,
+    themeCustom: s.themeCustom ?? DEFAULT_CUSTOM_THEME,
   }
 }
 
@@ -177,7 +188,7 @@ const PAYMENT_GATEWAY_OPTIONS = PAYMENT_GATEWAY_PROVIDERS.map((p) => ({
   label: PAYMENT_GATEWAY_LABEL[p],
 }))
 
-type StoreFormSectionId = "store" | "contact" | "seo" | "payments" | "shipping"
+type StoreFormSectionId = "store" | "appearance" | "contact" | "seo" | "payments" | "shipping"
 type SettingsSectionId = StoreFormSectionId | "promos" | "email"
 
 const FIELD_TO_SECTION: Record<keyof StoreSettingsInput, StoreFormSectionId> = {
@@ -189,6 +200,8 @@ const FIELD_TO_SECTION: Record<keyof StoreSettingsInput, StoreFormSectionId> = {
   heroBadge: "store",
   instagramUrl: "store",
   facebookUrl: "store",
+  themePreset: "appearance",
+  themeCustom: "appearance",
   keywords: "seo",
   whatsappNumber: "contact",
   phoneSameAsWhatsapp: "contact",
@@ -220,6 +233,7 @@ const FIELD_TO_SECTION: Record<keyof StoreSettingsInput, StoreFormSectionId> = {
 
 const STORE_FORM_SECTIONS: ReadonlySet<SettingsSectionId> = new Set([
   "store",
+  "appearance",
   "contact",
   "seo",
   "payments",
@@ -228,6 +242,7 @@ const STORE_FORM_SECTIONS: ReadonlySet<SettingsSectionId> = new Set([
 
 const ALL_SETTINGS_SECTIONS: ReadonlySet<string> = new Set([
   "store",
+  "appearance",
   "contact",
   "seo",
   "payments",
@@ -343,6 +358,7 @@ function StoreSettingsFormInner({
   const df = dirtyFields as Record<string, unknown>
   const shopDirty = hasDirty(df, "shopName", "tagline", "description", "announcement", "highlightLine", "heroBadge")
   const socialDirty = hasDirty(df, "instagramUrl", "facebookUrl")
+  const appearanceDirty = hasDirty(df, "themePreset", "themeCustom")
   const seoDirty = hasDirty(df, "keywords")
   const contactDirty = hasDirty(df, "whatsappNumber", "phoneSameAsWhatsapp", "phone", "email", "city", "region", "pincode")
   const paymentDirty = hasDirty(df, "paymentMode", "paymentGateway", "upiId", "upiPayeeName")
@@ -352,6 +368,7 @@ function StoreSettingsFormInner({
 
   const sectionDirty: Record<SettingsSectionId, boolean> = {
     store: shopDirty || socialDirty,
+    appearance: appearanceDirty,
     contact: contactDirty,
     seo: seoDirty,
     payments: paymentDirty || taxDirty,
@@ -359,7 +376,7 @@ function StoreSettingsFormInner({
     promos: false,
     email: false,
   }
-  const firstDirtySection = (["store", "contact", "seo", "payments", "shipping"] as StoreFormSectionId[]).find(
+  const firstDirtySection = (["store", "appearance", "contact", "seo", "payments", "shipping"] as StoreFormSectionId[]).find(
     (id) => sectionDirty[id]
   )
   const isStoreFormSection = STORE_FORM_SECTIONS.has(activeSection)
@@ -375,7 +392,7 @@ function StoreSettingsFormInner({
     setMobileDetailOpen(true)
   }, [])
 
-  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, pincodeVal, paymentModeNow, paymentGatewayNow] = useWatch({
+  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, pincodeVal, paymentModeNow, paymentGatewayNow, themePresetNow, themeCustomNow] = useWatch({
     control: form.control,
     name: [
       "deliveryFee",
@@ -393,6 +410,8 @@ function StoreSettingsFormInner({
       "pincode",
       "paymentMode",
       "paymentGateway",
+      "themePreset",
+      "themeCustom",
     ],
   })
 
@@ -508,6 +527,31 @@ function StoreSettingsFormInner({
             paymentGateway: values.paymentGateway,
             upiId: values.upiId ?? "",
             upiPayeeName: values.upiPayeeName ?? "",
+            themePreset: values.themePreset,
+            themeCustom: values.themeCustom ?? DEFAULT_CUSTOM_THEME,
+          }
+          // Apply theme immediately on the active document so the Admin Panel updates without a hard reload
+          if (typeof document !== "undefined") {
+            document.documentElement.dataset.theme = values.themePreset
+            let customStyleEl = document.getElementById("kalakriti-custom-theme")
+            if (values.themePreset === "custom" && values.themeCustom) {
+              if (!customStyleEl) {
+                customStyleEl = document.createElement("style")
+                customStyleEl.id = "kalakriti-custom-theme"
+                document.head.appendChild(customStyleEl)
+              }
+              customStyleEl.textContent = buildCustomThemeCss(values.themeCustom)
+            } else if (customStyleEl) {
+              customStyleEl.remove()
+            }
+            // Bust browser tab favicon cache immediately after saving a theme change
+            const bust = `v=${Date.now()}`
+            document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"]').forEach((link) => {
+              link.href = `/icon?${bust}`
+            })
+            document.querySelectorAll<HTMLLinkElement>('link[rel="apple-touch-icon"]').forEach((link) => {
+              link.href = `/apple-icon?${bust}`
+            })
           }
           onSaved(nextBaseline)
           primeArea(String(nextBaseline.pincode ?? ""), String(nextBaseline.city ?? ""), String(nextBaseline.region ?? ""))
@@ -542,6 +586,16 @@ function StoreSettingsFormInner({
           meta: String(name || settings.shopName || "Name, tagline & socials"),
           icon: StoreIcon,
           dirty: sectionDirty.store,
+        },
+        {
+          id: "appearance",
+          title: "Theme & Appearance",
+          meta:
+            themePresetNow === "custom"
+              ? "Custom theme"
+              : (THEME_PRESETS.find((p) => p.id === themePresetNow)?.name ?? "Artisanal Terracotta"),
+          icon: PaletteIcon,
+          dirty: sectionDirty.appearance,
         },
         {
           id: "contact",
@@ -670,6 +724,28 @@ function StoreSettingsFormInner({
                   {...form.register("facebookUrl")}
                 />
               </div>
+            </Card>
+          </div>
+
+          <div className={styles.settingsSectionStack} hidden={activeSection !== "appearance"}>
+            <Card
+              title="Unified Theme"
+              description="One palette applied across both your Storefront and Admin Panel (Light & Dark). Pick any curated preset or build your own."
+              icon={PaletteIcon}
+              dirty={appearanceDirty}
+            >
+              <ThemeSettingsSection
+                value={(themePresetNow ?? settings.themePreset) as ThemePresetId}
+                customColors={(themeCustomNow ?? settings.themeCustom ?? DEFAULT_CUSTOM_THEME) as CustomThemeColors}
+                shopName={String(name || settings.shopName || "Kalakriti")}
+                customErrors={{
+                  primary: errors.themeCustom?.primary?.message,
+                  background: errors.themeCustom?.background?.message,
+                  foreground: errors.themeCustom?.foreground?.message,
+                }}
+                onChangePreset={(preset) => form.setValue("themePreset", preset, { shouldDirty: true, shouldValidate: true })}
+                onChangeCustom={(next) => form.setValue("themeCustom", next, { shouldDirty: true, shouldValidate: true })}
+              />
             </Card>
           </div>
 

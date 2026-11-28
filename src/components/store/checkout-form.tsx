@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  BriefcaseIcon,
   CheckCircle2Icon,
   CheckIcon,
   ChevronDownIcon,
   CopyIcon,
   CreditCardIcon,
+  HomeIcon,
   Loader2Icon,
   LockIcon,
   MapPinIcon,
@@ -43,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Skeletonize } from "@/components/shared/skeletonize"
+import { SegmentedTabs, type SegmentedTabItem } from "@/components/shared/segmented-tabs"
 import { getMyProfile } from "@/features/account/actions"
 import type { Profile } from "@/features/account/schema"
 import { listMyAddresses, saveAddress as saveAccountAddress } from "@/features/addresses/actions"
@@ -264,21 +267,22 @@ function CheckoutAddressModalBody({
     <form onSubmit={handleSave} noValidate className={styles.addrModalForm}>
       <DialogBody className={styles.addrModalBody}>
         {canSaveMore && saveToAccount && (
-          <div className={styles.labelChipsGroup} role="group" aria-label="Address label">
+          <div className={styles.labelChipsGroup}>
             <span className={styles.labelChipsCaption}>Save as</span>
-            <div className={styles.labelChipsRow}>
-              {ADDRESS_LABELS.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  aria-pressed={label === l}
-                  onClick={() => setLabel(l)}
-                  className={cn(styles.labelChipBtn, label === l && styles.labelChipBtnActive)}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+            <SegmentedTabs
+              role="group"
+              ariaLabel="Save address as"
+              layout="equal"
+              surface="card"
+              shape="rounded"
+              items={[
+                { value: "Home", label: "Home", icon: HomeIcon },
+                { value: "Work", label: "Work", icon: BriefcaseIcon },
+                { value: "Other", label: "Other", icon: MapPinIcon },
+              ] satisfies readonly SegmentedTabItem<(typeof ADDRESS_LABELS)[number]>[]}
+              value={label}
+              onChange={setLabel}
+            />
           </div>
         )}
         <div className={styles.addressFieldsGrid}>

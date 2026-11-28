@@ -9,6 +9,7 @@ import { logAdminAction } from "@/features/security/audit"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 import { SETTINGS_TAG } from "./queries"
+import { parseCustomTheme } from "./theme"
 import { createPromoCodeSchema, deletePromoCodeSchema, storeSettingsSchema, togglePromoCodeSchema } from "./schema"
 
 export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
@@ -67,17 +68,42 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
     upi_payee_name: s.upiPayeeName,
   }
 
+  const normalizedCustomTheme = parseCustomTheme(s.themeCustom)
+  const withPincodePayload = { ...basePayload, contact_pincode: s.pincode }
+
   let { data: saved, error } = await supabase
     .from("store_settings")
-    .update({ ...basePayload, contact_pincode: s.pincode })
+    .update({
+      ...withPincodePayload,
+      theme_preset: s.themePreset,
+      theme_custom: normalizedCustomTheme,
+    })
     .eq("id", true)
     .select("id")
 
-  // Graceful fallback if migration 0076 (contact_pincode) has not been pushed to the remote DB yet
-  if (error && (error.code === "42703" || error.code === "PGRST204" || error.message.toLowerCase().includes("contact_pincode"))) {
-    const retry = await supabase.from("store_settings").update(basePayload).eq("id", true).select("id")
-    saved = retry.data
-    error = retry.error
+  // Graceful fallback if migration 0078 (theme_preset/theme_custom) is not yet pushed (keep contact_pincode!)
+  if (
+    error &&
+    (error.code === "42703" ||
+      error.code === "PGRST204" ||
+      error.message.toLowerCase().includes("theme_preset") ||
+      error.message.toLowerCase().includes("theme_custom"))
+  ) {
+    const retryTheme = await supabase.from("store_settings").update(withPincodePayload).eq("id", true).select("id")
+    saved = retryTheme.data
+    error = retryTheme.error
+  }
+
+  // Graceful fallback if migration 0076 (contact_pincode) is also not yet pushed
+  if (
+    error &&
+    (error.code === "42703" ||
+      error.code === "PGRST204" ||
+      error.message.toLowerCase().includes("contact_pincode"))
+  ) {
+    const retryBase = await supabase.from("store_settings").update(basePayload).eq("id", true).select("id")
+    saved = retryBase.data
+    error = retryBase.error
   }
 
   if (error) {

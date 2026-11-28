@@ -76,6 +76,9 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
 
   return (
     <div className={styles.adminPanelLayout}>
+      <a href="#admin-main" className={styles.skipLink}>
+        Skip to content
+      </a>
       <AdminSidebar ordersBadge={badge} />
       <div className={styles.adminPanelMainCol}>
         <AdminTopbar
@@ -92,7 +95,7 @@ export default function AdminPanelLayout({ children }: { children: ReactNode }) 
             </Suspense>
           }
         />
-        <main data-slot="admin-main" className={styles.adminMainContent}>
+        <main id="admin-main" data-slot="admin-main" className={styles.adminMainContent}>
           {children}
           <Suspense fallback={null}>
             <AdminGate />

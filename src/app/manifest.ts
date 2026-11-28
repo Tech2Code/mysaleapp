@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next"
-import { BRAND_ICON_VERSION, BRAND_PALETTE } from "@/components/shared/brand-glyph"
+import { BRAND_ICON_VERSION } from "@/components/shared/brand-glyph"
 import { getStoreSettings } from "@/features/settings/queries"
+import { resolveThemeBrandPalette } from "@/features/settings/theme"
 
 /** Makes the site installable as an app ("Add to Home screen"). */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const shop = await getStoreSettings()
-  const v = BRAND_ICON_VERSION
+  const brand = resolveThemeBrandPalette(shop.themePreset, shop.themeCustom)
+  const v = `${BRAND_ICON_VERSION}-${brand.versionKey}`
   return {
     name: shop.shopName,
     short_name: shop.shopName.slice(0, 12),
@@ -14,8 +16,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: BRAND_PALETTE.backgroundColor,
-    theme_color: BRAND_PALETTE.themeColor,
+    background_color: brand.backgroundColor,
+    theme_color: brand.themeColor,
     categories: ["shopping", "lifestyle"],
     lang: "en-IN",
     icons: [
