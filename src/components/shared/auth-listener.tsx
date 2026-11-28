@@ -21,6 +21,7 @@ const profileOverrides = new Map<string, { name?: string; email?: string; avatar
 function clearOrderSession() {
   try {
     sessionStorage.removeItem("kk-last-order")
+    sessionStorage.removeItem("kk-checkout-draft")
   } catch {}
 }
 
@@ -133,6 +134,14 @@ export function applyClientSignOut() {
   useAuth.getState().setUser(null)
   useWishlist.getState().clear()
   clearOrderSession()
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem("kk-wishlist-oos-ids")
+      window.localStorage.removeItem("kk-stock-alerts")
+    } catch {
+      // ignore storage errors
+    }
+  }
 }
 
 function handleSessionChange(user: User | null, isSignedOutEvent = false) {

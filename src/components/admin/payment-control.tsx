@@ -9,7 +9,7 @@ import { FormSelectField, TextAreaField, TextField } from "@/components/form"
 import { CopyableReference } from "@/components/shared/copyable-reference"
 import { PaymentBadge } from "@/components/shared/payment-badge"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { updateOrderPayment } from "@/features/orders/admin-actions"
 import { splitCancelReason } from "@/features/orders/reasons"
@@ -333,7 +333,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
                   <CopyableReference value={cancelRefundUpiId} />
                 </div>
                 {refundUpiDeepLink && (
-                  <a href={refundUpiDeepLink} className={styles.payRefundUpiBtn}>
+                  <a href={refundUpiDeepLink} className={buttonVariants({ variant: "primary", size: "xs" })}>
                     <SmartphoneIcon className={styles.iconSm} aria-hidden /> Pay {formatPrice(remainingToRefund)} via UPI App
                   </a>
                 )}
@@ -374,23 +374,23 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
 
       {canVerify && (
         <div className={styles.verifyActionRow}>
-          <Button type="button" onClick={() => setAsk("verify")} disabled={pending} className={styles.verifyBtn}>
+          <Button type="button" variant="success" onClick={() => setAsk("verify")} disabled={pending} className={styles.verifyPrimaryBtn}>
             {pending ? <Loader2Icon className={styles.spinIcon} /> : <CheckIcon className={styles.iconMd} />}{" "}
             {order.status === "cancelled" ? "Payment received (mark paid)" : "Verify payment & confirm order"}
           </Button>
           {needsVerification && !rejecting && (
             <Button
               type="button"
-              variant="outline"
+              variant="destructiveOutline"
               onClick={() => {
                 setRejecting(true)
                 requestAnimationFrame(() => {
                   document.querySelector<HTMLElement>("[placeholder*='UTR']")?.scrollIntoView({ behavior: "smooth", block: "nearest" })
                 })
               }}
-              className={styles.pillBtn}
+              className={styles.rejectTriggerBtn}
             >
-              <BanIcon className={styles.iconMd} /> Reject…
+              <BanIcon className={styles.iconMd} /> Reject
             </Button>
           )}
         </div>
@@ -410,10 +410,10 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
             error={reasonTouched && reason.trim().length < 5 ? "Please write at least 5 characters" : undefined}
           />
           <div className={styles.rejectBtnRow}>
-            <Button type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className={styles.pillBtn}>
+            <Button type="button" variant="destructive" onClick={() => setAsk("reject")} disabled={pending || reason.trim().length < 5} className={styles.rejectConfirmBtn}>
               {pending ? <Loader2Icon className={styles.spinIcon} /> : <BanIcon className={styles.iconMd} />} Reject payment
             </Button>
-            <Button type="button" variant="ghost" onClick={() => { setRejecting(false); setReason(""); setReasonTouched(false) }} className={styles.pillBtn}>
+            <Button type="button" variant="outline" onClick={() => { setRejecting(false); setReason(""); setReasonTouched(false) }} className={styles.rejectCancelBtn}>
               <XIcon className={styles.iconMd} /> Cancel
             </Button>
           </div>
@@ -424,7 +424,7 @@ export function PaymentControl({ order }: { order: PaymentOrder }) {
       {(showManual || (refundOnly && order.status === "cancelled" && owedBack)) && (
         <>
           {showManual && (
-            <Button type="button" variant="outline" onClick={() => setRefundOpen(true)} className={styles.manualEditBtn}>
+            <Button type="button" variant="outline" fullWidth onClick={() => setRefundOpen(true)}>
               <PencilIcon className={styles.iconMd} /> Edit payment record manually
             </Button>
           )}

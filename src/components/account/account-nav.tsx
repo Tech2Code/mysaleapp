@@ -113,11 +113,11 @@ function AccountSignOutCard() {
         </div>
         <Button
           type="button"
-          variant="outline"
-          className={styles.signOutOutlineBtn}
+          variant="destructiveOutline"
+          size="lg"
           onClick={() => setAskSignOut(true)}
         >
-          <LogOutIcon className={styles.icon16} /> Sign out
+          <LogOutIcon className={styles.icon16} aria-hidden="true" /> Sign out
         </Button>
       </div>
       <ConfirmDialog

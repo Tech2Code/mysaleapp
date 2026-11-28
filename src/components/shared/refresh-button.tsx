@@ -4,6 +4,7 @@ import { RefreshCwIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { useProgressWhile } from "./route-progress"
+import { Button } from "@/components/ui/button"
 import styles from "./shared.module.css"
 
 /**
@@ -29,15 +30,15 @@ export function RefreshButton({ label = "Refresh", onRefresh }: { label?: string
   }
 
   return (
-    <button
-
+    <Button
       type="button"
+      variant="outline"
+      size="sm"
       onClick={() => void refresh()}
       disabled={pending}
       aria-busy={pending}
-      className={styles.refreshBtn}
     >
       <RefreshCwIcon className={pending ? styles.icon16Spin : styles.icon16} aria-hidden /> {label}
-    </button>
+    </Button>
   )
 }

@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 import { FormSelectField, SelectField, SwitchField, TextAreaField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { CourierDialog } from "./courier-dialog"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -213,13 +213,14 @@ export function OrderStatusControl({
                 <span>Next step:</span>
                 <strong className={styles.nextStepStrong}>{STATUS_META[primaryNextStep].label}</strong>
               </span>
-              <button
+              <Button
                 type="button"
+                variant="success"
+                size="xs"
                 onClick={() => form.setValue("status", primaryNextStep, { shouldDirty: true })}
-                className={styles.nextStepQuickBtn}
               >
                 Select {STATUS_META[primaryNextStep].label} →
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -271,7 +272,7 @@ export function OrderStatusControl({
         href={savedNotifyUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={styles.whatsappSendBtn}
+        className={buttonVariants({ variant: "whatsapp", fullWidth: true })}
       >
         <WhatsAppIcon className={styles.iconMd} /> Send “{announcedStage ? announcedStage.customerLabel : STATUS_META[status].label}” update
       </a>
@@ -499,10 +500,7 @@ export function AdminCancelOrder({ orderId, orderCode, status, paidOrSent }: { o
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-
-        className={styles.cancelTriggerBtn}
-      >
+      <DialogTrigger className={buttonVariants({ variant: "destructiveOutline", fullWidth: true })}>
         Cancel order
       </DialogTrigger>
       <DialogContent className={styles.dialogSmMax}>

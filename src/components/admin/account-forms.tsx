@@ -1,9 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { KeyRoundIcon, Loader2Icon, LockIcon, MailCheckIcon, ShieldOffIcon } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
+import { ChevronRightIcon, KeyRoundIcon, Loader2Icon, LockIcon, MailCheckIcon, MailIcon, ShieldOffIcon, UserRoundIcon, type LucideIcon } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useCallback, useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import type { z } from "zod"
@@ -11,6 +11,7 @@ import { notifyAdminPinChanged } from "@/components/admin/admin-account-menu"
 import { TextField } from "@/components/form"
 import { applyClientProfileUpdate } from "@/components/shared/auth-listener"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   changeAdminPassword,
   changeAdminPin,
@@ -32,8 +33,10 @@ import { normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import styles from "./admin-core.module.css"
+import viewStyles from "./admin-views.module.css"
 
 function Card({
   title,
@@ -182,7 +185,7 @@ function EmailForm({ email }: { email: string }) {
 
     if (!errorDesc && !stepMessage && !emailChanged) return
 
-    window.history.replaceState(null, "", window.location.pathname)
+    window.history.replaceState(window.history.state, "", window.location.pathname)
 
     if (errorDesc) {
       const lower = errorDesc.toLowerCase()
@@ -763,13 +766,13 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructiveOutline"
                   disabled={pending}
                   onClick={() => {
                     setShowDisableConfirm(true)
                     setVerifyError(null)
                   }}
-                  className={styles.destructiveGhostBtn}
+                  className={styles.roundedFullBtn}
                 >
                   Don&apos;t use PIN (Turn off)
                 </Button>
@@ -816,6 +819,37 @@ function PinLockForm({ initialStatus }: { initialStatus?: AdminPinStatus }) {
   )
 }
 
+type AccountSectionId = "details" | "pin" | "email" | "password"
+
+const ALL_ACCOUNT_SECTIONS: ReadonlySet<string> = new Set(["details", "pin", "email", "password"])
+
+function AccountSectionQuerySync({ onSelect }: { onSelect: (id: AccountSectionId) => void }) {
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get("section")
+  const hasEmailCallback =
+    searchParams.get("email_changed") === "1" ||
+    Boolean(searchParams.get("error_description")) ||
+    Boolean(searchParams.get("message"))
+
+  useEffect(() => {
+    const target = sectionParam && ALL_ACCOUNT_SECTIONS.has(sectionParam)
+      ? sectionParam
+      : hasEmailCallback
+        ? "email"
+        : null
+    if (!target) return
+    onSelect(target as AccountSectionId)
+    if (sectionParam && typeof window !== "undefined") {
+      const next = new URLSearchParams(window.location.search)
+      next.delete("section")
+      const qs = next.toString()
+      window.history.replaceState(window.history.state, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
+    }
+  }, [sectionParam, hasEmailCallback, onSelect])
+
+  return null
+}
+
 /** Everything about the signed-in admin: details, login email, password, and 12-hour Quick PIN lock. */
 export function AccountSettings({
   name,
@@ -828,42 +862,224 @@ export function AccountSettings({
   email: string
   pinStatus?: AdminPinStatus
 }) {
+  const isMobile = useMediaQuery("(max-width: 959.98px)")
   const [visitKey, setVisitKey] = useState(0)
+  const [activeSection, setActiveSection] = useState<AccountSectionId>("details")
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [savedProfile, setSavedProfile] = useState({ name, phone })
-  const [prevProps, setPrevProps] = useState({ name, phone })
+  const [livePinEnabled, setLivePinEnabled] = useState(Boolean(pinStatus?.mode === "enabled" && pinStatus?.hasPin))
+  const [prevProps, setPrevProps] = useState({ name, phone, pinStatus })
 
-  if (name !== prevProps.name || phone !== prevProps.phone) {
-    setPrevProps({ name, phone })
+  if (name !== prevProps.name || phone !== prevProps.phone || pinStatus !== prevProps.pinStatus) {
+    setPrevProps({ name, phone, pinStatus })
     setSavedProfile({ name, phone })
+    setLivePinEnabled(Boolean(pinStatus?.mode === "enabled" && pinStatus?.hasPin))
   }
 
   useEffect(() => {
     applyClientProfileUpdate({ name, email })
   }, [name, email])
 
+  useEffect(() => {
+    const onPinSync = (e: Event) => {
+      const detail = (e as CustomEvent<Partial<AdminPinStatus>>).detail
+      if (!detail) return
+      if (detail.mode !== undefined || detail.hasPin !== undefined) {
+        setLivePinEnabled(detail.mode === "enabled" && detail.hasPin !== false)
+      }
+    }
+    window.addEventListener("kk-admin-pin-changed", onPinSync)
+    return () => window.removeEventListener("kk-admin-pin-changed", onPinSync)
+  }, [])
+
   useLayoutEffect(() => {
     return () => {
       setVisitKey((k) => k + 1)
+      setMobileDetailOpen(false)
     }
   }, [])
 
-  return (
-    <div className={styles.accountSettingsGrid}>
-      <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
-        <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
-      </Card>
-      <Card
-        title="Quick PIN lock"
-        description="Your full admin sign-in lasts 7 days. Set an optional 4-digit PIN to lock the screen every 12 hours instead of signing in again."
-      >
-        <PinLockForm key={`pin-${visitKey}`} initialStatus={pinStatus} />
-      </Card>
-      <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
-        <EmailForm key={`email-${visitKey}`} email={email} />
-      </Card>
+  const selectSection = useCallback((id: AccountSectionId) => {
+    setActiveSection(id)
+    setMobileDetailOpen(true)
+  }, [])
+
+  const navGroups: {
+    label: string
+    items: {
+      id: AccountSectionId
+      title: string
+      meta: string
+      icon: LucideIcon
+      liveDot?: boolean
+    }[]
+  }[] = [
+    {
+      label: "Profile",
+      items: [
+        {
+          id: "details",
+          title: "Your details",
+          meta: savedProfile.name.trim() || "Display name & mobile number",
+          icon: UserRoundIcon,
+        },
+      ],
+    },
+    {
+      label: "Security & Login",
+      items: [
+        {
+          id: "pin",
+          title: "Quick PIN lock",
+          meta: livePinEnabled ? "Enabled · 12-hour lock" : "Not configured",
+          icon: LockIcon,
+          liveDot: livePinEnabled,
+        },
+        {
+          id: "email",
+          title: "Login email",
+          meta: email || "Update sign-in email",
+          icon: MailIcon,
+        },
+        {
+          id: "password",
+          title: "Password",
+          meta: "Change your admin password",
+          icon: KeyRoundIcon,
+        },
+      ],
+    },
+  ]
+
+  const activeNavItem = navGroups.flatMap((g) => g.items).find((item) => item.id === activeSection) ?? navGroups[0].items[0]
+
+  const renderSectionContent = () => {
+    if (activeSection === "details") {
+      return (
+        <Card title="Your details" description="Shown in the admin menu. Customers never see this.">
+          <ProfileForm key={`profile-${visitKey}`} name={savedProfile.name} phone={savedProfile.phone} onSaved={setSavedProfile} />
+        </Card>
+      )
+    }
+    if (activeSection === "pin") {
+      return (
+        <Card
+          title="Quick PIN lock"
+          description="Your full admin sign-in lasts 7 days. Set an optional 4-digit PIN to lock the screen every 12 hours instead of signing in again."
+        >
+          <PinLockForm key={`pin-${visitKey}`} initialStatus={pinStatus} />
+        </Card>
+      )
+    }
+    if (activeSection === "email") {
+      return (
+        <Card title="Login email" description="We email a confirmation link to the new address before it takes effect.">
+          <EmailForm key={`email-${visitKey}`} email={email} />
+        </Card>
+      )
+    }
+    return (
       <Card title="Password" description="Forgot it instead? Use “Forgot password” on the sign-in page.">
         <PasswordForm key={`password-${visitKey}`} />
       </Card>
+    )
+  }
+
+  return (
+    <div className={viewStyles.settingsWorkspace}>
+      <Suspense fallback={null}>
+        <AccountSectionQuerySync onSelect={selectSection} />
+      </Suspense>
+
+      <nav aria-label="Account sections" className={viewStyles.settingsNavCol}>
+        {navGroups.map((group) => (
+          <div key={group.label} className={viewStyles.settingsNavGroup}>
+            <p className={viewStyles.settingsGroupLabel}>{group.label}</p>
+            <div
+              className={viewStyles.settingsNavList}
+              role="tablist"
+              aria-orientation="vertical"
+              onKeyDown={(event) => {
+                const flat = navGroups.flatMap((g) => g.items)
+                const idx = flat.findIndex((i) => i.id === activeSection)
+                if (idx < 0) return
+                let nextIdx: number | null = null
+                if (event.key === "ArrowDown") nextIdx = (idx + 1) % flat.length
+                else if (event.key === "ArrowUp") nextIdx = (idx - 1 + flat.length) % flat.length
+                else if (event.key === "Home") nextIdx = 0
+                else if (event.key === "End") nextIdx = flat.length - 1
+                if (nextIdx === null) return
+                event.preventDefault()
+                const nextId = flat[nextIdx].id
+                selectSection(nextId)
+                document.getElementById(`account-tab-${nextId}`)?.focus()
+              }}
+            >
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = activeSection === item.id
+                return (
+                  <button
+                    key={item.id}
+                    id={`account-tab-${item.id}`}
+                    type="button"
+                    role="tab"
+                    tabIndex={active ? 0 : -1}
+                    aria-selected={active}
+                    aria-controls={`account-panel-${item.id}`}
+                    onClick={() => selectSection(item.id)}
+                    className={cn(viewStyles.settingsNavBtn, active && viewStyles.settingsNavBtnActive)}
+                  >
+                    <span className={viewStyles.settingsNavIcon} aria-hidden="true">
+                      <Icon className={viewStyles.iconMd} />
+                    </span>
+                    <span className={viewStyles.settingsNavText}>
+                      <span className={viewStyles.settingsNavTitle}>{item.title}</span>
+                      <span className={viewStyles.settingsNavMeta}>{item.meta}</span>
+                    </span>
+                    <span className={viewStyles.settingsNavEnd}>
+                      {item.liveDot && (
+                        <>
+                          <span className={viewStyles.settingsNavLiveDot} aria-hidden="true" title="Enabled" />
+                          <span className={viewStyles.srOnly}>Enabled</span>
+                        </>
+                      )}
+                      <ChevronRightIcon className={viewStyles.settingsNavChevron} aria-hidden="true" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {!isMobile && (
+        <div
+          id={`account-panel-${activeSection}`}
+          role="tabpanel"
+          aria-labelledby={`account-tab-${activeSection}`}
+          className={viewStyles.settingsPaneCol}
+        >
+          <div className={viewStyles.settingsSectionStack}>{renderSectionContent()}</div>
+        </div>
+      )}
+
+      {isMobile && (
+        <Dialog open={mobileDetailOpen} onOpenChange={setMobileDetailOpen}>
+          <DialogContent mobileFullScreen className={viewStyles.settingsMobileDialog}>
+            <DialogHeader>
+              <DialogTitle>{activeNavItem.title}</DialogTitle>
+              <DialogDescription className={viewStyles.srOnly}>
+                Manage {activeNavItem.title}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody resetScrollKey={activeSection} className={viewStyles.settingsMobileDialogBody}>
+              {renderSectionContent()}
+            </DialogBody>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

@@ -42,6 +42,7 @@ type SettingsRow = {
   phone_same_as_whatsapp: boolean | null
   contact_city: string | null
   contact_region: string | null
+  contact_pincode?: string | null
   instagram_url: string | null
   facebook_url: string | null
   order_code_prefix: string | null
@@ -97,6 +98,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     phoneSameAsWhatsapp: phoneSame,
     city: data.contact_city,
     region: data.contact_region,
+    pincode: data.contact_pincode ?? null,
     instagramUrl: data.instagram_url,
     facebookUrl: data.facebook_url,
     orderCodePrefix: data.order_code_prefix ?? d.orderCodePrefix,

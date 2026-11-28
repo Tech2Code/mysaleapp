@@ -33,6 +33,8 @@
   --radiusModal: 16px;
   --radiusPill: 9999px;
   --controlHXs: 28px;
+  --skeleton: var(--muted);
+  --skeleton-pulse: 0.94;
   --controlHSm: 36px;
   --controlHMd: 40px;
   --controlHLg: 44px;
@@ -389,10 +391,6 @@
  * placeholder data inside <Skeletonize>; these rules turn every text run, icon, image and control
  * into a muted block of the same size, so it can never drift from the real page.
  */
-:root {
-  --skeleton: var(--muted);
-  --skeleton-pulse: 0.94;
-}
 .dark {
   --skeleton: var(--muted);
   --skeleton-pulse: 1.35;

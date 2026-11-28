@@ -30,7 +30,7 @@ Open http://localhost:3000. Without Supabase keys the app runs in **demo mode**:
    - `NEXT_PUBLIC_WHATSAPP_NUMBER`: your shop number, e.g. `919876543210`
    - `CRON_SECRET`: a long random string for the keep-alive cron endpoint
    - `RATE_LIMIT_SALT`: a long random string used to hash IPs for rate limiting
-3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0075_return_variants_and_security_hardening.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
+3. Apply the database migrations (`supabase/migrations/0001_init.sql` through `0077_audit_hardening.sql`) using the CLI below, and optionally run `supabase/seed.sql` for sample products.
 4. Restart `npm run dev`.
 
 ### Apply database changes from the terminal (no copy-paste)
@@ -172,7 +172,7 @@ src/
   store/              Client state (cart, wishlist, auth) with Zustand
   styles/             Independent Light & Dark CSS variable theme files (`theme-store.css`, `theme-admin.css`)
   config/site.ts      Deployment constants only (site URL, locale). Shop details live in Admin → Settings
-supabase/             SQL migrations (0001..0075) + seed
+supabase/             SQL migrations (0001..0077) + seed
 public/sw.js          Service worker (offline support)
 ```
 

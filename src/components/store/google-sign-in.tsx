@@ -23,6 +23,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, us
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
 import { CheckboxField, TextField } from "@/components/form"
 import { applyClientSignIn } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
@@ -38,7 +39,6 @@ import {
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { safeNextPath } from "@/lib/safe-redirect"
-import { cn } from "@/lib/utils"
 import { LIMITS, v } from "@/lib/validation"
 import { useAuth } from "@/store/auth"
 import { useWishlist } from "@/store/wishlist"
@@ -127,6 +127,7 @@ function SearchParamsSync({
   onParams: (nextPath: string, errorParam: string | null, initialMode: AuthMode | null) => void
 }) {
   const params = useSearchParams()
+  const verifiedToastShownRef = useRef(false)
   useEffect(() => {
     const nextPath = safeNextPath(params.get("next"), "/")
     let errorParam = params.get("error")
@@ -137,7 +138,8 @@ function SearchParamsSync({
         ? rawMode
         : null
 
-    if (verifiedParam === "1") {
+    if (verifiedParam === "1" && !verifiedToastShownRef.current) {
+      verifiedToastShownRef.current = true
       toast.success("Email verified! You can now sign in with your email and password.")
     }
     if (errorParam === "verify-expired") {
@@ -479,24 +481,27 @@ export function GoogleSignIn({
 
   const perks = mode === "signup" ? SIGN_UP_PERKS : SIGN_IN_PERKS
 
+  const handleSearchParams = useCallback(
+    (nextPath: string, errorParam: string | null, initialMode: AuthMode | null) => {
+      setNext(nextPath)
+      if (errorParam) setProblem(errorParam)
+      if (initialMode) {
+        if (initialMode === "reset-password") {
+          recoveryLockRef.current = true
+        }
+        setMode(initialMode)
+      }
+    },
+    []
+  )
+
   return (
     <div
 
       className={styles.authShell}
     >
       <Suspense fallback={null}>
-        <SearchParamsSync
-          onParams={(nextPath, errorParam, initialMode) => {
-            setNext(nextPath)
-            if (errorParam) setProblem(errorParam)
-            if (initialMode) {
-              if (initialMode === "reset-password") {
-                recoveryLockRef.current = true
-              }
-              setMode(initialMode)
-            }
-          }}
-        />
+        <SearchParamsSync onParams={handleSearchParams} />
       </Suspense>
 
       {/* Left Column: Dynamic Welcome & Perks Panel (Desktop only) */}
@@ -595,34 +600,17 @@ export function GoogleSignIn({
           </div>
 
           {mode !== "reset-password" && (
-            <div
-              role="group"
-              aria-label="Account access"
-              className={styles.modeSwitcher}
-            >
-              <button
-                type="button"
-                aria-pressed={mode === "signin"}
-                onClick={() => switchMode("signin")}
-                className={cn(
-                  styles.modeTabBtn,
-                  mode === "signin" && styles.modeTabBtnActive
-                )}
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                aria-pressed={mode === "signup"}
-                onClick={() => switchMode("signup")}
-                className={cn(
-                  styles.modeTabBtn,
-                  mode === "signup" && styles.modeTabBtnActive
-                )}
-              >
-                Create account
-              </button>
-            </div>
+            <SegmentedTabs
+              layout="equal"
+              shape="pill"
+              ariaLabel="Account access"
+              value={mode === "signup" ? "signup" : "signin"}
+              onChange={(next) => switchMode(next)}
+              items={[
+                { value: "signin", label: "Sign in" },
+                { value: "signup", label: "Create account" },
+              ]}
+            />
           )}
 
           {(mode === "signin" || mode === "signup") && (
@@ -655,7 +643,9 @@ export function GoogleSignIn({
                 ? "Sign-in was cancelled, so you're not signed in yet. You can try again whenever you like."
                 : problem === "expired"
                   ? "That password reset link has expired or was already used. Request a new one below."
-                  : "We couldn't sign you in this time. Please try again."}
+                  : problem === "auth"
+                    ? "We couldn't sign you in this time. Please try again."
+                    : problem}
             </p>
           )}
 

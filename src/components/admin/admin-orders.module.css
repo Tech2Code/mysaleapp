@@ -48,7 +48,7 @@
 .totalBox .totalLabel { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .totalBox .totalAmount { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--foreground); }
 .tileContent .statusBox { display: flex; flex-direction: column; gap: 8px; border-radius: 12px; background-color: color-mix(in oklab, var(--muted) 30%, transparent); padding: 10px; }
-.statusBox .badgesRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.statusBox .badgesRow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
 .statusBox .updatedLine { display: flex; align-items: center; gap: 6px; font-size: 11px; line-height: 16px; color: var(--muted-foreground); }
 .updatedLine .updatedTime { font-weight: 500; color: var(--foreground); }
 .tileContent .customerBox { display: flex; flex-direction: column; gap: 2px; font-size: 12px; line-height: 16px; }
@@ -109,9 +109,7 @@
 .selectSpan2Width52 { grid-column: span 2 / span 2; width: 100%; }
 .browserCard .bottomFilterRow { display: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 12px; }
 .browserCard .bottomFilterRowOpen { display: grid; }
-.bottomFilterRow .resetFilterBtn { grid-column: span 2 / span 2; display: inline-flex; height: var(--controlHMd); flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--secondary); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
-.bottomFilterRow .resetFilterBtn:hover { background-color: color-mix(in oklab, var(--secondary) 86%, var(--foreground) 14%); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
-.bottomFilterRow .resetFilterBtn:active { transform: scale(0.98); }
+.bottomFilterRow .resetFilterBtn { grid-column: span 2 / span 2; }
 .customerFilterCard { margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); padding: 14px; box-shadow: 0 1px 2px var(--shadow-color-soft); }
 .customerFilterCard .tabsRow { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); padding-top: 12px; }
 .tabsRow .statusTabsGroup { display: flex; width: 100%; align-items: center; gap: 4px; overflow-x: auto; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); background-color: color-mix(in oklab, var(--muted) 50%, transparent); padding: 4px; }
@@ -124,9 +122,7 @@
 .statusTabBtn .tabCountAttention { background-color: color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); color: var(--tone-warning-fg-strong); box-shadow: 0 0 0 1px color-mix(in oklab, var(--tone-warning-solid) 40%, transparent); }
 .statusTabBtn .tabCountDefault { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft), 0 0 0 1px color-mix(in oklab, var(--border) 80%, transparent); }
 .tabCountBadge .attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: var(--tone-warning-solid); }
-.tabsRow .customerResetBtn { display: inline-flex; height: var(--controlHSm); width: 100%; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; border-radius: var(--radiusControl); border: 1px solid var(--input); background-color: var(--secondary); padding: 0 14px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft); transition: background-color 180ms ease, border-color 180ms ease, transform 160ms ease; }
-.tabsRow .customerResetBtn:hover { background-color: color-mix(in oklab, var(--secondary) 86%, var(--foreground) 14%); border-color: color-mix(in oklab, var(--foreground) 24%, transparent); transform: translateY(-1px); }
-.tabsRow .customerResetBtn:active { transform: scale(0.98); }
+.tabsRow .customerResetBtn { width: 100%; flex-shrink: 0; }
 .noSearchMatchBox { display: flex; flex-direction: column; align-items: center; gap: 12px; border-radius: var(--radiusCard); border: 1px dashed var(--border); padding: 48px 16px; text-align: center; }
 .noSearchMatchBox .noMatchTitle { font-family: var(--font-heading); font-size: 20px; line-height: 28px; }
 .noSearchMatchBox .noMatchSub { max-width: 384px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
@@ -225,7 +221,7 @@
 .factLabel { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .factValue { margin-top: 2px; font-size: 14px; line-height: 20px; font-weight: 500; }
 .paymentRoot { display: flex; flex-direction: column; gap: 20px; }
-.paymentRoot .paymentHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.paymentRoot .paymentHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .paymentHeader .paymentHeading { font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
 .paymentRoot .factsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; row-gap: 12px; }
 .paymentRoot .owedRefundBox { display: flex; flex-direction: column; gap: 12px; border-radius: 12px; border: 1px solid var(--tone-refund-border); background-color: var(--tone-refund-bg); padding: 16px; font-size: 14px; line-height: 20px; }
@@ -237,12 +233,21 @@
 .refundHelperCard .refundHelperStep { margin: 0; color: var(--muted-foreground); }
 .returnRefundActionStack { display: flex; flex-direction: column; gap: 10px; }
 .paymentRoot .verifyNoteBox { border-radius: var(--radiusCard); border: 1px solid var(--tone-info-border); background-color: var(--tone-info-bg); padding: 12px; font-size: 14px; line-height: 20px; }
-.paymentRoot .verifyActionRow { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
-.verifyActionRow .verifyBtn { border-radius: var(--radiusControl); background-color: var(--success-solid); color: var(--on-solid); }
-.verifyActionRow .verifyBtn:hover { background-color: color-mix(in oklab, var(--success-solid) 88%, black); }
-.paymentRoot .rejectBox { display: flex; flex-direction: column; gap: 8px; border-radius: var(--radiusCard); border: 1px solid var(--border); padding: 16px; }
-.rejectBox .rejectBtnRow { display: flex; gap: 8px; }
-.paymentRoot .manualEditBtn { width: 100%; border-radius: var(--radiusControl); }
+.paymentRoot .verifyActionRow { display: flex; flex-direction: column; gap: 10px; }
+.verifyActionRow .verifyPrimaryBtn { width: 100%; height: 44px; }
+.verifyActionRow .rejectTriggerBtn { width: 100%; height: 44px; }
+.paymentRoot .rejectBox { display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 1px solid color-mix(in oklab, var(--destructive) 28%, var(--border)); background-color: color-mix(in oklab, var(--destructive) 4%, var(--card)); padding: 16px; }
+.rejectBox .rejectBtnRow { display: flex; flex-direction: column; gap: 8px; }
+.rejectBtnRow .rejectConfirmBtn { width: 100%; height: 44px; }
+.rejectBtnRow .rejectCancelBtn { width: 100%; height: 44px; }
+@media (min-width: 640px) {
+  .paymentRoot .verifyActionRow { flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+  .verifyActionRow .verifyPrimaryBtn { width: auto; height: var(--controlHMd); flex: 2 1 220px; }
+  .verifyActionRow .rejectTriggerBtn { width: auto; height: var(--controlHMd); flex: 1 1 116px; }
+  .rejectBox .rejectBtnRow { flex-direction: row; align-items: center; }
+  .rejectBtnRow .rejectConfirmBtn { width: auto; height: var(--controlHMd); }
+  .rejectBtnRow .rejectCancelBtn { width: auto; height: var(--controlHMd); }
+}
 .editPaymentNote { border-radius: var(--radiusCard); background-color: var(--muted); padding: 8px 12px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
 .uppercaseInput { text-transform: uppercase; }
 .uppercaseInput::placeholder { text-transform: none; }

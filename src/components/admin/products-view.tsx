@@ -10,6 +10,8 @@ import { ProductFlagSwitch, ProductRowActions } from "@/components/admin/product
 import { SearchField } from "@/components/form"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { ProductImage } from "@/components/store/product-image"
+import { PillTabs } from "@/components/shared/pill-tabs"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { siteConfig } from "@/config/site"
@@ -164,28 +166,17 @@ export function ProductsView({
         description={`${products.length} product${products.length === 1 ? "" : "s"} · ${products.filter((p) => p.isActive).length} visible in store`}
         actions={
           <div className={styles.headerActions}>
-            <div className={styles.viewSwitcher} role="group" aria-label="View format">
-              <button
-                type="button"
-                onClick={() => changeView("table")}
-                className={cn(styles.viewBtn, viewMode === "table" && styles.viewBtnActive)}
-                aria-pressed={viewMode === "table"}
-                aria-label="List view"
-              >
-                <ListIcon className={styles.iconSm} />
-                <span>List</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => changeView("tiles")}
-                className={cn(styles.viewBtn, viewMode === "tiles" && styles.viewBtnActive)}
-                aria-pressed={viewMode === "tiles"}
-                aria-label="Tile view"
-              >
-                <LayoutGridIcon className={styles.iconSm} />
-                <span>Tiles</span>
-              </button>
-            </div>
+            <SegmentedTabs
+              layout="inline"
+              size="sm"
+              ariaLabel="View format"
+              value={viewMode}
+              onChange={changeView}
+              items={[
+                { value: "table", label: "List", icon: ListIcon, ariaLabel: "List view" },
+                { value: "tiles", label: "Tiles", icon: LayoutGridIcon, ariaLabel: "Tile view" },
+              ]}
+            />
             <Link href="/admin/products/new" prefetch={true} className={cn(buttonVariants({ size: "sm" }), styles.addProductBtn)}>
               <PlusIcon className={styles.iconSm} /> Add product
             </Link>
@@ -243,7 +234,7 @@ export function ProductsView({
                         href={buildRestockWaHref(a)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={styles.restockWaBtn}
+                        className={buttonVariants({ variant: "whatsapp", size: "sm" })}
                       >
                         <WhatsAppIcon className={styles.iconSm} /> Notify on WhatsApp
                       </a>
@@ -279,27 +270,18 @@ export function ProductsView({
 
       {products.length > 0 && (
         <div className={cn("adminCard", styles.filterBar)}>
-          <div className={cn("scroll-row", styles.chipRow)} role="group" aria-label="Filter products">
-            {filterChips.map((chip) => {
-              const active = filter === chip.id
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setFilter(chip.id)}
-                  className={cn(styles.filterChip, active && styles.filterChipActive)}
-                >
-                  <span>{chip.label}</span>
-                  <span
-                    className={cn(styles.chipCount, active && styles.chipCountActive)}
-                  >
-                    {chip.count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <PillTabs
+            role="group"
+            size="sm"
+            ariaLabel="Filter products"
+            value={filter}
+            onChange={setFilter}
+            items={filterChips.map((chip) => ({
+              value: chip.id,
+              label: chip.label,
+              count: chip.count,
+            }))}
+          />
           <div className={styles.searchWrap}>
             <SearchField
               label="Search products"

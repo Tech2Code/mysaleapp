@@ -277,17 +277,165 @@ describe("7. Full-Codebase Audit Hardening Pass 2 (migration 0075 & Option A #1â
     expect(parsed.success).toBe(true)
   })
 
-  it("Admin Quick Jump renders <Link> items instead of <button> + router.push to avoid overlay history race", () => {
-    const code = readFileSync(join(SRC, "components/admin/admin-sidebar.tsx"), "utf8")
-    const qjStart = code.indexOf("function QuickJumpDialog")
-    const qjEnd = code.indexOf("export function AdminSidebar")
-    const qj = code.slice(qjStart, qjEnd)
-    expect(qj).toContain("<Link")
-    expect(qj).not.toContain("router.push(item.href)")
+  it("Admin Global Search renders <Link> items instead of <button> + router.push to avoid overlay history race", () => {
+    const code = readFileSync(join(SRC, "components/admin/admin-global-search.tsx"), "utf8")
+    expect(code).toContain("<Link")
+    expect(code).not.toContain("router.push(item.href)")
   })
 
   it("createGatewayRetrySession gates PII on row.isOwner rather than any signed-in user", () => {
     const code = readFileSync(join(SRC, "features/orders/actions.ts"), "utf8")
     expect(code).toContain("const isOrderOwner = Boolean(user && row.isOwner === true)")
+  })
+})
+
+describe("8. Deep Universal Audit Hardening (2026-11-28)", () => {
+  it("searchAdminGlobal never queries non-existent products.sku, hardens PostgREST pattern, and rate-limits", () => {
+    const code = readFileSync(join(SRC, "features/admin/search-actions.ts"), "utf8")
+    expect(code).not.toContain("sku.ilike.")
+    expect(code).toContain('typeof rawQuery !== "string"')
+    expect(code).toContain('limited("track-order"')
+    expect(code).toContain("locked: /pin|locked/i.test(auth.error)")
+  })
+
+  it("AdminGlobalSearch blocks Cmd+K/events while PIN-locked and clears cache on manualLock", () => {
+    const code = readFileSync(join(SRC, "components/admin/admin-global-search.tsx"), "utf8")
+    expect(code).toContain('document.querySelector("[data-admin-pin-locked]")')
+    expect(code).toContain('"kk-admin-pin-changed"')
+    expect(code).toContain("adminSearchCache.clear()")
+  })
+
+  it("AuthListener clears kk-checkout-draft on sign-out and CheckoutForm enforces draft TTL + sanitization", () => {
+    const auth = readFileSync(join(SRC, "components/shared/auth-listener.tsx"), "utf8")
+    expect(auth).toContain('sessionStorage.removeItem("kk-checkout-draft")')
+    const checkout = readFileSync(join(SRC, "components/store/checkout-form.tsx"), "utf8")
+    expect(checkout).toContain("CHECKOUT_DRAFT_TTL_MS")
+    expect(checkout).toContain("sanitizeOneTimeAddress")
+    expect(checkout).toContain("sanitizeAppliedPromo")
+    expect(checkout).toContain("draft && draft.ownerId !== ownerId")
+  })
+
+  it("useStepHistory.syncHistoryDepth synthesizes history entries when restoring without existing entries", () => {
+    const code = readFileSync(join(SRC, "hooks/use-step-history.ts"), "utf8")
+    expect(code).toContain("hasExistingEntries = true")
+    expect(code).toContain("if (!hasExistingEntries && depth > 0)")
+  })
+
+  it("usePincodeLookup never overwrites saved city/state on initial primed pincode mount", () => {
+    const code = readFileSync(join(SRC, "components/shared/use-pincode-lookup.ts"), "utf8")
+    expect(code).toContain("const allowOverwrite = overwrite && pincode !== filled.current.pin")
+  })
+
+  it("PillTabs and SegmentedTabs do not swallow onChange on active-tab re-click and PillTabs Link respects tint tone", () => {
+    const pill = readFileSync(join(SRC, "components/shared/pill-tabs.tsx"), "utf8")
+    expect(pill).not.toContain("centerItem(nextValue)\n      return")
+    expect(pill).toContain("MutationObserver")
+    const seg = readFileSync(join(SRC, "components/shared/segmented-tabs.tsx"), "utf8")
+    expect(seg).not.toContain("if (isScroll) centerItem(nextValue)\n      return")
+    expect(seg).toContain("styles.segmentedTrayEqual")
+  })
+
+  it("Settings/Account/Launch hubs preserve window.history.state on replaceState and clear Launch RESET confirmation", () => {
+    for (const rel of [
+      "components/admin/store-settings-form.tsx",
+      "components/admin/account-forms.tsx",
+      "components/admin/launch-panel.tsx",
+      "components/account/profile-form.tsx",
+    ]) {
+      const code = readFileSync(join(SRC, rel), "utf8")
+      expect(code).not.toContain("window.history.replaceState(null,")
+    }
+    const launch = readFileSync(join(SRC, "components/admin/launch-panel.tsx"), "utf8")
+    expect(launch).toContain('if (id !== "reset")')
+  })
+
+  it("ProductBrowser mobileSortRow does not nest overflow-x: auto around PillTabs", () => {
+    const css = readFileSync(join(SRC, "components/store/product-browser.module.css"), "utf8")
+    expect(css).not.toContain(".controlsRow .mobileSortRow { display: flex; align-items: center; gap: 6px; overflow-x: auto;")
+  })
+
+  it("LegalView (Server Component) passes serializable iconNode instead of component function to PillTabs", () => {
+    const code = readFileSync(join(SRC, "components/store/legal-view.tsx"), "utf8")
+    expect(code).toContain("iconNode:")
+    expect(code).not.toContain("icon: t.icon")
+  })
+})
+
+describe("9. Complete Production Audit Regression Guards (2026-11-28)", () => {
+  it("RequestReturn & AdminReturnRequests key and validate variant lines with returnLineKey", () => {
+    const reqRet = readFileSync(join(SRC, "components/store/request-return.tsx"), "utf8")
+    expect(reqRet).toContain("left.get(returnLineKey(p))")
+    expect(reqRet).not.toContain("left.get(p.productId)")
+    expect(reqRet).toContain("returnLineKey(o) === returnLineKey(p)")
+    expect(reqRet).not.toContain("<li key={i.productId}>")
+
+    const adminRet = readFileSync(join(SRC, "components/admin/return-requests.tsx"), "utf8")
+    expect(adminRet).toContain("<li key={returnLineKey(i)}>")
+    expect(adminRet).not.toContain("<li key={i.productId}>")
+  })
+
+  it("/auth/callback never lets query params bypass recovery-session cookies", () => {
+    const cb = readFileSync(join(SRC, "app/auth/callback/route.ts"), "utf8")
+    expect(cb).not.toContain('next.includes("email_changed=1")')
+    expect(cb).toContain('authMethod === "otp"')
+    expect(cb).toContain("hasRecentRecoverySent")
+  })
+
+  it("Redirect-based payment gateways return 'redirecting' without cancelling the order", () => {
+    const gw = readFileSync(join(SRC, "features/orders/gateway-client.ts"), "utf8")
+    expect(gw).toContain('return { status: "redirecting" }')
+    const checkout = readFileSync(join(SRC, "components/store/checkout-form.tsx"), "utf8")
+    expect(checkout).toContain('if (outcome.status === "redirecting")')
+    const panel = readFileSync(join(SRC, "components/store/payment-panel.tsx"), "utf8")
+    expect(panel).toContain('if (outcome.status === "redirecting")')
+  })
+
+  it("Checkout address modal uses account-scoped activeProfile instead of stale initialProfile", () => {
+    const checkout = readFileSync(join(SRC, "components/store/checkout-form.tsx"), "utf8")
+    expect(checkout).toContain("const activeProfile = clientProfile ?? (canUseInitial ? initialProfile : null)")
+    expect(checkout).toContain("fullName: activeProfile?.fullName")
+    expect(checkout).not.toContain("fullName: initialProfile?.fullName")
+  })
+
+  it("Order payment actions enforce paymentMode and verifyGatewayPayment verifies before paid-status branching", () => {
+    const actions = readFileSync(join(SRC, "features/orders/actions.ts"), "utf8")
+    expect(actions).toContain('if (shop.paymentMode !== "manual_upi")')
+    expect(actions).toContain('limited("gateway-payment", parsed.data.code)')
+    const verifyIdx = actions.indexOf("adapter.verifyClientPayment(")
+    const alreadyPaidIdx = actions.indexOf("This order is already marked as paid.")
+    expect(verifyIdx).toBeGreaterThan(0)
+    expect(alreadyPaidIdx).toBeGreaterThan(verifyIdx)
+  })
+
+  it("Authenticated customer mutations enforce assertActiveCustomer()", () => {
+    for (const rel of [
+      "features/addresses/actions.ts",
+      "features/wishlist/actions.ts",
+      "features/products/actions.ts",
+    ]) {
+      const code = readFileSync(join(SRC, rel), "utf8")
+      expect(code).toContain("assertActiveCustomer()")
+    }
+  })
+
+  it("ReturnStatusControl wires doorstep set_courier and admin-queries excludes cancelled from submitted payment filter", () => {
+    const ctrl = readFileSync(join(SRC, "components/admin/return-status-control.tsx"), "utf8")
+    expect(ctrl).toContain('"exchange_set_courier"')
+    expect(ctrl).toContain('mode="set_courier"')
+    const queries = readFileSync(join(SRC, "features/orders/admin-queries.ts"), "utf8")
+    expect(queries).toContain('head().eq("payment_status", "submitted").neq("status", "cancelled")')
+  })
+
+  it("Providers lazy-loads motion-features, admin has error.tsx, and critical CSS icon classes exist", () => {
+    const providers = readFileSync(join(SRC, "components/shared/providers.tsx"), "utf8")
+    expect(providers).toContain('import("./motion-features")')
+    expect(providers).not.toContain("import { domMax,")
+
+    const adminErr = readFileSync(join(SRC, "app/admin/(panel)/error.tsx"), "utf8")
+    expect(adminErr).toContain("AdminPanelError")
+
+    expect(readFileSync(join(SRC, "components/store/order-status.module.css"), "utf8")).toContain(".banSvg")
+    expect(readFileSync(join(SRC, "components/store/footer.module.css"), "utf8")).toContain(".whatsappIcon")
+    expect(readFileSync(join(SRC, "components/store/search-dialog.module.css"), "utf8")).toContain(".arrowSvg")
   })
 })

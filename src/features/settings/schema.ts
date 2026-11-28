@@ -66,6 +66,13 @@ export const storeSettingsSchema = z.object({
   ),
   city: v.optionalText(LIMITS.city.max),
   region: v.optionalText(LIMITS.region.max),
+  pincode: z.preprocess(
+    (x) => (typeof x === "string" ? x.replace(/\D/g, "").slice(0, LIMITS.pincode) || null : x),
+    z
+      .string()
+      .regex(PATTERNS.pincode, "Enter a valid 6-digit pincode")
+      .nullable()
+  ),
   instagramUrl: v.optionalUrl("Instagram link"),
   facebookUrl: v.optionalUrl("Facebook link"),
 

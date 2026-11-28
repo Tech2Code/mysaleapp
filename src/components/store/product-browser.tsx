@@ -1,12 +1,11 @@
 "use client"
 
-import * as m from "motion/react-m"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { SearchField, SelectField } from "@/components/form"
 import { Pagination } from "@/components/shared/pagination"
+import { PillTabs } from "@/components/shared/pill-tabs"
 import { parseSearchQuery, priceDistanceToQuery, scoreProductSearch, type Category, type ProductListItem } from "@/features/products/types"
-import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import styles from "./product-browser.module.css"
 import { ProductCard } from "./product-card"
@@ -40,8 +39,25 @@ function filterKey(q: string, category: string, sort: SortKey, page: number): st
   return JSON.stringify([q, category, sort, page])
 }
 
+const EMPTY_PARAMS = { get: () => null }
+
 /** Client-side search / filter / sort / pagination. The catalogue is small, so this is instant. */
 export function ProductBrowser({
+  products,
+  categories,
+  preview = false,
+}: {
+  products: ProductListItem[]
+  categories: Pick<Category, "id" | "name" | "slug">[]
+  preview?: boolean
+}) {
+  if (preview) {
+    return <ProductBrowserBody products={products} categories={categories} params={EMPTY_PARAMS} preview />
+  }
+  return <ProductBrowserWithParams products={products} categories={categories} />
+}
+
+function ProductBrowserWithParams({
   products,
   categories,
 }: {
@@ -49,6 +65,20 @@ export function ProductBrowser({
   categories: Pick<Category, "id" | "name" | "slug">[]
 }) {
   const params = useSearchParams()
+  return <ProductBrowserBody products={products} categories={categories} params={params} preview={false} />
+}
+
+function ProductBrowserBody({
+  products,
+  categories,
+  params,
+  preview,
+}: {
+  products: ProductListItem[]
+  categories: Pick<Category, "id" | "name" | "slug">[]
+  params: { get(name: string): string | null }
+  preview: boolean
+}) {
   const [query, setQuery] = useState(params.get("q") ?? "")
   const [category, setCategory] = useState(params.get("category") ?? "all")
   const [sort, setSort] = useState<SortKey>(sortFrom(params))
@@ -161,25 +191,32 @@ export function ProductBrowser({
   // Picking a filter or changing page repositions the results cleanly right under the sticky bar.
   const barRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const [isStuck, setIsStuck] = useState(false)
 
   useEffect(() => {
+    if (preview) return
     const bar = barRef.current
     if (!bar) return
+    let rafId = 0
     const checkStuck = () => {
-      const stickyTop = parseFloat(getComputedStyle(bar).top) || 64
+      rafId = 0
+      const parsedTop = parseFloat(getComputedStyle(bar).top)
+      const stickyTop = Number.isFinite(parsedTop) ? parsedTop : 64
       const rect = bar.getBoundingClientRect()
       const nextStuck = window.scrollY > 8 && rect.top <= stickyTop + 1
-      setIsStuck((prev) => (prev === nextStuck ? prev : nextStuck))
+      bar.toggleAttribute("data-stuck", nextStuck)
+    }
+    const schedule = () => {
+      if (!rafId) rafId = window.requestAnimationFrame(checkStuck)
     }
     checkStuck()
-    window.addEventListener("scroll", checkStuck, { passive: true })
-    window.addEventListener("resize", checkStuck, { passive: true })
+    window.addEventListener("scroll", schedule, { passive: true })
+    window.addEventListener("resize", schedule, { passive: true })
     return () => {
-      window.removeEventListener("scroll", checkStuck)
-      window.removeEventListener("resize", checkStuck)
+      if (rafId) window.cancelAnimationFrame(rafId)
+      window.removeEventListener("scroll", schedule)
+      window.removeEventListener("resize", schedule)
     }
-  }, [])
+  }, [preview])
 
   const lastStateRef = useRef({ filters: `${deferredQuery}|${category}|${sort}`, page: currentPage })
   useLayoutEffect(() => {
@@ -205,7 +242,7 @@ export function ProductBrowser({
 
   return (
     <div>
-      <div ref={barRef} className={cn(styles.stickyFilterBar, isStuck && styles.stickyFilterBarStuck)}>
+      <div ref={barRef} className={styles.stickyFilterBar}>
         <div className={styles.controlsRow}>
           <SearchField
             label="Search products"
@@ -236,53 +273,38 @@ export function ProductBrowser({
             }}
             options={Object.entries(SORTS).map(([value, label]) => ({ value, label }))}
           />
-          <div className={styles.mobileSortRow} role="group" aria-label="Sort products">
-            {(Object.entries(SORTS) as [SortKey, string][]).map(([key, label]) => {
-              const active = sort === key
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => {
-                    setSort(key)
-                    setPage(1)
-                  }}
-                  className={cn(styles.sortPillBtn, active && styles.sortPillBtnActive)}
-                >
-                  {label}
-                </button>
-              )
-            })}
+          <div className={styles.mobileSortRow}>
+            <PillTabs
+              role="group"
+              tone="tint"
+              size="sm"
+              ariaLabel="Sort products"
+              value={sort}
+              onChange={(next) => {
+                setSort(next)
+                setPage(1)
+              }}
+              items={(Object.entries(SORTS) as [SortKey, string][]).map(([key, label]) => ({
+                value: key,
+                label,
+              }))}
+            />
           </div>
         </div>
 
-        <div className={styles.chipsRow} role="group" aria-label="Filter by category">
-          {chips.map((c) => {
-            const active = category === c.slug
-            return (
-              <button
-                key={c.slug}
-                type="button"
-                aria-pressed={active}
-                onClick={() => {
-                  setCategory(c.slug)
-                  setPage(1)
-                }}
-                className={cn(styles.categoryChip, active && styles.categoryChipActive)}
-              >
-                {active && (
-                  <m.span
-                    layoutId="chip-active"
-                    className={styles.activeChipBg}
-                    transition={{ type: "spring", stiffness: 540, damping: 34 }}
-                  />
-                )}
-                <span className={styles.chipLabel}>{c.name}</span>
-              </button>
-            )
-          })}
-        </div>
+        <PillTabs
+          role="group"
+          ariaLabel="Filter by category"
+          value={category}
+          onChange={(next) => {
+            setCategory(next)
+            setPage(1)
+          }}
+          items={chips.map((c) => ({
+            value: c.slug,
+            label: c.name,
+          }))}
+        />
       </div>
 
       <div ref={listRef}>

@@ -11,6 +11,7 @@ import { SearchField, SelectField, TextAreaField, TextField } from "@/components
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { Carousel } from "@/components/shared/carousel"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { PillTabs } from "@/components/shared/pill-tabs"
 import { Breadcrumbs } from "@/components/store/page-header"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { useToastAfter } from "@/hooks/use-toast-after"
@@ -2144,7 +2145,7 @@ export function ProductReviewsPageView({
             </h1>
             <div className={styles.bannerPriceRow}>
               <span className={styles.bannerPrice}>{formatPrice(product.price)}</span>
-              {product.compareAtPrice && (
+              {product.compareAtPrice && product.compareAtPrice > product.price && (
                 <span className={styles.bannerComparePrice}>{formatPrice(product.compareAtPrice)}</span>
               )}
               {off && <span className={styles.bannerSavePill}>Save {off}%</span>}
@@ -2162,7 +2163,8 @@ export function ProductReviewsPageView({
         <div className={styles.bannerActionsGroup}>
           {product.stock > 0 ? (
             <Button type="button" size="lg" onClick={quickAddToCart} className={styles.bannerCartBtn}>
-              <ShoppingBagIcon className={styles.icon16} aria-hidden /> Add to cart
+              <ShoppingBagIcon className={styles.icon16} aria-hidden />{" "}
+              {(product.variants?.length ?? 0) > 0 ? "Select option" : "Add to cart"}
             </Button>
           ) : (
             <Button type="button" size="lg" variant="outline" disabled className={styles.pillBtn}>
@@ -2322,65 +2324,43 @@ export function ProductReviewsPageView({
 
                 {/* Aspect Filter Chips + Active Star Filter Chip */}
                 {(aspectStats.length > 0 || starFilter !== null) && (
-                  <div className={styles.aspectFilterRow} role="group" aria-label="Filter by product aspect">
-                    <button
-                      type="button"
-                      aria-pressed={aspectFilter === null && starFilter === null}
-                      onClick={() => {
+                  <PillTabs
+                    role="group"
+                    size="sm"
+                    ariaLabel="Filter by product aspect"
+                    value={aspectFilter ?? (starFilter === null ? "__all__" : "__none__")}
+                    onChange={(next) => {
+                      if (next === "__all__") {
                         setAspectFilter(null)
                         setStarFilter(null)
-                        setVisibleCount(REVIEWS_PER_PAGE)
-                      }}
-                      className={cn(
-                        styles.aspectFilterChip,
-                        aspectFilter === null && starFilter === null && styles.aspectFilterChipActive
-                      )}
-                    >
-                      <span>All reviews</span>
-                      <span
-                        className={cn(
-                          styles.aspectChipCount,
-                          aspectFilter === null && starFilter === null && styles.aspectChipCountActive
-                        )}
-                      >
-                        {liveReviews.length}
-                      </span>
-                    </button>
-
-                    {aspectStats.map((stat) => {
-                      const active = aspectFilter === stat.aspect
-                      return (
+                      } else {
+                        setAspectFilter((prev) => (prev === next ? null : next))
+                      }
+                      setVisibleCount(REVIEWS_PER_PAGE)
+                    }}
+                    items={[
+                      { value: "__all__", label: "All reviews", count: liveReviews.length },
+                      ...aspectStats.map((stat) => ({
+                        value: stat.aspect,
+                        label: stat.aspect,
+                        count: stat.totalVotes,
+                      })),
+                    ]}
+                    trailing={
+                      starFilter !== null ? (
                         <button
-                          key={stat.aspect}
                           type="button"
-                          aria-pressed={active}
                           onClick={() => {
-                            setAspectFilter((prev) => (prev === stat.aspect ? null : stat.aspect))
+                            setStarFilter(null)
                             setVisibleCount(REVIEWS_PER_PAGE)
                           }}
-                          className={cn(styles.aspectFilterChip, active && styles.aspectFilterChipActive)}
+                          className={styles.clearStarFilterBtn}
                         >
-                          <span>{stat.aspect}</span>
-                          <span className={cn(styles.aspectChipCount, active && styles.aspectChipCountActive)}>
-                            {stat.totalVotes}
-                          </span>
+                          {starFilter}★ only ✕
                         </button>
-                      )
-                    })}
-
-                    {starFilter !== null && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStarFilter(null)
-                          setVisibleCount(REVIEWS_PER_PAGE)
-                        }}
-                        className={styles.clearStarFilterBtn}
-                      >
-                        {starFilter}★ only ✕
-                      </button>
-                    )}
-                  </div>
+                      ) : undefined
+                    }
+                  />
                 )}
               </div>
 
@@ -2558,7 +2538,7 @@ export function ProductReviewsPageView({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(next) => !next && setDeleteTarget(null)}
+        onOpenChange={(next) => !next && !pending && setDeleteTarget(null)}
         title="Delete this review?"
         description={
           <>

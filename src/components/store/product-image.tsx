@@ -32,19 +32,33 @@ export function ProductImage({
   // Remember WHICH src failed/loaded, so a changed src (gallery thumbnail) starts fresh without an effect.
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
   const mounted = useRef(false)
   useEffect(() => {
     mounted.current = true
+    const img = imgRef.current
+    if (src && img?.complete) {
+      if (img.naturalWidth > 0) {
+        queueMicrotask(() => {
+          if (mounted.current) setLoadedSrc(src)
+        })
+      } else if (img.currentSrc) {
+        queueMicrotask(() => {
+          if (mounted.current) setFailedSrc(src)
+        })
+      }
+    }
     return () => {
       mounted.current = false
     }
-  }, [])
+  }, [src])
 
   // Inline `data:` URIs come from skeleton placeholders (`placeholderProduct`); render the lightweight CSS tile instead of mounting/preloading next/image.
   if (src && !src.startsWith("data:") && failedSrc !== src) {
     const isLoaded = Boolean(priority) || loadedSrc === src
     return (
       <Image
+        ref={imgRef}
         src={src}
         alt={alt}
         fill

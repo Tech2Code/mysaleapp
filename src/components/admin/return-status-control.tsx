@@ -20,6 +20,7 @@ type Choice =
   | "reject"
   | "picked_up"
   | "received"
+  | "exchange_set_courier"
   | "exchange_dispatch"
   | "exchange_deliver"
   | "exchange_undo_dispatch"
@@ -99,6 +100,12 @@ export function ReturnStatusControl({
     )
   }
   const isDoorstepApproved = open?.status === "approved" && open.resolutionType === "exchange" && open.exchangeMode === "doorstep"
+  if (isDoorstepApproved) {
+    options.push({
+      value: "exchange_set_courier",
+      label: open.exchangeShipping ? "Edit doorstep courier details" : "Add doorstep courier details",
+    })
+  }
   if (open?.status === "approved" && !open.pickedUpAt && !isDoorstepApproved) {
     options.push({ value: "picked_up", label: "Pickup successful", tone: "next", badge: "Next step" })
   }
@@ -177,6 +184,9 @@ export function ReturnStatusControl({
       {picked === "approve" && open && <DecideDialog request={open} approve orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "reject" && open && <DecideDialog request={open} approve={false} orderCode={orderCode} customerName={customerName} phone={phone} />}
       {picked === "picked_up" && open && <PickedUpButton requestId={open.id} />}
+      {picked === "exchange_set_courier" && open && (
+        <ExchangeFulfillmentControl request={open} mode="set_courier" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
+      )}
       {picked === "exchange_dispatch" && activeExchangeReq && (
         <ExchangeFulfillmentControl request={activeExchangeReq} mode="dispatched" orderCode={orderCode} customerName={customerName} phone={phone} stage={stage} />
       )}

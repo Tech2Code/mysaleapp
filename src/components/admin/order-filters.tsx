@@ -7,6 +7,8 @@ import { useEffect, useOptimistic, useRef, useState, useTransition, type ReactNo
 import { OrdersTable } from "@/components/admin/orders-table"
 import { SearchField, SelectField, type SelectOption } from "@/components/form"
 import { Skeletonize } from "@/components/shared/skeletonize"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
+import { Button } from "@/components/ui/button"
 import { fyYearOf, orderMonthOptions, orderYearOptions, resolveOrderPeriod } from "@/features/orders/dashboard-range"
 import { PLACEHOLDER_TODAY, placeholderOrders } from "@/features/orders/placeholders"
 import type { OrderFilterCounts, ReturnViewCounts } from "@/features/orders/admin-queries"
@@ -213,7 +215,7 @@ export function OrdersBrowser({
                 setQuery("")
                 go({ q: "" })
               }}
-              placeholder="Search code, phone or name…"
+              placeholder="Search code, phone, name or UTR…"
             />
           </form>
 
@@ -310,9 +312,9 @@ export function OrdersBrowser({
           />
 
           {hasActiveFilters && (
-            <button
-
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 setQuery("")
                 setMobileOpen(false)
@@ -321,7 +323,7 @@ export function OrdersBrowser({
               className={styles.resetFilterBtn}
             >
               <RotateCcwIcon className={styles.iconSm} aria-hidden /> Reset
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -508,49 +510,25 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
 
         {/* Row 2: Status Tabs (All, Active, Delivered, Cancelled, Refund) + Reset */}
         <div className={styles.tabsRow}>
-          <div
-
-            role="group"
-            aria-label="Order status"
-            className={cn("no-scrollbar", styles.statusTabsGroup)}
-          >
-            {statusTabs.map((tab) => {
-              const isSelected = status === tab.value
-              return (
-                <button
-
-                  key={tab.value}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => selectTab(tab.value)}
-                  className={cn(styles.statusTabBtn, isSelected && styles.statusTabBtnSelected)}
-                >
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && (
-                    <span
-
-                      className={cn(
-                        styles.tabCountBadge,
-                        isSelected
-                          ? styles.tabCountSelected
-                          : tab.attention
-                            ? styles.tabCountAttention
-                            : styles.tabCountDefault
-                      )}
-                    >
-                      {tab.attention && !isSelected && <span className={styles.attentionDot} aria-hidden />}
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+          <SegmentedTabs
+            layout="scroll"
+            surface="primary"
+            ariaLabel="Order status"
+            value={status}
+            onChange={selectTab}
+            items={statusTabs.map((tab) => ({
+              value: tab.value,
+              label: tab.label,
+              count: tab.count,
+              attention: tab.attention,
+            }))}
+          />
 
           {hasActiveFilters && (
-            <button
-
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 clearSearch()
                 if (!hasPeriodFilter) {
@@ -561,8 +539,8 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
               }}
               className={styles.customerResetBtn}
             >
-              <RotateCcwIcon className={styles.iconSm} aria-hidden /> Reset
-            </button>
+              <RotateCcwIcon className={styles.iconSm} aria-hidden="true" /> Reset
+            </Button>
           )}
         </div>
       </div>
@@ -583,22 +561,20 @@ export function CustomerOrdersFilterBar(current: CustomerOrderFilters) {
                   Search across all your past orders to find older purchases.
                 </p>
                 <div className={styles.noMatchActions}>
-                  <button
-
+                  <Button
                     type="button"
+                    variant="primary"
                     onClick={() => goPeriod({ status: "all", year: "all", month: "all" })}
-                    className={styles.allTimeBtn}
                   >
                     Search in all-time orders
-                  </button>
-                  <button
-
+                  </Button>
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={clearSearch}
-                    className={styles.clearSearchBtn}
                   >
                     Clear search
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (

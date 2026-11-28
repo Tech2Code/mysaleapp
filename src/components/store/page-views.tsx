@@ -92,19 +92,31 @@ export function WishlistPageView({ products, preview }: { products: ProductCardD
   )
 }
 
-export function ProductsPageView({ items, categories }: { items: ProductListItem[]; categories: Pick<Category, "id" | "name" | "slug">[] }) {
+export function ProductsPageView({
+  items,
+  categories,
+  preview = false,
+}: {
+  items: ProductListItem[]
+  categories: Pick<Category, "id" | "name" | "slug">[]
+  preview?: boolean
+}) {
   return (
     <>
       <PageHeader
         title="Shop all"
-        description="Every piece is made by hand in small batches — no two are exactly alike."
+        description="Browse our full collection — transparent pricing and quick UPI checkout."
         breadcrumbs={[{ name: "Home", href: "/" }, { name: "Shop all" }]}
       />
       <Body>
-        {/* Fallback is the first page of the crawlable grid; filters and pagination hydrate on top of it. */}
-        <Suspense fallback={<ProductGrid products={items.slice(0, PRODUCTS_PER_PAGE)} />}>
-          <ProductBrowser products={items} categories={categories} />
-        </Suspense>
+        {preview ? (
+          <ProductBrowser products={items} categories={categories} preview />
+        ) : (
+          /* Fallback is the first page of the crawlable grid; filters and pagination hydrate on top of it. */
+          <Suspense fallback={<ProductGrid products={items.slice(0, PRODUCTS_PER_PAGE)} />}>
+            <ProductBrowser products={items} categories={categories} />
+          </Suspense>
+        )}
       </Body>
     </>
   )

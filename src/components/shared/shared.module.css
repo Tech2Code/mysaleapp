@@ -53,7 +53,8 @@
 .carouselRegion .carouselArrowNext { right: -14px; }
 .carouselArrowBtn .arrowIcon20 { width: 20px; height: 20px; }
 .carouselRegion .carouselDotsRow { display: flex; align-items: center; justify-content: center; gap: 6px; padding-top: 2px; }
-.carouselDotsRow .carouselDotBtn { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 9999px; background-color: color-mix(in oklab, var(--foreground) 18%, transparent); transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease; }
+.carouselDotsRow .carouselDotBtn { position: relative; width: 6px; height: 6px; padding: 0; border: 0; border-radius: 9999px; background-color: color-mix(in oklab, var(--foreground) 18%, transparent); transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 220ms ease; }
+.carouselDotsRow .carouselDotBtn::after { content: ""; position: absolute; inset: -9px; }
 .carouselDotsRow .carouselDotBtn:hover { background-color: color-mix(in oklab, var(--foreground) 38%, transparent); }
 .carouselDotsRow .carouselDotBtnActive { width: 20px; background-color: var(--primary); }
 /* Section: Price Breakdown */
@@ -102,9 +103,10 @@
 .itemDetailsCol .itemUnitQty { margin: 4px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
 .itemFlexRow .itemLineTotal { margin: 0; font-size: 14px; font-weight: 600; color: var(--foreground); }
 .summaryBreakdownTop { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
-.paymentStatusStrip { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; border-radius: 16px; background-color: color-mix(in oklab, var(--muted) 62%, transparent); padding: 12px; font-size: 14px; }
+.paymentStatusStrip { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; border-radius: 16px; background-color: color-mix(in oklab, var(--muted) 62%, transparent); padding: 12px; font-size: 14px; }
 .paymentStatusStrip .paymentLabelLeft { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); }
-.paymentStatusStrip .paymentTonePill { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+.paymentStatusStrip .paymentStatusRight { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.paymentStatusRight .paymentTonePill { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .awaitingPaymentHint { margin: 8px 0 0 0; font-size: 12px; color: var(--muted-foreground); }
 /* Section: Order Timeline & Shipping Info */
 .timelineList { margin: 0; padding: 0; list-style: none; }
@@ -240,12 +242,25 @@
 .invoiceTable .tbodyRow { border-bottom: 1px solid var(--border); }
 .invoiceTable .tbodyPromoRow { border-bottom: 1px solid var(--border); color: var(--tone-success-fg-strong); }
 .invoiceTable .tdLeft { padding: 12px 8px 12px 0; }
+.tdLeft .invoiceVariantNote { color: var(--muted-foreground); font-size: 13px; }
 .invoiceTable .tdLeftMedium { padding: 12px 8px 12px 0; font-weight: 500; }
 .invoiceTable .tdMiddleNum { padding: 12px 8px; text-align: right; font-variant-numeric: tabular-nums; }
 .invoiceTable .tdRightNum { padding: 12px 0 12px 8px; text-align: right; font-variant-numeric: tabular-nums; }
 .invoiceTable .tdRightBoldNum { padding: 12px 0 12px 8px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .invoiceTable .tfootTh { padding: 16px 8px 0 0; text-align: right; font-size: 16px; font-weight: 600; }
 .invoiceTable .tfootTd { padding: 16px 0 0 8px; text-align: right; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.invoiceArticle .invoiceSummaryWrap { margin-top: 20px; display: flex; justify-content: flex-end; }
+.invoiceSummaryWrap .invoiceSummaryBox { margin: 0; width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 8px; border: 0; border-radius: 0; padding: 0; box-shadow: none; font-size: 14px; }
+.invoiceSummaryBox .summaryRow { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; color: var(--foreground); }
+.invoiceSummaryBox .summaryRowPromo { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; color: var(--tone-success-fg-strong); }
+.invoiceSummaryBox .summaryRowMuted { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--muted-foreground); }
+.invoiceSummaryBox .summaryTaxBlock { margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 6px; }
+.invoiceSummaryBox .summaryGrandTotalRow { margin-top: 4px; padding-top: 12px; border-top: 2px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; gap: 16px; color: var(--foreground); }
+.summaryRow .summaryLabel, .summaryRowPromo .summaryLabel, .summaryRowMuted .summaryLabel { margin: 0; font-weight: 500; }
+.summaryRow .summaryValue, .summaryRowMuted .summaryValue { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.summaryRowPromo .summaryValueBold { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.summaryGrandTotalRow .summaryGrandTotalLabel { margin: 0; font-size: 15px; font-weight: 700; }
+.summaryGrandTotalRow .summaryGrandTotalValue { margin: 0; text-align: right; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .invoiceArticle .gstSection { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; font-size: 14px; }
 .gstSection .gstRow { margin: 0; display: flex; justify-content: space-between; gap: 16px; }
 .gstSection .gstRowTop { margin: 4px 0 0 0; display: flex; justify-content: space-between; gap: 16px; }
@@ -262,6 +277,8 @@
 @keyframes successRingSweep { from { stroke-dashoffset: 1; opacity: 0.2; } to { stroke-dashoffset: 0; opacity: 1; } }
 @keyframes successCheckDraw { 0% { stroke-dashoffset: 1; opacity: 0; } 18% { opacity: 1; } 76% { stroke-dashoffset: 0; transform: scale(1.06); } 100% { stroke-dashoffset: 0; transform: scale(1); opacity: 1; } }
 .badgePillBase { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.paymentBadgeGroup { display: inline-flex; max-width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; }
+.paymentBadgeDetail { font-size: 11px; line-height: 15px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted-foreground); white-space: nowrap; }
 .badgeIconWrap { position: relative; display: grid; place-items: center; }
 .badgeIconWrap .badgePulseRing { position: absolute; inset: 0; border-radius: 9999px; background-color: currentColor; opacity: 0.3; animation: pingKeyframes 2.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 .badgeIconWrap .badgeIconRel { position: relative; width: 14px; height: 14px; }
@@ -307,7 +324,7 @@
   .billedToGrid .paymentRightCol { text-align: right; }
   .invoiceArticle .tableScrollWrap { overflow: visible; }
   .tableScrollWrap .invoiceTable { min-width: 0; }
-  .invoiceTable .tbodyPromoRow { color: #000000; }
+  .invoiceArticle .invoiceSummaryWrap { break-inside: avoid; }
 }
 @media (min-width: 640px) {
   .accordionBox { padding: 0 24px; }

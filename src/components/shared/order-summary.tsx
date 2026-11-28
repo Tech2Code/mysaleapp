@@ -107,9 +107,12 @@ export function OrderSummary({
         <span className={styles.paymentLabelLeft}>
           <CreditCardIcon className={styles.icon16} aria-hidden /> Payment
         </span>
-        <span className={cn(styles.paymentTonePill, pay.className)}>
-          <PayIcon className={styles.icon14} aria-hidden />
-          {display.label}
+        <span className={styles.paymentStatusRight}>
+          <span className={cn(styles.paymentTonePill, pay.className)}>
+            <PayIcon className={styles.icon14} aria-hidden />
+            {display.label}
+          </span>
+          {display.detail && <span className={styles.paymentBadgeDetail}>{display.detail}</span>}
         </span>
       </div>
       {audience === "customer" && isAwaitingPayment(order) && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { domMax, LazyMotion, MotionConfig } from "motion/react"
+import { LazyMotion, MotionConfig } from "motion/react"
 import { ThemeProvider } from "next-themes"
 import { Suspense, type ReactNode } from "react"
 import { Toaster } from "@/components/ui/sonner"
@@ -10,12 +10,14 @@ import { BusyOverlayProvider } from "./busy-overlay"
 import { RouteProgressProvider } from "./route-progress"
 import { ServiceWorkerRegister } from "./sw-register"
 
+const loadMotionFeatures = () => import("./motion-features").then((m) => m.default)
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       {/* Honour the OS "reduce motion" setting for every animation in the app */}
       <MotionConfig reducedMotion="user">
-        <LazyMotion features={domMax}>
+        <LazyMotion features={loadMotionFeatures} strict>
           <RouteProgressProvider>
             <BusyOverlayProvider>{children}</BusyOverlayProvider>
           </RouteProgressProvider>

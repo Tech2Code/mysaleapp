@@ -75,10 +75,10 @@ export function ProductRowActions({ productId, productSlug, name }: { productId:
         className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}
         aria-label={`Edit ${name}`}
       >
-        <PencilIcon />
+        <PencilIcon aria-hidden="true" />
       </Link>
       <Button variant="ghost" size="icon-sm" onClick={() => setOpen(true)} aria-label={`Delete ${name}`} className={styles.deleteBtn}>
-        <Trash2Icon />
+        <Trash2Icon aria-hidden="true" />
       </Button>
       <ConfirmDialog
         open={open}

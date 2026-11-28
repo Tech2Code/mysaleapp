@@ -8,7 +8,6 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { useInstallPrompt } from "@/hooks/use-install-prompt"
-import { cn } from "@/lib/utils"
 import { LogoMark } from "@/components/shared/logo"
 import { useStoreSettings } from "./store-settings-provider"
 import styles from "./store-widgets.module.css"
@@ -91,13 +90,14 @@ export function InstallButton({ className }: { className?: string }) {
   const { canInstall, needsManualSteps, install } = useInstallPrompt()
   if (!canInstall) return null
   return (
-    <button
+    <Button
       type="button"
-
+      variant="outline"
+      fullWidth
       onClick={() => (needsManualSteps ? toast.info("Tap Share in Safari, then “Add to Home Screen”.", { duration: 6000 }) : void install())}
-      className={cn(styles.footerInstallBtn, className)}
+      className={className}
     >
       <DownloadIcon className={styles.downloadSvg} aria-hidden /> Install app
-    </button>
+    </Button>
   )
 }

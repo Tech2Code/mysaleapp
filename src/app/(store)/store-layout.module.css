@@ -15,9 +15,6 @@
 .pillBtnPx24 { border-radius: var(--radiusControl); padding-left: 24px; padding-right: 24px; }
 .offlineCircle { margin: 0 auto; display: grid; width: 80px; height: 80px; place-items: center; border-radius: 9999px; background-color: var(--secondary); }
 .offlineCircle .wifiIcon { width: 36px; height: 36px; color: var(--primary); }
-.offlineTryLink { margin-top: 24px; display: inline-flex; height: var(--controlHLg); align-items: center; justify-content: center; border-radius: var(--radiusControl); background-color: var(--primary); padding: 0 24px; font-weight: 600; color: var(--primary-foreground); transition: background-color 180ms ease, transform 160ms ease; }
-.offlineTryLink:hover { background-color: var(--store-accent-hover, color-mix(in oklab, var(--primary) 88%, black)); transform: translateY(-1px); }
-.offlineTryLink:active { transform: scale(0.98); }
 @media (max-width: 639.98px) {
   .rootBody[data-product-detail="true"] > nav[data-mobile-bottom-bar], .rootBody[data-product-detail="true"] > a[aria-label="Chat with us on WhatsApp"] { display: none; }
 }

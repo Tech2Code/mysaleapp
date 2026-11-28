@@ -2,7 +2,9 @@
 
 import { PlusIcon, SparklesIcon, Trash2Icon, XIcon } from "lucide-react"
 import { useState } from "react"
+import { SelectField } from "@/components/form"
 import { Button } from "@/components/ui/button"
+import { PillTabs } from "@/components/shared/pill-tabs"
 import {
   Dialog,
   DialogBody,
@@ -506,33 +508,21 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
 
             {activeGroups.length >= 2 && (
               <div className={styles.ruleTabsBlock}>
-                <div className={styles.ruleTabsRow} role="tablist" aria-label="Quick pricing mode">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={effectiveRuleGroup === "none"}
-                    onClick={() => setPriceRuleGroup("none")}
-                    className={effectiveRuleGroup === "none" ? styles.ruleTabActive : styles.ruleTabBtn}
-                  >
-                    Bulk / Same price
-                  </button>
-                  {activeGroups.map((g) => {
-                    const gName = g.name.trim()
-                    const isActive = effectiveRuleGroup === gName
-                    return (
-                      <button
-                        key={g.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        onClick={() => setPriceRuleGroup(gName)}
-                        className={isActive ? styles.ruleTabActive : styles.ruleTabBtn}
-                      >
-                        Price by {gName}
-                      </button>
-                    )
-                  })}
-                </div>
+                <PillTabs
+                  role="tablist"
+                  tone="tint"
+                  size="sm"
+                  ariaLabel="Quick pricing mode"
+                  value={effectiveRuleGroup}
+                  onChange={setPriceRuleGroup}
+                  items={[
+                    { value: "none", label: "Bulk / Same price" },
+                    ...activeGroups.map((g) => {
+                      const gName = g.name.trim()
+                      return { value: gName, label: `Price by ${gName}` }
+                    }),
+                  ]}
+                />
 
                 {effectiveRuleGroup !== "none" && (
                   <div className={styles.ruleGridCard}>
@@ -594,24 +584,23 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
               <div className={styles.bulkBar}>
                 {activeGroups.length > 0 && (
                   <div className={styles.bulkScopeField}>
-                    <label htmlFor="bulk-scope" className={styles.bulkLabel}>Apply to</label>
-                    <select
+                    <SelectField
                       id="bulk-scope"
+                      label="Apply to"
+                      fieldSize="md"
+                      noErrorSpace
                       value={bulkScope}
-                      onChange={(e) => setBulkScope(e.target.value)}
-                      className={styles.bulkSelect}
-                    >
-                      <option value="all">All combinations ({rows.length})</option>
-                      {activeGroups.map((g) => (
-                        <optgroup key={g.id} label={`By ${g.name.trim()}`}>
-                          {g.values.map((v) => (
-                            <option key={`${g.name.trim()}::${v}`} value={`${g.name.trim()}::${v}`}>
-                              {g.name.trim()}: {v}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
+                      onValueChange={setBulkScope}
+                      options={[
+                        { value: "all", label: `All combinations (${rows.length})` },
+                        ...activeGroups.flatMap((g) =>
+                          g.values.map((v) => ({
+                            value: `${g.name.trim()}::${v}`,
+                            label: `${g.name.trim()}: ${v}`,
+                          }))
+                        ),
+                      ]}
+                    />
                   </div>
                 )}
                 <div className={styles.bulkField}>
@@ -765,7 +754,14 @@ function serializeVariantsForDiff(list: VariantFormRow[]): string {
         <Button type="button" variant="outline" size="lg" onClick={onClose} className={styles.footerBtn}>
           Cancel
         </Button>
-        <Button type="button" size="lg" disabled={saveDisabled} onClick={handleSave} className={styles.footerBtn}>
+        <Button
+          type="button"
+          variant={canClearExisting ? "destructive" : "default"}
+          size="lg"
+          disabled={saveDisabled}
+          onClick={handleSave}
+          className={styles.footerBtn}
+        >
           {canClearExisting
             ? "Clear variants"
             : rows.length === 0

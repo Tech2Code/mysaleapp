@@ -10,7 +10,7 @@
  *    so the installed mobile app opens instantaneously from cache while updating in the background.
  *  - Never touches admin, account, auth, API or non-GET requests.
  */
-const VERSION = "v6"
+const VERSION = "v7"
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const IMAGE_CACHE = `images-${VERSION}`
@@ -38,7 +38,7 @@ self.addEventListener("activate", (event) => {
 
 const PRIVATE = ["/admin", "/account", "/auth", "/api", "/checkout", "/order-placed", "/track", "/cart", "/wishlist", "/login"]
 // Only public catalogue pages are kept for offline use; anything personalised is never stored.
-const CACHEABLE_PAGE = /^\/($|(products|category|about|contact)(\/|$))/
+const CACHEABLE_PAGE = /^\/($|(products|category|about|contact|faq|privacy|terms|refund-policy)(\/|$))/
 const trimming = new Set()
 
 function isPrivatePath(pathname) {
@@ -87,13 +87,15 @@ self.addEventListener("fetch", (event) => {
       caches.match(request).then(
         (hit) =>
           hit ||
-          fetch(request).then((res) => {
-            if (res.ok) {
-              const copy = res.clone()
-              caches.open(STATIC_CACHE).then((c) => c.put(request, copy))
-            }
-            return res
-          })
+          fetch(request)
+            .then((res) => {
+              if (res.ok) {
+                const copy = res.clone()
+                caches.open(STATIC_CACHE).then((c) => c.put(request, copy))
+              }
+              return res
+            })
+            .catch(() => Response.error())
       )
     )
     return
@@ -129,39 +131,44 @@ self.addEventListener("fetch", (event) => {
             return res
           })
           .catch(() => hit || Response.error())
-        return hit || network
+        if (hit) {
+          event.waitUntil(network)
+          return hit
+        }
+        return network
       })
     )
     return
   }
 
   if (request.mode === "navigate") {
+    const offlineFallback = async () =>
+      (await caches.match(OFFLINE_URL)) ||
+      new Response("You are offline. Please check your internet connection.", {
+        status: 503,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      })
+
     if (CACHEABLE_PAGE.test(url.pathname)) {
-      // Stale-while-revalidate for public catalogue pages so installed PWA launches instantaneously
+      // Network-first with cache fallback so new deployments never serve stale HTML with old chunk/action hashes.
       event.respondWith(
         caches.open(PAGES_CACHE).then(async (cache) => {
-          const hit = await cache.match(request)
-          const networkPromise = fetch(request)
-            .then((res) => {
-              if (res.ok && !/no-store|private/.test(res.headers.get("Cache-Control") || "")) {
-                cache.put(request, res.clone())
-                trimCache(PAGES_CACHE, 40)
-              }
-              return res
-            })
-            .catch(() => null)
-          if (hit) {
-            event.waitUntil(networkPromise)
-            return hit
+          try {
+            const res = await fetch(request)
+            if (res.ok && !/no-store|private/i.test(res.headers.get("Cache-Control") || "")) {
+              cache.put(request, res.clone())
+              trimCache(PAGES_CACHE, 40)
+            }
+            return res
+          } catch {
+            return (await cache.match(request)) || offlineFallback()
           }
-          const networkRes = await networkPromise
-          return networkRes || (await caches.match(OFFLINE_URL))
         })
       )
       return
     }
     event.respondWith(
-      fetch(request).catch(async () => (await caches.match(request)) || caches.match(OFFLINE_URL))
+      fetch(request).catch(async () => (await caches.match(request)) || offlineFallback())
     )
   }
 })

@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
 import { normalizeIndianPhone } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { cancelOrder } from "@/features/orders/actions"
 import { CANCELLABLE_BY_CUSTOMER, CANCEL_REASONS } from "@/features/orders/transitions"
@@ -167,11 +167,8 @@ export function CancelOrder({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-
-        className={styles.cancelTriggerBtn}
-      >
-        <BanIcon className={styles.banSvg} /> Cancel order
+      <DialogTrigger className={buttonVariants({ variant: "destructiveOutline", size: "lg" })}>
+        <BanIcon className={styles.banSvg} aria-hidden="true" /> Cancel order
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.cancelDialogMax}>
         <DialogHeader>

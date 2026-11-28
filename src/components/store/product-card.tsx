@@ -148,7 +148,7 @@ export const ProductCard = memo(function ProductCard({ product, priority }: { pr
           <span className={styles.currentPrice}>
             {hasPriceRange ? `From ${formatPrice(product.price)}` : formatPrice(product.price)}
           </span>
-          {product.compareAtPrice && (
+          {product.compareAtPrice && product.compareAtPrice > product.price && (
             <span className={styles.comparePrice}>
               {formatPrice(product.compareAtPrice)}
             </span>

@@ -2,6 +2,7 @@ import { WifiOffIcon } from "lucide-react"
 import type { Metadata } from "next"
 import { getStoreSettings } from "@/features/settings/queries"
 import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
 import styles from "@/app/(store)/store-layout.module.css"
 
 export const metadata: Metadata = { title: "You're offline", robots: { index: false } }
@@ -21,7 +22,7 @@ export default async function OfflinePage() {
         </p>
         {/* Plain <a> on purpose: a full page load is what retries the network. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/" className={styles.offlineTryLink}>
+        <a href="/" className={cn(buttonVariants({ variant: "primary", size: "lg" }), styles.errorRetryBtn)}>
           Try again
         </a>
       </div>

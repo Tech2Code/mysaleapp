@@ -141,7 +141,7 @@ export function Carousel({ children, label, className }: { children: ReactNode; 
               aria-label={`Previous ${label}`}
               className={cn(styles.carouselArrowBtn, styles.carouselArrowPrev)}
             >
-              <ChevronLeftIcon className={styles.arrowIcon20} />
+              <ChevronLeftIcon className={styles.arrowIcon20} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -150,7 +150,7 @@ export function Carousel({ children, label, className }: { children: ReactNode; 
               aria-label={`Next ${label}`}
               className={cn(styles.carouselArrowBtn, styles.carouselArrowNext)}
             >
-              <ChevronRightIcon className={styles.arrowIcon20} />
+              <ChevronRightIcon className={styles.arrowIcon20} aria-hidden="true" />
             </button>
           </>
         )}

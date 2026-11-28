@@ -40,15 +40,24 @@ export function PaymentBadge({
   paidAmount?: number
   className?: string
 }) {
-  const { label, tone } = orderStatus
+  const { label, detail, tone } = orderStatus
     ? paymentDisplay(orderStatus, status, method, { refundedAmount, paidAmount })
-    : { label: PAYMENT_STATUS_LABEL[status], tone: status as PaymentTone }
+    : { label: PAYMENT_STATUS_LABEL[status], detail: undefined, tone: status as PaymentTone }
   const { icon: Icon, className: toneClass } = PAYMENT_TONE_STYLE[tone]
 
-  return (
+  const pill = (
     <span className={cn(styles.badgePillBase, toneClass, className)}>
       <Icon className={styles.icon14} aria-hidden />
       {label}
+    </span>
+  )
+
+  if (!detail) return pill
+
+  return (
+    <span className={styles.paymentBadgeGroup}>
+      {pill}
+      <span className={styles.paymentBadgeDetail}>{detail}</span>
     </span>
   )
 }

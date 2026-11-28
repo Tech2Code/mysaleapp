@@ -22,13 +22,13 @@ import { toast } from "sonner"
 import { TextAreaField, TextField } from "@/components/form"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { ProductImage } from "@/components/store/product-image"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { createReturnRequestAsAdmin } from "@/features/orders/admin-actions"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, OTHER_REASON, otherNeedsDetail } from "@/features/orders/reasons"
 import { netReturnRefund } from "@/features/orders/refund"
-import { composeReturnDetails, returnableQuantities, returnLineKey } from "@/features/orders/returns"
+import { returnableQuantities, returnLineKey } from "@/features/orders/returns"
 import type { OrderItem, OrderReturn, ReturnResolutionType } from "@/features/orders/types"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { formatPrice } from "@/lib/format"
@@ -263,16 +263,13 @@ export function CreateReturnRequest({
               : "Replacement: Same item, same size & colour"
             : `Exchange: ${cleanExchangePref}`
           : undefined
-      const packedDetails = composeReturnDetails(
-        details.trim() || undefined,
-        altPickupAddress.trim() || undefined,
-        resolutionType === "refund" && cleanRefundUpi ? cleanRefundUpi : undefined
-      )
       const res = await createReturnRequestAsAdmin({
         orderId,
         items: payload,
         reason,
-        details: packedDetails,
+        details: details.trim() || undefined,
+        pickupAddress: altPickupAddress.trim() || undefined,
+        refundUpiId: resolutionType === "refund" && cleanRefundUpi ? cleanRefundUpi : undefined,
         resolutionType,
         exchangePreference: formattedPref,
       })
@@ -316,7 +313,7 @@ export function CreateReturnRequest({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange} onBackStep={handleBackStep}>
-      <DialogTrigger className={styles.createReturnTrigger}>
+      <DialogTrigger className={buttonVariants({ variant: "soft", fullWidth: true })}>
         <Undo2Icon className={styles.iconMd} aria-hidden /> Create return or exchange
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.adminReturnDialog}>

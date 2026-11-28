@@ -1,0 +1,129 @@
+{
+  "categories": [
+    {
+      "key": "all",
+      "label": "All questions",
+      "icon": "help-circle"
+    },
+    {
+      "key": "orders",
+      "label": "Orders & UPI",
+      "icon": "shield-check"
+    },
+    {
+      "key": "shipping",
+      "label": "Shipping & Delivery",
+      "icon": "truck"
+    },
+    {
+      "key": "returns",
+      "label": "Returns & Refunds",
+      "icon": "rotate-ccw"
+    },
+    {
+      "key": "products",
+      "label": "Products & Care",
+      "icon": "sparkles"
+    }
+  ],
+  "items": [
+    {
+      "id": "how-to-order-upi",
+      "category": "orders",
+      "defaultOpen": true,
+      "question": "How do I place an order and pay by UPI?",
+      "answer": "Add your favourite items to the cart, enter your delivery address at checkout, scan the UPI QR code or tap any UPI app (Google Pay, PhonePe, Paytm, BHIM), and enter your 12-digit UTR / UPI reference number to place your order with {{shopName}}.",
+      "link": {
+        "href": "/products",
+        "label": "Browse the collection"
+      }
+    },
+    {
+      "id": "order-reservation-window",
+      "category": "orders",
+      "question": "How is my UPI payment verified?",
+      "answer": "{{expiryText}} Once verified, we confirm your order and share live courier tracking updates."
+    },
+    {
+      "id": "cod-availability",
+      "category": "orders",
+      "question": "Do you offer Cash on Delivery (COD)?",
+      "answer": "We operate on prepaid UPI / online orders to keep shipping fast and transparent with zero COD surcharges. You can chat directly with us on WhatsApp before paying if you have any questions about an item."
+    },
+    {
+      "id": "gst-invoice",
+      "category": "orders",
+      "question": "Do I get an invoice for my purchase?",
+      "answer": "{{invoiceSummary}}",
+      "link": {
+        "href": "/account/orders",
+        "label": "Open My Orders"
+      }
+    },
+    {
+      "id": "shipping-charges",
+      "category": "shipping",
+      "defaultOpen": true,
+      "question": "What are the delivery charges and when is shipping free?",
+      "answer": "{{shippingSummary}} Any protective fragile-packaging or heavy-parcel handling fee is calculated transparently at checkout before you place your order."
+    },
+    {
+      "id": "delivery-timeline",
+      "category": "shipping",
+      "question": "How long does delivery take across India?",
+      "answer": "Orders are carefully packed and dispatched{{studioOriginPhrase}} within 1–3 business days of payment confirmation. Tracked courier delivery typically reaches metro cities in 3–5 business days and other pin codes in 5–7 business days."
+    },
+    {
+      "id": "how-to-track-order",
+      "category": "shipping",
+      "question": "How can I track my order without signing in?",
+      "answer": "Use our Track Order page with your order code (e.g. {{orderCodePrefix}}-XXXXXX) and the last 4 digits of the phone number used at checkout to see live status updates, courier AWB number, and tracking links.",
+      "link": {
+        "href": "/track",
+        "label": "Go to Track Order"
+      }
+    },
+    {
+      "id": "returns-and-replacements",
+      "category": "returns",
+      "question": "What is your return and replacement policy?",
+      "answer": "{{returnSummary}} To ensure a smooth resolution, please record a short unboxing video when opening the parcel and submit a return request from your Order page or via WhatsApp.",
+      "link": {
+        "href": "/refund-policy",
+        "label": "Read full Refund & Return Policy"
+      }
+    },
+    {
+      "id": "refund-processing-time",
+      "category": "returns",
+      "question": "How and when are refunds processed?",
+      "answer": "Once a return is inspected or an order is cancelled before dispatch, refunds are sent straight back to your original UPI ID or bank account within 2–5 business days, along with a reference UTR number."
+    },
+    {
+      "id": "product-variations",
+      "category": "products",
+      "question": "Could product colours or finishes vary slightly from the photos?",
+      "answer": "We photograph every product accurately, though slight variations in colour or finish can occur due to screen calibration, studio lighting, or natural material variations.",
+      "link": {
+        "href": "/about",
+        "label": "Learn more about us"
+      }
+    },
+    {
+      "id": "custom-and-bulk-orders",
+      "category": "products",
+      "question": "Do you accept bulk, corporate, or custom gifting orders?",
+      "answer": "Yes! Reach out to {{shopName}} on WhatsApp with the items, quantities, and delivery timeline you need, and we'll share a custom quote.",
+      "link": {
+        "href": "/contact",
+        "label": "Contact us for bulk orders"
+      }
+    },
+    {
+      "id": "verified-customer-reviews",
+      "category": "products",
+      "question": "Who can post a product review on the store?",
+      "answer": "Only customers who have received a delivered order for that specific product can rate and review it. This guarantees that every rating and aspect highlight you see comes from a 100% verified buyer."
+    }
+  ]
+}

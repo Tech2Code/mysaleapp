@@ -1,0 +1,81 @@
+/* Section: Admin Global Search Command Palette (Desktop Modal + Native Mobile App Shell) */
+@keyframes searchSpin { to { transform: rotate(360deg); } }
+.searchDialogContent { max-width: 620px; padding: 0; gap: 0; overflow: hidden; }
+.searchDialogContent .searchInputBar { display: flex; flex-shrink: 0; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); background-color: var(--card); padding: max(10px, env(safe-area-inset-top)) 12px 10px 12px; }
+.searchInputBar .mobileBackBtn { display: grid; min-width: 44px; min-height: 44px; flex-shrink: 0; place-items: center; border: 0; border-radius: 9999px; background-color: transparent; color: var(--foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.searchInputBar .mobileBackBtn:hover { background-color: var(--muted); color: var(--primary); }
+.searchInputBar .mobileBackBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.searchInputBar .searchFieldWrap { display: flex; min-width: 0; min-height: 44px; flex: 1 1 0%; align-items: center; gap: 10px; border-radius: 12px; background-color: var(--muted); padding: 0 8px 0 12px; transition: box-shadow 150ms ease, background-color 150ms ease; }
+.searchInputBar .searchFieldWrap:focus-within { box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 24%, transparent); }
+.searchFieldWrap .searchLeadIcon { width: 18px; height: 18px; flex-shrink: 0; color: var(--muted-foreground); }
+.searchFieldWrap .searchSpinner { width: 18px; height: 18px; flex-shrink: 0; color: var(--primary); animation: searchSpin 0.8s linear infinite; }
+.searchFieldWrap .searchInput { width: 100%; min-width: 0; flex: 1 1 0%; border: 0; background: transparent; padding: 8px 0; font-size: 16px; line-height: 22px; color: var(--foreground); outline: none; -webkit-appearance: none; appearance: none; }
+.searchFieldWrap .searchInput::placeholder { color: var(--muted-foreground); }
+.searchFieldWrap .searchInput::-webkit-search-cancel-button, .searchFieldWrap .searchInput::-webkit-search-decoration, .searchFieldWrap .searchInput::-webkit-search-results-button, .searchFieldWrap .searchInput::-webkit-search-results-decoration { -webkit-appearance: none; appearance: none; display: none; }
+.searchFieldWrap .clearTextBtn { display: inline-flex; min-height: 44px; min-width: 44px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 8px; background-color: transparent; padding: 4px 10px; font-size: 13px; line-height: 16px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.searchFieldWrap .clearTextBtn:hover { background-color: color-mix(in oklab, var(--foreground) 8%, transparent); color: var(--foreground); }
+.searchFieldWrap .clearTextBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; color: var(--foreground); }
+.searchInputBar .barDivider { display: none; width: 1px; height: 20px; flex-shrink: 0; background-color: var(--border); }
+.searchInputBar .desktopCloseBtn { display: none; min-width: 32px; min-height: 32px; flex-shrink: 0; place-items: center; border: 0; border-radius: 8px; background-color: transparent; color: var(--muted-foreground); cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.searchInputBar .desktopCloseBtn:hover { background-color: var(--muted); color: var(--foreground); }
+.searchInputBar .desktopCloseBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; color: var(--foreground); }
+/* Section: Results Body, Groups & Skeletons */
+.searchDialogContent .searchResultsBody { padding: 12px 12px max(16px, env(safe-area-inset-bottom)) 12px; display: flex; flex-direction: column; gap: 12px; }
+.searchResultsBody .resultsInner { display: flex; flex-direction: column; gap: 12px; }
+.resultsInner .groupsStack { display: flex; flex-direction: column; gap: 16px; }
+.groupsStack .liveErrorBanner { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 10px; border: 1px solid var(--tone-warning-border, var(--border)); background-color: var(--tone-warning-bg-soft, var(--muted)); padding: 10px 12px; }
+.liveErrorBanner .liveErrorText { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tone-warning-fg-strong, var(--foreground)); }
+.liveErrorBanner .retryBtn { display: inline-flex; min-height: 40px; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 8px; background-color: var(--card); padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--foreground); cursor: pointer; transition: background-color 150ms ease; }
+.liveErrorBanner .retryBtn:hover { background-color: var(--muted); }
+.liveErrorBanner .retryBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.groupsStack .resultGroup { display: flex; flex-direction: column; gap: 6px; }
+.resultGroup .groupHeaderRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px; }
+.resultGroup .groupHeading { margin: 0; padding: 0 8px; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted-foreground); }
+.groupHeaderRow .groupHeading { padding: 0; }
+.groupHeaderRow .groupCount { display: inline-flex; min-width: 20px; height: 18px; align-items: center; justify-content: center; border-radius: 9999px; background-color: var(--muted); padding: 0 6px; font-size: 10px; line-height: 10px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+.resultGroup .resultList { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.resultList .resultRow { display: flex; min-height: 50px; align-items: center; gap: 12px; border-radius: 10px; padding: 8px 10px; color: var(--foreground); text-decoration: none; transition: background-color 120ms ease; }
+.resultList .resultRow:hover, .resultList .resultRowActive { background-color: color-mix(in oklab, var(--primary) 10%, var(--muted)); }
+.resultList .resultRow:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.resultRow .resultIconWrap { display: grid; width: 34px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 9px; background-color: color-mix(in oklab, var(--muted) 80%, transparent); color: var(--primary); }
+.resultRow .resultTextCol { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
+.resultTextCol .resultLabel { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 19px; font-weight: 600; color: var(--foreground); }
+.resultLabel .matchMark { border-radius: 3px; background-color: color-mix(in oklab, var(--primary) 18%, transparent); padding: 0 2px; color: inherit; }
+.resultTextCol .resultHint { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.resultRow .resultBadge { flex-shrink: 0; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--background); padding: 2px 8px; font-size: 11px; line-height: 16px; font-weight: 600; color: var(--muted-foreground); }
+.resultRow .chevronIcon { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); }
+/* Section: Empty State & Quick Suggestions */
+.resultsInner .emptyState { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 40px 16px; text-align: center; }
+.emptyState .emptyIcon { width: 28px; height: 28px; color: var(--muted-foreground); opacity: 0.7; }
+.emptyState .emptyTitle { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.emptyState .emptySub { margin: 0; max-width: 340px; font-size: 13px; line-height: 19px; color: var(--muted-foreground); }
+.emptyState .suggestionRow { margin-top: 6px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 380px; }
+.suggestionRow .suggestionChip { display: inline-flex; min-height: 40px; align-items: center; border: 1px solid var(--border); border-radius: 9999px; background-color: var(--card); padding: 0 14px; font-size: 12px; font-weight: 500; color: var(--foreground); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease; }
+.suggestionRow .suggestionChip:hover { border-color: color-mix(in oklab, var(--primary) 50%, var(--border)); background-color: color-mix(in oklab, var(--primary) 8%, var(--card)); color: var(--primary); }
+.suggestionRow .suggestionChip:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.emptyState .emptyClearBtn { margin-top: 6px; display: inline-flex; min-height: 44px; align-items: center; justify-content: center; border: 0; border-radius: 8px; background-color: var(--muted); padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--foreground); cursor: pointer; transition: background-color 150ms ease; }
+.emptyState .emptyClearBtn:hover { background-color: color-mix(in oklab, var(--foreground) 12%, var(--muted)); }
+.emptyState .emptyClearBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.groupsStack .inlineLiveStatus { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.inlineLiveStatus .inlineLiveSpinner { width: 13px; height: 13px; flex-shrink: 0; color: var(--primary); animation: searchSpin 0.8s linear infinite; }
+.icon14 { width: 14px; height: 14px; }
+.icon16 { width: 16px; height: 16px; }
+.icon20 { width: 20px; height: 20px; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .searchDialogContent .searchInputBar { gap: 10px; padding: 10px 14px 10px 16px; transition: border-color 150ms ease; }
+  .searchDialogContent .searchInputBar:focus-within { border-bottom-color: color-mix(in oklab, var(--primary) 45%, var(--border)); }
+  .searchInputBar .mobileBackBtn { display: none; }
+  .searchInputBar .searchFieldWrap { min-height: 36px; border-radius: 0; background-color: transparent; padding: 0; }
+  .searchInputBar .searchFieldWrap:focus-within { box-shadow: none; }
+  .searchFieldWrap .searchInput { padding: 4px 0; font-size: 15px; line-height: 22px; }
+  .searchFieldWrap .clearTextBtn { min-height: 28px; min-width: 0; padding: 2px 8px; font-size: 12px; }
+  .searchInputBar .barDivider { display: block; }
+  .searchInputBar .desktopCloseBtn { display: grid; }
+  .searchDialogContent .searchResultsBody { max-height: 460px; padding: 10px 12px 14px 12px; }
+  .resultList .resultRow { min-height: 46px; }
+  .suggestionRow .suggestionChip { min-height: 30px; padding: 0 12px; }
+  .liveErrorBanner .retryBtn { min-height: 32px; padding: 4px 10px; }
+  .emptyState .emptyClearBtn { min-height: 36px; }
+}

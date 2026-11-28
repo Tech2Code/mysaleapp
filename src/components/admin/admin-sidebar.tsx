@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Suspense, useEffect, useState, useSyncExternalStore, useTransition, type ReactNode } from "react"
+import { Suspense, useState, useSyncExternalStore, useTransition, type ReactNode } from "react"
 import { toast } from "sonner"
 import { applyClientSignOut } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
@@ -29,12 +29,12 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { Logo, LogoMark } from "@/components/shared/logo"
 import { ThemeToggle } from "@/components/shared/theme-toggle"
 import { buttonVariants } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { signOutAdmin } from "@/features/auth/actions"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
+import { AdminGlobalSearch, openAdminGlobalSearch } from "./admin-global-search"
 import styles from "./admin-core.module.css"
 
 type NavLink = { href: string; label: string; icon: LucideIcon; exact?: boolean; badge?: "orders" }
@@ -79,20 +79,6 @@ const GROUPS: { title: string; links: NavLink[] }[] = [
   },
 ]
 
-const COMMAND_ITEMS: { label: string; hint: string; href: string; icon: LucideIcon }[] = [
-  { label: "Dashboard overview", hint: "Metrics, queue & sales", href: "/admin", icon: LayoutDashboardIcon },
-  { label: "All orders", hint: "Manage & fulfil orders", href: "/admin/orders", icon: ShoppingCartIcon },
-  { label: "Payments to verify", hint: "Pending UTR review", href: "/admin/orders?view=to-verify", icon: ShoppingCartIcon },
-  { label: "To pack & ship", hint: "Confirmed orders ready to ship", href: "/admin/orders?view=to-ship", icon: ShoppingCartIcon },
-  { label: "Return requests", hint: "Pending customer returns", href: "/admin/orders?view=return-requests", icon: ShoppingCartIcon },
-  { label: "Products catalogue", hint: "Inventory, pricing & visibility", href: "/admin/products", icon: PackageIcon },
-  { label: "Add new product", hint: "Create a product listing", href: "/admin/products/new", icon: PlusIcon },
-  { label: "Categories", hint: "Organise collections", href: "/admin/categories", icon: TagsIcon },
-  { label: "Store settings", hint: "Promo codes, UPI & shipping", href: "/admin/settings", icon: SettingsIcon },
-  { label: "My account", hint: "Profile, Quick PIN & password", href: "/admin/account", icon: UserRoundCogIcon },
-  { label: "Data & launch", hint: "Readiness checklist & reset", href: "/admin/launch", icon: RocketIcon },
-]
-
 const ROUTE_TITLES: { match: (p: string) => boolean; label: string; group: string }[] = [
   { match: (p) => p === "/admin", label: "Overview", group: "Workspace" },
   { match: (p) => p.startsWith("/admin/orders/") && p.endsWith("/invoice"), label: "Order Invoice", group: "Operations" },
@@ -106,85 +92,6 @@ const ROUTE_TITLES: { match: (p: string) => boolean; label: string; group: strin
   { match: (p) => p.startsWith("/admin/account"), label: "My Account", group: "Manage" },
   { match: (p) => p.startsWith("/admin/launch"), label: "Data & Launch", group: "Manage" },
 ]
-
-function QuickJumpDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [query, setQuery] = useState("")
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault()
-        onOpenChange(!open)
-      }
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [open, onOpenChange])
-
-  const filtered = COMMAND_ITEMS.filter((item) => {
-    const q = query.trim().toLowerCase()
-    if (!q) return true
-    return item.label.toLowerCase().includes(q) || item.hint.toLowerCase().includes(q)
-  })
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setQuery("")
-        onOpenChange(next)
-      }}
-    >
-      <DialogContent className={styles.quickJumpContent}>
-        <DialogHeader showCloseButton={false} className={styles.srOnly}>
-          <DialogTitle>Quick jump</DialogTitle>
-        </DialogHeader>
-        <div className={styles.quickJumpSearchRow}>
-          <SearchIcon className={styles.iconMuted16} aria-hidden />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Jump to orders, products, settings…"
-            aria-label="Jump to admin section"
-            autoFocus
-            className={styles.quickJumpInput}
-          />
-          <kbd className={styles.escKbd}>ESC</kbd>
-        </div>
-        <div className={styles.quickJumpListWrap}>
-          {filtered.length === 0 ? (
-            <p className={styles.quickJumpEmpty}>No matching admin destination.</p>
-          ) : (
-            <ul className={styles.quickJumpUl}>
-              {filtered.map((item) => {
-                const Icon = item.icon
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={() => {
-                        onOpenChange(false)
-                        setQuery("")
-                      }}
-                      className={styles.quickJumpItemBtn}
-                    >
-                      <Icon className={styles.iconMuted16} aria-hidden />
-                      <div className={styles.quickJumpItemText}>
-                        <p className={styles.quickJumpItemLabel}>{item.label}</p>
-                        <p className={styles.quickJumpItemHint}>{item.hint}</p>
-                      </div>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 function NavItems({
   pathname,
@@ -421,9 +328,8 @@ function SidebarBody({
   )
 }
 
-/** Desktop sidebar with collapsible rail and quick jump command. */
+/** Desktop sidebar with collapsible rail and global admin search trigger. */
 export function AdminSidebar({ ordersBadge }: { ordersBadge?: ReactNode }) {
-  const [commandOpen, setCommandOpen] = useState(false)
   const collapsed = useSyncExternalStore(subscribeSidebarCollapsed, getSidebarCollapsedSnapshot, () => false)
 
   const toggleCollapse = () => {
@@ -434,67 +340,82 @@ export function AdminSidebar({ ordersBadge }: { ordersBadge?: ReactNode }) {
   }
 
   return (
-    <>
-      <aside
-
-        className={cn(
-          styles.desktopSidebarAside,
-          collapsed ? styles.desktopSidebarCollapsed : styles.desktopSidebarExpanded
-        )}
-      >
-        <SidebarBody
-          ordersBadge={ordersBadge}
-          collapsed={collapsed}
-          onToggleCollapse={toggleCollapse}
-          onOpenCommand={() => setCommandOpen(true)}
-        />
-      </aside>
-      <QuickJumpDialog open={commandOpen} onOpenChange={setCommandOpen} />
-    </>
+    <aside
+      className={cn(
+        styles.desktopSidebarAside,
+        collapsed ? styles.desktopSidebarCollapsed : styles.desktopSidebarExpanded
+      )}
+    >
+      <SidebarBody
+        ordersBadge={ordersBadge}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+        onOpenCommand={openAdminGlobalSearch}
+      />
+    </aside>
   )
 }
 
-/** Top bar: menu button on phones/tablets, breadcrumb on desktop, quick add product, theme toggle and account menu. */
+/** Top bar: menu button on phones/tablets, breadcrumb on desktop, global search, quick add product, theme toggle and account menu. */
 export function AdminTopbar({ ordersBadge, account }: { ordersBadge?: ReactNode; account?: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   return (
-    <header className={styles.adminTopbar}>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger
+    <>
+      <header className={styles.adminTopbar}>
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.mobileMenuBtn)}
+            aria-label="Open admin menu"
+          >
+            <MenuIcon className={styles.icon20} />
+          </SheetTrigger>
+          <SheetContent side="left" className={styles.mobileDrawerSheet}>
+            <SheetHeader className={styles.srOnly}>
+              <SheetTitle>Admin menu</SheetTitle>
+            </SheetHeader>
+            <SidebarBody
+              onNavigate={() => setOpen(false)}
+              onOpenCommand={() => {
+                setOpen(false)
+                setSearchOpen(true)
+              }}
+              ordersBadge={ordersBadge}
+            />
+          </SheetContent>
+        </Sheet>
 
-          className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.mobileMenuBtn)}
-          aria-label="Open admin menu"
-        >
-          <MenuIcon className={styles.icon20} />
-        </SheetTrigger>
-        <SheetContent side="left" className={styles.mobileDrawerSheet}>
-          <SheetHeader className={styles.srOnly}>
-            <SheetTitle>Admin menu</SheetTitle>
-          </SheetHeader>
-          <SidebarBody onNavigate={() => setOpen(false)} ordersBadge={ordersBadge} />
-        </SheetContent>
-      </Sheet>
+        <div className={styles.mobileLogoWrap}>
+          <Logo href="/admin" />
+        </div>
 
-      <div className={styles.mobileLogoWrap}>
-        <Logo href="/admin" />
-      </div>
+        <Suspense fallback={null}>
+          <TopbarBreadcrumb />
+        </Suspense>
 
-      <Suspense fallback={null}>
-        <TopbarBreadcrumb />
-      </Suspense>
-
-      <div className={styles.topbarRightActions}>
-        <Link
-          href="/admin/products/new"
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.topbarNewProdBtn)}
-        >
-          <PlusIcon className={styles.icon14} aria-hidden /> New product
-        </Link>
-        <ThemeToggle className={styles.topbarThemeToggle} />
-        {account}
-      </div>
-    </header>
+        <div className={styles.topbarRightActions}>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Global admin search"
+            title="Search admin (⌘K)"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon" }), styles.topbarSearchBtn)}
+          >
+            <SearchIcon className={styles.icon18} aria-hidden />
+          </button>
+          <Link
+            href="/admin/products/new"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), styles.topbarNewProdBtn)}
+          >
+            <PlusIcon className={styles.icon14} aria-hidden /> New product
+          </Link>
+          <ThemeToggle className={styles.topbarThemeToggle} />
+          {account}
+        </div>
+      </header>
+      <AdminGlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+    </>
   )
 }
 
@@ -593,7 +514,14 @@ export function AdminMobileBottomNav({ ordersBadge }: { ordersBadge?: ReactNode 
           <SheetHeader className={styles.srOnly}>
             <SheetTitle>Admin menu</SheetTitle>
           </SheetHeader>
-          <SidebarBody onNavigate={() => setMoreOpen(false)} ordersBadge={ordersBadge} />
+          <SidebarBody
+            onNavigate={() => setMoreOpen(false)}
+            onOpenCommand={() => {
+              setMoreOpen(false)
+              openAdminGlobalSearch()
+            }}
+            ordersBadge={ordersBadge}
+          />
         </SheetContent>
       </Sheet>
     </>

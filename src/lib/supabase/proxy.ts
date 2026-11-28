@@ -5,7 +5,11 @@ import { ADMIN_SESSION_MAX_AGE_MS } from "@/features/auth/account-schema"
 import { isSupabaseConfigured, supabaseConfig } from "./config"
 
 const PROD_FALLBACK_SECRET =
-  process.env.NODE_ENV === "production" && !process.env.COOKIE_SECRET && !process.env.RATE_LIMIT_SALT && !process.env.CRON_SECRET
+  process.env.NODE_ENV === "production" &&
+  !process.env.COOKIE_SECRET &&
+  !process.env.RATE_LIMIT_SALT &&
+  !process.env.CRON_SECRET &&
+  !process.env.SUPABASE_SERVICE_ROLE_KEY
     ? (() => {
         console.warn("[proxy] Set COOKIE_SECRET or RATE_LIMIT_SALT in production.")
         return randomBytes(32).toString("hex")
@@ -13,7 +17,13 @@ const PROD_FALLBACK_SECRET =
     : "kalakriti-local-dev-cookie-secret"
 
 function getCookieSecret(): string {
-  return process.env.COOKIE_SECRET || process.env.RATE_LIMIT_SALT || process.env.CRON_SECRET || PROD_FALLBACK_SECRET
+  return (
+    process.env.COOKIE_SECRET ||
+    process.env.RATE_LIMIT_SALT ||
+    process.env.CRON_SECRET ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    PROD_FALLBACK_SECRET
+  )
 }
 
 function hmacHex(payload: string): string {

@@ -3,6 +3,7 @@
 import { BarChart3Icon, TrendingUpIcon } from "lucide-react"
 import { useId, useState, type KeyboardEvent } from "react"
 import { formatPrice } from "@/lib/format"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
 import { cn } from "@/lib/utils"
 import styles from "./admin-core.module.css"
 
@@ -181,52 +182,26 @@ export function SalesChart({ points, unit, rangeLabel }: { points: Point[]; unit
         </dl>
 
         <div className={styles.chartControlsRow}>
-          <div role="group" aria-label="Chart style" className={styles.segmentedGroup}>
-            <button
-              type="button"
-              onClick={() => setChartMode("area")}
-              aria-pressed={chartMode === "area"}
-              aria-label="Area chart"
-              title="Area chart"
-              className={cn(
-                styles.modeIconBtn,
-                chartMode === "area" && styles.segBtnActive
-              )}
-            >
-              <TrendingUpIcon className={styles.icon14} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => setChartMode("bars")}
-              aria-pressed={chartMode === "bars"}
-              aria-label="Bar chart"
-              title="Bar chart"
-              className={cn(
-                styles.modeIconBtn,
-                chartMode === "bars" && styles.segBtnActive
-              )}
-            >
-              <BarChart3Icon className={styles.icon14} aria-hidden />
-            </button>
-          </div>
+          <SegmentedTabs
+            layout="inline"
+            size="sm"
+            ariaLabel="Chart style"
+            value={chartMode}
+            onChange={setChartMode}
+            items={[
+              { value: "area", icon: TrendingUpIcon, ariaLabel: "Area chart", title: "Area chart" },
+              { value: "bars", icon: BarChart3Icon, ariaLabel: "Bar chart", title: "Bar chart" },
+            ]}
+          />
 
-          <div role="group" aria-label="Chart shows" className={styles.segmentedGroup}>
-            {METRICS.map((m) => (
-              <button
-
-                key={m.key}
-                type="button"
-                aria-pressed={metric === m.key}
-                onClick={() => setMetric(m.key)}
-                className={cn(
-                  styles.metricTabBtn,
-                  metric === m.key && styles.segBtnActive
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedTabs
+            layout="inline"
+            size="sm"
+            ariaLabel="Chart shows"
+            value={metric}
+            onChange={setMetric}
+            items={METRICS.map((m) => ({ value: m.key, label: m.label }))}
+          />
         </div>
       </div>
 

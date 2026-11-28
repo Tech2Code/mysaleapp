@@ -14,6 +14,7 @@ import { lockedMessage } from "./locking"
 import { isPaymentMoneyLocked, paymentUpdateProblem } from "./payment-rules"
 import { mapRpcError } from "./rpc-errors"
 import { OTHER_DETAIL_MESSAGE, OTHER_DETAIL_MIN, cancelReasonText, otherNeedsDetail } from "./reasons"
+import { composeReturnDetails } from "./returns"
 import { ADMIN_CANCEL_REASONS, CANCELLABLE_BY_ADMIN, checkTransition, isRevertTransition } from "./transitions"
 import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, STATUS_META, type OrderStatus, type PaymentStatus } from "./types"
 
@@ -584,6 +585,10 @@ export async function decideReturnRequest(input: unknown): Promise<ActionResult>
   const { requestId, approve, note, pickupDate, exchangeMode, shipping } = parsed.data
   if (approve && !pickupDate) return fail("Pick the pickup date.", { pickupDate: ["Pick the pickup date"] })
   if (!approve && !note) return fail("Tell the customer why the return isn't approved.", { note: ["Write a reason"] })
+  if (approve && exchangeMode === "doorstep" && shipping) {
+    const dateProblem = expectedDeliveryProblem(shipping.expectedDelivery, null)
+    if (dateProblem) return fail("Please check the shipping details.", { expectedDelivery: [dateProblem] })
+  }
 
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("decide_return_request", {
@@ -725,6 +730,10 @@ export async function advanceExchangeFulfillment(input: unknown): Promise<Action
 
   const { requestId, stage, tracking, shipping } = parsed.data
   if (stage === "set_courier" && !shipping) return fail("Enter the courier details.")
+  if (shipping) {
+    const dateProblem = expectedDeliveryProblem(shipping.expectedDelivery, null)
+    if (dateProblem) return fail("Please check the shipping details.", { expectedDelivery: [dateProblem] })
+  }
   const trackingSummary =
     tracking ??
     (shipping
@@ -777,6 +786,8 @@ const createRequestSchema = z.object({
     ),
   reason: v.reason(),
   details: v.note(LIMITS.returnDetail.max).optional(),
+  pickupAddress: v.note(160).optional(),
+  refundUpiId: v.note(100).optional(),
   resolutionType: z.enum(["refund", "exchange"]).default("refund"),
   exchangePreference: v.note(200).optional(),
 })
@@ -790,7 +801,7 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
   if (!auth.ok) return fail(auth.error)
   const parsed = createRequestSchema.safeParse(input)
   if (!parsed.success) return fail("Please check the details.", z.flattenError(parsed.error).fieldErrors)
-  const { orderId, items, reason, details, resolutionType, exchangePreference } = parsed.data
+  const { orderId, items, reason, details, pickupAddress, refundUpiId, resolutionType, exchangePreference } = parsed.data
   if (otherNeedsDetail(reason, details)) {
     return fail(OTHER_DETAIL_MESSAGE, { details: [OTHER_DETAIL_MESSAGE] })
   }
@@ -798,12 +809,18 @@ export async function createReturnRequestAsAdmin(input: unknown): Promise<Action
     return fail("Enter the customer's exchange preference.", { exchangePreference: ["Enter the preferred size, colour, or replacement note"] })
   }
 
+  const composedDetails = composeReturnDetails(
+    details,
+    pickupAddress,
+    resolutionType === "refund" ? refundUpiId : undefined
+  )
+
   const supabase = await getServerSupabase()
   const { error } = await supabase.rpc("admin_create_return_request", {
     p_order_id: orderId,
     p_items: items,
     p_reason: reason,
-    p_details: details ?? null,
+    p_details: composedDetails ?? null,
     p_resolution_type: resolutionType,
     p_exchange_preference: resolutionType === "exchange" ? (exchangePreference ?? null) : null,
   })

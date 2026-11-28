@@ -29,47 +29,56 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult> {
   }
 
   const supabase = await getServerSupabase()
-  const { data: saved, error } = await supabase
+  const basePayload = {
+    shop_name: s.shopName,
+    tagline: s.tagline,
+    description: s.description,
+    seo_keywords: s.keywords || null,
+    announcement: s.announcement,
+    highlight_line: s.highlightLine,
+    hero_badge: s.heroBadge,
+    price_note: s.priceNote,
+    gst_registered: s.gstRegistered,
+    gstin: s.gstin,
+    gst_rate: s.gstRate,
+    legal_name: s.legalName,
+    business_address: s.businessAddress,
+    whatsapp_number: s.whatsappNumber,
+    contact_email: s.email,
+    // a separate calling number is stored only when the toggle is off
+    contact_phone: s.phoneSameAsWhatsapp ? null : s.phone,
+    phone_same_as_whatsapp: s.phoneSameAsWhatsapp,
+    contact_city: s.city,
+    contact_region: s.region,
+    instagram_url: s.instagramUrl,
+    facebook_url: s.facebookUrl,
+    order_code_prefix: s.orderCodePrefix,
+    unpaid_order_expiry_hours: s.unpaidOrderExpiryHours,
+    return_window_days: s.returnWindowDays,
+    delivery_fee: s.deliveryFee,
+    free_delivery_above: s.freeDeliveryAbove,
+    fragile_fee: s.fragileFee,
+    oversized_fee: s.oversizedFee,
+    free_weight_grams: s.freeWeightGrams,
+    extra_weight_fee_per_kg: s.extraWeightFeePerKg,
+    payment_mode: s.paymentMode,
+    payment_gateway: s.paymentGateway,
+    upi_id: s.upiId,
+    upi_payee_name: s.upiPayeeName,
+  }
+
+  let { data: saved, error } = await supabase
     .from("store_settings")
-    .update({
-      shop_name: s.shopName,
-      tagline: s.tagline,
-      description: s.description,
-      seo_keywords: s.keywords || null,
-      announcement: s.announcement,
-      highlight_line: s.highlightLine,
-      hero_badge: s.heroBadge,
-      price_note: s.priceNote,
-      gst_registered: s.gstRegistered,
-      gstin: s.gstin,
-      gst_rate: s.gstRate,
-      legal_name: s.legalName,
-      business_address: s.businessAddress,
-      whatsapp_number: s.whatsappNumber,
-      contact_email: s.email,
-      // a separate calling number is stored only when the toggle is off
-      contact_phone: s.phoneSameAsWhatsapp ? null : s.phone,
-      phone_same_as_whatsapp: s.phoneSameAsWhatsapp,
-      contact_city: s.city,
-      contact_region: s.region,
-      instagram_url: s.instagramUrl,
-      facebook_url: s.facebookUrl,
-      order_code_prefix: s.orderCodePrefix,
-      unpaid_order_expiry_hours: s.unpaidOrderExpiryHours,
-      return_window_days: s.returnWindowDays,
-      delivery_fee: s.deliveryFee,
-      free_delivery_above: s.freeDeliveryAbove,
-      fragile_fee: s.fragileFee,
-      oversized_fee: s.oversizedFee,
-      free_weight_grams: s.freeWeightGrams,
-      extra_weight_fee_per_kg: s.extraWeightFeePerKg,
-      payment_mode: s.paymentMode,
-      payment_gateway: s.paymentGateway,
-      upi_id: s.upiId,
-      upi_payee_name: s.upiPayeeName,
-    })
+    .update({ ...basePayload, contact_pincode: s.pincode })
     .eq("id", true)
     .select("id")
+
+  // Graceful fallback if migration 0076 (contact_pincode) has not been pushed to the remote DB yet
+  if (error && (error.code === "42703" || error.code === "PGRST204" || error.message.toLowerCase().includes("contact_pincode"))) {
+    const retry = await supabase.from("store_settings").update(basePayload).eq("id", true).select("id")
+    saved = retry.data
+    error = retry.error
+  }
 
   if (error) {
     return fail("Could not save settings.")

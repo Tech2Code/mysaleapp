@@ -7,6 +7,7 @@ export type GatewayCheckoutOutcome =
       paymentId: string
       signature: string
     }
+  | { status: "redirecting" }
   | { status: "dismissed" }
   | { status: "failed"; error: string }
   | { status: "unsupported"; error: string }
@@ -76,7 +77,7 @@ function loadExternalScript(src: string): Promise<void> {
 export async function openGatewayCheckout(session: GatewayClientSession): Promise<GatewayCheckoutOutcome> {
   if (session.checkoutUrl) {
     window.location.assign(session.checkoutUrl)
-    return { status: "dismissed" }
+    return { status: "redirecting" }
   }
 
   if (session.provider === "razorpay") {
@@ -108,7 +109,7 @@ export async function openGatewayCheckout(session: GatewayClientSession): Promis
         order_id: session.gatewayOrderId,
         prefill: {
           name: session.customerName,
-          contact: `+91${session.customerPhone}`,
+          ...(session.customerPhone ? { contact: `+91${session.customerPhone}` } : {}),
         },
         notes: {
           orderCode: session.orderCode,

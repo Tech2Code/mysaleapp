@@ -52,6 +52,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   phoneSameAsWhatsapp: true,
   city: null,
   region: null,
+  pincode: null,
   instagramUrl: null,
   facebookUrl: null,
 

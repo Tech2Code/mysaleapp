@@ -93,7 +93,7 @@ describe("order views (dashboard tile and list share one filter)", () => {
     const { calls } = setup()
     await listOrders({ q: "a,b).or(x.eq.1" })
     const or = ordersCall(calls).ops.find(([m]) => m === "or")![1][0] as string
-    expect(or).toBe("order_code.ilike.%aborxeq1%,phone.ilike.%aborxeq1%,customer_name.ilike.%aborxeq1%")
+    expect(or).toBe("order_code.ilike.%aborxeq1%,phone.ilike.%aborxeq1%,customer_name.ilike.%aborxeq1%,payment_reference.ilike.%aborxeq1%")
   })
 
   it("payment filter: refund-due finds cancelled orders with paid/submitted payment, and paid/submitted do not hide cancelled orders", async () => {
@@ -137,7 +137,7 @@ describe("order views (dashboard tile and list share one filter)", () => {
     expect(orderCountCalls.every((c) => c.ops.some(([m, a]) => m === "gte" && a[0] === "created_at"))).toBe(true)
     const submittedCountCall = calls.find((c) => c.name === "orders" && has(c, "eq", "payment_status", "submitted"))!
     expect(submittedCountCall).toBeTruthy()
-    expect(submittedCountCall.ops.some(([m, a]) => m === "neq" && a[0] === "status" && a[1] === "cancelled")).toBe(false)
+    expect(submittedCountCall.ops.some(([m, a]) => m === "neq" && a[0] === "status" && a[1] === "cancelled")).toBe(true)
     const pendingCountCall = calls.find((c) => c.name === "orders" && has(c, "eq", "payment_status", "pending"))!
     expect(pendingCountCall).toBeTruthy()
     expect(has(pendingCountCall, "neq", "status", "cancelled")).toBe(true)

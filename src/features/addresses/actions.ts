@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { getCurrentUser } from "@/features/auth/guards"
+import { assertActiveCustomer, getCurrentUser } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { normalizeIndianPhone } from "@/lib/format"
 import { getServerSupabase } from "@/lib/supabase/server"
@@ -29,8 +29,9 @@ export async function listMyAddresses(): Promise<Address[]> {
 
 /** Creates (id = null) or updates an address. RLS also restricts rows to the owner. */
 export async function saveAddress(id: string | null, input: unknown): Promise<ActionResult> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Please sign in again.")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  const user = auth.user
 
   const parsed = addressSchema.safeParse(input)
   if (!parsed.success) {
@@ -83,8 +84,9 @@ export async function saveAddress(id: string | null, input: unknown): Promise<Ac
 }
 
 export async function deleteAddress(id: string): Promise<ActionResult> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Please sign in again.")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  const user = auth.user
   if (!z.uuid().safeParse(id).success) return fail("Invalid address")
 
   const supabase = await getServerSupabase()
@@ -97,8 +99,8 @@ export async function deleteAddress(id: string): Promise<ActionResult> {
 }
 
 export async function setDefaultAddress(id: string): Promise<ActionResult> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Please sign in again.")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
   if (!z.uuid().safeParse(id).success) return fail("Invalid address")
 
   const supabase = await getServerSupabase()

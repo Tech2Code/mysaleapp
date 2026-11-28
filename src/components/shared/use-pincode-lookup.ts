@@ -44,15 +44,16 @@ export function usePincodeLookup({ pincode, overwrite = false, ...fields }: { pi
       setResult({ pin: pincode, info })
       if (!info.ok) return
       const f = latest.current
+      const allowOverwrite = overwrite && pincode !== filled.current.pin
       const city = f.getCity().trim()
-      if (overwrite || !city || city === filled.current.city) {
+      if (!city || allowOverwrite || (!allowOverwrite && pincode !== filled.current.pin && city === filled.current.city)) {
         filled.current.city = info.city
         if (city !== info.city) f.setCity(info.city)
       } else if (!filled.current.city) {
         filled.current.city = city
       }
       const state = f.getState()
-      if (overwrite || !state || state === filled.current.state) {
+      if (!state || allowOverwrite || (!allowOverwrite && pincode !== filled.current.pin && state === filled.current.state)) {
         filled.current.state = info.state
         if (state !== info.state) f.setState(info.state)
       } else if (!filled.current.state) {

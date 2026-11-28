@@ -18,7 +18,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { z } from "zod"
 import { TextField } from "@/components/form"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { createGatewayRetrySession, submitPayment, verifyGatewayPayment } from "@/features/orders/actions"
 import { openGatewayCheckout } from "@/features/orders/gateway-client"
 import { CopyableReference } from "@/components/shared/copyable-reference"
@@ -248,6 +248,9 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           return
         }
         const outcome = await openGatewayCheckout(res.data.session)
+        if (outcome.status === "redirecting") {
+          return
+        }
         if (outcome.status === "dismissed") {
           toast.info("Payment window closed.")
           return
@@ -385,20 +388,21 @@ export function PaymentPanel({ orderCode, phoneLast4, total, orderStatus, paymen
           {/* On a phone: open the UPI app or toggle QR code. On desktop: scan the QR with your phone. */}
           <a
             href={upiUrl}
-            className={styles.upiAppBtn}
+            className={cn(buttonVariants({ variant: "primary", size: "xl", fullWidth: true }), styles.upiAppBtn)}
           >
             <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(total)} with UPI app
           </a>
-          <button
-
+          <Button
             type="button"
+            variant="outline"
+            fullWidth
             onClick={() => setShowMobileQr((v) => !v)}
             aria-expanded={showMobileQr}
             className={styles.toggleQrBtn}
           >
             <QrCodeIcon className={styles.qrSvg} />
             {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
-          </button>
+          </Button>
           <div
 
             className={cn(styles.qrCardBox, showMobileQr && styles.qrCardVisible)}

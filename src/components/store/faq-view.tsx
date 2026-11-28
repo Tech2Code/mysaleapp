@@ -13,9 +13,11 @@ import Link from "next/link"
 import { useState, type ComponentType, type SVGProps } from "react"
 import { SearchField } from "@/components/form"
 import { JsonLd } from "@/components/shared/json-ld"
+import { PillTabs } from "@/components/shared/pill-tabs"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
 import { PageHeader } from "@/components/store/page-header"
 import { Button, buttonVariants } from "@/components/ui/button"
+import faqData from "@/data/faqs.json"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { gstActive } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
@@ -24,29 +26,57 @@ import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import styles from "./faq-view.module.css"
 
-export type FaqCategoryKey = "all" | "orders" | "shipping" | "returns" | "products"
+export type FaqCategoryKey = string
+
+export type FaqCategoryConfig = {
+  key: FaqCategoryKey
+  label: string
+  icon?: string
+}
+
+type RawFaqEntry = {
+  id: string
+  category: string
+  defaultOpen?: boolean
+  question: string
+  answer: string
+  link?: {
+    href: string
+    label: string
+  }
+}
 
 export type FaqItem = {
   id: string
-  category: Exclude<FaqCategoryKey, "all">
+  category: string
   categoryLabel: string
+  defaultOpen?: boolean
   question: string
   answer: string
   linkHref?: string
   linkLabel?: string
 }
 
-const FAQ_CATEGORIES: {
-  key: FaqCategoryKey
-  label: string
-  icon: ComponentType<SVGProps<SVGSVGElement>>
-}[] = [
-  { key: "all", label: "All questions", icon: HelpCircleIcon },
-  { key: "orders", label: "Orders & UPI", icon: ShieldCheckIcon },
-  { key: "shipping", label: "Shipping & Delivery", icon: TruckIcon },
-  { key: "returns", label: "Returns & Refunds", icon: RotateCcwIcon },
-  { key: "products", label: "Products & Care", icon: SparklesIcon },
-]
+const FAQ_ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
+  "help-circle": HelpCircleIcon,
+  "shield-check": ShieldCheckIcon,
+  truck: TruckIcon,
+  "rotate-ccw": RotateCcwIcon,
+  sparkles: SparklesIcon,
+}
+
+const FAQ_CATEGORIES: (FaqCategoryConfig & { Icon: ComponentType<SVGProps<SVGSVGElement>> })[] = (
+  faqData.categories as FaqCategoryConfig[]
+).map((cat) => ({
+  ...cat,
+  Icon: (cat.icon && FAQ_ICON_MAP[cat.icon]) || HelpCircleIcon,
+}))
+
+const CATEGORY_LABEL_BY_KEY = new Map(FAQ_CATEGORIES.map((c) => [c.key, c.label]))
+
+function interpolateFaqText(template: string, tokens: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => tokens[key] ?? "")
+}
 
 export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
   const shippingSummary =
@@ -71,119 +101,39 @@ export function buildStoreFaqs(shop: StoreSettings): FaqItem[] {
     : "Yes — every confirmed order includes a downloadable printable order invoice from My Orders when you sign in."
 
   const studioOrigin = [shop.city, shop.region].filter(Boolean).join(", ")
+  const tokens: Record<string, string> = {
+    shopName: shop.shopName,
+    shippingSummary,
+    expiryText,
+    returnSummary,
+    invoiceSummary,
+    studioOriginPhrase: studioOrigin ? ` from ${studioOrigin}` : "",
+    orderCodePrefix: shop.orderCodePrefix,
+  }
 
-  return [
-    {
-      id: "how-to-order-upi",
-      category: "orders",
-      categoryLabel: "Orders & UPI",
-      question: "How do I place an order and pay by UPI?",
-      answer: `Add your favourite pieces to the cart, enter your delivery address at checkout, scan the UPI QR code or tap any UPI app (Google Pay, PhonePe, Paytm, BHIM), and enter your 12-digit UTR / UPI reference number to place your order with ${shop.shopName}.`,
-      linkHref: "/products",
-      linkLabel: "Browse the collection",
-    },
-    {
-      id: "order-reservation-window",
-      category: "orders",
-      categoryLabel: "Orders & UPI",
-      question: "How is my UPI payment verified?",
-      answer: `${expiryText} Once verified, our studio confirms your order and shares live courier tracking updates.`,
-    },
-    {
-      id: "cod-availability",
-      category: "orders",
-      categoryLabel: "Orders & UPI",
-      question: "Do you offer Cash on Delivery (COD)?",
-      answer:
-        "We operate on prepaid UPI / online orders to keep shipping fast and transparent with zero COD surcharges. You can chat directly with us on WhatsApp before paying if you have any questions about an item.",
-    },
-    {
-      id: "gst-invoice",
-      category: "orders",
-      categoryLabel: "Orders & UPI",
-      question: "Do I get an invoice for my purchase?",
-      answer: invoiceSummary,
-      linkHref: "/account/orders",
-      linkLabel: "Open My Orders",
-    },
-    {
-      id: "shipping-charges",
-      category: "shipping",
-      categoryLabel: "Shipping & Delivery",
-      question: "What are the delivery charges and when is shipping free?",
-      answer: `${shippingSummary} Any protective fragile-packaging or heavy-parcel handling fee is calculated transparently at checkout before you place your order.`,
-    },
-    {
-      id: "delivery-timeline",
-      category: "shipping",
-      categoryLabel: "Shipping & Delivery",
-      question: "How long does delivery take across India?",
-      answer: `Orders are carefully packed and dispatched from our studio${studioOrigin ? ` in ${studioOrigin}` : ""} within 1–3 business days of payment confirmation. Tracked courier delivery typically reaches metro cities in 3–5 business days and other pin codes in 5–7 business days.`,
-    },
-    {
-      id: "how-to-track-order",
-      category: "shipping",
-      categoryLabel: "Shipping & Delivery",
-      question: "How can I track my order without signing in?",
-      answer: `Use our Track Order page with your order code (e.g. ${shop.orderCodePrefix}-XXXXXX) and the last 4 digits of the phone number used at checkout to see live status updates, courier AWB number, and tracking links.`,
-      linkHref: "/track",
-      linkLabel: "Go to Track Order",
-    },
-    {
-      id: "returns-and-replacements",
-      category: "returns",
-      categoryLabel: "Returns & Refunds",
-      question: "What is your return and replacement policy?",
-      answer: `${returnSummary} To ensure a smooth resolution, please record a short unboxing video when opening the parcel and submit a return request from your Order page or via WhatsApp.`,
-      linkHref: "/refund-policy",
-      linkLabel: "Read full Refund & Return Policy",
-    },
-    {
-      id: "refund-processing-time",
-      category: "returns",
-      categoryLabel: "Returns & Refunds",
-      question: "How and when are refunds processed?",
-      answer:
-        "Once a return is inspected or an order is cancelled before dispatch, refunds are sent straight back to your original UPI ID or bank account within 2–5 business days, along with a reference UTR number.",
-    },
-    {
-      id: "product-variations",
-      category: "products",
-      categoryLabel: "Products & Care",
-      question: "Could product colours or finishes vary slightly from the photos?",
-      answer:
-        "We photograph every product accurately, though slight variations in colour or finish can occur due to screen calibration, studio lighting, or natural material variations.",
-      linkHref: "/about",
-      linkLabel: "Learn more about us",
-    },
-    {
-      id: "custom-and-bulk-orders",
-      category: "products",
-      categoryLabel: "Products & Care",
-      question: "Do you accept bulk, corporate, or custom gifting orders?",
-      answer: `Yes! Reach out to ${shop.shopName} on WhatsApp with the items, quantities, and delivery timeline you need, and we'll share a custom quote.`,
-      linkHref: "/contact",
-      linkLabel: "Contact us for bulk orders",
-    },
-    {
-      id: "verified-customer-reviews",
-      category: "products",
-      categoryLabel: "Products & Care",
-      question: "Who can post a product review on the store?",
-      answer:
-        "Only customers who have received a delivered order for that specific product can rate and review it. This guarantees that every rating and aspect highlight you see comes from a 100% verified buyer.",
-    },
-  ]
+  return (faqData.items as RawFaqEntry[]).map((entry) => ({
+    id: entry.id,
+    category: entry.category,
+    categoryLabel: CATEGORY_LABEL_BY_KEY.get(entry.category) ?? entry.category,
+    defaultOpen: entry.defaultOpen,
+    question: interpolateFaqText(entry.question, tokens),
+    answer: interpolateFaqText(entry.answer, tokens),
+    linkHref: entry.link?.href,
+    linkLabel: entry.link?.label,
+  }))
 }
 
 export function FaqView({ shop }: { shop: StoreSettings }) {
   const faqs = buildStoreFaqs(shop)
-  const [activeCategory, setActiveCategory] = useState<FaqCategoryKey>("all")
+  const [activeCategory, setActiveCategory] = useState<FaqCategoryKey>(FAQ_CATEGORIES[0]?.key ?? "all")
   const [query, setQuery] = useState("")
-  const [openIds, setOpenIds] = useState<Record<string, boolean>>(() => ({
-    [faqs[0]?.id ?? "how-to-order-upi"]: true,
-    [faqs[4]?.id ?? "shipping-charges"]: true,
-  }))
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    for (const item of faqs) {
+      if (item.defaultOpen) initial[item.id] = true
+    }
+    return initial
+  })
 
   const normalizedQuery = query.trim().toLowerCase()
   const filteredFaqs = faqs.filter((item) => {
@@ -238,29 +188,18 @@ export function FaqView({ shop }: { shop: StoreSettings }) {
             placeholder="Search questions (e.g. UPI payment, free delivery, return window, custom gift)…"
           />
 
-          <div className={styles.faqCategoryTabs} role="tablist" aria-label="FAQ topics">
-            {FAQ_CATEGORIES.map((cat) => {
-              const Icon = cat.icon
-              const active = activeCategory === cat.key
-              const count = countForCategory(cat.key)
-              return (
-                <button
-                  key={cat.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setActiveCategory(cat.key)}
-                  className={cn(styles.faqTabBtn, active && styles.faqTabBtnActive)}
-                >
-                  <Icon className={styles.faqTabIcon} aria-hidden />
-                  <span>{cat.label}</span>
-                  <span className={cn(styles.faqTabCount, active && styles.faqTabCountActive)}>
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <PillTabs
+            role="tablist"
+            ariaLabel="FAQ topics"
+            value={activeCategory}
+            onChange={setActiveCategory}
+            items={FAQ_CATEGORIES.map((cat) => ({
+              value: cat.key,
+              label: cat.label,
+              icon: cat.Icon,
+              count: countForCategory(cat.key),
+            }))}
+          />
         </div>
 
         {/* Accordion Q&A List */}
@@ -348,9 +287,9 @@ export function FaqView({ shop }: { shop: StoreSettings }) {
               href={shopWhatsappLink(shop, `Hi ${shop.shopName}, I have a question:`)}
               target="_blank"
               rel="noopener noreferrer"
-              className={styles.faqWhatsappCta}
+              className={buttonVariants({ variant: "whatsapp", size: "lg" })}
             >
-              <WhatsAppIcon className={styles.faqActionIcon} /> Chat on WhatsApp
+              <WhatsAppIcon aria-hidden="true" /> Chat on WhatsApp
             </a>
             <Link
               href="/contact"

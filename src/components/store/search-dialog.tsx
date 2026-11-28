@@ -11,6 +11,7 @@ import { discountPercent, formatPrice } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { hasFunctionalConsent } from "@/components/shared/cookie-banner"
 import { ProductImage } from "./product-image"
+import { Button } from "@/components/ui/button"
 import styles from "./search-dialog.module.css"
 
 type Category = { name: string; slug: string }
@@ -590,18 +591,19 @@ export function SearchDialog({ open, onOpenChange, categories }: { open: boolean
                   </li>
                 ))}
               </ul>
-              <button
-
+              <Button
                 type="button"
+                variant="primary"
+                size="lg"
+                fullWidth
                 onClick={() => (shown.isFallback ? navigateFromSearch("/products") : seeAll())}
-                className={styles.seeAllBtn}
               >
                 {shown.isFallback ? (
                   <>Browse all products <ArrowRightIcon className={styles.arrowSvg} aria-hidden /></>
                 ) : (
                   <>See all {shown.total} {shown.total === 1 ? "result" : "results"} <ArrowRightIcon className={styles.arrowSvg} aria-hidden /></>
                 )}
-              </button>
+              </Button>
             </>
           )}
           {loading && shown && <span className={styles.srOnlyStatus}>Updating results</span>}
