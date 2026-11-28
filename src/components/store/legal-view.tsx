@@ -2,11 +2,11 @@ import { FileTextIcon, LockIcon, RotateCcwIcon, ScaleIcon, ShieldCheckIcon, Spar
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { PageHeader } from "@/components/store/page-header"
+import { PillTabs } from "@/components/shared/pill-tabs"
 import { shopWhatsappLink } from "@/features/orders/whatsapp"
 import { gstActive, priceNote } from "@/features/settings/tax"
 import type { StoreSettings } from "@/features/settings/types"
 import { formatPrice } from "@/lib/format"
-import { cn } from "@/lib/utils"
 import styles from "./legal-view.module.css"
 
 type LegalTab = "privacy" | "terms" | "refund"
@@ -19,23 +19,21 @@ const POLICY_TABS: { id: LegalTab; label: string; href: string; icon: typeof Shi
 
 function LegalTabsNav({ active }: { active: LegalTab }) {
   return (
-    <nav aria-label="Legal and store policies" className={styles.policyTabsNav}>
-      {POLICY_TABS.map((t) => {
-        const isCurrent = t.id === active
-        return (
-          <Link
-
-            key={t.id}
-            href={t.href}
-            aria-current={isCurrent ? "page" : undefined}
-            className={cn(styles.policyTabLink, isCurrent && styles.policyTabActive)}
-          >
-            <t.icon className={styles.tabIcon} aria-hidden />
-            {t.label}
-          </Link>
-        )
+    <PillTabs
+      role="navigation"
+      ariaLabel="Legal and store policies"
+      value={active}
+      items={POLICY_TABS.map((t) => {
+        const Icon = t.icon
+        return {
+          value: t.id,
+          label: t.label,
+          href: t.href,
+          iconNode: <Icon aria-hidden="true" />,
+        }
       })}
-    </nav>
+      className={styles.policyTabsNav}
+    />
   )
 }
 

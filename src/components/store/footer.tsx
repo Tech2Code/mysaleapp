@@ -8,6 +8,7 @@ import { safeExternalUrl } from "@/lib/safe-redirect"
 import type { NavCategory } from "./header"
 import { InstallButton } from "./install-prompt"
 import { WhatsAppIcon } from "./brand-icons"
+import { buttonVariants } from "@/components/ui/button"
 import styles from "./footer.module.css"
 
 export function Footer({ categories, shop }: { categories: NavCategory[]; shop: StoreSettings }) {
@@ -63,9 +64,9 @@ export function Footer({ categories, shop }: { categories: NavCategory[]; shop: 
               href={shopWhatsappLink(shop, `Hi ${shop.shopName}!`)}
               target="_blank"
               rel="noopener noreferrer"
-              className={styles.whatsappBtn}
+              className={buttonVariants({ variant: "whatsapp", fullWidth: true })}
             >
-              <WhatsAppIcon className={styles.whatsappIcon} /> Chat on WhatsApp
+              <WhatsAppIcon className={styles.whatsappIcon} aria-hidden="true" /> Chat on WhatsApp
             </a>
             <InstallButton className={styles.installBtn} />
           </div>

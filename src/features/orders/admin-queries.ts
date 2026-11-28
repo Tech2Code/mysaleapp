@@ -143,12 +143,9 @@ export type OrderFilterCounts = {
 }
 
 export async function getReturnViewCounts(): Promise<ReturnViewCounts> {
-  const adminCheck = requireAdmin()
+  await requireAdmin()
   const supabase = await getServerSupabase()
-  const [, counts] = await Promise.all([
-    adminCheck,
-    Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
-  ])
+  const counts = await Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0))
   return Object.fromEntries(RETURN_VIEWS.map((v, i) => [v, counts[i]])) as ReturnViewCounts
 }
 
@@ -157,7 +154,7 @@ export async function getOrderFilterCounts(filters?: {
   month?: string
   today?: string
 }): Promise<OrderFilterCounts> {
-  const adminCheck = requireAdmin()
+  await requireAdmin()
   const supabase = await getServerSupabase()
   const period =
     filters && (filters.year !== undefined || filters.month !== undefined)
@@ -171,12 +168,11 @@ export async function getOrderFilterCounts(filters?: {
     return q
   }
 
-  const [, returnCounts, statusCounts, paymentCounts] = await Promise.all([
-    adminCheck,
+  const [returnCounts, statusCounts, paymentCounts] = await Promise.all([
     Promise.all(RETURN_VIEWS.map(async (v) => (await countOrdersInView(supabase, v)).count ?? 0)),
     Promise.all(ORDER_STATUSES.map(async (s) => (await head().eq("status", s)).count ?? 0)),
     Promise.all([
-      head().eq("payment_status", "submitted").then((r) => r.count ?? 0),
+      head().eq("payment_status", "submitted").neq("status", "cancelled").then((r) => r.count ?? 0),
       head().eq("payment_status", "failed").neq("status", "cancelled").then((r) => r.count ?? 0),
       head().eq("payment_status", "pending").neq("status", "cancelled").then((r) => r.count ?? 0),
       head().eq("payment_status", "paid").then((r) => r.count ?? 0),
@@ -200,20 +196,19 @@ export async function getOrderFilterCounts(filters?: {
 }
 
 export async function listOrders(filters: OrderFilters): Promise<{ orders: Order[]; total: number; page: number }> {
-  const adminCheck = requireAdmin()
+  await requireAdmin()
   const supabase = await getServerSupabase()
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1)
   const from = (page - 1) * ADMIN_ORDERS_PAGE_SIZE
 
   const viewFilterFn = isOrderView(filters.view) ? await orderViewFilter(supabase, filters.view) : null
 
-  // Search by order code, phone or customer name. Strip characters that have
+  // Search by order code, phone, customer name, or payment reference (UTR). Strip characters that have
   // meaning in PostgREST filter syntax so user input can't alter the filter.
   const rawQuery = (filters.q ?? "").trim()
   const normalizedPhone = rawQuery ? normalizeIndianPhone(rawQuery) : null
   const q = (normalizedPhone ?? rawQuery.replace(/[^\p{L}\p{M}0-9\s-]/gu, "").trim()).slice(0, LIMITS.orderSearch.max)
   if (rawQuery && !q) {
-    await adminCheck
     return { orders: [], total: 0, page }
   }
 
@@ -233,14 +228,16 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
           query = query.eq("status", "cancelled").in("payment_status", ["paid", "submitted"])
         } else {
           query = query.eq("payment_status", filters.payment)
-          // a cancelled order is not "waiting" for a rejected/pending payment
-          if (filters.payment === "pending" || filters.payment === "failed") query = query.neq("status", "cancelled")
+          // a cancelled order is not "waiting" for a submitted/rejected/pending payment
+          if (filters.payment === "pending" || filters.payment === "failed" || filters.payment === "submitted") {
+            query = query.neq("status", "cancelled")
+          }
         }
       }
     }
 
     if (q) {
-      query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%`)
+      query = query.or(`order_code.ilike.%${q}%,phone.ilike.%${q}%,customer_name.ilike.%${q}%,payment_reference.ilike.%${q}%`)
     } else if (!isOrderView(filters.view) && (filters.year !== undefined || filters.month !== undefined)) {
       const period = resolveOrderPeriod({ year: filters.year, month: filters.month }, filters.today)
       if (period.startIso && period.endIso) {
@@ -250,8 +247,7 @@ export async function listOrders(filters: OrderFilters): Promise<{ orders: Order
     return query.returns<OrderRow[]>()
   }
 
-  const [, initialRes] = await Promise.all([adminCheck, buildQuery(RETURN_EMBED)])
-  let { data, error, count } = initialRes
+  let { data, error, count } = await buildQuery(RETURN_EMBED)
   if (isMissingExchangeCol(error)) {
     ({ data, error, count } = await buildQuery(RETURN_EMBED_BASE))
   }

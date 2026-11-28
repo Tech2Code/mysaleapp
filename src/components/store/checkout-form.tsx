@@ -25,7 +25,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
@@ -69,9 +69,133 @@ import { useStepHistory } from "@/hooks/use-step-history"
 import styles from "./checkout-form.module.css"
 
 export const LAST_ORDER_KEY = "kk-last-order"
+const CHECKOUT_DRAFT_KEY = "kk-checkout-draft"
+const CHECKOUT_DRAFT_TTL_MS = 30 * 60 * 1000
 const EMPTY_ADDRESSES: Address[] = []
 
 type CheckoutStep = 1 | 2 | 3
+
+type CheckoutDraft = {
+  ownerId: string | null
+  step: CheckoutStep
+  selectedId: string
+  oneTimeAddress: OneTimeAddress | null
+  appliedPromo: ValidatedPromo | null
+  formValues: CheckoutInput
+  savedAt: number
+}
+
+function isNonEmptyStr(v: unknown): v is string {
+  return typeof v === "string"
+}
+
+function sanitizeOneTimeAddress(raw: unknown): OneTimeAddress | null {
+  if (!raw || typeof raw !== "object") return null
+  const r = raw as Record<string, unknown>
+  if (
+    !isNonEmptyStr(r.fullName) ||
+    !isNonEmptyStr(r.phone) ||
+    !isNonEmptyStr(r.address) ||
+    !isNonEmptyStr(r.city) ||
+    !isNonEmptyStr(r.state) ||
+    !isNonEmptyStr(r.pincode)
+  ) {
+    return null
+  }
+  return {
+    fullName: r.fullName,
+    phone: r.phone,
+    address: r.address,
+    city: r.city,
+    state: r.state as IndianState,
+    pincode: r.pincode,
+  }
+}
+
+function sanitizeAppliedPromo(raw: unknown): ValidatedPromo | null {
+  if (!raw || typeof raw !== "object") return null
+  const r = raw as Record<string, unknown>
+  if (
+    typeof r.code !== "string" ||
+    (r.discountType !== "percent" && r.discountType !== "flat") ||
+    typeof r.discountValue !== "number" ||
+    !Number.isFinite(r.discountValue) ||
+    typeof r.minOrderAmount !== "number" ||
+    !Number.isFinite(r.minOrderAmount) ||
+    (r.maxDiscountAmount !== null && (typeof r.maxDiscountAmount !== "number" || !Number.isFinite(r.maxDiscountAmount))) ||
+    typeof r.discountAmount !== "number" ||
+    !Number.isFinite(r.discountAmount)
+  ) {
+    return null
+  }
+  return {
+    code: r.code,
+    description: typeof r.description === "string" ? r.description : null,
+    discountType: r.discountType,
+    discountValue: r.discountValue,
+    minOrderAmount: r.minOrderAmount,
+    maxDiscountAmount: r.maxDiscountAmount as number | null,
+    discountAmount: r.discountAmount,
+  }
+}
+
+function readCheckoutDraft(): CheckoutDraft | null {
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_DRAFT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<CheckoutDraft>
+    if (!parsed || typeof parsed !== "object") {
+      clearCheckoutDraft()
+      return null
+    }
+    if (typeof parsed.savedAt === "number" && Date.now() - parsed.savedAt > CHECKOUT_DRAFT_TTL_MS) {
+      clearCheckoutDraft()
+      return null
+    }
+    if (parsed.step !== 1 && parsed.step !== 2 && parsed.step !== 3) {
+      clearCheckoutDraft()
+      return null
+    }
+    if (!parsed.formValues || typeof parsed.formValues !== "object") {
+      clearCheckoutDraft()
+      return null
+    }
+    const fv = parsed.formValues as Record<string, unknown>
+    const formValues: CheckoutInput = {
+      name: typeof fv.name === "string" ? fv.name : "",
+      phone: typeof fv.phone === "string" ? fv.phone : "",
+      address: typeof fv.address === "string" ? fv.address : "",
+      city: typeof fv.city === "string" ? fv.city : "",
+      state: typeof fv.state === "string" ? (fv.state as IndianState) : ("" as IndianState),
+      pincode: typeof fv.pincode === "string" ? fv.pincode : "",
+      note: typeof fv.note === "string" ? fv.note : "",
+    }
+    return {
+      ownerId: typeof parsed.ownerId === "string" ? parsed.ownerId : null,
+      step: parsed.step,
+      selectedId: typeof parsed.selectedId === "string" ? parsed.selectedId : "new",
+      oneTimeAddress: sanitizeOneTimeAddress(parsed.oneTimeAddress),
+      appliedPromo: sanitizeAppliedPromo(parsed.appliedPromo),
+      formValues,
+      savedAt: typeof parsed.savedAt === "number" ? parsed.savedAt : Date.now(),
+    }
+  } catch {
+    clearCheckoutDraft()
+    return null
+  }
+}
+
+function writeCheckoutDraft(draft: CheckoutDraft) {
+  try {
+    sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(draft))
+  } catch {}
+}
+
+function clearCheckoutDraft() {
+  try {
+    sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
+  } catch {}
+}
 
 const CHECKOUT_STEPS: { step: CheckoutStep; label: string; shortLabel: string; mobileTitle: string }[] = [
   { step: 1, label: "Delivery", shortLabel: "Address", mobileTitle: "Delivery address" },
@@ -250,15 +374,29 @@ export function CheckoutForm({
   const showBusySuccess = useBusySuccess()
   const [step, setStep] = useState<CheckoutStep>(1)
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
+  const stepRafRef = useRef<number>(0)
+  const utrRafRef = useRef<number>(0)
+  const utrTimerRef = useRef<number>(0)
+
+  useEffect(() => {
+    return () => {
+      if (stepRafRef.current) window.cancelAnimationFrame(stepRafRef.current)
+      if (utrRafRef.current) window.cancelAnimationFrame(utrRafRef.current)
+      if (utrTimerRef.current) window.clearTimeout(utrTimerRef.current)
+    }
+  }, [])
+
   const applyStep = useCallback((next: CheckoutStep) => {
     setStep(next)
     setMobileSummaryOpen(false)
-    requestAnimationFrame(() => {
+    if (stepRafRef.current) window.cancelAnimationFrame(stepRafRef.current)
+    stepRafRef.current = window.requestAnimationFrame(() => {
+      stepRafRef.current = 0
       stepperTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
       stepHeadingRef.current?.focus({ preventScroll: true })
     })
   }, [])
-  const { goToStep: moveToStep, resetHistoryDepth } = useStepHistory<CheckoutStep>({
+  const { goToStep: moveToStep, resetHistoryDepth, syncHistoryDepth } = useStepHistory<CheckoutStep>({
     pathname: "/checkout",
     stateKey: "checkoutStep",
     step,
@@ -269,10 +407,14 @@ export function CheckoutForm({
   const [promoOpen, setPromoOpen] = useState(false)
   const [trackedOwnerId, setTrackedOwnerId] = useState<string | null>(initialUserId)
   const [clientAddresses, setClientAddresses] = useState<Address[] | null>(null)
-  const [, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
+  const [clientProfile, setClientProfile] = useState<{ fullName: string; phone: string } | null>(null)
   const [clearedOnSignOut, setClearedOnSignOut] = useState(false)
   const canUseInitial = !clearedOnSignOut && (ownerId ?? null) === (initialUserId ?? null)
-  const addresses = clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? (canUseInitial ? initialAddresses : []))
+  const activeProfile = clientProfile ?? (canUseInitial ? initialProfile : null)
+  const addresses = useMemo(
+    () => (clearedOnSignOut ? (clientAddresses ?? []) : (clientAddresses ?? (canUseInitial ? initialAddresses : []))),
+    [clearedOnSignOut, clientAddresses, canUseInitial, initialAddresses]
+  )
   const initialDefault = canUseInitial ? initialAddresses[0] : undefined
   /** id of the saved address in use, or "new" when typing a different one */
   const [selectedId, setSelected] = useState<string>(initialDefault ? initialDefault.id : "new")
@@ -303,6 +445,43 @@ export function CheckoutForm({
   const stepperTopRef = useRef<HTMLDivElement>(null)
   const stepHeadingRef = useRef<HTMLHeadingElement>(null)
   const utrInputRef = useRef<HTMLDivElement>(null)
+  const restoredDraftRef = useRef(false)
+  const draftReadyToPersistRef = useRef(false)
+
+  const focusUtrInput = useCallback(() => {
+    if (typeof window === "undefined") return
+    if (utrRafRef.current) window.cancelAnimationFrame(utrRafRef.current)
+    if (utrTimerRef.current) window.clearTimeout(utrTimerRef.current)
+    utrRafRef.current = window.requestAnimationFrame(() => {
+      utrRafRef.current = 0
+      const container = utrInputRef.current
+      if (!container) return
+      const input = container.querySelector<HTMLInputElement>("input")
+      const rect = container.getBoundingClientRect()
+      // Position the UTR field comfortably in the upper third of the viewport, clear of both the sticky header and mobile bottom bar / keyboard.
+      const headerOffset = window.innerWidth < 900 ? 72 : 96
+      const desiredTop = Math.max(0, window.scrollY + rect.top - headerOffset)
+      window.scrollTo({ top: desiredTop, behavior: "smooth" })
+      utrTimerRef.current = window.setTimeout(() => {
+        utrTimerRef.current = 0
+        input?.focus({ preventScroll: true })
+      }, 220)
+    })
+  }, [])
+
+  const navigateToOrderPlaced = useCallback(
+    (orderCode: string) => {
+      clearCheckoutDraft()
+      if (typeof document !== "undefined") {
+        ;(document.activeElement as HTMLElement | null)?.blur?.()
+      }
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+      }
+      router.replace(`/order-placed?code=${encodeURIComponent(orderCode)}`)
+    },
+    [router]
+  )
 
   if (ownerId !== trackedOwnerId) {
     setTrackedOwnerId(ownerId)
@@ -551,6 +730,7 @@ export function CheckoutForm({
     }
     if (!authReady || !wasSignedIn.current) return
     wasSignedIn.current = false
+    clearCheckoutDraft()
     fetchedForUser.current = null
     lastAppliedSavedKey.current = ""
     appliedInitialProfile.current = false
@@ -628,6 +808,91 @@ export function CheckoutForm({
     }
   }, [authReady, user, form, initialAddresses.length, clearedOnSignOut])
 
+  // Restore active checkout step & draft after a page refresh (web & mobile)
+  useEffect(() => {
+    if (preview || !authReady || restoredDraftRef.current) return
+    restoredDraftRef.current = true
+    draftReadyToPersistRef.current = true
+    const draft = readCheckoutDraft()
+    const histRaw =
+      typeof window !== "undefined"
+        ? (window.history.state as Record<string, unknown> | null)?.checkoutStep
+        : null
+    const histStep: CheckoutStep | null = histRaw === 1 || histRaw === 2 || histRaw === 3 ? histRaw : null
+
+    if (draft && draft.ownerId !== ownerId) {
+      clearCheckoutDraft()
+    } else if (draft && draft.ownerId === ownerId) {
+      const matchedSaved = draft.selectedId !== "new" ? addresses.find((a) => a.id === draft.selectedId) : undefined
+      if (matchedSaved) {
+        const split = splitCityState(matchedSaved.city)
+        lastAppliedSavedKey.current = `${matchedSaved.id}:${matchedSaved.fullName}:${matchedSaved.phone}:${matchedSaved.address}:${matchedSaved.city}:${matchedSaved.pincode}`
+        primeArea(matchedSaved.pincode, split.city, split.state)
+        form.reset({
+          name: matchedSaved.fullName,
+          phone: matchedSaved.phone,
+          address: matchedSaved.address,
+          ...split,
+          pincode: matchedSaved.pincode,
+          note: draft.formValues.note ?? "",
+        })
+      } else if (draft.selectedId === "new" && (draft.formValues.address || draft.formValues.name || draft.formValues.phone)) {
+        lastAppliedSavedKey.current = "new"
+        if (draft.formValues.pincode) {
+          primeArea(draft.formValues.pincode, draft.formValues.city, draft.formValues.state)
+        }
+        form.reset(draft.formValues)
+      }
+      const desiredStep = histStep ?? draft.step
+      const hasValidAddress = Boolean(matchedSaved) || checkoutSchema.safeParse(draft.formValues).success
+      queueMicrotask(() => {
+        if (draft.oneTimeAddress) setOneTimeAddress(draft.oneTimeAddress)
+        if (draft.appliedPromo) setAppliedPromo(draft.appliedPromo)
+        if (matchedSaved) setSelected(matchedSaved.id)
+        else if (draft.selectedId === "new" && (draft.formValues.address || draft.formValues.name || draft.formValues.phone)) {
+          setSelected("new")
+        }
+        if (draft.formValues.note) setHasOrderNote(true)
+        if (desiredStep > 1 && hasValidAddress) {
+          setStep(desiredStep)
+          syncHistoryDepth(desiredStep, Boolean(histStep))
+        } else if (histStep && histStep > 1) {
+          syncHistoryDepth(1, true)
+        }
+      })
+      return
+    }
+
+    if (histStep && histStep > 1) {
+      if (addresses.length > 0) {
+        queueMicrotask(() => {
+          setStep(histStep)
+          syncHistoryDepth(histStep, true)
+        })
+      } else {
+        syncHistoryDepth(1, true)
+      }
+    }
+  }, [preview, authReady, ownerId, addresses, form, primeArea, syncHistoryDepth])
+
+  // Persist checkout step & draft in sessionStorage so refreshing on Summary or Payment keeps the user in place
+  useEffect(() => {
+    if (preview || redirecting || !draftReadyToPersistRef.current) return
+    if (ready && available.length === 0) {
+      clearCheckoutDraft()
+      return
+    }
+    writeCheckoutDraft({
+      ownerId,
+      step,
+      selectedId: selected,
+      oneTimeAddress,
+      appliedPromo,
+      formValues: form.getValues(),
+      savedAt: Date.now(),
+    })
+  }, [preview, redirecting, ready, available.length, ownerId, step, selected, oneTimeAddress, appliedPromo, watchedFormValues, form])
+
   const getCustomerPayload = (): CheckoutInput => {
     const values = form.getValues()
     return activeSavedAddress
@@ -701,6 +966,10 @@ export function CheckoutForm({
         }
 
         const outcome = await openGatewayCheckout(res.data.session)
+        if (outcome.status === "redirecting") {
+          setRedirecting(true)
+          return
+        }
         if (outcome.status === "dismissed" || outcome.status === "failed" || outcome.status === "unsupported") {
           if (outcome.status !== "unsupported") {
             const latest = await trackOrder({ code: res.data.orderCode, phoneLast4: res.data.phoneLast4 })
@@ -726,7 +995,7 @@ export function CheckoutForm({
                 // private mode: the success page falls back to the code in the URL
               }
               for (const l of available) removeCartItem(cartLineKey(l))
-              router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+              navigateToOrderPlaced(res.data.orderCode)
               return
             }
           }
@@ -776,7 +1045,7 @@ export function CheckoutForm({
         if (!verified.ok) {
           toast.info("Confirming your payment…")
         }
-        router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+        navigateToOrderPlaced(res.data.orderCode)
       } catch {
         toast.error("Couldn't start online payment. Please check your connection and try again.")
       }
@@ -825,8 +1094,7 @@ export function CheckoutForm({
     const parsedRef = paymentReferenceSchema.safeParse(paymentRef)
     if (!parsedRef.success) {
       setPaymentRefError(parsedRef.error.issues[0]?.message ?? "Please enter your 12-digit UTR / UPI reference number.")
-      utrInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
-      utrInputRef.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true })
+      focusUtrInput()
       return
     }
     setPaymentRefError(null)
@@ -845,6 +1113,7 @@ export function CheckoutForm({
           const refFieldMsg = res.fieldErrors?.paymentReference?.[0]
           if (refFieldMsg) {
             setPaymentRefError(refFieldMsg)
+            focusUtrInput()
             return
           }
           if (res.error.toLowerCase().includes("promo code")) {
@@ -889,7 +1158,7 @@ export function CheckoutForm({
           // private mode: the success page falls back to the code in the URL
         }
         for (const l of available) removeCartItem(cartLineKey(l))
-        router.replace(`/order-placed?code=${encodeURIComponent(res.data.orderCode)}`)
+        navigateToOrderPlaced(res.data.orderCode)
       } catch {
         toast.error("Couldn't place your order. Please check your connection and try again.")
       }
@@ -1382,30 +1651,33 @@ export function CheckoutForm({
 
                     <div className={styles.addrActionsBar}>
                       {(addresses.length > 1 || Boolean(oneTimeAddress)) && (
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => setAddressModal("list")}
-                          className={styles.addrActionBtn}
                         >
                           Change address{addresses.length > 1 ? ` (${addresses.length})` : ""}
-                        </button>
+                        </Button>
                       )}
                       {!activeSavedAddress && oneTimeAddress && (
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => openNewAddressModal(false, true)}
-                          className={styles.addrActionBtn}
                         >
-                          <PencilIcon className={styles.actionIcon14} aria-hidden /> Edit
-                        </button>
+                          <PencilIcon aria-hidden="true" /> Edit
+                        </Button>
                       )}
-                      <button
+                      <Button
                         type="button"
+                        variant="soft"
+                        size="sm"
                         onClick={() => openNewAddressModal(false)}
-                        className={cn(styles.addrActionBtn, styles.addrActionBtnPrimary)}
                       >
-                        <PlusIcon className={styles.actionIcon14} aria-hidden /> Add new address
-                      </button>
+                        <PlusIcon aria-hidden="true" /> Add new address
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -1603,6 +1875,18 @@ export function CheckoutForm({
                   </div>
                 </div>
 
+                {promoBelowMin && appliedPromo && (
+                  <div role="status" className={styles.promoWarningRow}>
+                    <span>
+                      Promo <strong>{appliedPromo.code}</strong> needs a minimum order of{" "}
+                      {formatPrice(appliedPromo.minOrderAmount)} and wasn&apos;t applied to this total.
+                    </span>
+                    <button type="button" onClick={() => moveToStep(2)} className={styles.recapChangeBtn}>
+                      Review
+                    </button>
+                  </div>
+                )}
+
                 {shop.paymentMode === "gateway" ? (
                   <div className={styles.gatewayCard}>
                     <div className={styles.gatewayIconRow}>
@@ -1629,18 +1913,21 @@ export function CheckoutForm({
                           <span className={styles.solidStepNum}>1</span>
                           Pay {formatPrice(shownCharges.total)} with any UPI app
                         </p>
-                        <a href={upiUrl} className={styles.upiDeepLinkBtn}>
-                          <SmartphoneIcon className={styles.phoneSvg} /> Pay {formatPrice(shownCharges.total)} with UPI app
+                        <a href={upiUrl} className={cn(buttonVariants({ variant: "primary", size: "xl", fullWidth: true }), styles.upiDeepLinkBtn)}>
+                          <SmartphoneIcon className={styles.phoneSvg} aria-hidden="true" /> Pay {formatPrice(shownCharges.total)} with UPI app
                         </a>
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="lg"
+                          fullWidth
                           onClick={() => setShowMobileQr((v) => !v)}
                           aria-expanded={showMobileQr}
                           className={styles.qrToggleBtn}
                         >
-                          <QrCodeIcon className={styles.qrSvg} />
+                          <QrCodeIcon className={styles.qrSvg} aria-hidden="true" />
                           {showMobileQr ? "Hide QR code" : "Show QR code (scan from another device)"}
-                        </button>
+                        </Button>
                         <div className={cn(styles.qrCardRow, showMobileQr && styles.qrCardRowVisible)}>
                           <div className={styles.qrWhiteFrame}>
                             <QRCodeSVG value={upiUrl} size={112} marginSize={0} title={`UPI QR code to pay ${formatPrice(shownCharges.total)}`} />
@@ -2006,8 +2293,8 @@ export function CheckoutForm({
                 editingOneTime && oneTimeAddress
                   ? oneTimeAddress
                   : {
-                      fullName: initialProfile?.fullName || addresses[0]?.fullName || "",
-                      phone: initialProfile?.phone || addresses[0]?.phone || "",
+                      fullName: activeProfile?.fullName || addresses[0]?.fullName || "",
+                      phone: activeProfile?.phone || addresses[0]?.phone || "",
                     }
               }
               canSaveMore={addresses.length < MAX_ADDRESSES}

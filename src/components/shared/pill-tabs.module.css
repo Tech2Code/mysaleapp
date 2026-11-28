@@ -1,0 +1,34 @@
+/* Section: Scrollable Pill Tabs Shell & Navigation Arrows */
+.pillTabsShell { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+.pillTabsShell .pillTabsTrack { display: flex; flex-wrap: nowrap; flex: 1 1 auto; min-width: 0; align-items: center; gap: 8px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; padding: 4px 2px; margin: -4px -2px; scrollbar-width: none; }
+.pillTabsShell .pillTabsTrack::-webkit-scrollbar { display: none; }
+.pillTabsShell .scrollArrowBtn { display: grid; flex: none; width: 44px; height: 44px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); color: var(--foreground); place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: var(--store-elevation-sm); transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease; }
+.pillTabsShell .scrollArrowBtn:hover:not(:disabled) { background-color: var(--secondary); border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); color: var(--primary); }
+.pillTabsShell .scrollArrowBtn:active:not(:disabled) { transform: scale(0.95); }
+.pillTabsShell .scrollArrowBtn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.pillTabsShell .scrollArrowBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.scrollArrowBtn .scrollArrowIcon { width: 16px; height: 16px; }
+/* Section: Pill Tab Buttons */
+.pillTabsTrack .pillBtn { display: inline-flex; height: 44px; flex: none; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; border-radius: 9999px; border: 1.5px solid transparent; background-color: var(--store-section-tint, var(--muted)); padding: 0 16px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--foreground); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+.pillTabsTrack .pillBtnSm { height: 40px; padding: 0 14px; font-size: 12px; gap: 6px; }
+.pillTabsTrack .pillBtn:hover { background-color: var(--secondary); transform: translateY(-1px); }
+.pillTabsTrack .pillBtn:active { transform: scale(0.97); }
+.pillTabsTrack .pillBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pillTabsTrack .pillBtnActive, .pillTabsTrack .pillBtn[aria-selected="true"]:not(.pillBtnTint), .pillTabsTrack .pillBtn[aria-current="page"]:not(.pillBtnTint) { border-color: var(--primary); background-color: var(--primary); color: var(--primary-foreground); box-shadow: 0 6px 16px -4px color-mix(in oklab, var(--primary) 42%, transparent); }
+.pillTabsTrack .pillBtnActive:hover, .pillTabsTrack .pillBtn[aria-selected="true"]:not(.pillBtnTint):hover, .pillTabsTrack .pillBtn[aria-current="page"]:not(.pillBtnTint):hover { border-color: var(--store-accent-hover, var(--primary)); background-color: var(--store-accent-hover, var(--primary)); color: var(--primary-foreground); }
+.pillTabsTrack .pillBtnTint { border-color: var(--border); background-color: var(--card); color: var(--muted-foreground); }
+.pillTabsTrack .pillBtnTint:hover { color: var(--foreground); border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); background-color: var(--card); }
+.pillTabsTrack .pillBtnTintActive { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 12%, var(--card)); color: var(--primary); box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--primary) 26%, transparent); }
+.pillTabsTrack .pillBtnTintActive:hover { border-color: var(--primary); background-color: color-mix(in oklab, var(--primary) 16%, var(--card)); color: var(--primary); }
+.pillBtn .pillIcon { width: 14px; height: 14px; flex-shrink: 0; }
+.pillBtn .pillIconWrap { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pillIconWrap svg { width: 14px; height: 14px; }
+.pillBtn .pillCount { border-radius: 9999px; background-color: var(--card); padding: 1px 7px; font-size: 11px; line-height: 16px; font-weight: 700; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.pillBtn .pillCountActive { background-color: color-mix(in oklab, var(--primary-foreground) 22%, transparent); color: var(--primary-foreground); }
+.pillBtn .pillCountTintActive { background-color: color-mix(in oklab, var(--primary) 16%, transparent); color: var(--primary); }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .pillTabsShell .scrollArrowBtn { width: 34px; height: 34px; }
+  .pillTabsTrack .pillBtn { height: 38px; padding: 0 15px; }
+  .pillTabsTrack .pillBtnSm { height: 34px; padding: 0 12px; }
+}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { SwitchField, TextAreaField, TextField } from "@/components/form"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { formatPrice } from "@/lib/format"
 import { recordOrderReturn } from "@/features/orders/admin-actions"
@@ -170,10 +170,7 @@ export function AdminReturnOrder({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-
-        className={styles.recordReturnTrigger}
-      >
+      <DialogTrigger className={buttonVariants({ variant: "outline", fullWidth: true })}>
         {triggerLabel}
       </DialogTrigger>
       <DialogContent mobileFullScreen className={styles.dialogLgMax}>

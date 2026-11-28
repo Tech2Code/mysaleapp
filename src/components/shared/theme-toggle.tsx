@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { useMounted } from "@/hooks/use-mounted"
 import { cn } from "@/lib/utils"
+import { SegmentedTabs } from "./segmented-tabs"
 import styles from "./shared.module.css"
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -19,8 +20,8 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label="Toggle dark mode"
     >
-      <SunIcon className={styles.sunSvg} />
-      <MoonIcon className={styles.moonSvg} />
+      <SunIcon className={styles.sunSvg} aria-hidden="true" />
+      <MoonIcon className={styles.moonSvg} aria-hidden="true" />
     </Button>
   )
 }
@@ -37,33 +38,15 @@ export function ThemeSegmentedControl({ className }: { className?: string }) {
   const current = mounted ? (theme ?? "system") : "system"
 
   return (
-    <div
-
-      role="group"
-      aria-label="Theme preference"
-      className={cn(styles.themeSegmentedGroup, className)}
-    >
-      {THEME_OPTIONS.map((opt) => {
-        const Icon = opt.icon
-        const active = current === opt.value
-        return (
-          <button
-
-            key={opt.value}
-            type="button"
-            aria-pressed={active}
-            onClick={() => setTheme(opt.value)}
-            className={cn(
-              styles.segmentBtn,
-              active && styles.segmentBtnActive
-            )}
-          >
-            <Icon className={styles.icon14} aria-hidden />
-            <span>{opt.label}</span>
-          </button>
-        )
-      })}
-    </div>
+    <SegmentedTabs
+      layout="equal"
+      size="sm"
+      ariaLabel="Theme preference"
+      value={current}
+      onChange={setTheme}
+      items={THEME_OPTIONS}
+      className={className}
+    />
   )
 }
 

@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { SwitchField } from "@/components/form"
+import { SegmentedTabs } from "./segmented-tabs"
 import { cn } from "@/lib/utils"
 import styles from "./cookie-banner.module.css"
 
@@ -129,38 +130,19 @@ export function LegalQuickModal({
         </DialogHeader>
 
         <DialogBody className={styles.prefsBodyStack}>
-          <div role="tablist" aria-label="Policy sections" className={styles.legalTabRow}>
-            <button
-
-              type="button"
-              role="tab"
-              aria-selected={tab === "terms"}
-              onClick={() => setTab("terms")}
-              className={cn(styles.legalTabBtn, tab === "terms" && styles.legalTabBtnActive)}
-            >
-              Terms
-            </button>
-            <button
-
-              type="button"
-              role="tab"
-              aria-selected={tab === "privacy"}
-              onClick={() => setTab("privacy")}
-              className={cn(styles.legalTabBtn, tab === "privacy" && styles.legalTabBtnActive)}
-            >
-              Privacy
-            </button>
-            <button
-
-              type="button"
-              role="tab"
-              aria-selected={tab === "refund"}
-              onClick={() => setTab("refund")}
-              className={cn(styles.legalTabBtn, tab === "refund" && styles.legalTabBtnActive)}
-            >
-              Refunds
-            </button>
-          </div>
+          <SegmentedTabs
+            role="tablist"
+            layout="equal"
+            shape="pill"
+            ariaLabel="Policy sections"
+            value={tab}
+            onChange={setTab}
+            items={[
+              { value: "terms", label: "Terms" },
+              { value: "privacy", label: "Privacy" },
+              { value: "refund", label: "Refunds" },
+            ]}
+          />
 
           {tab === "terms" && (
             <ul className={styles.legalPointList}>
@@ -319,34 +301,37 @@ export function CookieBanner() {
           </div>
 
           <div className={styles.bannerActions}>
-            <button
-
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
+              fullWidth
               onClick={() => saveDecision(false, false, "Saved: Essential cookies only.")}
-              className={styles.equalBtn}
             >
               Essential only
-            </button>
-            <button
-
+            </Button>
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              fullWidth
               onClick={() => {
                 setFunctional(savedPrefs.functional)
                 setAnalytics(savedPrefs.analytics)
                 setDialogOpen(true)
               }}
-              className={styles.equalBtn}
             >
               Customize
-            </button>
-            <button
-
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
+              fullWidth
               onClick={() => saveDecision(true, true, "Cookie preferences saved.")}
-              className={cn(styles.equalBtn, styles.equalBtnPrimary)}
             >
               Accept all
-            </button>
+            </Button>
           </div>
         </aside>
       )}

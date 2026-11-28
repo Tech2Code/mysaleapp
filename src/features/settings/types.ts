@@ -42,6 +42,7 @@ export type StoreSettings = {
   phoneSameAsWhatsapp: boolean
   city: string | null
   region: string | null
+  pincode: string | null
   instagramUrl: string | null
   facebookUrl: string | null
 

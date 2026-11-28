@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
-  ArrowLeftIcon,
   BadgePercentIcon,
   ChevronRightIcon,
   CopyIcon,
@@ -20,8 +19,8 @@ import {
   TruckIcon,
   type LucideIcon,
 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useCallback, useEffect, useLayoutEffect, useState, useTransition, type ReactNode } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { DateField, FormSelectField, SwitchField, TextAreaField, TextField } from "@/components/form"
@@ -59,6 +58,7 @@ import { EmailSettingsCard } from "./email-settings-card"
 import { StickySaveBar } from "./sticky-save-bar"
 import { LIMITS, todayIST } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import styles from "./admin-views.module.css"
 
@@ -148,6 +148,7 @@ function toFormValues(s: StoreSettings): StoreSettingsInput {
     phone: s.phoneSameAsWhatsapp ? "" : (s.phone ?? ""),
     city: s.city ?? "",
     region: s.region ? (matchState(s.region) ?? s.region) : "",
+    pincode: s.pincode ?? "",
     instagramUrl: s.instagramUrl ?? "",
     facebookUrl: s.facebookUrl ?? "",
     orderCodePrefix: s.orderCodePrefix,
@@ -195,6 +196,7 @@ const FIELD_TO_SECTION: Record<keyof StoreSettingsInput, StoreFormSectionId> = {
   email: "contact",
   city: "contact",
   region: "contact",
+  pincode: "contact",
   paymentMode: "payments",
   paymentGateway: "payments",
   upiId: "payments",
@@ -223,6 +225,34 @@ const STORE_FORM_SECTIONS: ReadonlySet<SettingsSectionId> = new Set([
   "payments",
   "shipping",
 ])
+
+const ALL_SETTINGS_SECTIONS: ReadonlySet<string> = new Set([
+  "store",
+  "contact",
+  "seo",
+  "payments",
+  "shipping",
+  "promos",
+  "email",
+])
+
+function SettingsSectionQuerySync({ onSelect }: { onSelect: (id: SettingsSectionId) => void }) {
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get("section")
+
+  useEffect(() => {
+    if (!sectionParam || !ALL_SETTINGS_SECTIONS.has(sectionParam)) return
+    onSelect(sectionParam as SettingsSectionId)
+    if (typeof window !== "undefined") {
+      const next = new URLSearchParams(window.location.search)
+      next.delete("section")
+      const qs = next.toString()
+      window.history.replaceState(window.history.state, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname)
+    }
+  }, [sectionParam, onSelect])
+
+  return null
+}
 
 /**
  * Organised Settings Hub: sticky left navigation on desktop (Shopify/Stripe style)
@@ -299,6 +329,7 @@ function StoreSettingsFormInner({
   adminEmail?: string | null
 }) {
   const router = useRouter()
+  const isMobile = useMediaQuery("(max-width: 959.98px)")
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("store")
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -313,7 +344,7 @@ function StoreSettingsFormInner({
   const shopDirty = hasDirty(df, "shopName", "tagline", "description", "announcement", "highlightLine", "heroBadge")
   const socialDirty = hasDirty(df, "instagramUrl", "facebookUrl")
   const seoDirty = hasDirty(df, "keywords")
-  const contactDirty = hasDirty(df, "whatsappNumber", "phoneSameAsWhatsapp", "phone", "email", "city", "region")
+  const contactDirty = hasDirty(df, "whatsappNumber", "phoneSameAsWhatsapp", "phone", "email", "city", "region", "pincode")
   const paymentDirty = hasDirty(df, "paymentMode", "paymentGateway", "upiId", "upiPayeeName")
   const taxDirty = hasDirty(df, "gstRegistered", "gstRate", "gstin", "priceNote", "legalName", "businessAddress")
   const deliveryDirty = hasDirty(df, "deliveryFee", "freeDeliveryAbove", "fragileFee", "oversizedFee", "freeWeightGrams", "extraWeightFeePerKg")
@@ -339,22 +370,12 @@ function StoreSettingsFormInner({
     Boolean(emailSettings.gmailUser) &&
     emailSettings.hasAppPassword
 
-  const selectSection = (id: SettingsSectionId) => {
+  const selectSection = useCallback((id: SettingsSectionId) => {
     setActiveSection(id)
     setMobileDetailOpen(true)
-    if (typeof window !== "undefined" && window.innerWidth < 960) {
-      window.scrollTo({ top: 0, behavior: "instant" })
-    }
-  }
+  }, [])
 
-  const backToMobileHub = () => {
-    setMobileDetailOpen(false)
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "instant" })
-    }
-  }
-  const [pincode, setPincode] = useState("")
-  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, paymentModeNow, paymentGatewayNow] = useWatch({
+  const [fee, freeAbove, fragileFee, oversizedFee, freeWeightGrams, extraWeightFeePerKg, prefix, description, name, phoneSame, gstOn, regionVal, pincodeVal, paymentModeNow, paymentGatewayNow] = useWatch({
     control: form.control,
     name: [
       "deliveryFee",
@@ -369,19 +390,26 @@ function StoreSettingsFormInner({
       "phoneSameAsWhatsapp",
       "gstRegistered",
       "region",
+      "pincode",
       "paymentMode",
       "paymentGateway",
     ],
   })
 
   const area = usePincodeLookup({
-    pincode,
+    pincode: typeof pincodeVal === "string" ? pincodeVal : "",
     overwrite: true,
     getCity: () => String(form.getValues("city") ?? ""),
     setCity: (city) => form.setValue("city", city, { shouldValidate: true, shouldDirty: true }),
     getState: () => String(form.getValues("region") ?? ""),
     setState: (state) => form.setValue("region", state, { shouldValidate: true, shouldDirty: true }),
   })
+  const { prime: primeArea } = area
+  useEffect(() => {
+    if (typeof baseline.pincode === "string" && baseline.pincode) {
+      primeArea(baseline.pincode, String(baseline.city ?? ""), String(baseline.region ?? ""))
+    }
+  }, [baseline.pincode, baseline.city, baseline.region, primeArea])
   const regionStr = typeof regionVal === "string" ? regionVal.trim() : ""
   const stateOptions =
     regionStr && !STATE_OPTIONS.some((o) => o.value === regionStr)
@@ -424,7 +452,13 @@ function StoreSettingsFormInner({
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) =>
     void form.handleSubmit(
-      (values) =>
+      (values) => {
+        if (area.error) {
+          form.setError("pincode", { message: area.error })
+          jumpToFirstError(["pincode"])
+          toast.error("Please enter a valid 6-digit Indian pincode.")
+          return
+        }
         startTransition(async () => {
           const res = await saveStoreSettings(values)
           if (!res.ok) {
@@ -458,6 +492,7 @@ function StoreSettingsFormInner({
             phone: values.phoneSameAsWhatsapp ? "" : (values.phone ?? ""),
             city: values.city ?? "",
             region: values.region ?? "",
+            pincode: values.pincode ?? "",
             instagramUrl: values.instagramUrl ?? "",
             facebookUrl: values.facebookUrl ?? "",
             orderCodePrefix: values.orderCodePrefix,
@@ -475,10 +510,11 @@ function StoreSettingsFormInner({
             upiPayeeName: values.upiPayeeName ?? "",
           }
           onSaved(nextBaseline)
-          setPincode("")
+          primeArea(String(nextBaseline.pincode ?? ""), String(nextBaseline.city ?? ""), String(nextBaseline.region ?? ""))
           form.reset(nextBaseline)
           router.refresh()
-        }),
+        })
+      },
       (invalidErrors) => {
         jumpToFirstError(Object.keys(invalidErrors))
         toast.error("Please fix the highlighted fields before saving.")
@@ -562,104 +598,19 @@ function StoreSettingsFormInner({
 
   const activeNavItem = navGroups.flatMap((g) => g.items).find((item) => item.id === activeSection) ?? navGroups[0].items[0]
 
-  return (
-    <div className={cn(styles.settingsWorkspace, mobileDetailOpen && styles.settingsWorkspaceMobileDetail)}>
-      <nav aria-label="Settings sections" className={styles.settingsNavCol}>
-        {isDirty && firstDirtySection && (
-          <div className={styles.settingsHubUnsavedBar} role="status">
-            <p className={styles.settingsUnsavedText}>
-              <span className={styles.editedDot} aria-hidden />
-              You have unsaved store settings changes
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => selectSection(firstDirtySection)}
-              className={styles.settingsUnsavedBtn}
-            >
-              Review &amp; save
-            </Button>
-          </div>
-        )}
-        {navGroups.map((group) => (
-          <div key={group.label} className={styles.settingsNavGroup}>
-            <p className={styles.settingsGroupLabel}>{group.label}</p>
-            <div className={styles.settingsNavList} role="tablist" aria-orientation="vertical">
-              {group.items.map((item) => {
-                const Icon = item.icon
-                const active = activeSection === item.id
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => selectSection(item.id)}
-                    className={cn(styles.settingsNavBtn, active && styles.settingsNavBtnActive)}
-                  >
-                    <span className={styles.settingsNavIcon} aria-hidden>
-                      <Icon className={styles.iconMd} />
-                    </span>
-                    <span className={styles.settingsNavText}>
-                      <span className={styles.settingsNavTitle}>{item.title}</span>
-                      <span className={styles.settingsNavMeta}>{item.meta}</span>
-                    </span>
-                    <span className={styles.settingsNavEnd}>
-                      {item.dirty && <span className={styles.settingsNavDirtyDot} title="Unsaved changes" />}
-                      {item.liveDot && <span className={styles.settingsNavLiveDot} title="Connected" />}
-                      {item.countPill !== undefined && (
-                        <span className={styles.settingsNavCountPill}>{item.countPill}</span>
-                      )}
-                      <ChevronRightIcon className={styles.settingsNavChevron} aria-hidden />
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
+  const handleCancelForm = () => {
+    if (isMobile && !sectionDirty[activeSection]) {
+      setMobileDetailOpen(false)
+      return
+    }
+    form.reset(baseline)
+    primeArea(String(baseline.pincode ?? ""), String(baseline.city ?? ""), String(baseline.region ?? ""))
+    if (isMobile) setMobileDetailOpen(false)
+  }
 
-      <div className={styles.settingsPaneCol}>
-        <div className={styles.settingsMobileBar}>
-          <button type="button" onClick={backToMobileHub} className={styles.settingsBackBtn}>
-            <ArrowLeftIcon className={styles.iconMd} aria-hidden />
-            Settings
-          </button>
-          <p className={styles.settingsMobileTitle}>{activeNavItem.title}</p>
-          {sectionDirty[activeSection] && (
-            <span className={styles.editedPill}>
-              <span className={styles.editedDot} aria-hidden />
-              Edited
-            </span>
-          )}
-        </div>
-
-        {!isStoreFormSection && isDirty && firstDirtySection && (
-          <div className={styles.settingsUnsavedBanner} role="status">
-            <p className={styles.settingsUnsavedText}>
-              <span className={styles.editedDot} aria-hidden />
-              You have unsaved changes in Store Settings
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => selectSection(firstDirtySection)}
-              className={styles.settingsUnsavedBtn}
-            >
-              Review &amp; save
-            </Button>
-          </div>
-        )}
-
-        <form
-          onSubmit={onSubmit}
-          noValidate
-          className={cn(styles.formStack, !isStoreFormSection && styles.settingsPanelHidden)}
-        >
-          <div className={styles.settingsSectionStack} hidden={activeSection !== "store"}>
+  const storeFormPanels = (
+    <>
+      <div className={styles.settingsSectionStack} hidden={activeSection !== "store"}>
             <Card
               title="Shop profile"
               description="Your name and tagline appear in the header, the browser tab, Google results and WhatsApp share previews."
@@ -767,10 +718,9 @@ function StoreSettingsFormInner({
                   inputMode="numeric"
                   maxLength={6}
                   placeholder="e.g. 302001"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
                   hint={area.hint}
-                  error={area.error}
+                  error={errors.pincode?.message || area.error}
+                  {...form.register("pincode")}
                 />
                 <TextField label="City / District" kind="city" fieldSize="md" error={errors.city?.message} {...form.register("city")} />
                 <FormSelectField
@@ -1031,27 +981,235 @@ function StoreSettingsFormInner({
               </div>
             </Card>
           </div>
+    </>
+  )
 
-          <StickySaveBar
-            dirty={isDirty}
-            pending={pending}
-            saveLabel="Save settings"
-            onCancel={() => {
-              form.reset(baseline)
-              setPincode("")
-            }}
-          />
-        </form>
+  return (
+    <div className={styles.settingsWorkspace}>
+      <Suspense fallback={null}>
+        <SettingsSectionQuerySync onSelect={selectSection} />
+      </Suspense>
 
-        {activeSection === "promos" && <PromoCodeManager promoCodes={promoCodes} />}
-        {activeSection === "email" && (
-          <EmailSettingsCard
-            initialSettings={emailSettings}
-            shopName={settings.shopName}
-            defaultRecipient={adminEmail ?? settings.email}
-          />
+      <nav aria-label="Settings sections" className={styles.settingsNavCol}>
+        {isDirty && firstDirtySection && (
+          <div className={styles.settingsHubUnsavedBar} role="status">
+            <p className={styles.settingsUnsavedText}>
+              <span className={styles.editedDot} aria-hidden />
+              You have unsaved store settings changes
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => selectSection(firstDirtySection)}
+              className={styles.settingsUnsavedBtn}
+            >
+              Review &amp; save
+            </Button>
+          </div>
         )}
-      </div>
+        {navGroups.map((group) => (
+          <div key={group.label} className={styles.settingsNavGroup}>
+            <p className={styles.settingsGroupLabel}>{group.label}</p>
+            <div
+              className={styles.settingsNavList}
+              role="tablist"
+              aria-orientation="vertical"
+              onKeyDown={(event) => {
+                const flat = navGroups.flatMap((g) => g.items)
+                const idx = flat.findIndex((i) => i.id === activeSection)
+                if (idx < 0) return
+                let nextIdx: number | null = null
+                if (event.key === "ArrowDown") nextIdx = (idx + 1) % flat.length
+                else if (event.key === "ArrowUp") nextIdx = (idx - 1 + flat.length) % flat.length
+                else if (event.key === "Home") nextIdx = 0
+                else if (event.key === "End") nextIdx = flat.length - 1
+                if (nextIdx === null) return
+                event.preventDefault()
+                const nextId = flat[nextIdx].id
+                selectSection(nextId)
+                document.getElementById(`settings-tab-${nextId}`)?.focus()
+              }}
+            >
+              {group.items.map((item) => {
+                const Icon = item.icon
+                const active = activeSection === item.id
+                return (
+                  <button
+                    key={item.id}
+                    id={`settings-tab-${item.id}`}
+                    type="button"
+                    role="tab"
+                    tabIndex={active ? 0 : -1}
+                    aria-selected={active}
+                    aria-controls={`settings-panel-${item.id}`}
+                    onClick={() => selectSection(item.id)}
+                    className={cn(styles.settingsNavBtn, active && styles.settingsNavBtnActive)}
+                  >
+                    <span className={styles.settingsNavIcon} aria-hidden="true">
+                      <Icon className={styles.iconMd} />
+                    </span>
+                    <span className={styles.settingsNavText}>
+                      <span className={styles.settingsNavTitle}>{item.title}</span>
+                      <span className={styles.settingsNavMeta}>{item.meta}</span>
+                    </span>
+                    <span className={styles.settingsNavEnd}>
+                      {item.dirty && (
+                        <>
+                          <span className={styles.settingsNavDirtyDot} aria-hidden="true" title="Unsaved changes" />
+                          <span className={styles.srOnly}>Unsaved changes</span>
+                        </>
+                      )}
+                      {item.liveDot && (
+                        <>
+                          <span className={styles.settingsNavLiveDot} aria-hidden="true" title="Connected" />
+                          <span className={styles.srOnly}>Connected</span>
+                        </>
+                      )}
+                      {item.countPill !== undefined && (
+                        <span className={styles.settingsNavCountPill}>{item.countPill}</span>
+                      )}
+                      <ChevronRightIcon className={styles.settingsNavChevron} aria-hidden="true" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {!isMobile && (
+        <div
+          id={`settings-panel-${activeSection}`}
+          role="tabpanel"
+          aria-labelledby={`settings-tab-${activeSection}`}
+          className={styles.settingsPaneCol}
+        >
+          {!isStoreFormSection && isDirty && firstDirtySection && (
+            <div className={styles.settingsUnsavedBanner} role="status">
+              <p className={styles.settingsUnsavedText}>
+                <span className={styles.editedDot} aria-hidden />
+                You have unsaved changes in Store Settings
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => selectSection(firstDirtySection)}
+                className={styles.settingsUnsavedBtn}
+              >
+                Review &amp; save
+              </Button>
+            </div>
+          )}
+
+          <form
+            onSubmit={onSubmit}
+            noValidate
+            className={cn(styles.formStack, !isStoreFormSection && styles.settingsPanelHidden)}
+          >
+            {storeFormPanels}
+            <StickySaveBar
+              dirty={isDirty}
+              pending={pending}
+              saveLabel="Save settings"
+              onCancel={handleCancelForm}
+            />
+          </form>
+
+          {activeSection === "promos" && <PromoCodeManager promoCodes={promoCodes} />}
+          {activeSection === "email" && (
+            <EmailSettingsCard
+              initialSettings={emailSettings}
+              shopName={settings.shopName}
+              defaultRecipient={adminEmail ?? settings.email}
+            />
+          )}
+        </div>
+      )}
+
+      {isMobile && (
+        <Dialog
+          open={mobileDetailOpen}
+          onOpenChange={(next) => {
+            if (!pending) setMobileDetailOpen(next)
+          }}
+        >
+          <DialogContent mobileFullScreen className={styles.settingsMobileDialog}>
+            <DialogHeader>
+              <div className={styles.settingsMobileTitleRow}>
+                <DialogTitle>{activeNavItem.title}</DialogTitle>
+                {sectionDirty[activeSection] && (
+                  <span className={styles.editedPill}>
+                    <span className={styles.editedDot} aria-hidden />
+                    Edited
+                  </span>
+                )}
+              </div>
+              <DialogDescription className={styles.srOnly}>
+                Edit {activeNavItem.title} settings
+              </DialogDescription>
+            </DialogHeader>
+
+            {isStoreFormSection ? (
+              <form onSubmit={onSubmit} noValidate>
+                <DialogBody resetScrollKey={activeSection} className={styles.settingsMobileDialogBody}>
+                  {storeFormPanels}
+                </DialogBody>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    disabled={pending}
+                    onClick={handleCancelForm}
+                    className={styles.settingsMobileFooterBtn}
+                  >
+                    {sectionDirty[activeSection] ? "Cancel" : "Close"}
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={pending || !isDirty}
+                    className={styles.settingsMobileFooterBtn}
+                  >
+                    {pending && <Loader2Icon className={styles.spinIcon} />} Save settings
+                  </Button>
+                </DialogFooter>
+              </form>
+            ) : (
+              <DialogBody resetScrollKey={activeSection} className={styles.settingsMobileDialogBody}>
+                {isDirty && firstDirtySection && (
+                  <div className={styles.settingsUnsavedBanner} role="status">
+                    <p className={styles.settingsUnsavedText}>
+                      <span className={styles.editedDot} aria-hidden />
+                      You have unsaved changes in Store Settings
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => selectSection(firstDirtySection)}
+                      className={styles.settingsUnsavedBtn}
+                    >
+                      Review &amp; save
+                    </Button>
+                  </div>
+                )}
+                {activeSection === "promos" && <PromoCodeManager promoCodes={promoCodes} />}
+                {activeSection === "email" && (
+                  <EmailSettingsCard
+                    initialSettings={emailSettings}
+                    shopName={settings.shopName}
+                    defaultRecipient={adminEmail ?? settings.email}
+                  />
+                )}
+              </DialogBody>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -1291,9 +1449,8 @@ export function PromoCodeManager({ promoCodes }: { promoCodes: PromoCode[] }) {
 
                   <div className={styles.promoActions}>
                     <Button
-
                       type="button"
-                      variant={promo.isActive ? "outline" : "default"}
+                      variant={promo.isActive ? "destructiveOutline" : "default"}
                       size="xs"
                       disabled={pending}
                       onClick={() => handleToggle(promo, !promo.isActive)}

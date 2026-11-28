@@ -293,13 +293,13 @@ export function AddressBook({
                   </Button>
                 )}
                 <Button
-                  variant="ghost"
+                  variant="destructiveOutline"
                   size="sm"
-                  className={styles.deleteAddrBtn}
                   onClick={() => setDeleting(a)}
                   aria-label={`Delete ${a.label} address`}
+                  className={styles.deleteAddrBtn}
                 >
-                  <Trash2Icon /> Delete
+                  <Trash2Icon aria-hidden="true" /> Delete
                 </Button>
               </div>
             </li>

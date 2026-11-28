@@ -102,8 +102,7 @@
 .addressCardItem .addrPhone { margin: 0; font-size: 14px; color: var(--muted-foreground); }
 .addressCardItem .addrStreet { margin: 4px 0 16px 0; font-size: 14px; color: var(--foreground); }
 .addressCardItem .addrCardActions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
-.addrCardActions .deleteAddrBtn { margin-left: auto; border-radius: var(--radiusControlSm); color: var(--destructive); }
-.addrCardActions .deleteAddrBtn:hover { background-color: color-mix(in oklab, var(--destructive) 10%, transparent); }
+.addrCardActions .deleteAddrBtn { margin-left: auto; }
 /* Section: Profile Form, Password Form & Deactivate Account */
 .profileFormsStack { display: flex; flex-direction: column; gap: 24px; }
 .profileCardForm { display: flex; flex-direction: column; gap: 12px; border-radius: var(--radiusCard); border: 0; background-color: var(--card); padding: 24px; box-shadow: var(--store-elevation-sm); }
@@ -184,3 +183,20 @@
   .orderDetailStack .orderTwoColGrid { grid-template-columns: minmax(0, 1fr) 400px; }
   .orderTwoColGrid .rightSidebarCol { position: sticky; top: calc(var(--store-header-h, 64px) + 16px); align-self: start; }
 }
+/* Section: Mobile Profile Drill-Down Hub */
+.mobileProfileHub { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); box-shadow: var(--store-elevation-sm); }
+.mobileProfileHub .mobileProfileRow { display: flex; width: 100%; min-height: 64px; cursor: pointer; align-items: center; gap: 12px; border: 0; border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent); background-color: transparent; padding: 12px 14px; text-align: left; transition: background-color 150ms ease; }
+.mobileProfileHub .mobileProfileRow:first-child { border-top: 0; }
+.mobileProfileHub .mobileProfileRow:hover { background-color: color-mix(in oklab, var(--muted) 45%, transparent); }
+.mobileProfileHub .mobileProfileRow:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.mobileProfileRow .mobileProfileIcon { display: grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: 10px; background-color: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--primary); }
+.mobileProfileRow .mobileProfileIconDanger { background-color: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive); }
+.mobileProfileRow .mobileProfileText { display: flex; min-width: 0; flex: 1 1 0%; flex-direction: column; gap: 2px; }
+.mobileProfileText .mobileProfileTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--foreground); }
+.mobileProfileRowDanger .mobileProfileTitle { color: var(--destructive); }
+.mobileProfileText .mobileProfileMeta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.mobileProfileRow .mobileProfileChevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted-foreground); }
+.mobileProfileDialog { width: 100%; }
+.mobileProfileDialog .mobileProfileDialogBody { display: flex; flex-direction: column; gap: 16px; }
+.icon18 { width: 18px; height: 18px; flex-shrink: 0; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

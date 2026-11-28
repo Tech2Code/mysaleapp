@@ -28,7 +28,7 @@ export function CartView({ products, preview = false }: { products: LiveProduct[
 
   if (!ready || preview) {
     const placeholder = placeholderCartLines()
-    const layout = <CartLayout lines={placeholder} hasUnavailable={false} subtotal={calculateCharges(placeholder, settings).subtotal} charges={calculateCharges(placeholder, settings)} />
+    const layout = <CartLayout lines={placeholder} hasUnavailable={false} subtotal={calculateCharges(placeholder, settings).subtotal} charges={calculateCharges(placeholder, settings)} paymentMode={settings.paymentMode} />
     return preview ? layout : <Skeletonize>{layout}</Skeletonize>
   }
 
@@ -46,7 +46,7 @@ export function CartView({ products, preview = false }: { products: LiveProduct[
     )
   }
 
-  return <CartLayout lines={lines} hasUnavailable={hasUnavailable} subtotal={subtotal} charges={charges} onQuantity={setQuantity} onRemove={remove} />
+  return <CartLayout lines={lines} hasUnavailable={hasUnavailable} subtotal={subtotal} charges={charges} paymentMode={settings.paymentMode} onQuantity={setQuantity} onRemove={remove} />
 }
 
 function CartLayout({
@@ -54,6 +54,7 @@ function CartLayout({
   hasUnavailable,
   subtotal,
   charges,
+  paymentMode = "manual_upi",
   onQuantity,
   onRemove,
 }: {
@@ -61,6 +62,7 @@ function CartLayout({
   hasUnavailable: boolean
   subtotal: number
   charges: ReturnType<typeof calculateCharges>
+  paymentMode?: "manual_upi" | "gateway"
   onQuantity?: (productId: string, quantity: number) => void
   onRemove?: (productId: string) => void
 }) {
@@ -165,7 +167,15 @@ function CartLayout({
         <FreeShippingBar subtotal={subtotal} />
         <PriceBreakdown {...charges} itemCount={availableItems} />
         <p className={styles.upiNoteBox}>
-          <span className={styles.upiNoteStrong}>Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
+          {paymentMode === "gateway" ? (
+            <>
+              <span className={styles.upiNoteStrong}>Secure online payment at checkout.</span> Pay via UPI, card, or netbanking for instant confirmation. Cash on delivery isn&apos;t available.
+            </>
+          ) : (
+            <>
+              <span className={styles.upiNoteStrong}>Instant UPI payment at checkout.</span> Order is placed once you submit your UTR. Cash on delivery isn&apos;t available.
+            </>
+          )}
         </p>
         <Link
           href="/checkout"

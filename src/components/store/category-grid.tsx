@@ -40,6 +40,7 @@ export function CategoryGrid({ categories }: { categories: (Category & { count: 
               </span>
             )}
             <ArrowUpRightIcon
+              aria-hidden="true"
               className={cn(styles.cornerArrow, Boolean(c.imageUrl) && styles.cornerArrowOnPhoto)}
             />
             <div className={styles.cardTextGroup}>

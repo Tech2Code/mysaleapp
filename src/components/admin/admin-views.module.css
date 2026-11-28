@@ -214,7 +214,6 @@
 @keyframes settingsFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .settingsWorkspace { display: flex; flex-direction: column; gap: 16px; width: 100%; }
 .settingsWorkspace .settingsNavCol { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-.settingsWorkspaceMobileDetail .settingsNavCol { display: none; }
 .settingsNavCol .settingsNavGroup { display: flex; flex-direction: column; gap: 8px; }
 .settingsNavGroup .settingsGroupLabel { margin: 0; padding: 0 4px; font-size: 11px; line-height: 16px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted-foreground); }
 .settingsNavGroup .settingsNavList { display: flex; flex-direction: column; overflow: hidden; border-radius: var(--radiusCard); border: 1px solid var(--border); background-color: var(--card); }
@@ -234,16 +233,15 @@
 .settingsNavEnd .settingsNavCountPill { border-radius: 9999px; background-color: color-mix(in oklab, var(--primary) 12%, transparent); padding: 2px 8px; font-size: 11px; line-height: 16px; font-weight: 700; color: var(--primary); }
 .settingsNavEnd .settingsNavChevron { width: 16px; height: 16px; color: var(--muted-foreground); }
 .settingsWorkspace .settingsPaneCol { display: none; min-width: 0; flex-direction: column; gap: 16px; }
-.settingsWorkspaceMobileDetail .settingsPaneCol { display: flex; animation: settingsFadeIn 180ms ease; }
-.settingsPaneCol .settingsMobileBar { position: sticky; top: var(--admin-topbar-h); z-index: 20; margin: -4px -16px 4px -16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, transparent); background-color: color-mix(in oklab, var(--background) 92%, transparent); padding: 8px 16px; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-.settingsMobileBar .settingsBackBtn { display: inline-flex; min-height: 44px; cursor: pointer; align-items: center; gap: 6px; border: 0; border-radius: 10px; background-color: transparent; padding: 0 8px 0 2px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--primary); }
-.settingsMobileBar .settingsBackBtn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.settingsMobileBar .settingsMobileTitle { margin: 0; min-width: 0; flex: 1 1 0%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 600; color: var(--foreground); }
-.settingsPaneCol .settingsUnsavedBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; }
+.settingsPaneCol .settingsUnsavedBanner, .settingsMobileDialogBody .settingsUnsavedBanner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; }
 .settingsUnsavedBanner .settingsUnsavedText { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tone-warning-fg-strong); }
 .settingsUnsavedBanner .settingsUnsavedBtn { min-height: 36px; border-radius: var(--radiusControl); }
-.settingsPaneCol .settingsSectionStack { display: flex; flex-direction: column; gap: 16px; animation: settingsFadeIn 180ms ease; }
-.settingsPaneCol .settingsSectionStack[hidden], .settingsPaneCol .settingsPanelHidden { display: none; }
+.settingsPaneCol .settingsSectionStack, .settingsMobileDialogBody .settingsSectionStack { display: flex; flex-direction: column; gap: 16px; animation: settingsFadeIn 180ms ease; }
+.settingsPaneCol .settingsSectionStack[hidden], .settingsPaneCol .settingsPanelHidden, .settingsMobileDialogBody .settingsSectionStack[hidden] { display: none; }
+.settingsMobileDialog { width: 100%; }
+.settingsMobileDialog .settingsMobileTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.settingsMobileDialog .settingsMobileDialogBody { display: flex; flex-direction: column; gap: 16px; }
+.settingsMobileFooterBtn { flex: 1 1 0%; min-height: 44px; border-radius: var(--radiusControl); }
 .settingsNavCol .settingsHubUnsavedBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-radius: 12px; border: 1px solid var(--tone-warning-border); background-color: var(--tone-warning-bg-soft); padding: 12px 14px; }
 .settingsHubUnsavedBar .settingsUnsavedText { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--tone-warning-fg-strong); }
 .settingsHubUnsavedBar .settingsUnsavedBtn { min-height: 40px; border-radius: var(--radiusControl); }
@@ -295,9 +293,8 @@
 .promoActions .togglePromoBtn { border-radius: var(--radiusControlSm); padding-left: 12px; padding-right: 12px; }
 .createSubmitBtn { border-radius: var(--radiusControl); padding-left: 20px; padding-right: 20px; }
 /* Launch Panel */
-.launchGrid { display: grid; gap: 16px; }
-.launchGrid .launchCard { display: flex; flex-direction: column; gap: 16px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
-.launchGrid .launchCardDanger { border-color: color-mix(in oklab, var(--destructive) 30%, transparent); }
+.launchCard { display: flex; flex-direction: column; gap: 16px; border-radius: 12px; border: 1px solid var(--border); padding: 16px; }
+.launchCardDanger { border-color: color-mix(in oklab, var(--destructive) 30%, transparent); }
 .launchCard .launchTitle { font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; }
 .launchCard .launchDangerTitle { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: 18px; line-height: 26px; font-weight: 600; color: var(--destructive); }
 .launchCard .launchSub { margin-top: 2px; font-size: 14px; line-height: 20px; color: var(--muted-foreground); }
@@ -354,7 +351,7 @@
   .ordersFieldsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ordersFieldsGrid .returnWindowCol { grid-column: span 2 / span 2; }
   .promoSection { padding: 24px; }
-  .launchGrid .launchCard { padding: 20px; }
+  .launchCard { padding: 24px; }
 }
 @media (min-width: 768px) {
   .tilesGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -364,13 +361,12 @@
 }
 @media (min-width: 960px) {
   .settingsWorkspace { display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: 24px; align-items: start; }
-  .settingsWorkspace .settingsNavCol, .settingsWorkspaceMobileDetail .settingsNavCol { position: sticky; top: calc(var(--admin-topbar-h) + 20px); display: flex; }
+  .settingsWorkspace .settingsNavCol { position: sticky; top: calc(var(--admin-topbar-h) + 20px); display: flex; }
   .settingsNavCol .settingsHubUnsavedBar { display: none; }
   .settingsNavList .settingsNavBtn { min-height: 54px; padding: 10px 12px; }
   .settingsNavBtn .settingsNavIcon { width: 34px; height: 34px; border-radius: 9px; }
   .settingsNavEnd .settingsNavChevron { display: none; }
   .settingsWorkspace .settingsPaneCol { display: flex; max-width: 860px; }
-  .settingsPaneCol .settingsMobileBar { display: none; }
   .settingsPaneCol .settingsSectionStack { gap: 20px; }
 }
 @media (min-width: 1024px) {
@@ -380,5 +376,4 @@
 @media (min-width: 1280px) {
   .tilesGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .productFormGrid { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
-  .launchGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
 }

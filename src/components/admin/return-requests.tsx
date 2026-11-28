@@ -9,11 +9,11 @@ import { z } from "zod"
 import { CourierDialog, courierValues, type CourierPayload } from "@/components/admin/courier-dialog"
 import { COURIER_SUGGESTIONS, shippingSchema } from "@/features/orders/schema"
 import { CopyableReference } from "@/components/shared/copyable-reference"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { advanceExchangeFulfillment, decideReturnRequest, markReturnPickedUp, undoReturnStep } from "@/features/orders/admin-actions"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { requestStatusMeta, splitReturnDetails, type ReturnStage } from "@/features/orders/returns"
+import { requestStatusMeta, returnLineKey, splitReturnDetails, type ReturnStage } from "@/features/orders/returns"
 import type { ExchangeMode, OrderItem, OrderReturn, ReturnRequest } from "@/features/orders/types"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -154,10 +154,11 @@ export function DecideDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
-        className={cn(
-          styles.decideTrigger,
-          approve ? styles.decideTriggerApprove : styles.decideTriggerReject
-        )}
+        className={buttonVariants({
+          variant: approve ? "primary" : "destructiveOutline",
+          size: "sm",
+          fullWidth: true,
+        })}
       >
         {approve ? "Approve" : "Reject"}
       </DialogTrigger>
@@ -676,7 +677,7 @@ export function AdminReturnRequests({
               </div>
               <ul className={styles.requestItems}>
                 {r.items.map((i) => (
-                  <li key={i.productId}>
+                  <li key={returnLineKey(i)}>
                     {i.quantity} × {i.name}
                   </li>
                 ))}

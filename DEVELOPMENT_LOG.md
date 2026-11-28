@@ -838,3 +838,403 @@ Chronological log of all features, UI redesigns, bug fixes, root-cause analyses,
   - `src/components/store/header.tsx`, `src/components/store/mobile-bottom-nav.tsx`
   - `src/styles/theme-store.css`
   - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 08:41 IST — Horizontal Scrollable FAQ Category Tabs with Auto-Center Focus & Edge Fades
+
+- **User Prompt**: `"class=\"faq-view-module__4zFBqW__faqCategoryTabs\" ko web se hi sroll lagao, or ha mobile me agar koe tab pe click karke active karte h to, uskocenter me focus hoke aana cahiyevo tab aadha screen ke bahar rehte h active hone ke baad, tum apna ai laga ke best ui implementation and ux daalo"`
+- **Problem / Root Cause**:
+  - `.faqCategoryTabs` switched to `flex-wrap: wrap` at `@media (min-width: 640px)` in `src/components/store/faq-view.module.css`, preventing horizontal scrolling on web/tablet widths.
+  - Clicking a partially off-screen tab on mobile (or overflowing web widths) activated it without scrolling the tablist, leaving the active tab half-clipped at the viewport edge.
+  - Inactive tabs used `font-weight: 500` vs `600` on active tabs (causing slight width shift) and had `36px` height on mobile instead of `44px` touch targets, with no scrollability edge fades or desktop prev/next controls.
+- **Solution / Changes Made**:
+  1. Kept `.faqCategoryTabs` on a single horizontal scrollable row across all viewports (`flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: inline proximity; scroll-padding-inline: 36px`), removing the `@media (min-width: 640px)` `flex-wrap: wrap` override.
+  2. Added smooth horizontal-only auto-centering (`centerTab` using `getBoundingClientRect()` + `container.scrollTo({ left: clampedLeft, behavior })`, respecting `prefers-reduced-motion`) whenever a tab is clicked, navigated via keyboard (`ArrowLeft`/`ArrowRight`/`Home`/`End`), or reset via "Show all questions".
+  3. Added progressive-enhancement edge fade masks (`@property --faq-fade-start` / `--faq-fade-end` with `animation-timeline: scroll(self inline)` and `IntersectionObserver` + `ResizeObserver` fallback) plus subtle pointer-fine desktop left/right chevron scroll buttons outside `[role="tablist"]`.
+  4. Upgraded mobile tab touch targets to `44px` height, unified `font-weight: 600` + `1.5px` border to avoid layout shift and support forced-colors active indication via `[aria-selected="true"]`, and added roving `tabIndex` keyboard navigation.
+- **Files Modified**:
+  - `src/components/store/faq-view.tsx`
+  - `src/components/store/faq-view.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 08:44 IST — Remove Edge Fade Mask Shade on FAQ Category Tabs
+
+- **User Prompt**: `"class=\"faq-view-module__4zFBqW__faqCategoryTabs\" right left me ek with shade sa dikh raha h, jisse tab chuja raha h thoda sa"`
+- **Problem / Root Cause**:
+  - The `36px` left/right CSS mask fade (`--faq-fade-start` / `--faq-fade-end`) and `position: absolute` desktop chevron buttons overlapped the edges of `.faqCategoryTabs`, creating a white-ish washed-out shade that partially obscured the outer tabs.
+- **Solution / Changes Made**:
+  - Removed the edge fade `mask`, `@property --faq-fade-*`, and scroll-driven fade keyframes from `src/components/store/faq-view.module.css` so tabs remain 100% crisp and unobstructed from edge to edge.
+  - Changed desktop prev/next scroll chevron buttons to sit as non-overlapping flex siblings (`gap: 8px`) beside `.faqCategoryTabs` (only shown on pointer-fine desktop when overflow exists, with disabled state at either scroll end instead of shifting layout).
+- **Files Modified**:
+  - `src/components/store/faq-view.tsx`
+  - `src/components/store/faq-view.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 08:50 IST — Add Mobile Edge-to-Edge Bleed & Live Scroll Progress Pill for FAQ Tabs
+
+- **User Prompt**: `"mobile me kabhi kabhi pata hi nahi chal raha ki or tabs bhi h, jo ki scroll karke dikhna h, isha koe solution do bet possible ux ke hisab se"`
+- **Problem / Root Cause**:
+  - Without the edge fade mask, padded tabs on mobile could occasionally align neatly near the right card padding, giving users no clear cue that additional category tabs exist off-screen.
+- **Solution / Changes Made**:
+  1. Added **mobile full-bleed edge-to-edge scrolling** (`margin: -4px -18px; padding: 4px 18px;` on `< 640px`) inside `.faqToolbarCard` so off-screen tabs naturally peek at the outer card edge without washing out or covering any tab text.
+  2. Added a **live 60fps scroll progress pill** (`64px × 4px` centered track with `var(--primary)` sliding thumb updated via `requestAnimationFrame` + passive scroll listener) directly underneath `.faqCategoryTabs`, rendered only when tabs overflow (`hasOverflow`), giving instant visual proof of more tabs and current scroll position on both mobile and desktop.
+- **Files Modified**:
+  - `src/components/store/faq-view.tsx`
+  - `src/components/store/faq-view.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 08:54 IST — Replace FAQ Tab Scroll Progress Pill with Prev/Next Chevron Buttons on Mobile & Desktop
+
+- **User Prompt**: `"na iski jagh btn nahi use kar sakte kaya?"`
+- **Problem / Root Cause**:
+  - User preferred explicit left/right arrow buttons on mobile instead of the scroll progress pill below the tabs.
+- **Solution / Changes Made**:
+  - Removed the scroll progress pill (`faqScrollProgressTrack` / `faqScrollProgressThumb`, `thumbRef`, and passive scroll listener).
+  - Enabled the non-overlapping `.faqTabScrollBtn` left/right chevron buttons across all viewports (mobile `36px × 36px`, desktop `34px × 34px`) whenever `hasOverflow` is true, with disabled state at either scroll end.
+- **Files Modified**:
+  - `src/components/store/faq-view.tsx`
+  - `src/components/store/faq-view.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 08:56 IST — Remove Outer Box Border & Padding from Invoice Summary Block
+
+- **User Prompt**: `".shared-module__1ZJSKq__invoiceSummaryWrap .shared-module__1ZJSKq__invoiceSummaryBox me xhadow ya border use karne ki jaroot kaya h normal invoice ki tarah rakho na"`
+- **Problem / Root Cause**:
+  - `.invoiceSummaryWrap .invoiceSummaryBox` in `src/components/shared/shared.module.css` rendered an outer boxed border (`border: 1px solid var(--border); border-radius: 12px; padding: 16px`), making the totals block look like a separate card instead of a clean traditional invoice totals section.
+- **Solution / Changes Made**:
+  - Removed the outer `border`, `border-radius`, `padding`, and ensured `box-shadow: none` on `.invoiceSummaryWrap .invoiceSummaryBox` so the totals summary aligns cleanly flush like a standard printable invoice while keeping its internal tax and grand-total divider lines.
+- **Files Modified**:
+  - `src/components/shared/shared.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:02 IST — Upgrade PaymentControl Verify/Reject Actions to Shared `<Button>` Variants & Responsive Layout
+
+- **User Prompt**: `"iske ui ko sahi karo, web and mobile dono me best ui ux lagao or cancel btn ko white me kue kar rakha h ye to red jesa hona cahiye na comman btn me kaya chal raha h usi hisab se use karo , or all over the app ek audit chalaan ki har jagh comman btns hi h na apna koe alg btns classes or css to nahi chal rahai."`
+- **Problem / Root Cause**:
+  - In `src/components/admin/payment-control.tsx`, the Verify button used custom `.verifyBtn` CSS instead of shared `<Button variant="success">`, the Reject button used white `variant="outline"` instead of `<Button variant="destructiveOutline">`, and `.verifyActionRow` wrapped awkwardly leaving Reject as a tiny half-width white stub above full-width "Edit payment record manually".
+  - App-wide audit also revealed multiple destructive/cancel buttons using neutral `outline`/custom CSS and ~34 action buttons bypassing `<Button>` / `buttonVariants`.
+- **Solution / Changes Made**:
+  - Switched `PaymentControl` actions to shared `<Button>` variants: `variant="success"` for Verify, `variant="destructiveOutline"` for Reject trigger, `variant="destructive"` + `variant="outline"` inside the subtly red-tinted `.rejectBox`, `fullWidth` `variant="outline"` for manual edit, and `buttonVariants({ variant: "primary", size: "xs" })` for the UPI refund link.
+  - Upgraded `.verifyActionRow` and `.rejectBtnRow` in `src/components/admin/admin-orders.module.css`: full-width `44px` thumb-friendly stacked rows on mobile (`< 640px`), and clean balanced full-row side-by-side flex layout (`flex: 2 1 220px` + `flex: 1 1 116px`) on desktop (`>= 640px`) with zero orphan stubs.
+- **Files Modified**:
+  - `src/components/admin/payment-control.tsx`
+  - `src/components/admin/admin-orders.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:11 IST — App-Wide Standardization of Action & Destructive Buttons to Shared `<Button>` / `buttonVariants`
+
+- **User Prompt**: `"sabko"` (following app-wide button audit)
+- **Problem / Root Cause**:
+  - Across Admin, Store, Account, and Shared components, destructive/cancel/disable actions used neutral `outline` or manual red CSS overrides, and ~30 action buttons/links/dialog triggers recreated button styling with one-off CSS classes instead of using the shared `<Button>` / `buttonVariants` variants (`destructive`, `destructiveOutline`, `whatsapp`, `success`, `soft`, `outline`, `primary`, `secondary`).
+- **Solution / Changes Made**:
+  1. **Admin**: Migrated `order-controls.tsx` (`Select Next →`, WhatsApp update, Cancel order), `order-view.tsx` (Invoice, WhatsApp, Call), `return-requests.tsx` (Approve/Reject triggers), `create-return-request.tsx`, `return-order.tsx`, `refund-return-button.tsx`, `order-filters.tsx` (Reset, Search all-time, Clear search), `products-view.tsx` (Notify on WhatsApp), `store-settings-form.tsx` (Disable promo → `destructiveOutline`), `admin-account-menu.tsx` (PIN lock Sign out → `destructiveOutline`), `account-forms.tsx` (Turn off PIN → `destructiveOutline`), and `variant-matrix-modal.tsx` (Clear variants → `destructive`).
+  2. **Store**: Migrated `cancel-order.tsx` (`Cancel order` → `destructiveOutline`), `request-return.tsx` (`Request return`, `Edit`, `Change / add address`, `Cancel return/exchange/replacement` → `destructiveOutline`), `checkout-form.tsx` (address actions, UPI deep-link, QR toggle), `payment-panel.tsx` (UPI app, QR toggle), `faq-view.tsx` & `footer.tsx` (WhatsApp CTAs → `whatsapp`), `install-prompt.tsx`, and `search-dialog.tsx` (`See all` CTA).
+  3. **Account & Shared**: Migrated `account-nav.tsx` (`Sign out` → `destructiveOutline`), `profile-form.tsx` (`Deactivate account` → `destructiveOutline`), `address-book.tsx` (`Delete` → `destructiveOutline`), `account-views.tsx` (`Ask about this order` → `whatsapp`), `cookie-banner.tsx` (Essential only / Customize / Accept all), `refresh-button.tsx`, and `app/offline/page.tsx`.
+- **Files Modified**:
+  - `src/components/admin/order-controls.tsx`, `src/components/admin/order-view.tsx`, `src/components/admin/return-requests.tsx`, `src/components/admin/create-return-request.tsx`, `src/components/admin/return-order.tsx`, `src/components/admin/refund-return-button.tsx`, `src/components/admin/order-filters.tsx`, `src/components/admin/products-view.tsx`, `src/components/admin/store-settings-form.tsx`, `src/components/admin/admin-account-menu.tsx`, `src/components/admin/account-forms.tsx`, `src/components/admin/variant-matrix-modal.tsx`
+  - `src/components/store/cancel-order.tsx`, `src/components/store/request-return.tsx`, `src/components/store/checkout-form.tsx`, `src/components/store/payment-panel.tsx`, `src/components/store/faq-view.tsx`, `src/components/store/footer.tsx`, `src/components/store/install-prompt.tsx`, `src/components/store/search-dialog.tsx`
+  - `src/components/account/account-nav.tsx`, `src/components/account/profile-form.tsx`, `src/components/account/address-book.tsx`, `src/components/account/account-views.tsx`
+  - `src/components/shared/cookie-banner.tsx`, `src/components/shared/refresh-button.tsx`, `src/app/offline/page.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:19 IST — Extract Shared `PillTabs` & `SegmentedTabs` Components and Standardize All App Tab Bars
+
+- **User Prompt**: `"iske baad jo humne faq vala tab me changes kiye h, usko ek components bana ke proper iske jese or bhi tab s h aap me usme use karo ek deep audit chalana, check karna shayad 2 types ke tab h dono o alag alag components bana ke jaha use karna h karo."`
+- **Problem / Root Cause**:
+  - Tab bars across the app were hand-built in 15+ separate places using two recurring patterns (floating pill/chip strips and track-enclosed segmented controls), with inconsistent scrolling, missing auto-centering on mobile, and duplicated CSS.
+- **Solution / Changes Made**:
+  1. Created **`PillTabs`** (`src/components/shared/pill-tabs.tsx` + `pill-tabs.module.css`) with shared `useScrollableTabs` hook: single-row horizontal scroll on web & mobile, smooth horizontal-only auto-centering of active tabs, overflow-aware non-overlapping left/right chevron buttons, `solid`/`tint` tones, `tablist`/`group`/`navigation` modes, `44px` mobile touch targets, and full WAI-ARIA keyboard support.
+  2. Created **`SegmentedTabs`** (`src/components/shared/segmented-tabs.tsx` + `segmented-tabs.module.css`): track-enclosed segmented tabs supporting `equal`, `scroll` (reusing `useScrollableTabs` auto-center + `<`/`>` overflow arrows), and `inline` layouts, `card`/`primary` active surfaces, `rounded`/`pill` shapes, icons, count badges, and attention dots.
+  3. Migrated all 7 floating pill tab strips (`faq-view.tsx`, `legal-view.tsx`, `product-browser.tsx` category & mobile sort pills, `product-actions.tsx` review aspect filters, `products-view.tsx` stock filter chips, `variant-matrix-modal.tsx` quick-pricing tabs) to `PillTabs`.
+  4. Migrated all 8 segmented tab controls (`order-filters.tsx` customer order status tabs, `cookie-banner.tsx` policy modal tabs, `google-sign-in.tsx` auth mode switcher, `theme-toggle.tsx`, `admin-account-menu.tsx` PIN recovery tabs, `orders-table.tsx` & `products-view.tsx` view switchers, `sales-chart.tsx` chart mode & metric switchers) to `SegmentedTabs`.
+- **Files Modified**:
+  - Created: `src/components/shared/pill-tabs.tsx`, `src/components/shared/pill-tabs.module.css`, `src/components/shared/segmented-tabs.tsx`, `src/components/shared/segmented-tabs.module.css`
+  - Updated: `src/components/store/faq-view.tsx`, `src/components/store/legal-view.tsx`, `src/components/store/product-browser.tsx`, `src/components/store/product-actions.tsx`, `src/components/store/google-sign-in.tsx`, `src/components/admin/products-view.tsx`, `src/components/admin/variant-matrix-modal.tsx`, `src/components/admin/order-filters.tsx`, `src/components/admin/admin-account-menu.tsx`, `src/components/admin/orders-table.tsx`, `src/components/admin/sales-chart.tsx`, `src/components/shared/cookie-banner.tsx`, `src/components/shared/theme-toggle.tsx`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:29 IST — Fix Edge-Tab Scroll Glitch in `SegmentedTabs` / `PillTabs` (`useScrollableTabs`)
+
+- **User Prompt**: `"class=\"segmented-tabs-module__1SexrG__segmentedScrollShell\" me ja rha hu to canceled ke baad refund tab pe jese hi ja rha hu to kuch glitch sa kart ah, esa har tab me to nahi h or ye ho kue raha h?"`
+- **Problem / Root Cause**:
+  1. Switching to the last tab (`Refund`) triggered two overlapping `scrollTo` animations (once synchronously in `handleSelect`, once again in `useEffect`) while `scroll-snap-align: center` fought the edge-clamped `maxScroll` position.
+  2. `IntersectionObserver` on `firstEl`/`lastEl` combined with `hasOverflow = start || end` could oscillate arrow-button visibility (`±88px` width) when the last tab's width shifted slightly (`font-weight: 500 → 600` and unmounting `attentionDot`).
+- **Solution / Changes Made**:
+  - Replaced `IntersectionObserver` edge detection in `useScrollableTabs` (`src/components/shared/pill-tabs.tsx`) with exact `scrollLeft` / `scrollWidth` / `clientWidth` measurement via passive `scroll` listener + `ResizeObserver` and `92px` overflow hysteresis so arrow buttons never flicker/oscillate.
+  - Deduplicated `centerItem` to fire once per selection inside `requestAnimationFrame` (and on re-click of an already-active tab).
+  - Removed competing `scroll-snap-type` / `scroll-snap-align` from `.pillTabsTrack` and `.segmentedTrayScroll`, and unified `font-weight: 600` on `.segmentBtn` so active/inactive tab widths never shift.
+- **Files Modified**:
+  - `src/components/shared/pill-tabs.tsx`
+  - `src/components/shared/pill-tabs.module.css`
+  - `src/components/shared/segmented-tabs.tsx`
+  - `src/components/shared/segmented-tabs.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+
+---
+
+### 2026-11-28 08:45 IST — Shop All Skeleton & Scroll Flicker Fix, Checkout Refresh Persistence, Order Placed Top Scroll, UTR Focus, GST Invoice Breakdown, Mobile Full-Screen Admin Settings, Pincode Persistence & Admin Global Search
+
+- **User Prompt**:
+  1. Fix Shop All page skeleton loader not showing and middle content disappearing/reappearing on scroll (web & mobile).
+  2. Fix refreshing on Checkout Payment screen sending the user back to the Address screen (mobile & web).
+  3. Fix Order Placed screen appearing scrolled down after payment instead of at the top (mobile & web).
+  4. Update Invoice totals to show Subtotal → Less: Promo Discount → Add: Fees/Delivery → Taxable Value + Add: GST (CGST+SGST / IGST) → Grand Total.
+  5. Fix Mobile Admin Settings Back going 2 steps back, fix non-working Cancel button, and convert all Settings tabs on mobile into the common full-screen view (`<Dialog mobileFullScreen>`).
+  6. Fix Settings → Contact & Location Pincode not showing in the Pincode field after saving.
+  7. Build a comprehensive Admin Global Search covering live orders/products/categories/promos plus every minor setting and feature.
+  8. Fix clicking "Place Order" without entering UTR not bringing the UTR input cleanly into view.
+  9. Always read `DEVELOPMENT_LOG.md` before starting tasks so previously fixed bugs never regress.
+- **Problems / Root Causes**:
+  1. `ProductsPageView` rendered `<ProductBrowser>` (which calls `useSearchParams()`) inside `<Suspense fallback={<ProductGrid />}>` even during `loading.tsx`, stripping the search/sort/category filter bar from the skeleton; meanwhile `.stickyFilterBar` toggled `backdrop-filter: blur(28px)` with `transition: backdrop-filter` + negative `50vw` full-bleed margins + `body:has(.stickyFilterBar) { overflow-x: clip }` + React `isStuck` state re-renders on scroll, triggering Chromium compositor tile flicker. `ProductImage` also did not check `img.complete` on mount for already-cached images.
+  2. `CheckoutForm` initialized `step` to `1` on mount without restoring `window.history.state.checkoutStep` or persisting checkout draft state in `sessionStorage`, so refreshing on Step 2 or Step 3 reset to Step 1.
+  3. Navigating from `/checkout` to `/order-placed` via `router.replace()` while the mobile virtual keyboard was open on the UTR input left the viewport scrolled down after keyboard dismissal.
+  4. `InvoiceDocument` mixed discount/delivery rows directly into the items `<tbody>` without a dedicated Subtotal row or explicit CGST+SGST / IGST addition flow.
+  5. `StoreSettingsFormInner` managed mobile detail screens with plain `useState(false)` (no history entry, causing mobile Back to exit the route / jump 2 steps back) and its Cancel button only reset the form without closing the mobile view.
+  6. Store `pincode` was only stored in local component `useState("")` and explicitly cleared with `setPincode("")` on save instead of being persisted in `store_settings`.
+  7. Admin `QuickJumpDialog` only indexed 11 static links and was inaccessible from the mobile topbar.
+  8. `utrInputRef.current?.scrollIntoView()` ran synchronously before React painted the validation error and before mobile keyboard resize, leaving the UTR field partially obscured by the sticky header/bottom bar.
+- **Solution / Changes Made**:
+  1. **Shop All Skeleton & Smooth Scroll**: Added `preview` mode to `ProductsPageView` & `ProductBrowser` (bypassing `useSearchParams()` in `src/app/(store)/products/loading.tsx`), replaced `isStuck` React state with a rAF-throttled DOM `data-stuck` attribute, removed `backdrop-filter` transition / `50vw` bleed / `body:has() overflow-x: clip`, and checked `imgRef.current?.complete` in `ProductImage`.
+  2. **Checkout Refresh Persistence**: Added `syncHistoryDepth` to `useStepHistory` and `sessionStorage` draft persistence/restoration (`kk-checkout-draft`, owner-scoped and cleared on order placement, sign-out, or empty cart) in `CheckoutForm` so refreshing on Summary or Payment stays on the same step (web & mobile) with working step-by-step Back.
+  3. **Order Placed Top Scroll & UTR Focus**: Blurred active input + scrolled to top right before `router.replace("/order-placed?...")`, added `useLayoutEffect` top-scroll guard in `OrderPlacedBody`, and added a rAF-positioned `focusUtrInput()` helper with `scroll-margin-top`/`scroll-margin-bottom` on `.utrStepSection` for both client and server UTR errors.
+  4. **GST / E-commerce Invoice Summary**: Rebuilt `InvoiceDocument` summary into a clean right-aligned audit trail: `Subtotal` → `Less: Promo discount` → `Add: Extra fees` → `Add: Delivery` → `Taxable value (excl. GST)` + `Add: CGST + SGST` (intra-state) or `Add: IGST` (inter-state) → `Grand Total`.
+  5. **Mobile Full-Screen Admin Settings + Pincode Persistence**: Converted all 7 Settings tabs on mobile (`< 960px`) to open inside our common `<DialogContent mobileFullScreen>` (automatic `useOverlayHistory` Back handling + sticky header + working Cancel & Save footer); added `contact_pincode` (`supabase/migrations/0076_store_settings_pincode.sql`) with backward-compatible fallback in `saveStoreSettings`, wired `pincode` into `react-hook-form` & `StoreSettings`, and added `?section=<id>` deep-linking.
+  6. **Admin Global Search**: Created `searchAdminGlobal` server action (`src/features/admin/search-actions.ts`) and `AdminGlobalSearch` (`src/components/admin/admin-global-search.tsx`, `admin-global-search.module.css`) with instant search across all pages, every Settings tab & minor field, plus debounced live DB search across Orders, Products, Categories & Promo Codes — accessible via `⌘K`/`Ctrl+K`, Desktop Sidebar, and Mobile Topbar.
+  7. **Persistent Memory Rule**: Added mandatory "Read `DEVELOPMENT_LOG.md` Before Starting Any Task" instruction to `C:\Users\User\.gemini\config\GEMINI.md`.
+- **Files Modified**:
+  - `src/app/(store)/products/loading.tsx`, `src/components/store/page-views.tsx`, `src/components/store/product-browser.tsx`, `src/components/store/product-browser.module.css`, `src/components/store/product-image.tsx`
+  - `src/hooks/use-step-history.ts`, `src/components/store/checkout-form.tsx`, `src/components/store/checkout-form.module.css`, `src/components/store/order-placed.tsx`
+  - `src/components/shared/invoice-document.tsx`, `src/components/shared/shared.module.css`
+  - `supabase/migrations/0076_store_settings_pincode.sql`, `src/features/settings/{types.ts,defaults.ts,schema.ts,queries.ts,actions.ts}`, `src/components/admin/store-settings-form.tsx`, `src/components/admin/admin-views.module.css`
+  - `src/features/admin/search-actions.ts`, `src/components/admin/admin-global-search.tsx`, `src/components/admin/admin-global-search.module.css`, `src/components/admin/admin-sidebar.tsx`, `src/components/admin/admin-core.module.css`
+  - `C:\Users\User\.gemini\config\GEMINI.md`, `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:15 IST — Redesign Admin Global Search Controls, Live Skeleton Loading & Command Palette UX
+
+- **User Prompt**: `"admin global search me ye 3 bhot confusing h, isme best possible ui ux lagao or jab user kuch serch kare to serch resilts me kuch skelaton dikha sakte h , kue ki abhi ek vo ek dum gayab hi rehta h , agar result aat h tab dikhta h? iska best possible ui ux or functionality, tum sep pe reserch karek apply karo"`
+- **Problem / Root Cause**:
+  1. **3 Confusing Controls in Search Bar**: `<input type="search">` did not hide Chromium/WebKit's native blue `::-webkit-search-cancel-button`, so typing showed a blue native `×` right next to a custom circular `×` clear button and a non-clickable `ESC` badge. On mobile, an extra 56px `<DialogHeader>` stacked above `.searchInputBar`.
+  2. **Blank Results Void & Premature "No matches" Flash**: `loadingLive` was only toggled *after* the 180ms debounce timer fired, so typing a non-static query (like an order code or customer name) flashed `"No matches"` for 180ms and then rendered an empty `<div className={styles.groupsStack}>` void until the DB query returned.
+- **Solution / Changes Made**:
+  1. **Unambiguous Controls (Desktop + Native Mobile App Bar)**: Hid native browser search cancel icons (`::-webkit-search-cancel-button` / `decoration`), replaced the duplicate circular `×` with a clear `"Clear"` text button, added a single crisp desktop Close (`×`) button separated by a subtle divider, moved keyboard shortcuts (`↑↓ Navigate`, `↵ Open`, `Esc Close`) into a Linear/Stripe-style desktop footer bar, and unified mobile into a single sticky native app search bar (`[← Back]` + `[🔍 input Clear]`) with `>= 44px` tap targets.
+  2. **Zero-Flash `<Skeletonize>` Live Loading**: Tracked resolved `{ query, data, error }` state + per-session cache so `isLiveLoading` flips to `true` on frame 0 as soon as 2+ chars are typed, rendering a layout-accurate 3-row `<Skeletonize>` block immediately at the top of `.groupsStack` while static matches remain clickable below, and swapping the leading search icon to a spinner.
+  3. **Command-Palette Ergonomics & Accessibility**: Added token match highlighting (`<mark>`), per-group result counts, keyboard `scrollIntoView` + hover-synced `activeIndex`, polite settled-only screen-reader announcements, 1-char typing hint, inline retry banner on DB errors, and quick-suggestion chips in the empty state.
+- **Files Modified**:
+  - `src/components/admin/admin-global-search.tsx`
+  - `src/components/admin/admin-global-search.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:17 IST — Remove `.paletteFooter` from Admin Global Search for Cleaner Minimal Layout
+
+- **User Prompt**: `"class=\"admin-global-search-module__dqEnOG__paletteFooter\" ye show karn ki jaroot h ab"` → `"haa"`
+- **Problem / Root Cause**:
+  - The desktop keyboard-shortcut footer bar in `AdminGlobalSearch` added extra visual chrome while keyboard shortcuts (`↑↓`, `Enter`, `Esc`) already work natively.
+- **Solution / Changes Made**:
+  - Removed `.paletteFooter` markup and its unused CSS rules from `admin-global-search.tsx` and `admin-global-search.module.css`, and bumped desktop `.searchResultsBody` `max-height` from `430px` to `460px` to give results more breathing room.
+- **Files Modified**:
+  - `src/components/admin/admin-global-search.tsx`
+  - `src/components/admin/admin-global-search.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:20 IST — Prevent Admin Global Search Skeleton from Pushing Instant Matches Down
+
+- **User Prompt**: `"ab ho ye raha h ki, jab user serach kar raha h kuch match karta h to vo sapse niche aa jata h, or uper faltu me skelaton loader chalta rehta h? ye kue ho raha h?"`
+- **Problem / Root Cause**:
+  - `LiveSearchSkeleton` (3 full rows) was unconditionally rendered at the top of `.groupsStack` whenever `isLiveLoading` was `true`. When the user searched for a Settings or Page term (e.g. `"gst"`, `"delivery"`, `"upi"`), instant static matches appeared right away but were pushed to the bottom beneath the 3-row skeleton on every keystroke until the debounced DB query completed.
+- **Solution / Changes Made**:
+  - Split loading feedback into two clean states in `admin-global-search.tsx`:
+    - `showFullSkeleton` (`isLiveLoading && !hasStaticMatches && !hasLiveMatches`): renders the full 3-row `<LiveSearchSkeleton />` only when no instant matches exist yet (e.g. searching an order code, customer name, or product SKU), preventing a blank results area.
+    - `showInlineLiveCheck` (`isLiveLoading && (hasStaticMatches || hasLiveMatches)`): keeps instant matches pinned right at the top with zero layout shift, and shows a compact, non-intrusive `"Checking live orders, products & promos…"` row below them while the DB query finishes.
+- **Files Modified**:
+  - `src/components/admin/admin-global-search.tsx`
+  - `src/components/admin/admin-global-search.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:26 IST — Split Long "Partially refunded ₹X of ₹Y" Pill into Compact Status Pill + Amount Detail
+
+- **User Prompt**: `"Partially refunded ₹1,899 of ₹8,292 jo aat h usko break kar sate h kaya ye bhot bada pill aa raha h,"`
+- **Problem / Root Cause**:
+  - `paymentDisplay()` returned the full string `"Partially refunded ₹1,899 of ₹8,292"` as a single `label`, and `.badgePillBase` enforces `white-space: nowrap`, producing an oversized ~260px pill across Admin Orders table/cards, Payment Control header, and Customer Order Summary.
+- **Solution / Changes Made**:
+  - Updated `paymentDisplay()` in `src/features/orders/types.ts` to return a short `label: "Partially refunded"` plus a separate `detail: "₹X of ₹Y"`.
+  - Updated `PaymentBadge`, `OrderSummary`, and `InvoiceDocument` (plus `.paymentBadgeGroup`, `.paymentBadgeDetail`, and `.paymentStatusRight` in `src/components/shared/shared.module.css`) so the status renders as a compact `Partially refunded` pill paired with subtle `tabular-nums` amount text (`₹1,899 of ₹8,292`) that wraps cleanly on narrow screens.
+- **Files Modified**:
+  - `src/features/orders/types.ts`
+  - `src/components/shared/payment-badge.tsx`
+  - `src/components/shared/order-summary.tsx`
+  - `src/components/shared/invoice-document.tsx`
+  - `src/components/shared/shared.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 09:32 IST — Always Stack Partial Refund Amount Consistently Below Status Pill
+
+- **User Prompt**: `"kisi me amount niche aa rah ahkisi me sane hi kue h"`
+- **Problem / Root Cause**:
+  - `.paymentBadgeGroup` and `.paymentStatusRight` used `flex-wrap: wrap` (horizontal row), so the `₹X of ₹Y` amount sat inline next to the `Partially refunded` pill in wide containers and wrapped underneath in narrower table cells/cards, creating inconsistent alignment.
+- **Solution / Changes Made**:
+  - Switched `.paymentBadgeGroup` and `.paymentStatusRight` in `src/components/shared/shared.module.css` to consistent `flex-direction: column` (`gap: 3px`) so the `₹X of ₹Y` amount always renders neatly beneath the `Partially refunded` pill everywhere.
+  - Updated `.statusBox .badgesRow` and `.paymentRoot .paymentHeader` in `src/components/admin/admin-orders.module.css` to `align-items: flex-start` so sibling badges and headings stay top-aligned with the pill.
+- **Files Modified**:
+  - `src/components/shared/shared.module.css`
+  - `src/components/admin/admin-orders.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+
+---
+
+### 2026-11-28 09:38 IST — Extend Unified Settings Hub UI/UX (Desktop 2-Column + Mobile Full-Screen Dialog) to Admin My Account, Admin Data & Launch & Customer Profile
+
+- **User Prompt**: `"jese admin settings ka ui ux h abhi vese hi my account or baaki ek deep audit kar lena or kisi kis me ese lag sakt ah , web and mobile dono sahi se karna koe bug na rahe"`
+- **Audit Findings**:
+  1. **Admin → My Account (`/admin/account`)**: Stacked 4 heavy forms vertically (`Your details`, `Quick PIN lock`, `Login email`, `Password`), requiring long scrolling on both desktop and mobile.
+  2. **Admin → Data & Launch (`/admin/launch`)**: Stacked `Launch checklist` and `Clear test data` danger panel vertically on mobile and side-by-side on desktop.
+  3. **Customer → My Account → Profile (`/account/profile`)**: Stacked 4 separate sections vertically (`Personal details`, `Password & security`, `Your data & privacy`, `Deactivate account`) on mobile. (Desktop already has the outer `/account` sidebar, so keeping flat cards on desktop avoids nested sidebars.)
+  4. **Other pages audited**: Dashboard (bento), Orders/Products/Categories (tables/lists), Checkout (3-step native shell), and Addresses (already using `<Dialog mobileFullScreen>` for Add/Edit) are already optimal and left untouched.
+- **Solution / Changes Made**:
+  - **Admin My Account (`src/components/admin/account-forms.tsx`)**: Upgraded to the exact Admin Settings Hub layout — sticky 2-column left sidebar on desktop (`>= 960px`) grouped into *Profile* & *Security & Login* (with live green dot for active 4-digit PIN lock), native drill-down list + common `<DialogContent mobileFullScreen>` with automatic `useOverlayHistory` hardware Back on mobile (`< 960px`), and `?section=details|pin|email|password` + email-callback auto-open deep-linking. Preserved `<Activity>` password/PIN cleanup.
+  - **Admin Data & Launch (`src/components/admin/launch-panel.tsx`)**: Upgraded to the same unified Settings Hub layout (`Launch checklist` with live completion pill/dot + `Clear test data` with live record counts) on desktop & mobile `<DialogContent mobileFullScreen>`, with `?section=checklist|reset` deep-linking and `<Activity>` cleanup.
+  - **Customer Profile (`src/components/account/profile-form.tsx`, `account.module.css`)**: Converted the 4 stacked Profile cards on mobile (`< 900px`) into a clean native drill-down hub opening each section in `<DialogContent mobileFullScreen>` (with email-change callback auto-open & hardware Back), while keeping desktop (`>= 900px`) clean without double sidebars.
+  - **Admin Global Search (`src/components/admin/admin-global-search.tsx`)**: Updated deep-links for Quick PIN lock (`?section=pin`), Login email (`?section=email`), Password (`?section=password`), Launch checklist (`?section=checklist`), and Clear test data (`?section=reset`).
+- **Files Modified**:
+  - `src/components/admin/account-forms.tsx`
+  - `src/components/admin/launch-panel.tsx`
+  - `src/components/admin/admin-global-search.tsx`
+  - `src/components/account/profile-form.tsx`, `src/components/account/account.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+
+---
+
+### 2026-11-28 09:52 IST — Fix Data & Launch Card Padding & Border Selector After Settings Hub Migration
+
+- **User Prompt**: `"Data & launch page ka ui me padding etc sahi se nahi aa rha h? check and fix karo"`
+- **Problem / Root Cause**:
+  - In `src/components/admin/admin-views.module.css`, `.launchCard` and `.launchCardDanger` were nested under `.launchGrid .launchCard`. When `LaunchPanel` moved into `.settingsWorkspace` / `.settingsSectionStack` / `.settingsMobileDialogBody`, the `.launchGrid` wrapper was removed, so `.launchCard` lost its `flex` gap, border, radius, and padding (`16px` mobile / `24px` desktop).
+- **Solution / Fix**:
+  - Made `.launchCard` and `.launchCardDanger` standalone selectors in `src/components/admin/admin-views.module.css` (`padding: 16px`, `gap: 16px`, `border-radius: 12px`, and `padding: 24px` at `>= 640px` matching `.sectionCard` & `.promoSection`), and removed the unused `.launchGrid` rules.
+  - Audited `AccountSettings` (`admin-core.module.css`) and `ProfileForm` (`account.module.css`) to confirm all their card classes are already standalone with full padding.
+- **Files Modified**:
+  - `src/components/admin/admin-views.module.css`
+  - `DEVELOPMENT_LOG.md`
+
+
+---
+
+### 2026-11-28 10:12 IST — Deep Full-Stack Audit & Universal Root-Cause Fixes (Security, State/Hooks, UI/UX, CSS Modules & a11y)
+
+- **User Prompt**: `"abhi tak ke saare changes and usse related ui ux, functionality security, etc jo bhi ek app me kiya ja sakta h sab ka ek deep - deep audit karo or fix karke report do, fix esa karna di duara na aae universally fix karna."`
+- **Problems / Root Causes Found Across 3-Angle Deep Audit**:
+  1. **Security & DB (`search-actions.ts`, `admin-global-search.tsx`, `auth-listener.tsx`, `checkout-form.tsx`, `launch-panel.tsx`, `admin-account-menu.tsx`)**:
+     - `searchAdminGlobal` queried non-existent `products.sku` column (silent Postgres `42703` breaking 100% of live Product search), lacked runtime `typeof rawQuery` check, left `"` and `*` unsanitized in PostgREST `.or()`, had no rate limit, and masked PIN-lock errors as cached empty results.
+     - `Cmd+K` / `Ctrl+K` and `OPEN_ADMIN_SEARCH_EVENT` opened Admin Global Search on top of the Admin PIN lock screen, and `adminSearchCache` was not wiped on `manualLock`.
+     - `AuthListener.clearOrderSession()` did not clear `"kk-checkout-draft"`, leaving checkout PII in `sessionStorage` after sign-out / account switch; `CheckoutForm` also restored unvalidated JSON drafts with no TTL and did not clear other-user drafts immediately.
+     - `LaunchPanel` retained destructive `"RESET"` confirmation text across tab switches and mobile dialog close; `AdminPinGateDialog` retained `password`/`newPin` state when exiting Forgot-PIN view.
+  2. **State Machines, Hooks & Navigation (`use-step-history.ts`, `use-pincode-lookup.ts`, `pill-tabs.tsx`, `segmented-tabs.tsx`, `store-settings-form.tsx`, `account-forms.tsx`, `profile-form.tsx`, `product-image.tsx`, `product-browser.tsx`, `orders/types.ts`)**:
+     - `useStepHistory.syncHistoryDepth` did not synthesize missing history entries when restoring from `sessionStorage` without existing history state (causing in-app Back to exit `/checkout`), and stale `checkoutStep: 3` on guest refresh was not reset to `1`.
+     - `usePincodeLookup({ overwrite: true })` overwrote saved City/State and dirtied `/admin/settings` immediately on mount.
+     - `PillTabs` and `SegmentedTabs` swallowed `onChange` on active-tab re-click, breaking Review aspect chip deselection (`product-actions.tsx`) and Forgot Password → Sign In tab switching (`google-sign-in.tsx`). `useScrollableTabs` also lacked a `MutationObserver` for dynamic count/trailing width changes.
+     - `*SectionQuerySync` left `?section=` in the URL, making repeated Global Search jumps to the same section a no-op; `window.history.replaceState(null, ...)` in `account-forms.tsx` & `profile-form.tsx` wiped mobile dialog `__overlayId` history state.
+     - `StoreSettingsForm` allowed submitting an invalid pincode error and its mobile Cancel button silently wiped edits in other sections even when the current section was clean.
+     - `ProductImage` left pre-hydration image errors permanently invisible (`opacity: 0`).
+  3. **UI/UX, CSS Modules, Mobile Native Feel & a11y**:
+     - Broken/orphaned CSS selectors after button migrations: `.footerInstallBtn .downloadSvg` (lost primary color on `InstallPrompt`), `.editPickupBtn .pencilSvg` (lost `12px` size), `.addrActionBtn .actionIcon14`, `.faqWhatsappCta .faqActionIcon`.
+     - `PillTabs` `<Link>` branch hardcoded `pillCountActive` instead of checking `tone === "tint"`; `SegmentedTabs` `layout="equal"` only handled 2 or 3 columns; `ProductBrowser` `.mobileSortRow` nested `overflow-x: auto` around `PillTabs`; `AddressBook` Delete button lost `margin-left: auto`; `CustomerOrdersFilterBar` Reset button still bypassed `<Button>`; `.dialogHeaderMobileFull` & `AdminGlobalSearch` lacked `env(safe-area-inset-*)` and `>= 44px` mobile touch targets; `LaunchPanel` desktop vertical tabs lacked roving `tabIndex` + arrow-key nav + `role="tabpanel"`; several decorative icons lacked `aria-hidden="true"`.
+- **Universal Fixes Applied**:
+  - Hardened `searchAdminGlobal` (removed `products.sku`, hardened PostgREST sanitization, added `limited("track-order", ...)`, discriminated `{ ok, locked }`) and `AdminGlobalSearch` (PIN-lock guard, `manualLock` cache wipe, `closeAndReset` on `⌘K`, `reqIdRef` invalidation, `activeKey` tracking, mobile safe-area & touch targets), plus wired Global Search into `AdminMobileBottomNav` drawer.
+  - Cleared `kk-checkout-draft` in `AuthListener.clearOrderSession()`, added strict sanitization + 30-min TTL + rAF/timer cleanup in `CheckoutForm`, and upgraded `useStepHistory.syncHistoryDepth(step, hasExistingEntries)` to synthesize missing history entries on restore.
+  - Fixed `usePincodeLookup` to never overwrite saved city/state on primed initial pincode mount, added invalid-pincode submit guard & section-aware mobile Close/Cancel in `StoreSettingsForm`, preserved `window.history.state` & stripped `?section=` across Settings/Account/Launch/Profile hubs, cleared `"RESET"` on leave/close in `LaunchPanel`, and cleared forgot-PIN inputs in `AdminPinGateDialog`.
+  - Fixed `PillTabs` & `SegmentedTabs` active re-click dispatch, `MutationObserver` overflow sync, `<Link>` tint count contrast, universal `segmentedTrayEqual` grid, and mobile `44px` touch targets; fixed `ProductImage` pre-hydration errors, `ProductBrowser` double-scroll & `stickyTop: 0`, `paymentDisplay` cancelled partial-refund detail, `InvoiceDocument` print `break-inside: avoid`, orphaned CSS selectors, `AddressBook` Delete alignment, `OrderFilters` `<Button>` consistency, safe-area insets, and WAI-ARIA keyboard/screen-reader attributes.
+  - Added 8 permanent architectural regression tests in `src/features/orders/ux-flows-audit.test.ts` (Section 8).
+- **Files Modified**:
+  - `src/features/admin/search-actions.ts`, `src/components/admin/admin-global-search.tsx`, `src/components/admin/admin-global-search.module.css`, `src/components/admin/admin-sidebar.tsx`
+  - `src/components/shared/auth-listener.tsx`, `src/hooks/use-step-history.ts`, `src/components/store/checkout-form.tsx`
+  - `src/components/shared/use-pincode-lookup.ts`, `src/components/admin/store-settings-form.tsx`, `src/components/admin/account-forms.tsx`, `src/components/admin/launch-panel.tsx`, `src/components/admin/admin-account-menu.tsx`, `src/components/account/profile-form.tsx`
+  - `src/components/shared/pill-tabs.tsx`, `src/components/shared/pill-tabs.module.css`, `src/components/shared/segmented-tabs.tsx`, `src/components/shared/segmented-tabs.module.css`
+  - `src/components/store/product-image.tsx`, `src/components/store/product-browser.tsx`, `src/components/store/product-browser.module.css`, `src/components/store/store-widgets.module.css`, `src/components/store/request-return.module.css`, `src/components/store/faq-view.tsx`
+  - `src/components/account/address-book.tsx`, `src/components/account/account.module.css`, `src/components/account/account-nav.tsx`, `src/components/account/account-views.tsx`
+  - `src/components/admin/order-filters.tsx`, `src/components/admin/admin-orders.module.css`, `src/components/ui/ui.module.css`, `src/components/shared/theme-toggle.tsx`, `src/components/shared/shared.module.css`, `src/components/shared/invoice-document.tsx`, `src/features/orders/types.ts`
+  - `src/features/orders/ux-flows-audit.test.ts`, `DEVELOPMENT_LOG.md`
+- **Follow-Up Polish & Migration Verification (10:20 IST)**:
+  - Verified remote Supabase (`nepfgwfunxebhsfrfxeb`) via `npm run db:dry`: migration `0076_store_settings_pincode.sql` is already applied and remote DB is 100% up to date.
+  - Completed vertical `tablist` keyboard nav (`ArrowUp`/`ArrowDown`/`Home`/`End`, roving `tabIndex`, `role="tabpanel"`, `srOnly` status dots) on `StoreSettingsForm` & `AccountSettings` (100% parity with `LaunchPanel`), added Step 3 `promoBelowMin` warning banner in `CheckoutForm`, removed remaining dead/orphaned button CSS rules (`order-status.module.css`, `footer.module.css`, `search-dialog.module.css`, `checkout-form.module.css`, `faq-view.module.css`), and added the permanent **Exhaustive Single-Pass Deep Audit & Zero-Leftover Fixes** rule to `C:\Users\User\.gemini\config\GEMINI.md`.
+
+
+---
+
+### 2026-11-28 10:56 IST — Complete End-to-End Ecommerce Deep Audit, Hardening & Production Readiness (`audit-production-readiness`)
+
+- **User Prompt**: Full-stack deep audit from first Git commit (`6844d17`) through latest changes covering Git history, architecture, customer storefront, admin panel, security, database/RPCs, UI/UX (web & mobile), accessibility, performance, and SEO — fix all safely fixable issues on a separate Git branch, re-verify everything, and generate `AUDIT_REPORT.md`, `REGRESSION_CHECKLIST.md`, and `TEST_RESULTS.md`.
+- **Key Root Causes Discovered**:
+  1. **Critical (`request-return.tsx`)**: `tooMany` checked `left.get(p.productId)` instead of `left.get(returnLineKey(p))`, blocking all returns/exchanges on variant products.
+  2. **Security (`auth/callback/route.ts`, `orders/actions.ts`, `addresses/actions.ts`, `wishlist/actions.ts`, `products/actions.ts`, `webhooks/payment/route.ts`, `lib/supabase/proxy.ts`)**: Query params could suppress `isRecoveryFlow` on PKCE recovery links; `placeOrder`/`submitPayment` did not enforce `paymentMode === "manual_upi"`; `verifyGatewayPayment` branched on paid status before cryptographic signature check and omitted `code` from rate-limit key; `assertActiveCustomer()` was missing on address/wishlist/review mutations; webhook lacked body size cap; proxy HMAC fallback was ephemeral when `COOKIE_SECRET` was unset.
+  3. **Backend / DB (`0077_audit_hardening.sql`, `products/actions.ts`, `product-form.tsx`)**: Concurrent variant product edits overwrote customer stock reservations; return RPCs allowed omitting `variantId` on multi-variant orders; `refund_order` / `guard_payment_status` allowed partial refunds before dispatch/cancel and unpaid→refunded; stale gateway failure webhooks could overwrite newer retry sessions; TOCTOU `unique_violation` races in `subscribe_stock_alert` & `undo_return_step`; multi-variant `dashboard_stats` `topProducts` revenue inflation; missing `^https?://` check on exchange `trackingUrl`; 6 missing DB indexes.
+  4. **Customer & Admin Flows (`gateway-client.ts`, `checkout-form.tsx`, `payment-panel.tsx`, `google-sign-in.tsx`, `return-status-control.tsx`, `admin-queries.ts`, `admin-actions.ts`, `create-return-request.tsx`, `launch-actions.ts`)**: Redirect gateways immediately cancelled orders; checkout address modal leaked `initialProfile` across account switches; `/login` swallowed expired verification/reset copy; doorstep exchange `set_courier` was unwired; `payment=submitted` filter/counts included cancelled orders; admin return creation packed address/UPI into 300-char `details`; `resetStoreData` skipped product cache tag on `"customers"` scope.
+  5. **Infra, UI/UX, Perf & SEO (`public/sw.js`, `providers.tsx`, `admin/(panel)/error.tsx`, `scroll-reset.tsx`, `order-placed.tsx`, `search-dialog.module.css`, `robots.ts`, `globals.css`, `variant-matrix-modal.tsx`)**: SW SWR HTML risked stale chunks/action IDs; synchronous `domMax` defeated `LazyMotion` code-splitting; missing admin error boundary; 4 broken CSS Module class refs (`.banSvg`, `.whatsappIcon`, `.arrowSvg`); SearchDialog `100vw` + missing safe-area insets; uncleaned `scroll-reset` timers; `/order-placed` above-the-fold `opacity: 0`; native `<select>` in `VariantMatrixModal`; 7 unused UI/dashboard files.
+- **Solution / Changes Made**:
+  - Created branch `audit-production-readiness` and fixed all Critical (1), High (10), Medium (14), and Low (9) findings, authored `supabase/migrations/0077_audit_hardening.sql`, added 8 permanent regression tests in `src/features/orders/ux-flows-audit.test.ts` (Section 9), and generated `AUDIT_REPORT.md`, `REGRESSION_CHECKLIST.md`, and `TEST_RESULTS.md`.
+  - Verified with `tsc --noEmit --incremental false` (0 errors), `npm run lint` (0 errors, 0 warnings), `npm test` (33/33 files, 897/897 tests), and `npm run build` (84/84 pages generated cleanly).
+- **Files Modified / Created**:
+  - Created: `supabase/migrations/0077_audit_hardening.sql`, `src/app/admin/(panel)/error.tsx`, `AUDIT_REPORT.md`, `REGRESSION_CHECKLIST.md`, `TEST_RESULTS.md`
+  - Deleted (unused): `src/components/admin/dashboard/attention-tile.tsx`, `src/components/ui/{avatar,badge,card,select,separator,tabs}.tsx`
+  - Modified: `public/sw.js`, `src/proxy.ts`, `src/app/robots.ts`, `src/app/globals.css`, `src/app/error.tsx`, `src/app/global-error.tsx`, `src/app/offline/page.tsx`, `src/app/(store)/store-layout.module.css`, `src/app/auth/callback/route.ts`, `src/app/api/webhooks/payment/route.ts`, `src/app/admin/(panel)/orders/page.tsx`, `src/lib/seo.ts`, `src/lib/supabase/proxy.ts`, `src/features/orders/{actions,admin-actions,admin-queries,gateway-client}.ts`, `src/features/orders/{actions,admin-queries,ux-flows-audit}.test.ts`, `src/features/addresses/actions.ts`, `src/features/wishlist/actions.ts`, `src/features/products/actions.ts`, `src/features/settings/launch-actions.ts`, `src/features/security/audit.ts`, `src/components/shared/{providers,auth-listener,scroll-reset,carousel}.tsx`, `src/components/shared/shared.module.css`, `src/components/store/{request-return,checkout-form,payment-panel,google-sign-in,order-placed,cart-view,product-card,product-actions,footer,cancel-order,category-grid}.tsx`, `src/components/store/{order-status,footer,search-dialog,product-card}.module.css`, `src/components/account/account-views.tsx`, `src/components/admin/{return-status-control,return-requests,create-return-request,order-filters,product-form,product-row-actions,variant-matrix-modal}.tsx`, `DEVELOPMENT_LOG.md`
+
+
+
+---
+
+### 2026-11-28 11:03 IST — Move FAQ Tabs & Questions Into Standard JSON Data File (`src/data/faqs.json`)
+
+- **User Prompt**: `"faqs ke tabs or unke faqes ko ek json file me bane ke use kar ke map karke use kar sate? abhi kese h? josn ka format standard rakhna taki map karne me aasani ho. or baaad me agar kuch changes karne ho to json m esidha akr sake"`
+- **Problem / Root Cause**:
+  - Both `FAQ_CATEGORIES` and the 12 FAQ items were hardcoded inside `src/components/store/faq-view.tsx`, making content edits or adding new FAQ tabs require editing TypeScript component code.
+- **Solution / Changes Made**:
+  - Created standard JSON dataset [src/data/faqs.json](file:///d:/nextApps/mysaleapp/src/data/faqs.json) with two top-level arrays: `categories` (`key`, `label`, `icon`) and `items` (`id`, `category`, optional `defaultOpen`, `question`, `answer`, optional `link: { href, label }`).
+  - Updated [src/components/store/faq-view.tsx](file:///d:/nextApps/mysaleapp/src/components/store/faq-view.tsx) to map tabs and FAQ cards directly from `faqs.json` while supporting live store-settings template placeholders (`{{shopName}}`, `{{shippingSummary}}`, `{{expiryText}}`, `{{returnSummary}}`, `{{invoiceSummary}}`, `{{studioOriginPhrase}}`, `{{orderCodePrefix}}`) and fallback icon mapping.
+- **Files Modified**:
+  - `src/data/faqs.json` (created)
+  - `src/components/store/faq-view.tsx`
+  - `DEVELOPMENT_LOG.md`

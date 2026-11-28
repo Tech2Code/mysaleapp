@@ -33,7 +33,15 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "Service role key not configured" }, { status: 503 })
   }
 
+  const contentLength = Number(request.headers.get("content-length") ?? "0")
+  if (Number.isFinite(contentLength) && contentLength > 262_144) {
+    return Response.json({ ok: false, error: "Payload too large" }, { status: 413 })
+  }
+
   const rawBody = await request.text()
+  if (rawBody.length > 262_144) {
+    return Response.json({ ok: false, error: "Payload too large" }, { status: 413 })
+  }
   const adapter = getGatewayAdapter(provider)
   const verified = await adapter.parseAndVerifyWebhook({ rawBody, headers: request.headers })
   if (!verified.ok) {

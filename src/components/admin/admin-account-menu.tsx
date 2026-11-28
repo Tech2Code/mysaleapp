@@ -10,6 +10,7 @@ import { applyClientSignOut } from "@/components/shared/auth-listener"
 import { useBlockWhile, useBusySuccess } from "@/components/shared/busy-overlay"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { ThemeSegmentedControl } from "@/components/shared/theme-toggle"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -45,7 +46,6 @@ import {
 import { signOutAdmin } from "@/features/auth/actions"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
 import { LIMITS } from "@/lib/validation"
 import styles from "./admin-core.module.css"
 
@@ -598,6 +598,12 @@ function AdminPinGateDialog({
         onBackStep={() => {
           if (forgotMode) {
             setForgotMode(false)
+            setPassword("")
+            setNewPin("")
+            setNewPinConfirm("")
+            setPasswordError(null)
+            setNewPinError(null)
+            setNewPinConfirmError(null)
             return true
           }
           return true
@@ -722,7 +728,7 @@ function AdminPinGateDialog({
             <DialogFooter className={styles.pinDialogFooter}>
               <Button
                 type="button"
-                variant="outline"
+                variant="destructiveOutline"
                 disabled={pending}
                 onClick={onSignOut}
                 className={styles.roundedFullBtn}
@@ -765,33 +771,23 @@ function AdminPinGateDialog({
               />
               <div className={styles.recoveryOptionsWrap}>
                 <span className={styles.recoveryLabel}>After verifying password:</span>
-                <div className={styles.recoveryTabsGrid}>
-                  {(
-                    [
-                      { id: "reset", label: "Set new PIN" },
-                      { id: "unlock", label: "Unlock only" },
-                      { id: "disable", label: "Don't use PIN" },
-                    ] as const
-                  ).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-pressed={recoveryAction === item.id}
-                      onClick={() => {
-                        setRecoveryAction(item.id)
-                        setPasswordError(null)
-                        setNewPinError(null)
-                        setNewPinConfirmError(null)
-                      }}
-                      className={cn(
-                        styles.recoveryTabBtn,
-                        recoveryAction === item.id && styles.recoveryTabActive
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
+                <SegmentedTabs
+                  layout="equal"
+                  size="sm"
+                  ariaLabel="Recovery action"
+                  value={recoveryAction}
+                  onChange={(next) => {
+                    setRecoveryAction(next)
+                    setPasswordError(null)
+                    setNewPinError(null)
+                    setNewPinConfirmError(null)
+                  }}
+                  items={[
+                    { value: "reset", label: "Set new PIN" },
+                    { value: "unlock", label: "Unlock only" },
+                    { value: "disable", label: "Don't use PIN" },
+                  ]}
+                />
               </div>
               {recoveryAction === "reset" && (
                 <div className={styles.twoColGrid3}>
@@ -834,6 +830,9 @@ function AdminPinGateDialog({
                 disabled={pending}
                 onClick={() => {
                   setForgotMode(false)
+                  setPassword("")
+                  setNewPin("")
+                  setNewPinConfirm("")
                   setPasswordError(null)
                   setNewPinError(null)
                   setNewPinConfirmError(null)

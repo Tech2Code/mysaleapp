@@ -1,9 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { DownloadIcon, KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, ShieldCheckIcon, UserXIcon, XIcon } from "lucide-react"
+import { ChevronRightIcon, DownloadIcon, KeyRoundIcon, Loader2Icon, MailCheckIcon, ShieldAlertIcon, ShieldCheckIcon, UserIcon, UserXIcon, XIcon, type LucideIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { toast } from "sonner"
 import { SelectField, TextAreaField, TextField } from "@/components/form"
@@ -23,13 +23,19 @@ import { cancelReasonText, OTHER_DETAIL_MESSAGE, OTHER_REASON, otherNeedsDetail 
 import { normalizeIndianPhone } from "@/lib/format"
 import { LIMITS } from "@/lib/validation"
 import { useBlockWhile } from "@/components/shared/busy-overlay"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { getBrowserSupabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import styles from "./account.module.css"
 
+type CustomerProfileSectionId = "details" | "password" | "privacy" | "deactivate"
+
 export function ProfileForm({ profile }: { profile: Profile }) {
+  const isMobile = useMediaQuery("(max-width: 899.98px)")
   const [visitKey, setVisitKey] = useState(0)
+  const [activeSection, setActiveSection] = useState<CustomerProfileSectionId>("details")
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [hasPassword, setHasPassword] = useState(profile.hasPassword ?? true)
   const [saved, setSaved] = useState({
     fullName: profile.fullName,
@@ -57,23 +63,137 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     })
   }, [profile.fullName, profile.email, profile.avatarUrl])
 
+  // Auto-open Your details on mobile when returning from an email confirmation link
+  useEffect(() => {
+    if (!isMobile || typeof window === "undefined") return
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+    const searchParams = new URLSearchParams(window.location.search)
+    const hasEmailCallback =
+      searchParams.get("email_changed") === "1" ||
+      Boolean(hashParams.get("error_description") ?? searchParams.get("error_description")) ||
+      Boolean(hashParams.get("message") ?? searchParams.get("message")) ||
+      hashParams.get("type") === "email_change"
+    if (hasEmailCallback) {
+      queueMicrotask(() => {
+        setActiveSection("details")
+        setMobileDetailOpen(true)
+      })
+    }
+  }, [isMobile])
+
   useLayoutEffect(() => {
     return () => {
       setVisitKey((k) => k + 1)
+      setMobileDetailOpen(false)
     }
   }, [])
 
+  const openMobileSection = useCallback((id: CustomerProfileSectionId) => {
+    setActiveSection(id)
+    setMobileDetailOpen(true)
+  }, [])
+
+  const mobileSections: {
+    id: CustomerProfileSectionId
+    title: string
+    meta: string
+    icon: LucideIcon
+    danger?: boolean
+  }[] = [
+    {
+      id: "details",
+      title: "Personal details",
+      meta: saved.fullName.trim() || saved.email || "Name, email & phone",
+      icon: UserIcon,
+    },
+    {
+      id: "password",
+      title: hasPassword ? "Password & security" : "Set account password",
+      meta: hasPassword ? "Change your login password" : "Add a password for email sign-in",
+      icon: KeyRoundIcon,
+    },
+    {
+      id: "privacy",
+      title: "Your data & privacy",
+      meta: "Download a copy of your account data",
+      icon: ShieldCheckIcon,
+    },
+    {
+      id: "deactivate",
+      title: "Deactivate account",
+      meta: "Temporarily disable sign-in on this account",
+      icon: UserXIcon,
+      danger: true,
+    },
+  ]
+
+  const activeMobileMeta = mobileSections.find((s) => s.id === activeSection) ?? mobileSections[0]
+
+  if (!isMobile) {
+    return (
+      <div className={styles.profileFormsStack}>
+        <ProfileFormInner key={`details-${visitKey}`} saved={saved} onSaved={setSaved} />
+        <CustomerPasswordForm
+          key={`password-${visitKey}-${hasPassword ? "change" : "set"}`}
+          hasPassword={hasPassword}
+          onPasswordSet={() => setHasPassword(true)}
+        />
+        <DataPrivacyCard />
+        <DeactivateAccountCard key={`deactivate-${visitKey}`} />
+      </div>
+    )
+  }
+
   return (
-    <div className={styles.profileFormsStack}>
-      <ProfileFormInner key={`details-${visitKey}`} saved={saved} onSaved={setSaved} />
-      <CustomerPasswordForm
-        key={`password-${visitKey}-${hasPassword ? "change" : "set"}`}
-        hasPassword={hasPassword}
-        onPasswordSet={() => setHasPassword(true)}
-      />
-      <DataPrivacyCard />
-      <DeactivateAccountCard key={`deactivate-${visitKey}`} />
-    </div>
+    <>
+      <nav aria-label="Profile sections" className={styles.mobileProfileHub}>
+        {mobileSections.map((item) => {
+          const Icon = item.icon
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => openMobileSection(item.id)}
+              className={cn(styles.mobileProfileRow, item.danger && styles.mobileProfileRowDanger)}
+            >
+              <span className={cn(styles.mobileProfileIcon, item.danger && styles.mobileProfileIconDanger)} aria-hidden>
+                <Icon className={styles.icon18} />
+              </span>
+              <span className={styles.mobileProfileText}>
+                <span className={styles.mobileProfileTitle}>{item.title}</span>
+                <span className={styles.mobileProfileMeta}>{item.meta}</span>
+              </span>
+              <ChevronRightIcon className={styles.mobileProfileChevron} aria-hidden />
+            </button>
+          )
+        })}
+      </nav>
+
+      <Dialog open={mobileDetailOpen} onOpenChange={setMobileDetailOpen}>
+        <DialogContent mobileFullScreen className={styles.mobileProfileDialog}>
+          <DialogHeader>
+            <DialogTitle>{activeMobileMeta.title}</DialogTitle>
+            <DialogDescription className={styles.srOnly}>
+              Manage {activeMobileMeta.title}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody resetScrollKey={activeSection} className={styles.mobileProfileDialogBody}>
+            {activeSection === "details" && (
+              <ProfileFormInner key={`details-${visitKey}`} saved={saved} onSaved={setSaved} />
+            )}
+            {activeSection === "password" && (
+              <CustomerPasswordForm
+                key={`password-${visitKey}-${hasPassword ? "change" : "set"}`}
+                hasPassword={hasPassword}
+                onPasswordSet={() => setHasPassword(true)}
+              />
+            )}
+            {activeSection === "privacy" && <DataPrivacyCard />}
+            {activeSection === "deactivate" && <DeactivateAccountCard key={`deactivate-${visitKey}`} />}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -112,7 +232,7 @@ function ProfileFormInner({
 
     if (!errorDesc && !stepMessage && !emailChanged) return
 
-    window.history.replaceState(null, "", window.location.pathname)
+    window.history.replaceState(window.history.state, "", window.location.pathname)
 
     if (errorDesc) {
       const lower = errorDesc.toLowerCase()
@@ -498,13 +618,12 @@ function DeactivateAccountCard() {
       </div>
 
       <Button
-
         type="button"
-        variant="outline"
+        variant="destructiveOutline"
+        size="lg"
         onClick={() => handleOpenChange(true)}
-        className={styles.deactivateTriggerBtn}
       >
-        <UserXIcon className={styles.icon16} /> Deactivate account
+        <UserXIcon className={styles.icon16} aria-hidden="true" /> Deactivate account
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>

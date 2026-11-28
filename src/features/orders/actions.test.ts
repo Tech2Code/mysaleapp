@@ -77,7 +77,8 @@ describe("the rate limiter runs before the RPC", () => {
     const fake = setup()
     const r = await run()
     expect(r).toMatchObject({ ok: false, error: "Too many attempts." })
-    expect(mocks.limited).toHaveBeenCalledWith(scope)
+    expect(mocks.limited).toHaveBeenCalled()
+    expect(mocks.limited.mock.calls[0]?.[0]).toBe(scope)
     expect(rpcNames(fake.calls)).toEqual([])
   })
 

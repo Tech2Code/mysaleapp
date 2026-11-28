@@ -1,3 +1,4 @@
+import { splitCityState } from "@/features/location/states"
 import type { Order } from "@/features/orders/types"
 import { paymentDisplay } from "@/features/orders/types"
 import { gstActive, gstIncluded, invoiceTitle } from "@/features/settings/tax"
@@ -5,14 +6,16 @@ import type { StoreSettings } from "@/features/settings/types"
 import { formatDate, formatMoney } from "@/lib/format"
 import styles from "./shared.module.css"
 
+const round2 = (n: number) => Math.round((n + (n >= 0 ? Number.EPSILON : -Number.EPSILON)) * 100) / 100
+
 /**
- * Printable bill for one order. Prices already include any GST, so this only shows how much tax is inside.
- * Shop not registered → "Bill of Supply" (no tax). Registered → "Tax Invoice" with GSTIN and the GST included.
+ * Printable bill for one order. Shows a clear audit-trail summary:
+ * Subtotal -> Less: Promo Discount -> Add: Extra Fees & Delivery -> (Taxable Value + CGST/SGST or IGST) -> Grand Total.
+ * Shop not registered → "Bill of Supply" (no tax). Registered → "Tax Invoice" with GSTIN and GST split.
  * Colours follow the theme on screen; globals.css prints it black on white.
  */
 export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSettings }) {
-  // Always use live Store Settings for seller contact & address details so any update in Settings reflects
-  // on all Bill of Supply / Tax Invoices, while locking GST rate/registration from the order-time snapshot.
+  // Use the order-time taxSnapshot for immutable Tax Invoice seller/GST details, falling back to live Store Settings for legacy orders.
   const snap = order.taxSnapshot
   const effectiveShop = snap
     ? {
@@ -32,6 +35,14 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
   const title = invoiceTitle(effectiveShop)
   const taxed = gstActive(effectiveShop)
   const tax = taxed ? gstIncluded(order.total, effectiveShop.gstRate) : null
+  const itemsSubtotal = round2(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))
+  const discount = order.discountAmount && order.discountAmount > 0 ? order.discountAmount : 0
+  const sellerState = effectiveShop.region?.trim().toLowerCase() ?? ""
+  const customerState = splitCityState(order.city).state?.trim().toLowerCase() ?? ""
+  const isIntraState = Boolean(sellerState && customerState && sellerState === customerState)
+  const cgst = tax ? round2(tax.gst / 2) : 0
+  const sgst = tax ? round2(tax.gst - cgst) : 0
+  const halfRate = round2(effectiveShop.gstRate / 2)
   const sellerName = effectiveShop.legalName || effectiveShop.shopName
   const sellerAddress = effectiveShop.businessAddress || [effectiveShop.city, effectiveShop.region].filter(Boolean).join(", ")
   const payment = paymentDisplay(order.status, order.paymentStatus, order.paymentMethod, {
@@ -68,6 +79,7 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
         <div className={styles.paymentRightCol}>
           <h2 className={styles.sectionKicker}>Payment</h2>
           <p className={styles.billedBold}>{payment.label}</p>
+          {payment.detail && <p className={styles.billedSmallNote}>{payment.detail} refunded</p>}
           {order.returnStage?.badge && order.returnStage.key !== "rejected" && (
             <p className={styles.billedSmallNote}>Return: {order.returnStage.customerLabel}</p>
           )}
@@ -89,54 +101,86 @@ export function InvoiceDocument({ order, shop }: { order: Order; shop: StoreSett
           <tbody>
             {order.items.map((i) => (
               <tr key={i.variantId ? `${i.productId}::${i.variantId}` : i.productId} className={styles.tbodyRow}>
-                <td className={styles.tdLeft}>{i.name}</td>
+                <td className={styles.tdLeft}>
+                  <span>{i.name}</span>
+                  {i.variantLabel && <span className={styles.invoiceVariantNote}> ({i.variantLabel})</span>}
+                </td>
                 <td className={styles.tdMiddleNum}>{i.quantity}</td>
                 <td className={styles.tdMiddleNum}>{formatMoney(i.price)}</td>
                 <td className={styles.tdRightNum}>{formatMoney(i.price * i.quantity)}</td>
               </tr>
             ))}
-            {order.discountAmount && order.discountAmount > 0 ? (
-              <tr className={styles.tbodyPromoRow}>
-                <td className={styles.tdLeftMedium} colSpan={3}>
-                  Promo discount{order.promoCode ? ` (${order.promoCode})` : ""}
-                </td>
-                <td className={styles.tdRightBoldNum}>
-                  -{formatMoney(order.discountAmount)}
-                </td>
-              </tr>
-            ) : null}
-            {order.extraFees.map((f, idx) => (
-              <tr key={`${f.productId ?? "fee"}-${idx}`} className={styles.tbodyRow}>
-                <td className={styles.tdLeft} colSpan={3}>
-                  {f.label}
-                  {f.productName ? ` (${f.productName})` : ""}
-                </td>
-                <td className={styles.tdRightNum}>{formatMoney(f.amount)}</td>
-              </tr>
-            ))}
-            <tr className={styles.tbodyRow}>
-              <td className={styles.tdLeft} colSpan={3}>Delivery</td>
-              <td className={styles.tdRightNum}>{order.shippingFee > 0 ? formatMoney(order.shippingFee) : "Free"}</td>
-            </tr>
           </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" colSpan={3} className={styles.tfootTh}>Total</th>
-              <td className={styles.tfootTd}>{formatMoney(order.total)}</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
+      <section className={styles.invoiceSummaryWrap} aria-label="Invoice summary">
+        <dl className={styles.invoiceSummaryBox}>
+          <div className={styles.summaryRow}>
+            <dt className={styles.summaryLabel}>Subtotal</dt>
+            <dd className={styles.summaryValue}>{formatMoney(itemsSubtotal)}</dd>
+          </div>
+          {discount > 0 && (
+            <div className={styles.summaryRowPromo}>
+              <dt className={styles.summaryLabel}>
+                Less: Promo discount{order.promoCode ? ` (${order.promoCode})` : ""}
+              </dt>
+              <dd className={styles.summaryValueBold}>-{formatMoney(discount)}</dd>
+            </div>
+          )}
+          {order.extraFees.map((f, idx) => (
+            <div key={`${f.productId ?? "fee"}-${idx}`} className={styles.summaryRow}>
+              <dt className={styles.summaryLabel}>
+                Add: {f.label}
+                {f.productName ? ` (${f.productName})` : ""}
+              </dt>
+              <dd className={styles.summaryValue}>+{formatMoney(f.amount)}</dd>
+            </div>
+          ))}
+          <div className={styles.summaryRow}>
+            <dt className={styles.summaryLabel}>Add: Delivery</dt>
+            <dd className={styles.summaryValue}>
+              {order.shippingFee > 0 ? `+${formatMoney(order.shippingFee)}` : "Free"}
+            </dd>
+          </div>
+
+          {tax && (
+            <div className={styles.summaryTaxBlock}>
+              <div className={styles.summaryRowMuted}>
+                <dt className={styles.summaryLabel}>Taxable value (excl. GST)</dt>
+                <dd className={styles.summaryValue}>{formatMoney(tax.taxable)}</dd>
+              </div>
+              {isIntraState ? (
+                <>
+                  <div className={styles.summaryRowMuted}>
+                    <dt className={styles.summaryLabel}>Add: CGST @ {halfRate}%</dt>
+                    <dd className={styles.summaryValue}>+{formatMoney(cgst)}</dd>
+                  </div>
+                  <div className={styles.summaryRowMuted}>
+                    <dt className={styles.summaryLabel}>Add: SGST @ {halfRate}%</dt>
+                    <dd className={styles.summaryValue}>+{formatMoney(sgst)}</dd>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.summaryRowMuted}>
+                  <dt className={styles.summaryLabel}>Add: IGST @ {effectiveShop.gstRate}%</dt>
+                  <dd className={styles.summaryValue}>+{formatMoney(tax.gst)}</dd>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className={styles.summaryGrandTotalRow}>
+            <dt className={styles.summaryGrandTotalLabel}>Grand Total</dt>
+            <dd className={styles.summaryGrandTotalValue}>{formatMoney(order.total)}</dd>
+          </div>
+        </dl>
+      </section>
+
       {tax ? (
-        <section className={styles.gstSection} aria-label="GST included">
-          <p className={styles.gstRow}><span>Taxable value</span><span className={styles.tabularSpan}>{formatMoney(tax.taxable)}</span></p>
-          <p className={styles.gstRowTop}>
-            <span>GST @ {effectiveShop.gstRate}% (included in the total)</span>
-            <span className={styles.tabularSpan}>{formatMoney(tax.gst)}</span>
-          </p>
-          <p className={styles.gstFootnote}>Prices are inclusive of GST. CGST + SGST or IGST applies depending on the delivery state.</p>
-        </section>
+        <p className={styles.nonGstNote}>
+          Prices are inclusive of GST @ {effectiveShop.gstRate}%. Net Taxable Value ({formatMoney(tax.taxable)}) + GST ({formatMoney(tax.gst)}) = Grand Total ({formatMoney(order.total)}). Tax is not payable under Reverse Charge.
+        </p>
       ) : (
         <p className={styles.nonGstNote}>
           {sellerName} is not registered under GST, so no tax is charged. This is a Bill of Supply, not a Tax Invoice.

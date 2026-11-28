@@ -59,7 +59,11 @@ function MyOrderCard({ o, shop }: { o: Order; shop: StoreSettings }) {
         <p className={styles.orderDateNote}>{formatDate(o.createdAt)}</p>
         {isAwaitingPayment(o) && shop.unpaidOrderExpiryHours > 0 && (
           <p className={styles.deadlineWarning}>
-            Update UTR by {formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after {describeHours(shop.unpaidOrderExpiryHours)}
+            {shop.paymentMode === "gateway"
+              ? `Complete payment by ${formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · unpaid orders are cancelled automatically after ${describeHours(shop.unpaidOrderExpiryHours)}`
+              : o.paymentStatus === "failed"
+                ? `Update UTR by ${formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · orders with a rejected payment are cancelled automatically after ${describeHours(shop.unpaidOrderExpiryHours)}`
+                : `Submit UTR by ${formatDeadline(paymentDeadline(o.createdAt, shop.unpaidOrderExpiryHours, o.updatedAt)!)} · unpaid orders are cancelled automatically after ${describeHours(shop.unpaidOrderExpiryHours)}`}
           </p>
         )}
       </div>
@@ -260,9 +264,9 @@ export function MyOrderView({
                   href={shopWhatsappLink(shop, `Hi! I have a question about my order ${order.orderCode}.`)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={styles.askWaBtn}
+                  className={buttonVariants({ variant: "whatsapp", size: "lg" })}
                 >
-                  <WhatsAppIcon className={styles.icon16} /> Ask about this order
+                  <WhatsAppIcon className={styles.icon16} aria-hidden="true" /> Ask about this order
                 </a>
                 <RequestReturn
                   orderCode={order.orderCode}

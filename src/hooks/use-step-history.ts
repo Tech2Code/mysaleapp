@@ -84,5 +84,27 @@ export function useStepHistory<T extends number>({
     pushedStepsRef.current = 0
   }, [])
 
-  return { goToStep, resetHistoryDepth }
+  const syncHistoryDepth = useCallback(
+    (currentStep: T, hasExistingEntries = true) => {
+      const depth = Math.max(0, currentStep - minStep)
+      pushedStepsRef.current = depth
+      if (typeof window !== "undefined" && window.location.pathname === pathname) {
+        const prevState =
+          window.history.state && typeof window.history.state === "object" ? window.history.state : {}
+        if (!hasExistingEntries && depth > 0) {
+          window.history.replaceState({ ...prevState, [stateKey]: minStep }, "")
+          for (let s = minStep + 1; s <= currentStep; s += 1) {
+            window.history.pushState({ ...prevState, [stateKey]: s }, "")
+          }
+          return
+        }
+        if ((prevState as Record<string, unknown>)[stateKey] !== currentStep) {
+          window.history.replaceState({ ...prevState, [stateKey]: currentStep }, "")
+        }
+      }
+    },
+    [minStep, pathname, stateKey]
+  )
+
+  return { goToStep, resetHistoryDepth, syncHistoryDepth }
 }

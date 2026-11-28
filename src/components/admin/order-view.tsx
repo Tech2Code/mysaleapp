@@ -14,6 +14,7 @@ import { CopyButton } from "@/components/shared/copy-button"
 import { OrderSummary } from "@/components/shared/order-summary"
 import { OrderTimeline } from "@/components/shared/order-timeline"
 import { WhatsAppIcon } from "@/components/store/brand-icons"
+import { buttonVariants } from "@/components/ui/button"
 import { whatsappLink } from "@/features/orders/whatsapp"
 import { formatDeadline } from "@/features/orders/deadline"
 import { CANCELLABLE_BY_ADMIN } from "@/features/orders/transitions"
@@ -73,7 +74,7 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
             </span>
           )}
           {order.status !== "cancelled" && (
-            <Link href={`/admin/orders/${encodeURIComponent(order.orderCode)}/invoice`} className={styles.invoiceBtn}>
+            <Link href={`/admin/orders/${encodeURIComponent(order.orderCode)}/invoice`} className={buttonVariants({ variant: "outline", size: "sm" })}>
               <ReceiptTextIcon className={styles.iconMd} /> Invoice
             </Link>
           )}
@@ -169,11 +170,11 @@ export function AdminOrderView({ order, autoCancelAt }: { order: OrderWithHistor
                 href={whatsappLink(`91${order.phone}`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={styles.whatsappContactBtn}
+                className={buttonVariants({ variant: "whatsapp", size: "sm" })}
               >
                 <WhatsAppIcon className={styles.iconMd} /> WhatsApp
               </a>
-              <a href={`tel:+91${order.phone}`} className={styles.callContactBtn}>
+              <a href={`tel:+91${order.phone}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 <PhoneIcon className={styles.iconMd} /> Call
               </a>
             </div>

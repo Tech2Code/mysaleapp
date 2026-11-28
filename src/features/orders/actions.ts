@@ -127,6 +127,9 @@ export async function placeOrder(input: unknown): Promise<ActionResult<PlacedOrd
   const phone = normalizeIndianPhone(customer.phone)!
   const supabase = await getServerSupabase()
   const shop = await getStoreSettings()
+  if (shop.paymentMode !== "manual_upi") {
+    return fail("Online payment gateway is active. Please complete checkout using the online payment option.")
+  }
 
   const { data, error } = await supabase
     .rpc("create_order", {
@@ -291,7 +294,12 @@ export async function submitPayment(input: unknown): Promise<ActionResult> {
     )
   }
   if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
-  if (await limited("submit-payment")) return fail(RATE_LIMIT_MESSAGE)
+  if (await limited("submit-payment", parsed.data.code)) return fail(RATE_LIMIT_MESSAGE)
+
+  const shop = await getStoreSettings()
+  if (shop.paymentMode !== "manual_upi") {
+    return fail("Manual UTR submission is disabled while online payment gateway is active.")
+  }
 
   const supabase = await getServerSupabase()
   const { data, error } = await supabase.rpc("submit_payment", {
@@ -629,7 +637,7 @@ export async function verifyGatewayPayment(
   const parsed = verifyGatewayPaymentSchema.safeParse(input)
   if (!parsed.success) return fail("Invalid payment verification payload.")
   if (!isSupabaseConfigured) return fail("Payments are unavailable in demo mode.")
-  if (await limited("gateway-payment")) return fail(RATE_LIMIT_MESSAGE)
+  if (await limited("gateway-payment", parsed.data.code)) return fail(RATE_LIMIT_MESSAGE)
 
   const shop = await getStoreSettings()
   const serviceSupabase = getServiceRoleSupabase()
@@ -656,11 +664,9 @@ export async function verifyGatewayPayment(
     return fail("Order not found.")
   }
 
-  if (orderRow.payment_status === "paid" || orderRow.payment_status === "refunded") {
-    if (orderRow.payment_reference === parsed.data.paymentId) {
-      return { ok: true, data: { confirmed: orderRow.status !== "cancelled", orderCode: orderRow.order_code } }
-    }
-    return fail("This order is already marked as paid.")
+  const expectedGatewayOrderId = orderRow.gateway_order_id
+  if (!expectedGatewayOrderId || expectedGatewayOrderId !== parsed.data.gatewayOrderId) {
+    return fail("No active gateway session found for this order.")
   }
 
   const provider =
@@ -670,11 +676,6 @@ export async function verifyGatewayPayment(
     orderRow.payment_gateway === "stripe"
       ? orderRow.payment_gateway
       : shop.paymentGateway
-
-  const expectedGatewayOrderId = orderRow.gateway_order_id
-  if (!expectedGatewayOrderId) {
-    return fail("No active gateway session found for this order.")
-  }
 
   const adapter = getGatewayAdapter(provider)
   const verified = await adapter.verifyClientPayment({
@@ -686,6 +687,13 @@ export async function verifyGatewayPayment(
   })
   if (!verified.ok) {
     return fail(verified.error)
+  }
+
+  if (orderRow.payment_status === "paid" || orderRow.payment_status === "refunded") {
+    if (orderRow.payment_reference === parsed.data.paymentId) {
+      return { ok: true, data: { confirmed: orderRow.status !== "cancelled", orderCode: orderRow.order_code } }
+    }
+    return fail("This order is already marked as paid.")
   }
 
   const { data: rpcData, error: rpcError } = await serviceSupabase.rpc("confirm_gateway_payment", {

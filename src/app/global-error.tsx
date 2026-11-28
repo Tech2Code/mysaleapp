@@ -1,15 +1,31 @@
 "use client"
 
+import { useEffect } from "react"
+
 // Last-resort boundary: renders when the root layout itself fails (settings/DB outage, provider crash).
 // It replaces the whole document, so it must not depend on the theme, fonts or any provider.
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    console.error("[global-error]", error.digest ?? error.message)
+  }, [error])
+
   return (
     <html lang="en-IN">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif", background: "#fbf7f2", color: "#1f1a17" }}>
+      <head>
+        <style>{`
+          body { margin: 0; font-family: system-ui, sans-serif; background: #fbf7f2; color: #1f1a17; }
+          .ge-sub { margin-top: 8px; color: #6b625b; }
+          @media (prefers-color-scheme: dark) {
+            body { background: #141210; color: #f5f0eb; }
+            .ge-sub { color: #a89f96; }
+          }
+        `}</style>
+      </head>
+      <body>
         <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 16, textAlign: "center" }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>Something went wrong</h1>
-            <p style={{ marginTop: 8, color: "#6b625b" }}>Please try again. If it keeps happening, message us on WhatsApp.</p>
+            <p className="ge-sub">Please try again. If it keeps happening, message us on WhatsApp.</p>
             <button
               type="button"
               onClick={reset}

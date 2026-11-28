@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { getCurrentUser } from "@/features/auth/guards"
+import { assertActiveCustomer } from "@/features/auth/guards"
 import { fail, type ActionResult } from "@/lib/action-result"
 import { getServerSupabase } from "@/lib/supabase/server"
 
@@ -63,14 +63,15 @@ export async function syncWishlistForUser(userId: string, localIds: unknown): Pr
  * (duplicates ignored) and returns the full, merged list from the database.
  */
 export async function syncWishlist(localIds: unknown): Promise<ActionResult<string[]>> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Not signed in")
-  return syncWishlistForUser(user.id, localIds)
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  return syncWishlistForUser(auth.user.id, localIds)
 }
 
 export async function setWishlisted(productId: unknown, on: unknown): Promise<ActionResult> {
-  const user = await getCurrentUser()
-  if (!user) return fail("Not signed in")
+  const auth = await assertActiveCustomer()
+  if (!auth.ok) return fail(auth.error)
+  const user = auth.user
 
   const parsed = uuidItem.safeParse(productId)
   const parsedOn = z.boolean().safeParse(on)

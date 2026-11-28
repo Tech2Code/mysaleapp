@@ -8,7 +8,7 @@ import { useBlockWhile } from "@/components/shared/busy-overlay"
 import { CopyableReference } from "@/components/shared/copyable-reference"
 import { useToastAfter } from "@/hooks/use-toast-after"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { refundReturn } from "@/features/orders/admin-actions"
 import { buildUpiUrl } from "@/features/orders/upi"
 import { formatPrice } from "@/lib/format"
@@ -78,7 +78,7 @@ export function RefundReturnButton({
                 <CopyableReference value={refundUpiId} />
               </div>
               {upiLink && (
-                <a href={upiLink} className={styles.payRefundUpiBtn}>
+                <a href={upiLink} className={buttonVariants({ variant: "primary", size: "xs" })}>
                   <SmartphoneIcon className={styles.iconSm} aria-hidden /> Pay {formatPrice(value)} via UPI
                 </a>
               )}

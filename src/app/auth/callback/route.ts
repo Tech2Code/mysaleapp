@@ -110,31 +110,35 @@ export async function GET(request: NextRequest) {
     return user
   }
 
-  const handleAuthenticatedSuccess = async (supabase: Awaited<ReturnType<typeof getServerSupabase>>) => {
+  const handleAuthenticatedSuccess = async (
+    supabase: Awaited<ReturnType<typeof getServerSupabase>>,
+    authMethod: "pkce" | "otp"
+  ) => {
     const user = await syncProfileFromMetadata(supabase)
-    const isNonRecoveryOtp =
-      otpType === "signup" ||
-      otpType === "email_change" ||
-      otpType === "invite" ||
-      next.includes("email_changed=1")
+    // Only trust otpType when the verifyOtp branch actually verified that OTP type.
+    // Never allow attacker-supplied query params (`flow=oauth`, `next=...email_changed=1`) to bypass recovery locks.
+    const verifiedOtpType = authMethod === "otp" && isOtpType(otpType) ? otpType : null
+    const isVerifiedNonRecoveryOtp =
+      verifiedOtpType === "signup" || verifiedOtpType === "email_change" || verifiedOtpType === "invite"
     const recoverySentMs = user?.recovery_sent_at ? Date.parse(user.recovery_sent_at) : NaN
-    const isRecentRecovery =
-      flow !== "oauth" &&
-      !isNonRecoveryOtp &&
-      (flow === "recovery" || recoveryIntent === "admin" || recoveryIntent === "customer") &&
-      !Number.isNaN(recoverySentMs) &&
-      Date.now() - recoverySentMs < 60 * 60 * 1000
+    const hasRecentRecoverySent = !Number.isNaN(recoverySentMs) && Date.now() - recoverySentMs < 60 * 60 * 1000
+    const isOAuthUser =
+      authMethod === "pkce" &&
+      flow === "oauth" &&
+      !recoveryIntent &&
+      user?.app_metadata?.provider === "google" &&
+      !hasRecentRecoverySent
 
     const isRecoveryFlow =
-      !isNonRecoveryOtp &&
-      flow !== "oauth" &&
-      (otpType === "recovery" ||
+      !isVerifiedNonRecoveryOtp &&
+      !isOAuthUser &&
+      (verifiedOtpType === "recovery" ||
         flow === "recovery" ||
         nextPathname === "/admin/reset-password" ||
         next.includes("mode=reset-password") ||
         recoveryIntent === "admin" ||
         recoveryIntent === "customer" ||
-        isRecentRecovery)
+        hasRecentRecoverySent)
 
     if (isRecoveryFlow) {
       const { data: isAdmin } = await supabase.rpc("is_admin")
@@ -176,13 +180,13 @@ export async function GET(request: NextRequest) {
     const supabase = await getServerSupabase()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return handleAuthenticatedSuccess(supabase)
+      return handleAuthenticatedSuccess(supabase, "pkce")
     }
   } else if (tokenHash && isOtpType(otpType)) {
     const supabase = await getServerSupabase()
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType })
     if (!error) {
-      return handleAuthenticatedSuccess(supabase)
+      return handleAuthenticatedSuccess(supabase, "otp")
     }
   }
 

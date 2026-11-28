@@ -138,6 +138,15 @@ export function ScrollReset() {
       }
     }
 
+    let transitionTimer: number | null = null
+    const scheduleTransitionClear = () => {
+      if (transitionTimer !== null) window.clearTimeout(transitionTimer)
+      transitionTimer = window.setTimeout(() => {
+        transitionTimer = null
+        if (committedPath === window.location.pathname) isTransitioning = false
+      }, 1500)
+    }
+
     // Snapshot scroll position the instant the user clicks an internal link (before Next.js resets scroll)
     const onClickCapture = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
@@ -155,9 +164,7 @@ export function ScrollReset() {
 
         if (url.pathname !== window.location.pathname) {
           isTransitioning = true
-          window.setTimeout(() => {
-            if (committedPath === window.location.pathname) isTransitioning = false
-          }, 1500)
+          scheduleTransitionClear()
           pendingHash = url.hash
           if (url.hash) {
             viaHistory = false
@@ -198,9 +205,7 @@ export function ScrollReset() {
         }
         viaHistory = true
         isTransitioning = true
-        window.setTimeout(() => {
-          if (committedPath === window.location.pathname) isTransitioning = false
-        }, 1500)
+        scheduleTransitionClear()
       }
     }
 
@@ -217,9 +222,7 @@ export function ScrollReset() {
       }
       viaHistory = true
       isTransitioning = true
-      window.setTimeout(() => {
-        if (committedPath === window.location.pathname) isTransitioning = false
-      }, 1500)
+      scheduleTransitionClear()
     }
 
     const nav = (window as Window & { navigation?: EventTarget }).navigation
@@ -229,6 +232,7 @@ export function ScrollReset() {
     document.addEventListener("pointerdown", onPointerDownCapture, true)
     document.addEventListener("click", onClickCapture, true)
     return () => {
+      if (transitionTimer !== null) window.clearTimeout(transitionTimer)
       nav?.removeEventListener("navigate", onNavigate)
       window.removeEventListener("scroll", onScroll)
       window.removeEventListener("popstate", onPop, true)

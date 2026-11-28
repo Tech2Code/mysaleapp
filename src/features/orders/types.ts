@@ -130,18 +130,25 @@ export function paymentDisplay(
   orderStatus: OrderStatus,
   status: PaymentStatus,
   method: PaymentMethod | null,
-  /** Partial refund info: shown as "Partially refunded ₹X of ₹Y" while the payment is still 'paid'. */
+  /** Partial refund info: shown as pill "Partially refunded" + detail "₹X of ₹Y" while the payment is still 'paid'. */
   refund?: { refundedAmount: number; paidAmount: number }
-): { label: string; tone: PaymentTone } {
+): { label: string; detail?: string; tone: PaymentTone } {
   if (orderStatus === "cancelled") {
-    if (status === "paid") return { label: "Paid · refund due", tone: "refund_due" }
+    if (status === "paid") {
+      return {
+        label: "Paid · refund due",
+        detail: refund && refund.refundedAmount > 0 ? `${formatPrice(refund.refundedAmount)} of ${formatPrice(refund.paidAmount)} refunded` : undefined,
+        tone: "refund_due",
+      }
+    }
     if (status === "submitted") return { label: "Payment sent · refund if received", tone: "refund_due" }
     if (status === "refunded") return { label: "Refunded", tone: "refunded" }
     return { label: "No payment due", tone: "cancelled" }
   }
   if (status === "paid" && refund && refund.refundedAmount > 0) {
     return {
-      label: `Partially refunded ${formatPrice(refund.refundedAmount)} of ${formatPrice(refund.paidAmount)}`,
+      label: "Partially refunded",
+      detail: `${formatPrice(refund.refundedAmount)} of ${formatPrice(refund.paidAmount)}`,
       tone: "refunded",
     }
   }

@@ -4,7 +4,7 @@ import { CheckIcon, CopyIcon } from "lucide-react"
 import * as m from "motion/react-m"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { toast } from "sonner"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeletonize } from "@/components/shared/skeletonize"
@@ -112,6 +112,20 @@ function OrderPlacedBody({ preview, urlCode }: { preview: boolean; urlCode: stri
 
   // Read the real payment state on mount (and whenever the order or signed-in user changes).
   const userId = user?.id ?? null
+
+  // Always open Order Placed at the very top of the viewport (web & mobile), even after keyboard dismissal on /checkout.
+  useLayoutEffect(() => {
+    if (preview || typeof window === "undefined") return
+    const scrollTopNow = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+    scrollTopNow()
+    const rafId = window.requestAnimationFrame(scrollTopNow)
+    const timerId = window.setTimeout(scrollTopNow, 120)
+    return () => {
+      window.cancelAnimationFrame(rafId)
+      window.clearTimeout(timerId)
+    }
+  }, [preview, code])
+
   useEffect(() => {
     if (!order || preview) return
     let cancelled = false
@@ -153,10 +167,10 @@ function OrderPlacedBody({ preview, urlCode }: { preview: boolean; urlCode: stri
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
         className={styles.checkBadge}
       >
-        <CheckIcon className={styles.checkSvg} strokeWidth={3} />
+        <CheckIcon className={styles.checkSvg} strokeWidth={3} aria-hidden="true" />
       </m.div>
 
-      <m.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <m.div initial={{ y: 12 }} animate={{ y: 0 }} transition={{ duration: 0.25 }}>
         <h1 className={styles.placedHeadline}>{activeState ? headline.title : "Order placed & payment submitted!"}</h1>
         <p className={styles.placedSubtext}>{activeState ? headline.text : HEADLINE.submitted.text}</p>
 
@@ -174,7 +188,7 @@ function OrderPlacedBody({ preview, urlCode }: { preview: boolean; urlCode: stri
             className={styles.codeCopyBtn}
             aria-label={`Copy order code ${code}`}
           >
-            {code} <CopyIcon className={styles.copySvg} />
+            {code} <CopyIcon className={styles.copySvg} aria-hidden="true" />
           </button>
         )}
 

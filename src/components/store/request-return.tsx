@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { toast } from "sonner"
 import { CheckboxField, SelectField, TextAreaField, TextField } from "@/components/form"
 import { usePincodeLookup } from "@/components/shared/use-pincode-lookup"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { listMyAddresses, saveAddress } from "@/features/addresses/actions"
@@ -350,7 +350,7 @@ export function RequestReturn({
           : undefined
       : undefined
   const refundUpiInvalid = Boolean(refundUpiError)
-  const tooMany = payload.some((p) => p.quantity > (left.get(p.productId) ?? 0))
+  const tooMany = payload.some((p) => p.quantity > (left.get(returnLineKey(p)) ?? 0))
 
   // Guests on /track pass phoneLast4 and must prove their full 10-digit mobile number to request a return;
   // signed-in owners on /account/orders/[code] omit phoneLast4 and are recognised by their session.
@@ -622,7 +622,7 @@ export function RequestReturn({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange} onBackStep={handleBackStep}>
-        <DialogTrigger className={styles.returnTriggerBtn}>
+        <DialogTrigger className={buttonVariants({ variant: "outline", size: "lg" })}>
           <Undo2Icon className={styles.triggerIcon} aria-hidden /> Request return or exchange
         </DialogTrigger>
         <DialogContent mobileFullScreen className={styles.returnDialog}>
@@ -1442,27 +1442,29 @@ export function RequestReturn({
                       </p>
                       <div className={styles.pickupActionBtns}>
                         {pickupMode === "new" && (
-                          <button
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() => {
                               setPickupSubmitted(false)
                               setDialogView("pickup-new")
                             }}
-                            className={styles.editPickupBtn}
                           >
                             <PencilIcon className={styles.pencilSvg} aria-hidden /> Edit
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
                           type="button"
+                          variant="soft"
+                          size="xs"
                           onClick={() => {
                             setPickupSubmitted(false)
                             setDialogView("pickup-list")
                           }}
-                          className={styles.changePickupBtn}
                         >
                           Change / add address
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -1543,7 +1545,7 @@ export function RequestReturn({
                         <dd className={styles.reviewSummaryVal}>
                           {payload
                             .map((p) => {
-                              const itemName = items.find((o) => o.productId === p.productId)?.name ?? "Item"
+                              const itemName = items.find((o) => returnLineKey(o) === returnLineKey(p))?.name ?? "Item"
                               return `${p.quantity} × ${itemName}`
                             })
                             .join(", ")}
@@ -1760,7 +1762,7 @@ export function ReturnRequestsPanel({
               </div>
               <ul className={styles.requestItemsUl}>
                 {r.items.map((i) => (
-                  <li key={i.productId}>
+                  <li key={returnLineKey(i)}>
                     {i.quantity} × {i.name}
                   </li>
                 ))}
@@ -1839,7 +1841,7 @@ export function ReturnRequestsPanel({
                 </p>
               )}
               {r.status === "requested" && (
-                <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className={styles.withdrawBtn}>
+                <Button type="button" variant="destructiveOutline" size="sm" disabled={pending} onClick={() => setConfirmId(r.id)} className={styles.withdrawBtn}>
                   {pending && <Loader2Icon className={styles.btnIconSpin} />}{" "}
                   {isExchange ? (isReplacement ? "Cancel replacement" : "Cancel exchange") : "Cancel return"}
                 </Button>

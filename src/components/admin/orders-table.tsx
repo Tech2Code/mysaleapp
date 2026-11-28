@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { OrderStatusBadge } from "@/components/shared/order-status-badge"
 import { PaymentBadge } from "@/components/shared/payment-badge"
+import { SegmentedTabs } from "@/components/shared/segmented-tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Order } from "@/features/orders/types"
 import { formatDateTime, formatPrice } from "@/lib/format"
@@ -164,28 +165,17 @@ export function OrdersTable({
             ? `Showing ${(page - 1) * pageSize + 1}–${(page - 1) * pageSize + orders.length} of ${total} orders`
             : `Showing ${orders.length} order${orders.length === 1 ? "" : "s"}`}
         </span>
-        <div className={styles.viewSwitcher} role="group" aria-label="View format">
-          <button
-            type="button"
-            onClick={() => changeView("table")}
-            className={cn(styles.viewBtn, viewMode === "table" && styles.viewBtnActive)}
-            aria-pressed={viewMode === "table"}
-            aria-label="List view"
-          >
-            <ListIcon className={styles.iconSm} />
-            <span>List</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => changeView("tiles")}
-            className={cn(styles.viewBtn, viewMode === "tiles" && styles.viewBtnActive)}
-            aria-pressed={viewMode === "tiles"}
-            aria-label="Tile view"
-          >
-            <LayoutGridIcon className={styles.iconSm} />
-            <span>Tiles</span>
-          </button>
-        </div>
+        <SegmentedTabs
+          layout="inline"
+          size="sm"
+          ariaLabel="View format"
+          value={viewMode}
+          onChange={changeView}
+          items={[
+            { value: "table", label: "List", icon: ListIcon, ariaLabel: "List view" },
+            { value: "tiles", label: "Tiles", icon: LayoutGridIcon, ariaLabel: "Tile view" },
+          ]}
+        />
       </div>
 
       {viewMode === "tiles" ? (

@@ -63,8 +63,8 @@ export async function resetStoreData(input: unknown): Promise<ActionResult<Launc
     }
     updateTag(CACHE_TAGS.products)
     updateTag(CACHE_TAGS.categories)
-  } else if (scopes.includes("orders")) {
-    // Clearing orders restores reserved product stock in admin_reset_data.
+  } else if (scopes.includes("orders") || scopes.includes("customers")) {
+    // Clearing orders restores reserved stock; clearing customers deletes product reviews.
     updateTag(CACHE_TAGS.products)
   }
 

@@ -1,0 +1,40 @@
+/* Section: Scrollable Segmented Shell & Arrows */
+.segmentedScrollShell { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+.segmentedScrollShell .scrollArrowBtn { display: grid; flex: none; width: 44px; height: 44px; border-radius: 9999px; border: 1px solid var(--border); background-color: var(--card); color: var(--foreground); place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: var(--store-elevation-sm); transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease, transform 160ms ease; }
+.segmentedScrollShell .scrollArrowBtn:hover:not(:disabled) { background-color: var(--secondary); border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); color: var(--primary); }
+.segmentedScrollShell .scrollArrowBtn:active:not(:disabled) { transform: scale(0.95); }
+.segmentedScrollShell .scrollArrowBtn:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+.segmentedScrollShell .scrollArrowBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.scrollArrowBtn .scrollArrowIcon { width: 16px; height: 16px; }
+/* Section: Segmented Tray Layouts */
+.segmentedTray { display: grid; gap: 4px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--border) 75%, transparent); background-color: color-mix(in oklab, var(--muted) 65%, transparent); padding: 4px; min-width: 0; }
+.segmentedTrayEqual { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+.segmentedTrayScroll { display: flex; flex-wrap: nowrap; flex: 1 1 auto; width: 100%; align-items: center; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.segmentedTrayScroll::-webkit-scrollbar { display: none; }
+.segmentedTrayInline { display: inline-flex; width: auto; align-items: center; gap: 2px; border-radius: 10px; padding: 3px; }
+.segmentedTrayPill { border-radius: 9999px; }
+.segmentedTraySm { border-radius: 8px; padding: 2px; gap: 2px; }
+/* Section: Segment Buttons */
+.segmentedTray .segmentBtn { display: inline-flex; height: 36px; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; border-radius: 8px; border: 0; background: transparent; padding: 0 12px; font-size: 13px; line-height: 18px; font-weight: 600; color: var(--muted-foreground); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 140ms ease; }
+.segmentedTray .segmentBtnScroll { flex: none; height: 44px; padding: 0 14px; font-size: 12px; line-height: 16px; gap: 8px; }
+.segmentedTray .segmentBtnPill { border-radius: 9999px; }
+.segmentedTray .segmentBtnSm { height: 28px; border-radius: 6px; padding: 0 10px; font-size: 12px; line-height: 16px; gap: 5px; }
+.segmentedTray .segmentBtnIconOnly { width: 28px; padding: 0; }
+.segmentedTray .segmentBtn:hover { color: var(--foreground); }
+.segmentedTray .segmentBtn:active { transform: scale(0.98); }
+.segmentedTray .segmentBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.segmentedTray .segmentBtnCardActive { background-color: var(--card); font-weight: 600; color: var(--foreground); box-shadow: 0 1px 3px var(--shadow-color-soft), 0 0 0 1px color-mix(in oklab, var(--border) 80%, transparent); }
+.segmentedTray .segmentBtnPrimaryActive { background-color: var(--primary); font-weight: 600; color: var(--primary-foreground); box-shadow: 0 2px 6px -2px color-mix(in oklab, var(--primary) 42%, transparent); }
+.segmentedTray .segmentBtnPrimaryActive:hover { background-color: var(--primary); color: var(--primary-foreground); }
+.segmentBtn .segmentIcon { width: 14px; height: 14px; flex-shrink: 0; }
+.segmentBtn .segmentCount { display: inline-flex; height: 20px; min-width: 20px; align-items: center; justify-content: center; gap: 4px; border-radius: 9999px; padding: 0 6px; font-size: 11px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.segmentBtn .segmentCountPrimaryActive { background-color: var(--primary-foreground); color: var(--primary); box-shadow: 0 1px 2px var(--shadow-color-soft); }
+.segmentBtn .segmentCountCardActive { background-color: color-mix(in oklab, var(--primary) 12%, transparent); color: var(--primary); }
+.segmentBtn .segmentCountAttention { background-color: color-mix(in oklab, var(--tone-warning-solid) 20%, transparent); color: var(--tone-warning-fg-strong); box-shadow: 0 0 0 1px color-mix(in oklab, var(--tone-warning-solid) 40%, transparent); }
+.segmentBtn .segmentCountDefault { background-color: var(--background); color: var(--foreground); box-shadow: 0 1px 2px var(--shadow-color-soft), 0 0 0 1px color-mix(in oklab, var(--border) 80%, transparent); }
+.segmentCount .attentionDot { width: 6px; height: 6px; border-radius: 9999px; background-color: var(--tone-warning-solid); }
+/* Section: Responsive Breakpoints */
+@media (min-width: 640px) {
+  .segmentedScrollShell .scrollArrowBtn { width: 34px; height: 34px; }
+  .segmentedTray .segmentBtnScroll { height: 34px; }
+}

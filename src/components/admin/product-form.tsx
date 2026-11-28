@@ -262,7 +262,10 @@ function ProductFormInner({
         return
       }
       startTransition(async () => {
-        const res = await saveProduct(product?.id ?? null, values, product?.stock)
+        const expectedVariantStocks = product?.variants?.length
+          ? Object.fromEntries(product.variants.map((vr) => [vr.id, vr.stock]))
+          : undefined
+        const res = await saveProduct(product?.id ?? null, values, product?.stock, expectedVariantStocks)
         if (!res.ok) {
           toast.error(res.error)
           for (const [field, messages] of Object.entries(res.fieldErrors ?? {})) {
